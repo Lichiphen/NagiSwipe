@@ -17,14 +17,14 @@
 HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ### CDN経由 (推奨)
-[Statically](https://statically.io/) を利用して高速に配信されます。
+[jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.statically.io/gl/lichiphen/nagiswipe/main/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gl/lichiphen/nagiswipe@main/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.statically.io/gl/lichiphen/nagiswipe/main/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gl/lichiphen/nagiswipe@main/NagiSwipe-main.js"></script>
 ```
 
 ### 使い方
