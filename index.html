@@ -8,7 +8,47 @@
       NagiSwipe Integration Example 
       Just load these two files.
     -->
-    <link rel="stylesheet" href="NagiSwipe-main.css?2026-01-14">
+    <script>
+        /**
+         * 外部ファイルの最終更新日時を取得してキャッシュバスターとして付与し、
+         * タグを動的に生成してロードするスクリプト
+         */
+        (function() {
+            function loadAsset(url, type) {
+                const xhr = new XMLHttpRequest();
+                // 同期リクエストでHEADのみ取得（メタデータ確認のため）
+                xhr.open('HEAD', url, false);
+                try {
+                    xhr.send();
+                    const lastMod = xhr.getResponseHeader('Last-Modified');
+                    // メタデータ（日時）をパスに変換、取得できなければ現在時刻
+                    const version = lastMod ? encodeURIComponent(lastMod) : Date.now();
+                    const finalUrl = `${url}?v=${version}`;
+
+                    if (type === 'css') {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = finalUrl;
+                        document.head.appendChild(link);
+                    } else if (type === 'js') {
+                        const script = document.createElement('script');
+                        script.src = finalUrl;
+                        // ライブラリなので早期に読み込ませる
+                        document.head.appendChild(script);
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch metadata for ' + url, e);
+                    // 失敗した場合は通常の読み込みを試行
+                    if (type === 'css') document.write(`<link rel="stylesheet" href="${url}">`);
+                    else document.write(`<script src="${url}"><\/script>`);
+                }
+            }
+
+            // CSSとJSをメタデータ付きでロード
+            loadAsset('NagiSwipe-main.css', 'css');
+            loadAsset('NagiSwipe-main.js', 'js');
+        })();
+    </script>
     
     <style>
         /* [DEMO PAGE CSS] */
@@ -43,8 +83,7 @@
     <!-- Gallery Grid -->
     <div class="gallery-grid" id="grid"></div>
 
-    <!-- Core Library -->
-    <script src="NagiSwipe-main.js?2026-01-14"></script>
+    <!-- Core Library is now loaded dynamically in head -->
     
     <!-- Demo Script -->
     <script>
