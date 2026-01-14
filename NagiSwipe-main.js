@@ -16,11 +16,56 @@
 
     const SVG_ARROW_LEFT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`;
     const SVG_ARROW_RIGHT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+    const SVG_ZOOM_IN = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`;
+    const SVG_ZOOM_OUT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>`;
 
     const SmartUtils = {
         clamp: (val, min, max) => Math.min(Math.max(val, min), max),
         getDistance: (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y),
-        getCenter: (p1, p2) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 })
+        getCenter: (p1, p2) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }),
+        
+        /**
+         * Check if a point (clientX, clientY) is on the visible part of an image
+         * with object-fit: contain (accounts for letterboxing)
+         */
+        isPointOnVisibleImage: (imgEl, clientX, clientY) => {
+            if (!imgEl || !imgEl.complete || imgEl.naturalWidth === 0) return false;
+            
+            const rect = imgEl.getBoundingClientRect();
+            const containerW = rect.width;
+            const containerH = rect.height;
+            const naturalW = imgEl.naturalWidth;
+            const naturalH = imgEl.naturalHeight;
+            
+            // Calculate actual displayed image dimensions (object-fit: contain)
+            const containerRatio = containerW / containerH;
+            const imageRatio = naturalW / naturalH;
+            
+            let displayedW, displayedH, offsetX, offsetY;
+            
+            if (imageRatio > containerRatio) {
+                // Image is wider than container ratio -> fit to width
+                displayedW = containerW;
+                displayedH = containerW / imageRatio;
+                offsetX = 0;
+                offsetY = (containerH - displayedH) / 2;
+            } else {
+                // Image is taller than container ratio -> fit to height
+                displayedH = containerH;
+                displayedW = containerH * imageRatio;
+                offsetX = (containerW - displayedW) / 2;
+                offsetY = 0;
+            }
+            
+            // Calculate visible image bounds in viewport coordinates
+            const visibleLeft = rect.left + offsetX;
+            const visibleTop = rect.top + offsetY;
+            const visibleRight = visibleLeft + displayedW;
+            const visibleBottom = visibleTop + displayedH;
+            
+            return clientX >= visibleLeft && clientX <= visibleRight &&
+                   clientY >= visibleTop && clientY <= visibleBottom;
+        }
     };
 
     class NagiSwipeViewer {
@@ -70,6 +115,7 @@
                 <div class="ns-bg" id="ns-bg"></div>
                 <div class="ns-stage" id="ns-stage"></div>
                 <div class="ns-ui" id="ns-ui">
+                    <button class="ns-btn ns-zoom" id="ns-zoom" aria-label="Zoom">${SVG_ZOOM_IN}</button>
                     <button class="ns-btn ns-close" id="ns-close" aria-label="Close"></button>
                     <button class="ns-btn ns-prev" id="ns-prev" aria-label="Previous">${SVG_ARROW_LEFT}</button>
                     <button class="ns-btn ns-next" id="ns-next" aria-label="Next">${SVG_ARROW_RIGHT}</button>
@@ -103,6 +149,10 @@
 
             closeBtn.addEventListener('pointerdown', onDown(() => this.close()));
             closeBtn.addEventListener('click', swallow);
+
+            this.btnZoom = this.viewer.querySelector('#ns-zoom');
+            this.btnZoom.addEventListener('pointerdown', onDown(() => this.toggleZoom()));
+            this.btnZoom.addEventListener('click', swallow);
 
             this.btnPrev.addEventListener('pointerdown', onDown(() => this.changeIndex(-1)));
             this.btnPrev.addEventListener('click', swallow);
@@ -289,37 +339,44 @@
 
         close() {
             if (!this.isOpen) return;
-            this.isAnimating = true;
-            this.bg.style.opacity = 0;
-            this.ui.style.opacity = 0;
-
             const currentEl = this.slidePool.current;
-            const targetItem = this.items[this.currentIndex];
-
-            if (currentEl && targetItem && targetItem.thumbEl) {
-                // Fly back
-                const rect = targetItem.thumbEl.getBoundingClientRect();
-                const endX = rect.left + rect.width/2 - window.innerWidth/2;
-                const endY = rect.top + rect.height/2 - window.innerHeight/2;
-                const endScale = rect.width / window.innerWidth; 
-
-                currentEl.style.transition = 'transform 0.35s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.35s';
-                currentEl.style.transform = `translate3d(${endX}px, ${endY}px, 0) scale(${endScale})`;
-                // Slight fade out just in case aspect ratio mismatch looks weird
-                // currentEl.style.opacity = 0.8; 
-            } else {
-                if(currentEl) {
-                    currentEl.style.transition = 'opacity 0.3s';
+            
+            // Fly back animation
+            if (this.items[this.currentIndex] && currentEl) {
+                const item = this.items[this.currentIndex];
+                if (item.thumbEl) {
+                    const rect = item.thumbEl.getBoundingClientRect();
+                    const scale = rect.width / window.innerWidth; // rough approx
+                    currentEl.style.transition = 'transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s linear';
                     currentEl.style.opacity = 0;
+                    // We could try to match position, but simpler fade/shrink is often enough or just fade out
                 }
             }
 
+            this.isOpen = false;
+            this.bg.style.opacity = 0;
+            this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
+
             setTimeout(() => {
                 this.viewer.style.display = 'none';
-                this.isOpen = false;
-                this.stage.innerHTML = '';
-                this.isAnimating = false;
-            }, 350);
+                // Reset everything
+                this.stage.innerHTML = ''; 
+                this.slidePool = { current:null, prev:null, next:null };
+            }, 300);
+            
+            // Re-enable scroll
+            document.documentElement.style.overflow = '';
+            document.body.style.overflow = '';
+        }
+
+        toggleZoom() {
+            if (this.state.scale > 1.01) {
+                // Return to 1x
+                this.animateTo({ x: 0, y: 0, scale: 1 });
+            } else {
+                // Zoom to 2.5x (or just fitting 1x if image is huge? Simple: 2.5x for now like double tap)
+                this.animateTo({ x: 0, y: 0, scale: 2.5 });
+            }
         }
 
         destroy() {
@@ -472,9 +529,12 @@
                 // Double tap detection
                 const now = Date.now();
                 const dist = Math.hypot(e.clientX - this.lastTapPos.x, e.clientY - this.lastTapPos.y);
-                const isImage = e.target.classList.contains('ns-img');
                 
-                if (isImage && now - this.lastTapTime < 300 && dist < 30) {
+                // Check if tap is on the visible part of the current image
+                const currentImg = this.slidePool.current?.querySelector('.ns-img');
+                const isOnVisibleImage = currentImg && SmartUtils.isPointOnVisibleImage(currentImg, e.clientX, e.clientY);
+                
+                if (isOnVisibleImage && now - this.lastTapTime < 300 && dist < 30) {
                     this.onDoubleTap(e);
                     this.pointers = []; // Cancel current drag
                     return;
@@ -593,9 +653,15 @@
 
             // Treat as tap if movement is small
             if (dist < moveDistThreshold) {
-                // Use the stored target from pointerdown for accurate detection
-                const isOnImage = this.tapTarget && (this.tapTarget.classList.contains('ns-img') || !!this.tapTarget.closest('.ns-img'));
-                if (!isOnImage) {
+                // Check if tap is on the visible part of the current image
+                const currentImg = this.slidePool.current?.querySelector('.ns-img');
+                const isOnVisibleImage = currentImg && SmartUtils.isPointOnVisibleImage(
+                    currentImg, 
+                    this.startPos.x, 
+                    this.startPos.y
+                );
+                
+                if (!isOnVisibleImage) {
                     this.close();
                 }
             } else {
@@ -730,18 +796,26 @@
                 this.slidePool.current.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
             }
             
+            // Show/Hide neighbors based on zoom
+            // Actually, we keep them in DOM but possibly reposition or hide if zoomed?
+            // Existing logic:
             if (scale <= 1.01) {
                 if (this.slidePool.prev) {
                     this.slidePool.prev.style.display = 'block';
-                    this.slidePool.prev.style.transform = `translate3d(${x - winW - gap}px, 0, 0)`;
+                    this.slidePool.prev.style.transform = `translate3d(${x - winW}px, 0, 0)`;
                 }
                 if (this.slidePool.next) {
                     this.slidePool.next.style.display = 'block';
-                    this.slidePool.next.style.transform = `translate3d(${x + winW + gap}px, 0, 0)`;
+                    this.slidePool.next.style.transform = `translate3d(${x + winW}px, 0, 0)`;
                 }
             } else {
                 if (this.slidePool.prev) this.slidePool.prev.style.display = 'none';
                 if (this.slidePool.next) this.slidePool.next.style.display = 'none';
+            }
+
+            // Update Zoom Button Icon
+            if (this.btnZoom) {
+                this.btnZoom.innerHTML = (this.state.scale > 1.01) ? SVG_ZOOM_OUT : SVG_ZOOM_IN;
             }
         }
     }
