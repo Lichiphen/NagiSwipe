@@ -1,5 +1,7 @@
 # NagiSwipe
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 軽量画像ポップアップモーダルです。
 
 ## 特徴
