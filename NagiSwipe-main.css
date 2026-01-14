@@ -41,7 +41,7 @@
     inset: 0;
     display: block;
     will-change: transform;
-    pointer-events: auto;
+    pointer-events: none;
     backface-visibility: hidden;
     transform: translateZ(0);
 }
