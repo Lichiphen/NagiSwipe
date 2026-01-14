@@ -169,4 +169,6 @@
 }
 
 
-/* Visual centering tweaks for chevrons - Removed for better alignment */
+/* Visual centering tweaks for chevrons - Optical alignment */
+.ns-prev svg { transform: translateX(-2px); }
+.ns-next svg { transform: translateX(2px); }
