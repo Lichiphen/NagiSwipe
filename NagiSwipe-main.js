@@ -491,6 +491,7 @@
             }
             
             this.startPos = { x: e.clientX, y: e.clientY };
+            this.tapTarget = e.target; // Store the target element for tap detection
             this.isDragging = false;
             this.dragAxis = null;
         }
@@ -590,10 +591,10 @@
             const moveDistThreshold = 15;
             const dist = Math.hypot(e.clientX - this.startPos.x, e.clientY - this.startPos.y);
 
-            // Treat as tap if movement is small, regardless of isDragging (mobile jitter safe)
+            // Treat as tap if movement is small
             if (dist < moveDistThreshold) {
-                // If tap originated on image, do not close
-                const isOnImage = !!e.target.closest('.ns-img');
+                // Use the stored target from pointerdown for accurate detection
+                const isOnImage = this.tapTarget && (this.tapTarget.classList.contains('ns-img') || !!this.tapTarget.closest('.ns-img'));
                 if (!isOnImage) {
                     this.close();
                 }
