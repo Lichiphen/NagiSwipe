@@ -1,8 +1,13 @@
-/**
- * ======================================================================================
- * [NagiSwipe Library Core]
+/*
+* ============================================================================
+ * ![NagiSwipe Library Core]
  * Drop-in gallery library
- * ======================================================================================
+ * 
+ * NagiSwipe v1.0.0
+ * Copyright (c) 2026 Lichiphen
+ * Licensed under the MIT License
+ * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
+ * ============================================================================
  */
 (function (global) {
     'use strict';
@@ -84,29 +89,26 @@
             this.btnNext = this.viewer.querySelector('#ns-next');
 
             const closeBtn = this.viewer.querySelector('#ns-close');
-            
-            // Interaction: use pointerdown on buttons to avoid 300ms delay and capture more reliably
-            const handleClose = (e) => {
+
+            // Button interactions: handle on pointerdown for immediate response,
+            // and swallow click to avoid duplicate / ghost events.
+            const swallow = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                this.close();
             };
-            closeBtn.addEventListener('click', handleClose);
-            closeBtn.addEventListener('pointerdown', e => e.stopPropagation());
+            const onDown = (fn) => (e) => {
+                swallow(e);
+                fn();
+            };
 
-            this.btnPrev.addEventListener('click', (e) => { 
-                e.preventDefault();
-                e.stopPropagation(); 
-                this.changeIndex(-1); 
-            });
-            this.btnPrev.addEventListener('pointerdown', e => e.stopPropagation());
+            closeBtn.addEventListener('pointerdown', onDown(() => this.close()));
+            closeBtn.addEventListener('click', swallow);
 
-            this.btnNext.addEventListener('click', (e) => { 
-                e.preventDefault();
-                e.stopPropagation(); 
-                this.changeIndex(1); 
-            });
-            this.btnNext.addEventListener('pointerdown', e => e.stopPropagation());
+            this.btnPrev.addEventListener('pointerdown', onDown(() => this.changeIndex(-1)));
+            this.btnPrev.addEventListener('click', swallow);
+
+            this.btnNext.addEventListener('pointerdown', onDown(() => this.changeIndex(1)));
+            this.btnNext.addEventListener('click', swallow);
 
             // Viewer events
             this.viewer.addEventListener('pointerdown', this.onPointerDown.bind(this));
@@ -197,9 +199,8 @@
                 const rect = targetItem.thumbEl.getBoundingClientRect();
                 const startX = rect.left + rect.width/2 - window.innerWidth/2;
                 const startY = rect.top + rect.height/2 - window.innerHeight/2;
-                const startScale = rect.width / window.innerWidth; // Approximate width based
+                const startScale = rect.width / window.innerWidth;
 
-                // Initial position
                 currentEl.style.transition = 'none';
                 currentEl.style.transform = `translate3d(${startX}px, ${startY}px, 0) scale(${startScale})`;
                 this.bg.style.opacity = 0;
@@ -222,6 +223,68 @@
                 this.loadHighRes(index, currentEl);
                 this.isAnimating = false;
             }
+        }
+
+        _recycleSlidesAfterNav(dir) {
+            const oldPrev = this.slidePool.prev;
+            const oldCur = this.slidePool.current;
+            const oldNext = this.slidePool.next;
+
+            if (dir > 0) {
+                this.slidePool.prev = oldCur;
+                this.slidePool.current = oldNext;
+                this.slidePool.next = oldPrev || this._createEmptyWrap();
+                this._setWrapContent(this.slidePool.next, this.currentIndex + 1);
+            } else if (dir < 0) {
+                this.slidePool.next = oldCur;
+                this.slidePool.current = oldPrev;
+                this.slidePool.prev = oldNext || this._createEmptyWrap();
+                this._setWrapContent(this.slidePool.prev, this.currentIndex - 1);
+            }
+
+            this._setWrapContent(this.slidePool.prev, this.currentIndex - 1);
+            this._setWrapContent(this.slidePool.next, this.currentIndex + 1);
+
+            const frag = document.createDocumentFragment();
+            if (this.slidePool.prev) frag.appendChild(this.slidePool.prev);
+            if (this.slidePool.current) frag.appendChild(this.slidePool.current);
+            if (this.slidePool.next) frag.appendChild(this.slidePool.next);
+            this.stage.appendChild(frag);
+        }
+
+        _createEmptyWrap() {
+            const wrap = document.createElement('div');
+            wrap.className = 'ns-img-wrap';
+            wrap.style.display = 'none';
+            this.stage.appendChild(wrap);
+            return wrap;
+        }
+
+        _setWrapContent(wrap, index) {
+            if (!wrap) return;
+            if (index < 0 || index >= this.items.length) {
+                wrap.style.display = 'none';
+                wrap.innerHTML = '';
+                return;
+            }
+            const item = this.items[index];
+            wrap.style.display = 'block';
+            wrap.innerHTML = '';
+
+            const img = document.createElement('img');
+            img.className = 'ns-img';
+            img.src = item.thumb || item.src;
+            img.draggable = false;
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.style.opacity = '0';
+            const fadeIn = () => requestAnimationFrame(() => { img.style.opacity = '1'; });
+            if (img.complete) fadeIn();
+            else {
+                img.onload = fadeIn;
+                img.onerror = () => { img.style.opacity = '1'; };
+            }
+            wrap.appendChild(img);
         }
 
         close() {
@@ -270,10 +333,28 @@
         // --- Logic ---
 
         setupSlides(index) {
-            this.stage.innerHTML = '';
-            this.slidePool.current = this._createSlide(index, 0);
-            this.slidePool.prev = this._createSlide(index - 1, -1);
-            this.slidePool.next = this._createSlide(index + 1, 1);
+            // Build (or update) the 3-slide pool without nuking DOM every time
+            if (!this.slidePool.current) {
+                this.slidePool.current = this._createEmptyWrap();
+                this.slidePool.prev = this._createEmptyWrap();
+                this.slidePool.next = this._createEmptyWrap();
+            }
+            this._setWrapContent(this.slidePool.current, index);
+            this._setWrapContent(this.slidePool.prev, index - 1);
+            this._setWrapContent(this.slidePool.next, index + 1);
+
+            // Initial positioning
+            const winW = window.innerWidth;
+            if (this.slidePool.prev) this.slidePool.prev.style.transform = `translate3d(${-winW}px, 0, 0)`;
+            if (this.slidePool.current) this.slidePool.current.style.transform = `translate3d(0, 0, 0)`;
+            if (this.slidePool.next) this.slidePool.next.style.transform = `translate3d(${winW}px, 0, 0)`;
+
+            // Ensure DOM order
+            const frag = document.createDocumentFragment();
+            if (this.slidePool.prev) frag.appendChild(this.slidePool.prev);
+            if (this.slidePool.current) frag.appendChild(this.slidePool.current);
+            if (this.slidePool.next) frag.appendChild(this.slidePool.next);
+            this.stage.appendChild(frag);
         }
 
         _createSlide(index, offsetDir) {
@@ -286,10 +367,19 @@
             img.className = 'ns-img';
             img.src = item.thumb || item.src;
             img.draggable = false;
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.style.opacity = '0';
+            const fadeInThumb = () => requestAnimationFrame(() => { img.style.opacity = '1'; });
+            if (img.complete) fadeInThumb();
+            else {
+                img.onload = fadeInThumb;
+                img.onerror = () => { img.style.opacity = '1'; };
+            }
             wrap.appendChild(img);
             
             if (offsetDir !== 0) {
-                 const x = offsetDir * (window.innerWidth + 40);
+                 const x = offsetDir * (window.innerWidth);
                  wrap.style.transform = `translate3d(${x}px, 0, 0)`;
                  wrap.style.display = 'block'; 
             } else {
@@ -314,6 +404,8 @@
             fullImg.src = item.src;
             fullImg.draggable = false;
             fullImg.style.opacity = '0';
+            fullImg.decoding = 'async';
+            fullImg.loading = 'eager';
 
             fullImg.onload = () => {
                 if(!this.isOpen) return;
@@ -497,12 +589,12 @@
             // End Gesture detection
             const moveDistThreshold = 15;
             const dist = Math.hypot(e.clientX - this.startPos.x, e.clientY - this.startPos.y);
-            
-            if (!this.isDragging && dist < moveDistThreshold) {
-                // Tap
-                const target = e.target;
-                // Strict check: if it's not the image, it's the background
-                if (!target.classList.contains('ns-img')) {
+
+            // Treat as tap if movement is small, regardless of isDragging (mobile jitter safe)
+            if (dist < moveDistThreshold) {
+                // If tap originated on image, do not close
+                const isOnImage = !!e.target.closest('.ns-img');
+                if (!isOnImage) {
                     this.close();
                 }
             } else {
@@ -567,63 +659,50 @@
 
         changeIndex(dir) {
             if (this.isAnimating) return;
+
             const targetIndex = this.currentIndex + dir;
             if (targetIndex < 0 || targetIndex >= this.items.length) {
-                // Bounce back?
                 this.animateTo({ x: 0, y: 0, scale: 1 });
                 return;
             }
 
+            // Ensure we slide as a "page turn": both slides animate and no seam is visible.
             this.isAnimating = true;
+            this.state.y = 0;
+            this.state.scale = 1;
+
             const winW = window.innerWidth;
-            const gap = 40;
+            const gap = 0; // seamless; avoids visible vertical seam
+            const duration = 260;
+            const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+            // Apply transition to ALL involved slides so the incoming slide animates too
+            [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
+                if (el) el.style.transition = `transform ${duration}ms ${easing}`;
+            });
+
+            // Move to target position; render() will place prev/next accordingly
             const targetX = dir > 0 ? -(winW + gap) : (winW + gap);
-            
-            // Animate current out
-            const currentEl = this.slidePool.current;
-            if (currentEl) {
-                currentEl.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)';
-                currentEl.style.transform = `translate3d(${targetX}px, 0, 0) scale(1)`;
-            }
-
-            // Animate next in (it should already be in position if simplified,
-            // but for safety in this logic we just swap after delay or animate both)
-            // Simpler approach: Slide Animation
-            // We need to move the whole "stage" conceptually, or just the elements.
-            // current moves out, next moves in (from offset).
-            
-            // Let's assume standard slide behavior where we move specific elements.
-            // We set the state.x to targetX to animate current. 
-            // BUT we also need to animate the incoming one from its offset to 0.
-            
-            // Actually, `render()` already positions prev/next based on state.x.
-            // So if we set state.x to targetX, `render()` will move current to targetX, 
-            // and the 'next' slide (which is at +winW) will move to 0.
-            
             this.state.x = targetX;
-            this.render(); // This applies the transform based on x
+            this.render();
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 this.currentIndex = targetIndex;
-                this.setupSlides(this.currentIndex);
+
+                // Reuse existing slide DOM to avoid flashing
+                this._recycleSlidesAfterNav(dir);
                 this.updateUiVisibility();
                 this.loadHighRes(this.currentIndex, this.slidePool.current);
                 this.preloadSurrounding(this.currentIndex);
-                
+             // Reset state & snap to center without animation
                 this.state = { x: 0, y: 0, scale: 1 };
-                // Snap to 0 (since we reconstructed slides, current is now the new center)
-                // Disable transition for snap
                 [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
-                    if(el) {
-                        el.style.transition = 'none';
-                        // force repaint
-                         el.offsetHeight; 
-                    }
+                    if (el) el.style.transition = 'none';
                 });
                 this.render();
-                
+
                 this.isAnimating = false;
-            }, 300);
+            }, duration);
         }
 
         animateTo(targetState) {
@@ -644,7 +723,7 @@
         render() {
             const { x, y, scale } = this.state;
             const winW = window.innerWidth;
-            const gap = 40;
+            const gap = 0;
 
             if (this.slidePool.current) {
                 this.slidePool.current.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
