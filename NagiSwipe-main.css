@@ -1,4 +1,14 @@
-/* [NagiSwipe Library CSS] */
+/* 
+* ============================================================================
+ * ![NagiSwipe Library Core CSS] 
+ * Drop-in gallery library
+ * 
+ * NagiSwipe v1.0.0
+ * Copyright (c) 2026 Lichiphen
+ * Licensed under the MIT License
+ * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
+ * ============================================================================
+ */
 
 .ns-viewer {
     position: fixed;
@@ -14,7 +24,7 @@
 .ns-bg {
     position: absolute;
     inset: 0;
-    background: #000;
+    background: rgba(0, 0, 0, 0.75);
     opacity: 0;
     transition: opacity 0.25s linear;
     will-change: opacity;
@@ -31,7 +41,7 @@
     inset: 0;
     display: block;
     will-change: transform;
-    pointer-events: none;
+    pointer-events: auto;
     backface-visibility: hidden;
     transform: translateZ(0);
 }
@@ -50,6 +60,7 @@
     backface-visibility: hidden;
     transform: translateZ(0);
     transition: opacity 0.4s ease-out;
+    display: block;
 }
 
 .ns-ui {
@@ -96,6 +107,7 @@
     width: 32px;
     height: 32px;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    pointer-events: none;
 }
 
 .ns-close {
@@ -116,7 +128,7 @@
 /* Arrow Positioning */
 .ns-prev {
     top: 50%;
-    left: 14px;
+    left: calc(env(safe-area-inset-left, 0px) + 6px);
     transform: translateY(-50%);
     width: 56px;
     height: 56px;
@@ -129,7 +141,7 @@
 
 .ns-next {
     top: 50%;
-    right: 14px;
+    right: calc(env(safe-area-inset-right, 0px) + 6px);
     transform: translateY(-50%);
     width: 56px;
     height: 56px;
@@ -155,3 +167,6 @@
         height: 52px;
     }
 }
+
+
+/* Visual centering tweaks for chevrons - Removed for better alignment */
