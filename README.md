@@ -21,10 +21,10 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gl/lichiphen/nagiswipe@main/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@main/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gl/lichiphen/nagiswipe@main/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@main/NagiSwipe-main.js"></script>
 ```
 
 ### 使い方
