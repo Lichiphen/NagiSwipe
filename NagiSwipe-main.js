@@ -431,10 +431,10 @@
 
         updateUiVisibility() {
             // Updated Arrows
-            if (this.currentIndex > 0) this.btnPrev.style.display = 'block';
+            if (this.currentIndex > 0) this.btnPrev.style.display = 'flex';
             else this.btnPrev.style.display = 'none';
 
-            if (this.currentIndex < this.items.length - 1) this.btnNext.style.display = 'block';
+            if (this.currentIndex < this.items.length - 1) this.btnNext.style.display = 'flex';
             else this.btnNext.style.display = 'none';
 
             // Hide UI if zoomed
