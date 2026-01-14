@@ -1,0 +1,157 @@
+/* [NagiSwipe Library CSS] */
+
+.ns-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ns-bg {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    transition: opacity 0.25s linear;
+    will-change: opacity;
+}
+
+.ns-stage {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+}
+
+.ns-img-wrap {
+    position: absolute;
+    inset: 0;
+    display: block;
+    will-change: transform;
+    pointer-events: none;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.ns-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: auto; /* Allow tap detection on image */
+    -webkit-user-drag: none;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    transition: opacity 0.4s ease-out;
+}
+
+.ns-ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 10000;
+}
+
+/* Icons / Buttons */
+.ns-btn {
+    appearance: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.72);
+    pointer-events: auto;
+    transition: color 0.2s, opacity 0.2s, transform 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+
+    padding: 0; /* size is defined per-button (close/prev/next) */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    outline: none;
+}
+
+.ns-btn:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+.ns-btn:focus {
+    outline: none;
+}
+
+.ns-btn svg {
+    display: block;
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+.ns-close {
+    top: 12px;
+    right: 12px;
+    width: 48px;
+    height: 48px;
+    color: #fff;
+    z-index: 3; /* ensure above arrows */
+}
+.ns-close::before {
+    content: "✕";
+    font-size: 24px;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Arrow Positioning */
+.ns-prev {
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.25);
+    backdrop-filter: blur(8px);
+    opacity: 0.65;
+    z-index: 2;
+}
+
+.ns-next {
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.25);
+    backdrop-filter: blur(8px);
+    opacity: 0.65;
+    z-index: 2;
+}
+
+.ns-prev:active, .ns-next:active {
+    transform: translateY(-50%) scale(0.96);
+    opacity: 0.9;
+}
+
+/* Mobile Adjustments */
+@media (hover: none) and (pointer: coarse) {
+    .ns-btn {
+        opacity: 1; 
+    }
+    .ns-prev, .ns-next {
+        width: 52px;
+        height: 52px;
+    }
+}
