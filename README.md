@@ -19,15 +19,17 @@
 HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ### CDN経由 (推奨)
-[jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。
+[jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。最新の安定版を使用する場合は以下のURLをコピーしてください。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@main/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@2e4bc07/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@main/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@2e4bc07/NagiSwipe-main.js"></script>
 ```
+
+※常に最新の `main` ブランチを参照したい場合は `@main` を使用してください。
 
 ### 使い方
 ページ内の `<a href="image.jpg">` のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。
