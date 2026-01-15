@@ -29,15 +29,42 @@
          * with object-fit: contain (accounts for letterboxing)
          */
         isPointOnVisibleImage: (imgEl, clientX, clientY) => {
-            if (!imgEl) return false;
+            if (!imgEl || !imgEl.complete || imgEl.naturalWidth === 0) return false;
             
-            // With new CSS (width:auto, max-width:100%), the img element itself 
-            // has the correct dimensions of the visible image. 
-            // We just check if the point is within the bounding rect.
             const rect = imgEl.getBoundingClientRect();
+            const containerW = rect.width;
+            const containerH = rect.height;
+            const naturalW = imgEl.naturalWidth;
+            const naturalH = imgEl.naturalHeight;
             
-            return clientX >= rect.left && clientX <= rect.right &&
-                   clientY >= rect.top && clientY <= rect.bottom;
+            // Calculate actual displayed image dimensions (object-fit: contain)
+            const containerRatio = containerW / containerH;
+            const imageRatio = naturalW / naturalH;
+            
+            let displayedW, displayedH, offsetX, offsetY;
+            
+            if (imageRatio > containerRatio) {
+                // Image is wider than container ratio -> fit to width
+                displayedW = containerW;
+                displayedH = containerW / imageRatio;
+                offsetX = 0;
+                offsetY = (containerH - displayedH) / 2;
+            } else {
+                // Image is taller than container ratio -> fit to height
+                displayedH = containerH;
+                displayedW = containerH * imageRatio;
+                offsetX = (containerW - displayedW) / 2;
+                offsetY = 0;
+            }
+            
+            // Calculate visible image bounds in viewport coordinates
+            const visibleLeft = rect.left + offsetX;
+            const visibleTop = rect.top + offsetY;
+            const visibleRight = visibleLeft + displayedW;
+            const visibleBottom = visibleTop + displayedH;
+            
+            return clientX >= visibleLeft && clientX <= visibleRight &&
+                   clientY >= visibleTop && clientY <= visibleBottom;
         }
     };
 
