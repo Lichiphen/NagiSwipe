@@ -29,42 +29,25 @@
          * with object-fit: contain (accounts for letterboxing)
          */
         isPointOnVisibleImage: (imgEl, clientX, clientY) => {
-            if (!imgEl || !imgEl.complete || imgEl.naturalWidth === 0) return false;
-            
+            if (!imgEl) return false;
             const rect = imgEl.getBoundingClientRect();
-            const containerW = rect.width;
-            const containerH = rect.height;
+            if (rect.width === 0 || rect.height === 0) return false;
+
             const naturalW = imgEl.naturalWidth;
             const naturalH = imgEl.naturalHeight;
-            
-            // Calculate actual displayed image dimensions (object-fit: contain)
-            const containerRatio = containerW / containerH;
-            const imageRatio = naturalW / naturalH;
-            
-            let displayedW, displayedH, offsetX, offsetY;
-            
-            if (imageRatio > containerRatio) {
-                // Image is wider than container ratio -> fit to width
-                displayedW = containerW;
-                displayedH = containerW / imageRatio;
-                offsetX = 0;
-                offsetY = (containerH - displayedH) / 2;
-            } else {
-                // Image is taller than container ratio -> fit to height
-                displayedH = containerH;
-                displayedW = containerH * imageRatio;
-                offsetX = (containerW - displayedW) / 2;
-                offsetY = 0;
+            if (!naturalW || !naturalH) {
+                return clientX >= rect.left && clientX <= rect.right &&
+                       clientY >= rect.top && clientY <= rect.bottom;
             }
-            
-            // Calculate visible image bounds in viewport coordinates
-            const visibleLeft = rect.left + offsetX;
-            const visibleTop = rect.top + offsetY;
-            const visibleRight = visibleLeft + displayedW;
-            const visibleBottom = visibleTop + displayedH;
-            
-            return clientX >= visibleLeft && clientX <= visibleRight &&
-                   clientY >= visibleTop && clientY <= visibleBottom;
+
+            const scale = Math.min(rect.width / naturalW, rect.height / naturalH);
+            const displayW = naturalW * scale;
+            const displayH = naturalH * scale;
+            const left = rect.left + (rect.width - displayW) / 2;
+            const top = rect.top + (rect.height - displayH) / 2;
+
+            return clientX >= left && clientX <= left + displayW &&
+                   clientY >= top && clientY <= top + displayH;
         }
     };
 
@@ -82,6 +65,12 @@
             this.startPos = { x: 0, y: 0 };
             this.isDragging = false;
             this.dragAxis = null; // 'x' or 'y'
+            this.bgTapStart = null;
+            this.closeTimer = null;
+            this.tapTargetIsImage = false;
+            this.tapImageEl = null;
+            this.suppressNextClick = false;
+            this.suppressClickTimer = null;
 
             // Double tap state
             this.lastTapTime = 0;
@@ -199,6 +188,12 @@
             if (this._clickHandler) document.removeEventListener('click', this._clickHandler);
             
             this._clickHandler = (e) => {
+                if (this.suppressNextClick) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this._clearSuppressNextClick();
+                    return;
+                }
                 const link = e.target.closest(this.options.selector);
                 if (link && link.hasAttribute('data-ns-index')) {
                     const idx = parseInt(link.getAttribute('data-ns-index'), 10);
@@ -223,20 +218,44 @@
             window.addEventListener('keydown', this._keyHandler);
         }
 
+        _setSuppressNextClick() {
+            this.suppressNextClick = true;
+            if (this.suppressClickTimer) clearTimeout(this.suppressClickTimer);
+            this.suppressClickTimer = setTimeout(() => {
+                this.suppressNextClick = false;
+                this.suppressClickTimer = null;
+            }, 400);
+        }
+
+        _clearSuppressNextClick() {
+            this.suppressNextClick = false;
+            if (this.suppressClickTimer) {
+                clearTimeout(this.suppressClickTimer);
+                this.suppressClickTimer = null;
+            }
+        }
+
         open(index) {
+            if (this.closeTimer) {
+                clearTimeout(this.closeTimer);
+                this.closeTimer = null;
+            }
             if (this.isOpen) return;
             index = SmartUtils.clamp(index, 0, this.items.length - 1);
             
             this.isOpen = true;
             this.currentIndex = index;
             this.viewer.style.display = 'block';
+            this.viewer.style.pointerEvents = 'auto';
             
             // Force reflow
             this.viewer.getBoundingClientRect();
             
             this.state = { x: 0, y: 0, scale: 1 };
             this.pointers = [];
+            this.isAnimating = false;
             this.isAnimating = true;
+            this.bgTapStart = null;
 
             this.updateUiVisibility();
             this.setupSlides(index);
@@ -319,6 +338,7 @@
             }
             const item = this.items[index];
             wrap.style.display = 'block';
+            wrap.style.opacity = '1';
             wrap.innerHTML = '';
 
             const img = document.createElement('img');
@@ -339,6 +359,11 @@
 
         close() {
             if (!this.isOpen) return;
+            this._setSuppressNextClick();
+            if (this.closeTimer) {
+                clearTimeout(this.closeTimer);
+                this.closeTimer = null;
+            }
             const currentEl = this.slidePool.current;
             
             // Fly back animation
@@ -357,11 +382,16 @@
             this.bg.style.opacity = 0;
             this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
 
-            setTimeout(() => {
+            this.closeTimer = setTimeout(() => {
+                this.closeTimer = null;
+                if (this.isOpen) return;
                 this.viewer.style.display = 'none';
                 // Reset everything
                 this.stage.innerHTML = ''; 
                 this.slidePool = { current:null, prev:null, next:null };
+                this.pointers = [];
+                this.isDragging = false;
+                this.isAnimating = false;
             }, 300);
             
             // Re-enable scroll
@@ -414,6 +444,7 @@
             this.stage.appendChild(frag);
         }
 
+
         _createSlide(index, offsetDir) {
             if (index < 0 || index >= this.items.length) return null;
             const item = this.items[index];
@@ -427,7 +458,11 @@
             img.decoding = 'async';
             img.loading = 'eager';
             img.style.opacity = '0';
-            const fadeInThumb = () => requestAnimationFrame(() => { img.style.opacity = '1'; });
+            
+            const fadeInThumb = () => {
+                requestAnimationFrame(() => { img.style.opacity = '1'; });
+            };
+            
             if (img.complete) fadeInThumb();
             else {
                 img.onload = fadeInThumb;
@@ -466,20 +501,6 @@
 
             fullImg.onload = () => {
                 if(!this.isOpen) return;
-                
-                // Native size logic
-                // CSS max-width/max-height: 100% handles the shrink-to-fit.
-                // We just ensure standard width/height are auto (resetting if needed, though default is good).
-                // If we wanted to force it via JS, we could do:
-                /*
-                const natW = fullImg.naturalWidth;
-                const natH = fullImg.naturalHeight;
-                const winW = window.innerWidth;
-                const winH = window.innerHeight;
-                
-                // If native is smaller than viewport, allow it to be native size
-                // (CSS width: auto handles this naturally with max-width: 100%)
-                */
 
                 wrapperEl.appendChild(fullImg);
                 requestAnimationFrame(() => fullImg.style.opacity = '1');
@@ -541,21 +562,34 @@
             });
 
             if (this.pointers.length === 1) {
+                this.tapImageEl = e.target.closest('.ns-img');
+                this.tapTargetIsImage = !!this.tapImageEl;
+
                 // Double tap detection
                 const now = Date.now();
                 const dist = Math.hypot(e.clientX - this.lastTapPos.x, e.clientY - this.lastTapPos.y);
                 
                 // Check if tap is on the visible part of the current image
-                const currentImg = this.slidePool.current?.querySelector('.ns-img');
+                // Use the last .ns-img element (newest)
+                const imgs = this.slidePool.current?.querySelectorAll('.ns-img');
+                const currentImg = this.tapImageEl || (imgs && imgs.length > 0 ? imgs[imgs.length - 1] : null);
                 const isOnVisibleImage = currentImg && SmartUtils.isPointOnVisibleImage(currentImg, e.clientX, e.clientY);
                 
                 if (isOnVisibleImage && now - this.lastTapTime < 300 && dist < 30) {
                     this.onDoubleTap(e);
                     this.pointers = []; // Cancel current drag
+                    this.bgTapStart = null;
                     return;
                 }
                 this.lastTapTime = now;
                 this.lastTapPos = { x: e.clientX, y: e.clientY };
+                this.bgTapStart = (this.tapTargetIsImage && isOnVisibleImage)
+                    ? null
+                    : { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
+            } else {
+                this.bgTapStart = null;
+                this.tapTargetIsImage = false;
+                this.tapImageEl = null;
             }
 
             if (this.pointers.length === 2) {
@@ -592,6 +626,9 @@
                         this.dragAxis = Math.abs(totalDx) > Math.abs(totalDy) ? 'x' : 'y';
                     }
                 }
+            }
+            if (this.isDragging && this.bgTapStart) {
+                this.bgTapStart = null;
             }
 
             const dx = currentCenter.x - this.lastCenter.x;
@@ -649,6 +686,11 @@
 
             if (this.isAnimating) return;
             
+            const bgTap = this.bgTapStart && this.bgTapStart.pointerId === e.pointerId;
+            const bgTapDist = bgTap
+                ? Math.hypot(e.clientX - this.bgTapStart.x, e.clientY - this.bgTapStart.y)
+                : 0;
+
             const prevPointersLen = this.pointers.length;
             this.pointers = this.pointers.filter(p => p.pointerId !== e.pointerId);
 
@@ -657,31 +699,58 @@
                     ? SmartUtils.getCenter(this.pointers[0], this.pointers[1]) 
                     : { x: this.pointers[0].clientX, y: this.pointers[0].clientY };
                 if (this.pointers.length === 2) this.lastDist = SmartUtils.getDistance(this.pointers[0], this.pointers[1]);
+                if (bgTap) this.bgTapStart = null;
                 return;
             }
 
-            if (prevPointersLen === 0) return;
+            if (prevPointersLen === 0) {
+                this.bgTapStart = null;
+                this.tapTargetIsImage = false;
+                this.tapImageEl = null;
+                return;
+            }
 
             // End Gesture detection
-            const moveDistThreshold = 15;
+            const moveDistThreshold = 40; // Increased for high-DPI screens / shaky fingers
             const dist = Math.hypot(e.clientX - this.startPos.x, e.clientY - this.startPos.y);
+
+            if (bgTap && bgTapDist < moveDistThreshold && !this.isDragging) {
+                this.bgTapStart = null;
+                this.close();
+                return;
+            }
 
             // Treat as tap if movement is small
             if (dist < moveDistThreshold) {
+                if (!this.tapTargetIsImage && !this.isDragging) {
+                    this.close();
+                    this.bgTapStart = null;
+                    this.tapTargetIsImage = false;
+                    this.tapImageEl = null;
+                    return;
+                }
                 // Check if tap is on the visible part of the current image
-                const currentImg = this.slidePool.current?.querySelector('.ns-img');
+                // Use the last .ns-img element (newest, in case loadHighRes hasn't removed old ones yet)
+                const imgs = this.slidePool.current?.querySelectorAll('.ns-img');
+                const currentImg = this.tapImageEl || (imgs && imgs.length > 0 ? imgs[imgs.length - 1] : null);
                 const isOnVisibleImage = currentImg && SmartUtils.isPointOnVisibleImage(
                     currentImg, 
                     this.startPos.x, 
                     this.startPos.y
                 );
                 
+                // console.log('Tap detected', { dist, isOnVisibleImage, startPos: this.startPos });
+
                 if (!isOnVisibleImage) {
                     this.close();
                 }
             } else {
                 this.onGestureEnd();
             }
+
+            this.bgTapStart = null;
+            this.tapTargetIsImage = false;
+            this.tapImageEl = null;
         }
 
         onDoubleTap(e) {

@@ -88,35 +88,46 @@
     <!-- Demo Script -->
     <script>
         /** [DEMO CONTENT GENERATION] */
-        const itemsData = [];
         const container = document.getElementById('grid');
         const fragment = document.createDocumentFragment();
 
+        // Manual items (local images)
+        const manualItems = [
+            { src: 'Kyururun.png', thumb: 'Kyururun.png' },
+            { src: 'Fu-n.png', thumb: 'Fu-n.png' },
+            { src: 'Shimeshime.png', thumb: 'Shimeshime.png' }
+        ];
+
+        // Combine with generated items
+        const allItems = [...manualItems];
         for (let i = 0; i < 30; i++) {
-            const el = document.createElement('div');
-            el.className = 'grid-item';
-
-            const link = document.createElement('a');
-            link.className = 'gallery-link';
-
             const seed = i + 3000;
             let w = 800, h = 800;
             const r = Math.random();
             if (r < 0.3) { w = 600; h = 900; }
             else if (r < 0.6) { w = 900; h = 600; }
-
+            
             const src = `https://picsum.photos/seed/${seed}/${w}/${h}`;
-            const fullSrc = `https://picsum.photos/seed/${seed}/${w * 2}/${h * 2}`;
+            const fullSrc = `https://picsum.photos/seed/${seed}/${w * 2}/${h * 2}.jpg`;
+            allItems.push({ src: fullSrc, thumb: src });
+        }
 
-            link.href = fullSrc + ".jpg"; 
+        allItems.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'grid-item';
+
+            const link = document.createElement('a');
+            link.className = 'gallery-link';
+            link.href = item.src;
 
             const img = document.createElement('img');
-            img.src = src;
+            img.src = item.thumb;
             
             link.appendChild(img);
             el.appendChild(link);
             fragment.appendChild(el);
-        }
+        });
+
         container.appendChild(fragment);
 
         requestAnimationFrame(() => {
