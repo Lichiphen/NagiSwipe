@@ -23,10 +23,10 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@2e4bc07/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@b0f8e32/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@2e4bc07/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@b0f8e32/NagiSwipe-main.js"></script>
 ```
 
 ※常に最新の `main` ブランチを参照したい場合は `@main` を使用してください。
