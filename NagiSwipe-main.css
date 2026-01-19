@@ -1,9 +1,9 @@
 /* 
-* ============================================================================
+ * ============================================================================
  * ![NagiSwipe Library Core CSS] 
  * Drop-in gallery library
  * 
- * NagiSwipe v1.0.0
+ * NagiSwipe v1.0.1
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -38,7 +38,10 @@
 
 .ns-img-wrap {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
     display: block;
     will-change: transform;
     pointer-events: none;
@@ -48,18 +51,31 @@
 
 .ns-img {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    max-width: 100%;
-    max-height: 100%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+    max-width: none;
+    max-height: none;
+    transform-origin: 0 0; /* 左上を基準に変形 */
     object-fit: contain;
+    will-change: transform;
     user-select: none;
     -webkit-user-select: none;
     pointer-events: auto;
     -webkit-user-drag: none;
     backface-visibility: hidden;
+    transition: opacity 0.4s ease-out, filter 0.4s ease-out;
+}
+
+/* 高解像度（メイン）画像設定 */
+.ns-img-highres {
+    z-index: 2;
+    opacity: 0;
     transition: opacity 0.4s ease-out;
+}
+
+/* ローディング完了後の表示 */
+.ns-img-loaded .ns-img-highres {
+    opacity: 1;
 }
 
 .ns-ui {
@@ -138,6 +154,13 @@
 }
 .ns-zoom:active { opacity: 0.6; transform: scale(0.95); }
 
+@media (hover: hover) and (pointer: fine) {
+    .ns-viewer.ns-is-zoomed .ns-stage,
+    .ns-viewer.ns-is-zoomed .ns-img { cursor: grab; }
+
+    .ns-viewer.ns-dragging .ns-stage,
+    .ns-viewer.ns-dragging .ns-img { cursor: grabbing; }
+}
 
 /* Arrow Positioning */
 .ns-prev {
@@ -186,3 +209,46 @@
 /* Visual centering tweaks for chevrons - Optical alignment */
 .ns-prev svg { transform: translateX(-2px); }
 .ns-next svg { transform: translateX(2px); }
+
+/* ========================================
+   ローディングスピナー
+   高解像度画像読み込み中に表示
+   ======================================== */
+.ns-loading-spinner {
+    position: fixed; /* 親のサイズが0になったのでfixedで画面基準にする */
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px; /* translateなどを使わずmarginでセンタリング */
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: ns-spin 0.8s infinite linear;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+}
+
+.ns-loading-spinner.ns-visible {
+    opacity: 1;
+}
+
+@keyframes ns-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   ズームカーソル（PC環境向け）
+   zoom-in: ズーム可能時、zoom-out: ズーム中
+   ======================================== */
+@media (hover: hover) and (pointer: fine) {
+    .ns-viewer.ns-can-zoom:not(.ns-is-zoomed):not(.ns-dragging) .ns-img {
+        cursor: zoom-in;
+    }
+    
+    .ns-viewer.ns-is-zoomed:not(.ns-dragging) .ns-img {
+        cursor: zoom-out;
+    }
+}

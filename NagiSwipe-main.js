@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.0.0
+ * NagiSwipe v1.0.1
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -57,6 +57,8 @@
             this.isOpen = false;
             this.currentIndex = 0;
             this.state = { x: 0, y: 0, scale: 1 };
+            this.maxScale = 1;
+            this.allowOverZoom = false;
             
             // Interaction state
             this.pointers = [];
@@ -103,6 +105,8 @@
             const html = `
                 <div class="ns-bg" id="ns-bg"></div>
                 <div class="ns-stage" id="ns-stage"></div>
+                <!-- Shared Spinner -->
+                <div class="ns-loading-spinner" id="ns-spinner"></div>
                 <div class="ns-ui" id="ns-ui">
                     <button class="ns-btn ns-zoom" id="ns-zoom" aria-label="Zoom">${SVG_ZOOM_IN}</button>
                     <button class="ns-btn ns-close" id="ns-close" aria-label="Close"></button>
@@ -119,6 +123,7 @@
 
             this.bg = this.viewer.querySelector('#ns-bg');
             this.stage = this.viewer.querySelector('#ns-stage');
+            this.spinner = this.viewer.querySelector('#ns-spinner'); // Global Spinner
             this.ui = this.viewer.querySelector('#ns-ui');
             this.btnPrev = this.viewer.querySelector('#ns-prev');
             this.btnNext = this.viewer.querySelector('#ns-next');
@@ -255,78 +260,97 @@
             this.pointers = [];
             this.isAnimating = false;
             this.isAnimating = true;
+            this.allowOverZoom = false;
+            if (this.viewer) this.viewer.classList.remove('ns-dragging');
             this.bgTapStart = null;
 
             this.updateUiVisibility();
             this.setupSlides(index);
 
-            // Animation Opening
-            const targetItem = this.items[index];
+            // Animation Opening: Simple Fade In
+            this.bg.style.opacity = 0;
+            this.ui.style.opacity = 0;
+            
+            this.state = { x: 0, y: 0, scale: 1 };
             const currentEl = this.slidePool.current;
-
-            if (currentEl && targetItem.thumbEl) {
-                const rect = targetItem.thumbEl.getBoundingClientRect();
-                const startX = rect.left + rect.width/2 - window.innerWidth/2;
-                const startY = rect.top + rect.height/2 - window.innerHeight/2;
-                const startScale = rect.width / window.innerWidth;
-
+            
+            // アニメーションなしで初期位置をセット
+            if (currentEl) {
                 currentEl.style.transition = 'none';
-                currentEl.style.transform = `translate3d(${startX}px, ${startY}px, 0) scale(${startScale})`;
-                this.bg.style.opacity = 0;
-                this.ui.style.opacity = 0;
+                currentEl.style.transform = `translate3d(0, 0, 0)`;
+                // _nsBaseScale は _setWrapContent で 1 に初期化されている
+            }
 
-                requestAnimationFrame(() => {
-                    this.bg.style.opacity = 1;
-                    this.ui.style.opacity = 1;
-                    currentEl.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
-                    currentEl.style.transform = `translate3d(0, 0, 0) scale(1)`;
-
-                    this.loadHighRes(index, currentEl);
-                    this.preloadSurrounding(index);
-
-                    setTimeout(() => { this.isAnimating = false; }, 400);
-                });
-            } else {
+            requestAnimationFrame(() => {
                 this.bg.style.opacity = 1;
                 this.ui.style.opacity = 1;
+
+                this.render();
+
                 this.loadHighRes(index, currentEl);
+                this.preloadSurrounding(index);
                 this.isAnimating = false;
-            }
+            });
         }
 
         _recycleSlidesAfterNav(dir) {
             const oldPrev = this.slidePool.prev;
-            const oldCur = this.slidePool.current;
             const oldNext = this.slidePool.next;
+            const oldCurr = this.slidePool.current;
 
-            if (dir > 0) {
-                this.slidePool.prev = oldCur;
-                this.slidePool.current = oldNext;
-                this.slidePool.next = oldPrev || this._createEmptyWrap();
-                this._setWrapContent(this.slidePool.next, this.currentIndex + 1);
-            } else if (dir < 0) {
-                this.slidePool.next = oldCur;
-                this.slidePool.current = oldPrev;
-                this.slidePool.prev = oldNext || this._createEmptyWrap();
-                this._setWrapContent(this.slidePool.prev, this.currentIndex - 1);
+            if (dir > 0) { // Next
+                if (oldPrev) {
+                   oldPrev.remove();
+                   oldPrev._nsIndex = null;
+                   oldPrev._nsValuesCalculated = false;
+                }
+                this.slidePool.prev = oldCurr;
+                this.slidePool.current = oldNext; // was next
+                // Create new next
+                const newIdx = this.currentIndex + 1;
+                const newWrap = this._createSlideWrap(newIdx); 
+                this.slidePool.next = newWrap;
+                if(newWrap) this.stage.appendChild(newWrap);
+            } else { // Prev
+                if (oldNext) {
+                   oldNext.remove();
+                   oldNext._nsIndex = null;
+                   oldNext._nsValuesCalculated = false;
+                }
+                this.slidePool.next = oldCurr;
+                this.slidePool.current = oldPrev; // was prev
+                // Create new prev
+                const newIdx = this.currentIndex - 1;
+                const newWrap = this._createSlideWrap(newIdx); 
+                this.slidePool.prev = newWrap;
+                if(newWrap) this.stage.appendChild(newWrap);
             }
-
-            this._setWrapContent(this.slidePool.prev, this.currentIndex - 1);
-            this._setWrapContent(this.slidePool.next, this.currentIndex + 1);
-
-            const frag = document.createDocumentFragment();
-            if (this.slidePool.prev) frag.appendChild(this.slidePool.prev);
-            if (this.slidePool.current) frag.appendChild(this.slidePool.current);
-            if (this.slidePool.next) frag.appendChild(this.slidePool.next);
-            this.stage.appendChild(frag);
         }
 
-        _createEmptyWrap() {
-            const wrap = document.createElement('div');
-            wrap.className = 'ns-img-wrap';
-            wrap.style.display = 'none';
-            this.stage.appendChild(wrap);
-            return wrap;
+        setupSlides(index) {
+            // Clear stage
+            this.stage.innerHTML = '';
+            
+            this.slidePool = { 
+                prev: this._createSlideWrap(index - 1),
+                current: this._createSlideWrap(index),
+                next: this._createSlideWrap(index + 1)
+            };
+            
+            if (this.slidePool.prev) this.stage.appendChild(this.slidePool.prev);
+            if (this.slidePool.current) this.stage.appendChild(this.slidePool.current);
+            if (this.slidePool.next) this.stage.appendChild(this.slidePool.next);
+        }
+
+        _createSlideWrap(index) {
+            if (index < 0 || index >= this.items.length) return null;
+            const div = document.createElement('div');
+            // コンテナサイズ0、JS制御
+            div.className = 'ns-img-wrap'; 
+            div._nsIndex = index; // Store index
+            
+            this._setWrapContent(div, index);
+            return div;
         }
 
         _setWrapContent(wrap, index) {
@@ -334,27 +358,22 @@
             if (index < 0 || index >= this.items.length) {
                 wrap.style.display = 'none';
                 wrap.innerHTML = '';
+                wrap._nsBaseScale = 1;
                 return;
             }
             const item = this.items[index];
             wrap.style.display = 'block';
             wrap.style.opacity = '1';
             wrap.innerHTML = '';
+            // 初期値
+            wrap._nsBaseScale = 1; 
+            wrap._nsValuesCalculated = false;
 
-            const img = document.createElement('img');
-            img.className = 'ns-img';
-            img.src = item.thumb || item.src;
-            img.draggable = false;
-            img.decoding = 'async';
-            img.loading = 'eager';
-            img.style.opacity = '0';
-            const fadeIn = () => requestAnimationFrame(() => { img.style.opacity = '1'; });
-            if (img.complete) fadeIn();
-            else {
-                img.onload = fadeIn;
-                img.onerror = () => { img.style.opacity = '1'; };
-            }
-            wrap.appendChild(img);
+            // スピナー生成は削除（グローバル化）
+            
+            // 初期のズームボタン状態更新用
+            const isCurrent = wrap === this.slidePool.current;
+            if (isCurrent && this.isOpen) this._updateZoomButtonDisplay();
         }
 
         close() {
@@ -366,19 +385,17 @@
             }
             const currentEl = this.slidePool.current;
             
-            // Fly back animation
-            if (this.items[this.currentIndex] && currentEl) {
-                const item = this.items[this.currentIndex];
-                if (item.thumbEl) {
-                    const rect = item.thumbEl.getBoundingClientRect();
-                    const scale = rect.width / window.innerWidth; // rough approx
-                    currentEl.style.transition = 'transform 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.3s linear';
-                    currentEl.style.opacity = 0;
-                    // We could try to match position, but simpler fade/shrink is often enough or just fade out
-                }
+            // Simple Fade Out
+            if (currentEl) {
+                // Just fade out, don't move
+                currentEl.style.transition = 'opacity 0.25s ease-out';
+                currentEl.style.opacity = 0;
             }
 
             this.isOpen = false;
+            this.allowOverZoom = false;
+            if (this.viewer) this.viewer.classList.remove('ns-dragging');
+            this._setZoomButtonVisible(this.btnZoom, false);
             this.bg.style.opacity = 0;
             this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
 
@@ -402,10 +419,14 @@
         toggleZoom() {
             if (this.state.scale > 1.01) {
                 // Return to 1x
+                this.allowOverZoom = false;
                 this.animateTo({ x: 0, y: 0, scale: 1 });
             } else {
-                // Zoom to 2.5x (or just fitting 1x if image is huge? Simple: 2.5x for now like double tap)
-                this.animateTo({ x: 0, y: 0, scale: 2.5 });
+                const targetScale = this._getMaxScaleForCurrent();
+                if (targetScale <= 1.01) return;
+                this.maxScale = targetScale;
+                this.allowOverZoom = true;
+                this.animateTo({ x: 0, y: 0, scale: targetScale });
             }
         }
 
@@ -419,94 +440,76 @@
 
         // --- Logic ---
 
-        setupSlides(index) {
-            // Build (or update) the 3-slide pool without nuking DOM every time
-            if (!this.slidePool.current) {
-                this.slidePool.current = this._createEmptyWrap();
-                this.slidePool.prev = this._createEmptyWrap();
-                this.slidePool.next = this._createEmptyWrap();
-            }
-            this._setWrapContent(this.slidePool.current, index);
-            this._setWrapContent(this.slidePool.prev, index - 1);
-            this._setWrapContent(this.slidePool.next, index + 1);
-
-            // Initial positioning
-            const winW = window.innerWidth;
-            if (this.slidePool.prev) this.slidePool.prev.style.transform = `translate3d(${-winW}px, 0, 0)`;
-            if (this.slidePool.current) this.slidePool.current.style.transform = `translate3d(0, 0, 0)`;
-            if (this.slidePool.next) this.slidePool.next.style.transform = `translate3d(${winW}px, 0, 0)`;
-
-            // Ensure DOM order
-            const frag = document.createDocumentFragment();
-            if (this.slidePool.prev) frag.appendChild(this.slidePool.prev);
-            if (this.slidePool.current) frag.appendChild(this.slidePool.current);
-            if (this.slidePool.next) frag.appendChild(this.slidePool.next);
-            this.stage.appendChild(frag);
-        }
-
-
-        _createSlide(index, offsetDir) {
-            if (index < 0 || index >= this.items.length) return null;
-            const item = this.items[index];
-            const wrap = document.createElement('div');
-            wrap.className = 'ns-img-wrap';
-            
-            const img = document.createElement('img');
-            img.className = 'ns-img';
-            img.src = item.thumb || item.src;
-            img.draggable = false;
-            img.decoding = 'async';
-            img.loading = 'eager';
-            img.style.opacity = '0';
-            
-            const fadeInThumb = () => {
-                requestAnimationFrame(() => { img.style.opacity = '1'; });
-            };
-            
-            if (img.complete) fadeInThumb();
-            else {
-                img.onload = fadeInThumb;
-                img.onerror = () => { img.style.opacity = '1'; };
-            }
-            wrap.appendChild(img);
-            
-            if (offsetDir !== 0) {
-                 const x = offsetDir * (window.innerWidth);
-                 wrap.style.transform = `translate3d(${x}px, 0, 0)`;
-                 wrap.style.display = 'block'; 
-            } else {
-                 wrap.style.transform = `translate3d(0, 0, 0)`;
-            }
-
-            this.stage.appendChild(wrap);
-            return wrap;
-        }
-
         loadHighRes(index, wrapperEl) {
-            if (!wrapperEl || index < 0 || index >= this.items.length) return;
+            if (!wrapperEl) return;
             const item = this.items[index];
-            
-            // Check if last image is already the high res one
-            const imgs = wrapperEl.querySelectorAll('img.ns-img');
-            const currentImg = imgs[imgs.length - 1];
-            if (currentImg && currentImg.src === item.src && currentImg.complete) return;
+            if (!item) return;
+
+            // 既にロード済みなら何もしない（スピナーも出さない）
+            if (wrapperEl.classList.contains('ns-img-loaded')) {
+                this.spinner.style.opacity = '0';
+                return;
+            }
+
+            // ロード開始：スピナー表示
+            this.spinner.style.opacity = '1';
 
             const fullImg = document.createElement('img');
-            fullImg.className = 'ns-img';
+            fullImg.className = 'ns-img ns-img-highres';
             fullImg.src = item.src;
+            fullImg.alt = '';
             fullImg.draggable = false;
-            fullImg.style.opacity = '0';
-            fullImg.decoding = 'async';
-            fullImg.loading = 'eager';
+            
+            // 重要: 計算が終わるまで非表示
+            fullImg.style.opacity = '0'; 
+
+            wrapperEl.appendChild(fullImg);
 
             fullImg.onload = () => {
+                // ロード完了：スピナー非表示
+                this.spinner.style.opacity = '0';
+
                 if(!this.isOpen) return;
 
-                wrapperEl.appendChild(fullImg);
-                requestAnimationFrame(() => fullImg.style.opacity = '1');
-                setTimeout(() => {
-                    imgs.forEach(img => { if (img !== fullImg) img.remove(); });
-                }, 500);
+                item.naturalWidth = fullImg.naturalWidth;
+                item.naturalHeight = fullImg.naturalHeight;
+                
+                // --- Dimension Calculation (Load then Show) ---
+                const winW = window.innerWidth;
+                const winH = window.innerHeight;
+                
+                // 画像のアスペクト比
+                const ratio = fullImg.naturalWidth / fullImg.naturalHeight;
+                const screenRatio = winW / winH;
+                
+                let baseScale = 1;
+
+                // 画像が画面より小さい場合は拡大しない（等倍表示）
+                if (fullImg.naturalWidth <= winW && fullImg.naturalHeight <= winH) {
+                    baseScale = 1;
+                } else {
+                    if (ratio > screenRatio) {
+                        baseScale = winW / fullImg.naturalWidth;
+                    } else {
+                        baseScale = winH / fullImg.naturalHeight;
+                    }
+                }
+                
+                // コンテナに、この画像専用の BaseScale を保存
+                wrapperEl._nsBaseScale = baseScale;
+                wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
+
+                // Layout Update Sync
+                requestAnimationFrame(() => {
+                    if (this.isOpen && !this.isAnimating) this.render();
+                    fullImg.style.opacity = '1';
+                    wrapperEl.classList.add('ns-img-loaded');
+                    this._updateZoomButtonDisplay();
+                });
+            };
+
+            fullImg.onerror = () => {
+                this.spinner.style.opacity = '0';
             };
         }
 
@@ -542,6 +545,63 @@
                 this.btnPrev.style.pointerEvents = 'auto';
                 this.btnNext.style.pointerEvents = 'auto';
             }
+
+            this._updateZoomButtonDisplay();
+        }
+
+        _getWrapBaseScale(wrap) {
+            if (!wrap || typeof wrap._nsBaseScale !== 'number') return 1;
+            return wrap._nsBaseScale || 1;
+        }
+
+        _applyBaseScale(wrap, img) {
+            if (!wrap || !img) return;
+            const naturalW = img.naturalWidth;
+            const naturalH = img.naturalHeight;
+            if (!naturalW || !naturalH) return;
+            const fitScale = Math.min(
+                window.innerWidth / naturalW,
+                window.innerHeight / naturalH,
+                1
+            );
+            wrap._nsBaseScale = fitScale;
+            img.style.width = `${naturalW}px`;
+            img.style.height = `${naturalH}px`;
+            img.style.maxWidth = 'none';
+            img.style.maxHeight = 'none';
+        }
+
+        _getCurrentImageEl() {
+            const imgs = this.slidePool.current?.querySelectorAll('.ns-img');
+            return (imgs && imgs.length > 0) ? imgs[imgs.length - 1] : null;
+        }
+
+        _getMaxScaleForCurrent() {
+            const baseScale = this._getWrapBaseScale(this.slidePool.current);
+            if (!baseScale || baseScale <= 0) return 1;
+            return Math.min(Math.max(1, 1 / baseScale), 5);
+        }
+
+        _isDesktopPointer() {
+            return !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+        }
+
+        _setZoomButtonVisible(btn, visible, useDefaultOpacity = false) {
+            if (!btn) return;
+            btn.style.opacity = visible ? (useDefaultOpacity ? '' : '1') : '0';
+            btn.style.pointerEvents = visible ? 'auto' : 'none';
+        }
+
+        _updateZoomButtonDisplay() {
+            this.maxScale = this._getMaxScaleForCurrent();
+            const canZoomIn = this.maxScale > 1.01;
+            const isZoomed = this.state.scale > 1.01;
+            if (this.viewer) {
+                this.viewer.classList.toggle('ns-can-zoom', canZoomIn);
+                this.viewer.classList.toggle('ns-is-zoomed', isZoomed);
+            }
+
+            this._setZoomButtonVisible(this.btnZoom, isZoomed || canZoomIn, true);
         }
 
         // --- Inputs ---
@@ -603,6 +663,8 @@
             this.tapTarget = e.target; // Store the target element for tap detection
             this.isDragging = false;
             this.dragAxis = null;
+            this.maxScale = this._getMaxScaleForCurrent();
+            if (this.viewer) this.viewer.classList.remove('ns-dragging');
         }
 
         onPointerMove(e) {
@@ -621,6 +683,7 @@
             if (!this.isDragging) {
                 if (Math.hypot(totalDx, totalDy) > 10) {
                     this.isDragging = true;
+                    if (this.viewer) this.viewer.classList.add('ns-dragging');
                     // Lock axis only if not zoomed
                     if (this.state.scale <= 1.01) {
                         this.dragAxis = Math.abs(totalDx) > Math.abs(totalDy) ? 'x' : 'y';
@@ -639,8 +702,16 @@
                 const currentDist = SmartUtils.getDistance(this.pointers[0], this.pointers[1]);
                 const scaleFactor = currentDist / this.lastDist;
                 
+                const maxScale = this._getMaxScaleForCurrent();
+                this.maxScale = maxScale;
+                const isZoomInGesture = scaleFactor > 1;
+                if (maxScale <= 1.01 && this.state.scale <= 1.01 && isZoomInGesture) {
+                    this.lastDist = currentDist;
+                    this.lastCenter = currentCenter;
+                    return;
+                }
                 let newScale = this.state.scale * scaleFactor;
-                newScale = SmartUtils.clamp(newScale, 0.5, 5);
+                newScale = SmartUtils.clamp(newScale, 0.5, maxScale || 1);
 
                 const centerOffsetX = currentCenter.x - window.innerWidth / 2;
                 const centerOffsetY = currentCenter.y - window.innerHeight / 2;
@@ -703,6 +774,8 @@
                 return;
             }
 
+            if (this.viewer) this.viewer.classList.remove('ns-dragging');
+
             if (prevPointersLen === 0) {
                 this.bgTapStart = null;
                 this.tapTargetIsImage = false;
@@ -711,7 +784,7 @@
             }
 
             // End Gesture detection
-            const moveDistThreshold = 40; // Increased for high-DPI screens / shaky fingers
+            const moveDistThreshold = 28; // Tighter swipe threshold for less travel
             const dist = Math.hypot(e.clientX - this.startPos.x, e.clientY - this.startPos.y);
 
             if (bgTap && bgTapDist < moveDistThreshold && !this.isDragging) {
@@ -722,6 +795,7 @@
 
             // Treat as tap if movement is small
             if (dist < moveDistThreshold) {
+                let handledTap = false;
                 if (!this.tapTargetIsImage && !this.isDragging) {
                     this.close();
                     this.bgTapStart = null;
@@ -741,7 +815,22 @@
                 
                 // console.log('Tap detected', { dist, isOnVisibleImage, startPos: this.startPos });
 
-                if (!isOnVisibleImage) {
+                if (isOnVisibleImage && !this.isDragging) {
+                    if (this.state.scale > 1.01) {
+                        this.animateTo({ x: 0, y: 0, scale: 1 });
+                        handledTap = true;
+                    } else if (this._isDesktopPointer()) {
+                        const targetScale = this._getMaxScaleForCurrent();
+                        if (targetScale > 1.01) {
+                            this.maxScale = targetScale;
+                            this.allowOverZoom = true;
+                            this.animateTo({ x: 0, y: 0, scale: targetScale });
+                            handledTap = true;
+                        }
+                    }
+                }
+
+                if (!handledTap && !isOnVisibleImage) {
                     this.close();
                 }
             } else {
@@ -755,10 +844,13 @@
 
         onDoubleTap(e) {
             if (this.state.scale > 1) {
+                this.allowOverZoom = false;
                 this.animateTo({ x: 0, y: 0, scale: 1 });
             } else {
                 // Zoom to point
-                let targetScale = 2.5;
+                const targetScale = this._getMaxScaleForCurrent();
+                if (targetScale <= 1.01) return;
+                this.allowOverZoom = true;
                 const winW = window.innerWidth;
                 const winH = window.innerHeight;
                 
@@ -796,7 +888,7 @@
                 }
 
                 // Horizontal Swipe
-                const threshold = winW * 0.15;
+                const threshold = winW * 0.12;
                 if (x < -threshold && this.items[this.currentIndex + 1]) {
                     this.changeIndex(1);
                 } 
@@ -821,6 +913,7 @@
             this.isAnimating = true;
             this.state.y = 0;
             this.state.scale = 1;
+            this.allowOverZoom = false;
 
             const winW = window.innerWidth;
             const gap = 0; // seamless; avoids visible vertical seam
@@ -858,6 +951,7 @@
 
         animateTo(targetState) {
             this.isAnimating = true;
+            if (targetState.scale <= 1.01) this.allowOverZoom = false;
             this.state = targetState;
             
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
@@ -872,35 +966,98 @@
         }
 
         render() {
-            const { x, y, scale } = this.state;
+            const x = this.state.x;
+            const y = this.state.y;
+            const scale = this.state.scale;
             const winW = window.innerWidth;
-            const gap = 0;
+            const winH = window.innerHeight;
+            
+            // _getWrapBaseScale メソッド依存を排除し、直接プロパティを参照
+            const currentBaseScale = (this.slidePool.current && this.slidePool.current._nsBaseScale) ? this.slidePool.current._nsBaseScale : 1;
+            const prevBaseScale = (this.slidePool.prev && this.slidePool.prev._nsBaseScale) ? this.slidePool.prev._nsBaseScale : 1;
+            const nextBaseScale = (this.slidePool.next && this.slidePool.next._nsBaseScale) ? this.slidePool.next._nsBaseScale : 1;
+            
+            const currentScale = scale * currentBaseScale;
+
+            // --- Absolute Centering Logic ---
+            // CSSのセンタリングを廃止したため、JSで中央位置を計算する
+            // 画像基準サイズ（BaseScale適用済み）に対し、Scaleを掛ける前の元サイズを逆算...
+            // ではなく、単純に img要素の width/height * baseScale * scale が現在の表示サイズ。
+            // これを画面中央に置くためのオフセットを計算する。
+
+            // Helper to calc center offset
+            const getCenterOffset = (el, baseSc, sc) => {
+                if (!el || !el.firstChild) return { x: 0, y: 0 };
+                // img要素を探す (highres優先)
+                const img = el.querySelector('.ns-img-highres') || el.querySelector('img');
+                if (!img) return { x: 0, y: 0 };
+                
+                // imgには width/height が style で入っている前提 (loadHighResでセット済み)
+                // もし入ってなければ natural を使う
+                const w = parseFloat(img.style.width) || img.naturalWidth || 0;
+                const h = parseFloat(img.style.height) || img.naturalHeight || 0;
+                
+                const finalW = w * baseSc * sc;
+                const finalH = h * baseSc * sc;
+                
+                // 画面中央 - 画像中央
+                const offX = (winW - finalW) / 2;
+                const offY = (winH - finalH) / 2;
+                // ピクセルパーフェクトのため整数化
+                return { x: Math.floor(offX), y: Math.floor(offY) };
+            };
 
             if (this.slidePool.current) {
-                this.slidePool.current.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+                const offset = getCenterOffset(this.slidePool.current, currentBaseScale, scale);
+                // state.x, y はパンニング移動量なので加算する
+                // transform-origin: 0 0 なので、オフセット位置まで移動させる必要がある
+                const finalX = offset.x + x;
+                const finalY = offset.y + y;
+                this.slidePool.current.style.transform = `translate3d(${finalX}px, ${finalY}px, 0) scale(${currentScale})`;
             }
             
-            // Show/Hide neighbors based on zoom
-            // Actually, we keep them in DOM but possibly reposition or hide if zoomed?
-            // Existing logic:
+            // 隣接スライドの処理（拡大時は非表示）
             if (scale <= 1.01) {
                 if (this.slidePool.prev) {
                     this.slidePool.prev.style.display = 'block';
-                    this.slidePool.prev.style.transform = `translate3d(${x - winW}px, 0, 0)`;
+                    this.slidePool.prev.style.opacity = '1';
+                    this.slidePool.prev.style.visibility = 'visible';
+                    const offset = getCenterOffset(this.slidePool.prev, prevBaseScale, 1);
+                    // 前の画像は画面幅分左に配置（余白なしの場合）
+                    // ここではシンプルに「画面外に置く」処理
+                    // slidePool自体を動かすより、絶対座標計算で配置
+                    // ただし単純化のため、prev/nextは translate(-winW ... ) のロジックを維持しつつ
+                    // 内部のオフセットを考慮する必要があるが、
+                    // 現状の構造だと slidePool 自体に transform をかけているので
+                    // 「画面中央へのオフセット」-「画面幅」 で配置すればよい
+                    const finalX = offset.x - winW; 
+                    const finalY = offset.y;
+                    this.slidePool.prev.style.transform = `translate3d(${finalX}px, ${finalY}px, 0) scale(${prevBaseScale})`;
                 }
                 if (this.slidePool.next) {
                     this.slidePool.next.style.display = 'block';
-                    this.slidePool.next.style.transform = `translate3d(${x + winW}px, 0, 0)`;
+                    this.slidePool.next.style.opacity = '1';
+                    this.slidePool.next.style.visibility = 'visible';
+                    const offset = getCenterOffset(this.slidePool.next, nextBaseScale, 1);
+                    const finalX = offset.x + winW;
+                    const finalY = offset.y;
+                    this.slidePool.next.style.transform = `translate3d(${finalX}px, ${finalY}px, 0) scale(${nextBaseScale})`;
                 }
             } else {
-                if (this.slidePool.prev) this.slidePool.prev.style.display = 'none';
-                if (this.slidePool.next) this.slidePool.next.style.display = 'none';
+                if (this.slidePool.prev) {
+                    this.slidePool.prev.style.display = 'none';
+                    this.slidePool.prev.style.opacity = '0';
+                    this.slidePool.prev.style.visibility = 'hidden';
+                }
+                if (this.slidePool.next) {
+                    this.slidePool.next.style.display = 'none';
+                    this.slidePool.next.style.opacity = '0';
+                    this.slidePool.next.style.visibility = 'hidden';
+                }
             }
-
-            // Update Zoom Button Icon
-            if (this.btnZoom) {
-                this.btnZoom.innerHTML = (this.state.scale > 1.01) ? SVG_ZOOM_OUT : SVG_ZOOM_IN;
-            }
+            
+            const zoomIcon = (this.state.scale > 1.01) ? SVG_ZOOM_OUT : SVG_ZOOM_IN;
+            if (this.btnZoom) this.btnZoom.innerHTML = zoomIcon;
         }
     }
 
