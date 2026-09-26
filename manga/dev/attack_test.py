@@ -441,6 +441,93 @@ def run(data_dir):
     check("許可 IP 以外は管理画面が 404（ログイン済みでも）", blocked)
     check("X-Forwarded-For 偽装で IP 制限を抜けられない", spoof)
 
+    # --- EPUB import ------------------------------------------------------------------------------
+    def make_epub(pages, ppd="rtl", title="テスト本", opf=None, container=None, extra=()):
+        """pages: list of (xhtml_body_or_None, image_name, image_bytes)"""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+            z.writestr("META-INF/container.xml", container or
+                       '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+                       '<rootfiles><rootfile full-path="item/standard.opf" media-type="application/oebps-package+xml"/></rootfiles></container>')
+            manifest, spine = [], []
+            for i, (body, img, data) in enumerate(pages):
+                if img and data is not None:
+                    z.writestr(f"item/image/{img}", data)
+                    manifest.append(f'<item id="i{i}" href="image/{img}" media-type="image/png"/>')
+                if body is not None:
+                    z.writestr(f"item/xhtml/p{i}.xhtml", '<?xml version="1.0"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" '
+                               'xmlns:epub="http://www.idpf.org/2007/ops"><head><title>t</title></head><body>' + body + '</body></html>')
+                    manifest.append(f'<item id="p{i}" href="xhtml/p{i}.xhtml" media-type="application/xhtml+xml" fallback="i{i}"/>')
+                    spine.append(f'<itemref idref="p{i}"/>')
+            z.writestr("item/standard.opf", opf or
+                       '<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0">'
+                       f'<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>{title}</dc:title></metadata>'
+                       f'<manifest>{"".join(manifest)}</manifest><spine page-progression-direction="{ppd}">{"".join(spine)}</spine></package>')
+            for name, data in extra:
+                z.writestr(name, data)
+        return buf.getvalue()
+
+    def svg_page(img):
+        return ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 60 90">'
+                f'<image width="60" height="90" xlink:href="../image/{img}"/></svg>')
+
+    def works_count():
+        return len(list((data_dir / "works").glob("*/work.json")))
+
+    def import_epub(data, title=""):
+        r = adm.post("/admin/index.php", {"do": "epub", "csrf": csrf, "title": title}, files={"epub": ("b.epub", data, "application/epub+zip")})
+        loc = r.getheader("Location") or ""
+        m = re.search(r"id=([A-Za-z0-9]{12})", loc)
+        flashes = re.findall(r'class="flash flash-\w+">([^<]+)', adm.get("/admin/index.php" + (f"?p=work&id={m.group(1)}" if m else "")).text)
+        return (m.group(1) if m else None), " / ".join(flashes)
+
+    good = make_epub([
+        (svg_page("a.png"), "a.png", png(60, 90, seed=1)),                     # CLIP STUDIO style (svg <image>)
+        ('<img src="../image/b.png" alt=""/>', "b.png", png(60, 90, seed=2)),   # <img>
+        ("<p>no image here</p>", "c.png", png(60, 90, seed=3)),                  # manifest fallback
+        (svg_page("white.png"), "white.png", png(60, 90, seed=0)),
+    ])
+    eid, msg = import_epub(good)
+    man = json.loads(anon.get(f"/read.php?a=m&id={eid}").text) if eid else {}
+    check("EPUB（svg / img / fallback の 3 通り）から全ページを取り込める", bool(eid) and len(man.get("pages", [])) == 4, msg)
+    check("EPUB のタイトルと読む向き（rtl）を引き継ぐ", man.get("title") == "テスト本" and man.get("direction") == "rtl")
+    eid2, _ = import_epub(make_epub([(svg_page("a.png"), "a.png", png(60, 90))], ppd="ltr"), title="上書きタイトル")
+    man2 = json.loads(anon.get(f"/read.php?a=m&id={eid2}").text) if eid2 else {}
+    check("左から右の EPUB は ltr、入力したタイトルが優先", man2.get("direction") == "ltr" and man2.get("title") == "上書きタイトル")
+
+    n1 = works_count()
+    xxe_opf = ('<?xml version="1.0"?><!DOCTYPE package [<!ENTITY x SYSTEM "file:///C:/Windows/win.ini">]>'
+               '<package xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>&x;</dc:title></metadata>'
+               '<manifest><item id="i0" href="image/a.png" media-type="image/png"/></manifest><spine><itemref idref="i0"/></spine></package>')
+    eid, msg = import_epub(make_epub([(None, "a.png", png(60, 90))], opf=xxe_opf))
+    check("XXE（外部実体）入りの EPUB は拒否", eid is None and "目録" in msg and "[fonts]" not in msg, msg)
+    eid, msg = import_epub(make_epub([(svg_page("a.png"), "a.png", png(60, 90))], extra=[("META-INF/encryption.xml", "<encryption/>")]))
+    check("DRM（encryption.xml）付きは拒否", eid is None and "DRM" in msg, msg)
+    eid, msg = import_epub(make_epub([("<p>文章だけ</p>", None, None)]))
+    check("文章だけの EPUB は拒否", eid is None and "画像のページが見つかりません" in msg, msg)
+    trav = make_epub([('<img src="../../../../../evil.png"/>', None, None)], extra=[("evil.png", png(10, 10))])
+    eid, msg = import_epub(trav)
+    check("EPUB の外を指すパス（../）は使わない", eid is None, msg)
+    eid, msg = import_epub(make_epub([(svg_page("a.png"), "a.png", png(60, 90))],
+                                     container='<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles>'
+                                               '<rootfile full-path="../../config.php"/></rootfiles></container>'))
+    check("目録の場所を外に向けても読まない", eid is None, msg)
+    fake = make_epub([(svg_page("a.png"), "a.png", b"\x89PNG\r\n\x1a\n<?php system($_GET['c']); ?>")])
+    eid, msg = import_epub(fake)
+    check("画像に偽装した PHP だけの EPUB は作品を作らない", eid is None and "取り込める画像がありません" in msg, msg)
+    bombbuf = io.BytesIO()
+    with zipfile.ZipFile(bombbuf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("META-INF/container.xml", '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles>'
+                                             '<rootfile full-path="o.opf"/></rootfiles></container>')
+        z.writestr("o.opf", '<package xmlns="http://www.idpf.org/2007/opf"><manifest><item id="i0" href="big.png" media-type="image/png"/>'
+                            '</manifest><spine><itemref idref="i0"/></spine></package>')
+        z.writestr("big.png", b"\x00" * (70 * 1024 * 1024))
+    eid, msg = import_epub(bombbuf.getvalue())
+    check("展開すると巨大な画像（ZIP 爆弾）は読まない", eid is None, msg)
+    check("拒否した EPUB は作品もファイルも残さない", works_count() == n1 and not list((data_dir / "tmp").glob("epub-*")))
+    check("XXE の試みはログに残る", "epub_entity_refused" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+
     # --- Guest mode plugin (read-only admin for demos) --------------------------------------------
     plugin_src = HERE.parent / "plugins" / "guest-mode.php"
     plugin_dst = data_dir.parent / "plugins" / "guest-mode.php"
@@ -491,7 +578,9 @@ def run(data_dir):
     refused.append(r.status == 403)
     r = g.post("/admin/index.php", {"do": "restore", "csrf": gcsrf}, files={"backup": ("b.zip", good_zip or b"x", "application/zip")})
     refused.append(r.status == 303)
-    check("ゲストの変更操作 15 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 15, str(refused))
+    r = g.post("/admin/index.php", {"do": "epub", "csrf": gcsrf}, files={"epub": ("b.epub", good, "application/epub+zip")})
+    refused.append(r.status == 303)
+    check("ゲストの変更操作 16 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 16, str(refused))
     check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
     check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
 

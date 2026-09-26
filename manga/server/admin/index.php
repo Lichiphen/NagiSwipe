@@ -11,6 +11,7 @@ require __DIR__ . '/../lib/bootstrap.php';
 require __DIR__ . '/../lib/auth.php';
 require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
+require __DIR__ . '/../lib/epub.php';
 nm_load_plugins();
 
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
@@ -339,6 +340,25 @@ function nm_handle_post(array $cfg): void
 
         case 'upload':
             nm_upload_page($id, $cfg);
+
+        case 'epub':
+            $f = $_FILES['epub'] ?? null;
+            if (!is_array($f) || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) {
+                nm_flash('err', 'EPUB を受け取れませんでした（サーバーのアップロード上限を超えている可能性があります）');
+                nm_redirect();
+            }
+            $res = nm_epub_import((string)$f['tmp_name'],
+                mb_substr(trim(nm_str($_POST, 'title', 600)), 0, 200),
+                mb_substr(trim(nm_str($_POST, 'series', 600)), 0, 200), $cfg);
+            if (is_string($res)) {
+                nm_log('epub_rejected', $res);
+                nm_flash('err', $res);
+                nm_redirect();
+            }
+            nm_log('epub_imported', $res['id'] . ' ' . $res['count']);
+            nm_flash('ok', '「' . $res['title'] . '」を EPUB から作りました（' . $res['count'] . ' ページ'
+                . ($res['skipped'] ? '、読めなかった ' . $res['skipped'] . ' ページは飛ばしました' : '') . '）');
+            nm_redirect('p=work&id=' . $res['id']);
 
         case 'sort_name':
             nm_modify_work($id, static function (array $w) {
@@ -672,7 +692,16 @@ function nm_view_dashboard(): void
         . '<label>タイトル<input name="title" required maxlength="200" placeholder="例: 第1話 はじまり"></label>'
         . '<label>シリーズ名（任意）<input name="series" maxlength="200" placeholder="例: ねこの日々"></label>'
         . '<label>読み方<select name="direction">' . nm_direction_options('rtl') . '</select></label>'
-        . '<button class="btn primary">作成</button></form></section>'
+        . '<button class="btn primary">作成</button></form>'
+        . '<h2>EPUB から作る</h2>'
+        . '<p class="note">CLIP STUDIO PAINT などで書き出した漫画の EPUB（画像のページだけのもの）から、ページの順番・読む向き・タイトルをそのまま取り込みます。DRM 付き・文章だけの EPUB は読めません。</p>'
+        . '<form method="post" action="index.php" enctype="multipart/form-data" class="form row">' . nm_csrf_field()
+        . '<input type="hidden" name="do" value="epub">'
+        . '<label>EPUB ファイル<input type="file" name="epub" accept=".epub,application/epub+zip" required></label>'
+        . '<label>タイトル（空欄なら EPUB のタイトル）<input name="title" maxlength="200"></label>'
+        . '<label>シリーズ名（任意）<input name="series" maxlength="200"></label>'
+        . '<button class="btn primary">取り込む</button></form>'
+        . '<p class="note">サーバーのアップロード上限: ' . h((string)ini_get('upload_max_filesize')) . '（これより大きい EPUB は取り込めません）</p></section>'
         . '<p class="warn js-probe" hidden data-probe="../data/probe.txt">data フォルダがインターネットから見える状態です。.htaccess が効いていない可能性があります。README の「data フォルダを守る」を確認してください。</p>'
         . '<section class="works">' . $rows . '</section>');
 }
