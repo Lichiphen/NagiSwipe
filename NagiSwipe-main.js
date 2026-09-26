@@ -689,6 +689,8 @@
                 if (frame && currentEl) {
                     this._zoomTimer = setTimeout(() => {
                         this._zoomTimer = null;
+                        // Opening is over: later layout changes must apply instantly
+                        currentEl.style.transition = 'none';
                         this._setSlideClip(currentEl, '');
                         this._showThumb();
                         this._endAnimation();
@@ -801,7 +803,10 @@
                         : this._guessSizeFromThumb(ph.naturalWidth, ph.naturalHeight);
                     if (!guess) return;
                     this._setSlideSize(wrap, guess.w, guess.h);
-                    if (this.isOpen && !this.isAnimating) this.render();
+                    if (this.isOpen && !this.isAnimating) {
+                        wrap.style.transition = 'none';
+                        this.render();
+                    }
                 };
                 ph.onload = sizeFromThumb;
                 ph.src = item.thumb;
@@ -1003,12 +1008,18 @@
                     if (!this.isOpen || wrapperEl._nsIndex !== index) return;
 
                     // 実寸で枠を確定（画像が画面より小さい場合は拡大しない）
+                    // 画像サイズは即座に変わるので、transform も即座に合わせる。
+                    // トランジションが残っていると一瞬拡大して縮む「揺れ」になる
+                    wrapperEl.style.transition = 'none';
                     this._setSlideSize(wrapperEl, fullImg.naturalWidth, fullImg.naturalHeight);
                     wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
 
                     // Layout Update Sync
                     requestAnimationFrame(() => {
-                        if (this.isOpen && !this.isAnimating) this.render();
+                        if (this.isOpen && !this.isAnimating) {
+                            wrapperEl.style.transition = 'none';
+                            this.render();
+                        }
                         fullImg.style.opacity = '1';
                         wrapperEl.classList.add('ns-img-loaded');
                         if (wrapperEl === this.slidePool.current) this._updateZoomButtonDisplay();
@@ -1163,6 +1174,10 @@
             // Priority 1: Buttons should always be responsive if possible
             // Caption: leave it to native text selection / scrolling
             if (e.target.closest('.ns-btn, .ns-caption')) return;
+
+            // Mouse: left button only (the back / forward buttons navigate history,
+            // the middle / right buttons are not ours)
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
 
             // Otherwise, don't start new gestures during animation
             if (this.isAnimating) return;
@@ -1330,6 +1345,7 @@
         onPointerUp(e) {
             const btn = e.target.closest('.ns-btn, .ns-caption');
             if (btn) return; // Handled by click listener / native behavior
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
 
             if (this.isAnimating) return;
             
