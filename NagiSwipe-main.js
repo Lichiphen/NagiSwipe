@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.2.0
+ * NagiSwipe v1.3.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -13,6 +13,11 @@
     'use strict';
 
     const DEFAULT_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|bmp|avif|svg)$/i;
+
+    // Zoom from / to the thumbnail
+    const ZOOM_OPEN_MS = 340;
+    const ZOOM_CLOSE_MS = 300;
+    const ZOOM_EASING = 'cubic-bezier(0.25, 0.8, 0.25, 1)';
 
     const SVG_ARROW_LEFT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>`;
     const SVG_ARROW_RIGHT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
@@ -102,12 +107,27 @@
                 imageExtensions: DEFAULT_EXTENSIONS,
                 selector: 'a[href]',
                 scope: document,
-                caption: true,  // Show caption (alt etc.) at the bottom
-                counter: true   // Show "3 / 12" at the top left
+                caption: true,        // Show caption (alt etc.) at the bottom
+                counter: true,        // Show "3 / 12" at the top left
+                zoomAnimation: true,  // Open / close by zooming from / to the thumbnail
+                history: true         // Browser "back" closes the viewer
             };
 
             this.domGenerated = false;
             this._savedOverflow = null;
+
+            // Inertia (pan after release)
+            this._velSamples = [];
+            this._inertiaRaf = null;
+
+            // Thumbnail hidden while zooming from / to it
+            this._hiddenThumb = null;
+            this._zoomTimer = null;
+
+            // History entry pushed while the viewer is open
+            this._historyPushed = false;
+            this._historyBackPending = false;
+            this._pushAfterPop = false;
         }
 
         init(options = {}) {
@@ -260,18 +280,26 @@
 
         _lockScroll() {
             if (this._savedOverflow) return;
+            // Hiding the scrollbar would shift the page sideways; pad by its width instead
+            const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
             this._savedOverflow = {
                 html: document.documentElement.style.overflow,
-                body: document.body.style.overflow
+                body: document.body.style.overflow,
+                padding: document.body.style.paddingRight
             };
+            if (scrollbarW > 0) {
+                const pad = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+                document.body.style.paddingRight = `${pad + scrollbarW}px`;
+            }
             document.documentElement.style.overflow = 'hidden';
             document.body.style.overflow = 'hidden';
         }
 
         _unlockScroll() {
-            const saved = this._savedOverflow || { html: '', body: '' };
+            const saved = this._savedOverflow || { html: '', body: '', padding: '' };
             document.documentElement.style.overflow = saved.html;
             document.body.style.overflow = saved.body;
+            document.body.style.paddingRight = saved.padding;
             this._savedOverflow = null;
         }
 
@@ -324,10 +352,233 @@
                 });
             };
             window.addEventListener('resize', this._resizeHandler);
+
+            // Browser "back" (incl. mouse back button / swipe-back) closes the viewer
+            if (this._popHandler) window.removeEventListener('popstate', this._popHandler);
+            this._popHandler = () => {
+                if (this._historyBackPending) {
+                    // Our own history.back() from close() arrived
+                    this._historyBackPending = false;
+                    if (this._pushAfterPop && this.isOpen) {
+                        this._pushAfterPop = false;
+                        this._pushHistory();
+                    }
+                    return;
+                }
+                if (this.isOpen && this._historyPushed) {
+                    this._historyPushed = false;
+                    this.close();
+                }
+            };
+            window.addEventListener('popstate', this._popHandler);
+
+            // Reloaded while the viewer was open: drop the stale marker
+            try {
+                const st = window.history.state;
+                if (st && st.nagiswipe) {
+                    const rest = { ...st };
+                    delete rest.nagiswipe;
+                    window.history.replaceState(Object.keys(rest).length ? rest : null, '');
+                }
+            } catch (e) { /* history not available */ }
+        }
+
+        _pushHistory() {
+            if (!this.options.history || this._historyPushed) return;
+            if (this._historyBackPending) {
+                // Wait until the previous back() has been applied
+                this._pushAfterPop = true;
+                return;
+            }
+            try {
+                // Same URL; only a marker so that "back" lands on the page again
+                window.history.pushState({ ...(window.history.state || {}), nagiswipe: true }, '');
+                this._historyPushed = true;
+            } catch (e) { /* sandboxed iframe etc. */ }
+        }
+
+        _releaseHistory() {
+            this._pushAfterPop = false;
+            if (!this._historyPushed) return;
+            this._historyPushed = false;
+            try {
+                const st = window.history.state;
+                if (st && st.nagiswipe) {
+                    this._historyBackPending = true;
+                    window.history.back();
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        _prefersReducedMotion() {
+            return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        }
+
+        // --- Zoom from / to thumbnail ---
+
+        _getThumbRect(index) {
+            const item = this.items[index];
+            const el = item && (item.thumbEl || item.linkEl);
+            if (!el || !el.isConnected) return null;
+            const r = el.getBoundingClientRect();
+            if (r.width < 2 || r.height < 2) return null;
+            // Off screen (e.g. swiped far away from the opened one): fade instead
+            if (r.bottom < 0 || r.right < 0 || r.top > window.innerHeight || r.left > window.innerWidth) return null;
+            return r;
+        }
+
+        /**
+         * Where the slide should be so that it looks exactly like the thumbnail.
+         * Thumbnails are often cropped (object-fit: cover), so the image is scaled
+         * to cover the thumbnail box and the overflow is clipped away (in image px).
+         */
+        _getZoomFrame(index, wrap) {
+            if (!this.options.zoomAnimation || this._prefersReducedMotion()) return null;
+            if (!wrap || !wrap._nsW) return null;
+            const r = this._getThumbRect(index);
+            if (!r) return null;
+
+            const W = wrap._nsW;
+            const H = wrap._nsH;
+            const thumb = this.items[index].thumbEl;
+            const fit = thumb ? getComputedStyle(thumb).objectFit : 'fill';
+            const contain = fit === 'contain' || fit === 'scale-down';
+            const s = contain ? Math.min(r.width / W, r.height / H) : Math.max(r.width / W, r.height / H);
+            const clipX = contain ? 0 : Math.max(0, (W * s - r.width) / 2 / s);
+            const clipY = contain ? 0 : Math.max(0, (H * s - r.height) / 2 / s);
+            return {
+                x: r.left + r.width / 2 - (W * s) / 2,
+                y: r.top + r.height / 2 - (H * s) / 2,
+                scale: s,
+                clip: `inset(${clipY}px ${clipX}px)`
+            };
+        }
+
+        _setSlideClip(wrap, clip, transition) {
+            if (!wrap) return;
+            wrap.querySelectorAll('.ns-img').forEach(img => {
+                img.style.transition = transition || '';
+                img.style.clipPath = clip || '';
+            });
+        }
+
+        _hideThumb(index) {
+            this._showThumb();
+            const thumb = this.items[index] && this.items[index].thumbEl;
+            if (!thumb) return;
+            this._hiddenThumb = { el: thumb, prev: thumb.style.visibility };
+            thumb.style.visibility = 'hidden';
+        }
+
+        _showThumb() {
+            if (!this._hiddenThumb) return;
+            this._hiddenThumb.el.style.visibility = this._hiddenThumb.prev;
+            this._hiddenThumb = null;
+        }
+
+        // Called when a transition-driven animation is over
+        _endAnimation() {
+            this.isAnimating = false;
+            [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(wrap => {
+                if (wrap && wrap._nsPendingReveal) {
+                    const reveal = wrap._nsPendingReveal;
+                    wrap._nsPendingReveal = null;
+                    reveal();
+                }
+            });
+        }
+
+        // --- Pan bounds / inertia ---
+
+        _getPanBounds(scale = this.state.scale) {
+            const wrap = this.slidePool.current;
+            if (!wrap || !wrap._nsW) return { x: 0, y: 0 };
+            const bs = wrap._nsBaseScale || 1;
+            return {
+                x: Math.max(0, (wrap._nsW * bs * scale - window.innerWidth) / 2),
+                y: Math.max(0, (wrap._nsH * bs * scale - window.innerHeight) / 2)
+            };
+        }
+
+        // Moving further past the edge only follows the finger partly
+        _rubberBand(pos, delta, bound) {
+            const pushingOut = Math.abs(pos) >= bound && Math.sign(delta) === Math.sign(pos);
+            return pos + (pushingOut ? delta * 0.35 : delta);
+        }
+
+        _trackVelocity(point) {
+            const now = performance.now();
+            this._velSamples.push({ t: now, x: point.x, y: point.y });
+            while (this._velSamples.length > 2 && now - this._velSamples[0].t > 100) {
+                this._velSamples.shift();
+            }
+        }
+
+        // px per ms, from the last ~100ms of movement
+        _getReleaseVelocity() {
+            const samples = this._velSamples;
+            if (samples.length < 2) return { vx: 0, vy: 0 };
+            const last = samples[samples.length - 1];
+            // Finger stopped before lifting: no fling
+            if (performance.now() - last.t > 60) return { vx: 0, vy: 0 };
+            const first = samples[0];
+            const dt = last.t - first.t;
+            if (dt <= 0) return { vx: 0, vy: 0 };
+            return { vx: (last.x - first.x) / dt, vy: (last.y - first.y) / dt };
+        }
+
+        _startInertia(velocity) {
+            this._stopInertia();
+            [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
+                if (el) el.style.transition = 'none';
+            });
+            let vx = velocity.vx;
+            let vy = velocity.vy;
+            let last = performance.now();
+
+            const step = (now) => {
+                const dt = Math.min(now - last, 32);
+                last = now;
+                const bounds = this._getPanBounds();
+                const s = this.state;
+                // Glide freely inside, brake hard once past the edge
+                vx *= Math.pow(Math.abs(s.x) > bounds.x ? 0.9 : 0.995, dt);
+                vy *= Math.pow(Math.abs(s.y) > bounds.y ? 0.9 : 0.995, dt);
+                s.x += vx * dt;
+                s.y += vy * dt;
+                this.render();
+
+                if (Math.abs(vx) < 0.02 && Math.abs(vy) < 0.02) {
+                    this._inertiaRaf = null;
+                    this._settleInBounds();
+                    return;
+                }
+                this._inertiaRaf = requestAnimationFrame(step);
+            };
+            this._inertiaRaf = requestAnimationFrame(step);
+        }
+
+        _stopInertia() {
+            if (this._inertiaRaf) cancelAnimationFrame(this._inertiaRaf);
+            this._inertiaRaf = null;
+        }
+
+        // Spring back inside the image edges
+        _settleInBounds() {
+            const bounds = this._getPanBounds();
+            const { x, y, scale } = this.state;
+            const cx = SmartUtils.clamp(x, -bounds.x, bounds.x);
+            const cy = SmartUtils.clamp(y, -bounds.y, bounds.y);
+            if (Math.abs(cx - x) > 0.5 || Math.abs(cy - y) > 0.5) {
+                this.animateTo({ x: cx, y: cy, scale });
+            } else {
+                this.updateUiVisibility();
+            }
         }
 
         _refit() {
             if (!this.isOpen || this.isAnimating) return;
+            this._stopInertia();
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(wrap => {
                 if (!wrap) return;
                 if (wrap._nsW) this._setSlideSize(wrap, wrap._nsW, wrap._nsH);
@@ -385,35 +636,66 @@
             if (this.viewer) this.viewer.classList.remove('ns-dragging');
             this.bgTapStart = null;
 
+            this._stopInertia();
+            this._showThumb();
+            if (this._zoomTimer) {
+                clearTimeout(this._zoomTimer);
+                this._zoomTimer = null;
+            }
+            this.bg.style.transition = '';
+
             this.updateUiVisibility();
             this.setupSlides(index);
             this._updateCaption();
             this._lockScroll();
+            this._pushHistory();
 
-            // Animation Opening: Simple Fade In
             this.bg.style.opacity = 0;
             this.ui.style.opacity = 0;
-            
+
             this.state = { x: 0, y: 0, scale: 1 };
             const currentEl = this.slidePool.current;
-            
-            // アニメーションなしで初期位置をセット
+
+            // Opening: zoom out of the thumbnail when we know where it is, otherwise fade in
+            const frame = this._getZoomFrame(index, currentEl);
             if (currentEl) {
                 currentEl.style.transition = 'none';
-                currentEl.style.transform = `translate3d(0, 0, 0)`;
-                // _nsBaseScale は _setWrapContent で 1 に初期化されている
+                if (frame) {
+                    currentEl.style.transform = `translate3d(${frame.x}px, ${frame.y}px, 0) scale(${frame.scale})`;
+                    this._setSlideClip(currentEl, frame.clip);
+                    this._hideThumb(index);
+                } else {
+                    currentEl.style.transform = `translate3d(0, 0, 0)`;
+                }
             }
 
             requestAnimationFrame(() => {
+                if (!this.isOpen) return;
                 this.bg.style.opacity = 1;
                 this.ui.style.opacity = 1;
 
+                if (frame && currentEl) {
+                    currentEl.getBoundingClientRect(); // commit the start frame
+                    currentEl.style.transition = `transform ${ZOOM_OPEN_MS}ms ${ZOOM_EASING}`;
+                    this._setSlideClip(currentEl, 'inset(0px 0px)',
+                        `clip-path ${ZOOM_OPEN_MS}ms ${ZOOM_EASING}, opacity 0.4s ease-out`);
+                }
                 this.render();
 
                 this.loadHighRes(index, currentEl);
                 this.preloadSurrounding(index);
                 this._updateSpinner();
-                this.isAnimating = false;
+
+                if (frame && currentEl) {
+                    this._zoomTimer = setTimeout(() => {
+                        this._zoomTimer = null;
+                        this._setSlideClip(currentEl, '');
+                        this._showThumb();
+                        this._endAnimation();
+                    }, ZOOM_OPEN_MS);
+                } else {
+                    this._endAnimation();
+                }
             });
         }
 
@@ -504,7 +786,7 @@
 
             // サムネイルを仮画像として即座に置く。
             // 高画質版が届くまでの間も、スワイプ中の隣のスライドに絵が見える
-            if (item.thumb && item.thumb !== item.src) {
+            if (item.thumb) {
                 const ph = document.createElement('img');
                 ph.className = 'ns-img ns-img-placeholder';
                 ph.alt = '';
@@ -513,7 +795,10 @@
                 ph.decoding = 'async';
                 const sizeFromThumb = () => {
                     if (wrap._nsW || wrap._nsIndex !== index) return;
-                    const guess = this._guessSizeFromThumb(ph.naturalWidth, ph.naturalHeight);
+                    // Thumbnail is the full image itself: its size is exact
+                    const guess = (item.thumb === item.src)
+                        ? { w: ph.naturalWidth, h: ph.naturalHeight }
+                        : this._guessSizeFromThumb(ph.naturalWidth, ph.naturalHeight);
                     if (!guess) return;
                     this._setSlideSize(wrap, guess.w, guess.h);
                     if (this.isOpen && !this.isAnimating) this.render();
@@ -540,11 +825,39 @@
                 clearTimeout(this.closeTimer);
                 this.closeTimer = null;
             }
+            this._stopInertia();
+            if (this._zoomTimer) {
+                clearTimeout(this._zoomTimer);
+                this._zoomTimer = null;
+            }
+            this._showThumb();
+            this._releaseHistory();
+
             const currentEl = this.slidePool.current;
-            
-            // Simple Fade Out
-            if (currentEl) {
-                // Just fade out, don't move
+            // A high-res image waiting for an animation to end: take its real size now
+            if (currentEl && currentEl._nsPendingReveal) {
+                const reveal = currentEl._nsPendingReveal;
+                currentEl._nsPendingReveal = null;
+                reveal();
+            }
+            const frame = this._getZoomFrame(this.currentIndex, currentEl);
+            let closeDelay = 300;
+
+            if (currentEl && frame) {
+                // Shrink back into the thumbnail (from wherever it is now: zoomed, dragged…)
+                [this.slidePool.prev, this.slidePool.next].forEach(el => {
+                    if (el) el.style.visibility = 'hidden';
+                });
+                this._setSlideClip(currentEl, 'inset(0px 0px)');
+                currentEl.getBoundingClientRect(); // commit the start clip
+                currentEl.style.transition = `transform ${ZOOM_CLOSE_MS}ms ${ZOOM_EASING}`;
+                currentEl.style.transform = `translate3d(${frame.x}px, ${frame.y}px, 0) scale(${frame.scale})`;
+                this._setSlideClip(currentEl, frame.clip,
+                    `clip-path ${ZOOM_CLOSE_MS}ms ${ZOOM_EASING}, opacity 0.4s ease-out`);
+                this._hideThumb(this.currentIndex);
+                closeDelay = ZOOM_CLOSE_MS;
+            } else if (currentEl) {
+                // Simple Fade Out
                 currentEl.style.transition = 'opacity 0.25s ease-out';
                 currentEl.style.opacity = 0;
             }
@@ -553,15 +866,18 @@
             this.allowOverZoom = false;
             if (this.viewer) this.viewer.classList.remove('ns-dragging');
             this._setZoomButtonVisible(this.btnZoom, false);
+            this.bg.style.transition = '';
             this.bg.style.opacity = 0;
             this.ui.style.opacity = 0;
             if (this._spinnerTimer) clearTimeout(this._spinnerTimer);
             this.spinner.style.opacity = '0';
-            this.viewer.style.pointerEvents = 'none';// prevent interaction during fade out
+            this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
 
             this.closeTimer = setTimeout(() => {
                 this.closeTimer = null;
                 if (this.isOpen) return;
+                // The slide has landed on the thumbnail: swap back to the real one
+                this._showThumb();
                 this.viewer.style.display = 'none';
                 // Reset everything
                 this.stage.innerHTML = ''; 
@@ -569,8 +885,8 @@
                 this.pointers = [];
                 this.isDragging = false;
                 this.isAnimating = false;
-            }, 300);
-            
+            }, closeDelay);
+
             // Re-enable scroll
             this._unlockScroll();
         }
@@ -594,7 +910,13 @@
             if (this._clickHandler) document.removeEventListener('click', this._clickHandler);
             if (this._keyHandler) window.removeEventListener('keydown', this._keyHandler);
             if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
-            if (this.isOpen) this._unlockScroll();
+            if (this._popHandler) window.removeEventListener('popstate', this._popHandler);
+            this._stopInertia();
+            this._showThumb();
+            if (this.isOpen) {
+                this._unlockScroll();
+                this._releaseHistory();
+            }
             this.isOpen = false;
             // Reset
             this.domGenerated = false;
@@ -609,6 +931,10 @@
         _getKnownSize(item) {
             if (item.naturalWidth && item.naturalHeight) {
                 return { w: item.naturalWidth, h: item.naturalHeight };
+            }
+            const t = item.thumbEl;
+            if (t && item.thumb === item.src && t.naturalWidth && t.naturalHeight) {
+                return { w: t.naturalWidth, h: t.naturalHeight };
             }
             const link = item.linkEl;
             const w = link ? parseInt(link.getAttribute('data-ns-width'), 10) : 0;
@@ -672,26 +998,32 @@
                 item.naturalWidth = fullImg.naturalWidth;
                 item.naturalHeight = fullImg.naturalHeight;
 
-                // スライドが閉じられた / 使い回されて別の画像になった
-                if (!this.isOpen || wrapperEl._nsIndex !== index) return;
+                const reveal = () => {
+                    // スライドが閉じられた / 使い回されて別の画像になった
+                    if (!this.isOpen || wrapperEl._nsIndex !== index) return;
 
-                // 実寸で枠を確定（画像が画面より小さい場合は拡大しない）
-                this._setSlideSize(wrapperEl, fullImg.naturalWidth, fullImg.naturalHeight);
-                wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
+                    // 実寸で枠を確定（画像が画面より小さい場合は拡大しない）
+                    this._setSlideSize(wrapperEl, fullImg.naturalWidth, fullImg.naturalHeight);
+                    wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
 
-                // Layout Update Sync
-                requestAnimationFrame(() => {
-                    if (this.isOpen && !this.isAnimating) this.render();
-                    fullImg.style.opacity = '1';
-                    wrapperEl.classList.add('ns-img-loaded');
-                    if (wrapperEl === this.slidePool.current) this._updateZoomButtonDisplay();
-                    this._updateSpinner();
-                    // 高画質版がフェードインし終えたら仮画像は捨てる
-                    setTimeout(() => {
-                        const ph = wrapperEl.querySelector('.ns-img-placeholder');
-                        if (ph) ph.remove();
-                    }, 450);
-                });
+                    // Layout Update Sync
+                    requestAnimationFrame(() => {
+                        if (this.isOpen && !this.isAnimating) this.render();
+                        fullImg.style.opacity = '1';
+                        wrapperEl.classList.add('ns-img-loaded');
+                        if (wrapperEl === this.slidePool.current) this._updateZoomButtonDisplay();
+                        this._updateSpinner();
+                        // 高画質版がフェードインし終えたら仮画像は捨てる
+                        setTimeout(() => {
+                            const ph = wrapperEl.querySelector('.ns-img-placeholder');
+                            if (ph) ph.remove();
+                        }, 450);
+                    });
+                };
+
+                // 開閉・ページめくりの最中に寸法が変わるとガタつくので、終わってから差し替える
+                if (this.isAnimating) wrapperEl._nsPendingReveal = reveal;
+                else reveal();
             };
 
             fullImg.onerror = () => {
@@ -836,6 +1168,9 @@
             if (this.isAnimating) return;
 
             e.preventDefault();
+            // Catch a gliding image
+            this._stopInertia();
+            this._velSamples = [];
             this.pointers.push(e);
 
             // Reset transition for drag
@@ -919,6 +1254,10 @@
             const dx = currentCenter.x - this.lastCenter.x;
             const dy = currentCenter.y - this.lastCenter.y;
 
+            // Velocity for the fling after release (one finger only)
+            if (this.pointers.length === 1) this._trackVelocity(currentCenter);
+            else this._velSamples = [];
+
             if (this.pointers.length === 2) {
                 // Pinch
                 const currentDist = SmartUtils.getDistance(this.pointers[0], this.pointers[1]);
@@ -959,13 +1298,28 @@
                 }
 
                 if (this.state.scale > 1) {
-                    this.state.x += dx;
-                    this.state.y += dy;
+                    // Past the image edge the image only follows the finger partly
+                    const bounds = this._getPanBounds();
+                    this.state.x = this._rubberBand(this.state.x, dx, bounds.x);
+                    this.state.y = this._rubberBand(this.state.y, dy, bounds.y);
                 } else {
-                    // Resistance at edges if moving x
+                    // Resistance at the first / last image
+                    const hasPrev = this.currentIndex > 0;
+                    const hasNext = this.currentIndex < this.items.length - 1;
+                    if ((applyDx < 0 && this.state.x <= 0 && !hasNext) ||
+                        (applyDx > 0 && this.state.x >= 0 && !hasPrev)) {
+                        applyDx *= 0.35;
+                    }
                     this.state.x += applyDx;
-                    // Vertical drag for closing -> resistance? or 0.85 approx
+                    // Vertical drag for closing
                     this.state.y += applyDy;
+
+                    // The page shows through more the further it is pulled
+                    if (this.dragAxis === 'y') {
+                        const pull = Math.min(Math.abs(this.state.y) / (window.innerHeight * 0.5), 1);
+                        this.bg.style.transition = 'none';
+                        this.bg.style.opacity = String(1 - pull * 0.7);
+                    }
                 }
             }
 
@@ -1015,8 +1369,8 @@
                 return;
             }
 
-            // Treat as tap if movement is small
-            if (dist < moveDistThreshold) {
+            // Treat as tap if movement is small (a short drag still snaps back / flings)
+            if (dist < moveDistThreshold && !this.isDragging) {
                 let handledTap = false;
                 if (!this.tapTargetIsImage && !this.isDragging) {
                     this.close();
@@ -1081,9 +1435,11 @@
                 const centerOffsetX = tapX - winW / 2;
                 const centerOffsetY = tapY - winH / 2;
                 
-                const newX = -centerOffsetX * (targetScale - 1);
-                const newY = -centerOffsetY * (targetScale - 1);
-                
+                // Keep the zoomed image covering the screen edges
+                const bounds = this._getPanBounds(targetScale);
+                const newX = SmartUtils.clamp(-centerOffsetX * (targetScale - 1), -bounds.x, bounds.x);
+                const newY = SmartUtils.clamp(-centerOffsetY * (targetScale - 1), -bounds.y, bounds.y);
+
                 this.animateTo({ x: newX, y: newY, scale: targetScale });
             }
         }
@@ -1091,30 +1447,38 @@
         onGestureEnd() {
             const { x, y, scale } = this.state;
             const winW = window.innerWidth;
+            const v = this._getReleaseVelocity();
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
                 if(el) el.style.transition = 'transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1)';
             });
+            const restoreBg = () => {
+                this.bg.style.transition = '';
+                this.bg.style.opacity = 1;
+            };
 
             if (scale < 1) {
+                 restoreBg();
                  this.animateTo({ x: 0, y: 0, scale: 1 });
             } else if (scale > 1) {
-                 // Should ideally clamp to boundaries, but for simple gallery:
-                 // just keep it unless it's way out?
-                 this.updateUiVisibility();
+                 // Keep gliding, then spring back inside the image edges
+                 this._startInertia(v);
             } else {
                 // Scale 1 logic
-                // Vertical Close
-                if (Math.abs(y) > 60) { // Threshold for closure
+                // Vertical Close: far enough, or flicked up / down
+                const flickY = this.dragAxis === 'y' && Math.abs(v.vy) > 0.5 && Math.sign(v.vy) === Math.sign(y);
+                if (Math.abs(y) > 60 || (flickY && Math.abs(y) > 16)) {
                     this.close();
                     return;
                 }
+                restoreBg();
 
-                // Horizontal Swipe
+                // Horizontal Swipe: far enough, or a quick flick in the same direction
                 const threshold = winW * 0.12;
-                if (x < -threshold && this.items[this.currentIndex + 1]) {
+                const flickX = this.dragAxis === 'x' && Math.abs(v.vx) > 0.45 && Math.abs(x) > 16;
+                if ((x < -threshold || (flickX && v.vx < 0)) && this.items[this.currentIndex + 1]) {
                     this.changeIndex(1);
-                } 
-                else if (x > threshold && this.items[this.currentIndex - 1]) {
+                }
+                else if ((x > threshold || (flickX && v.vx > 0)) && this.items[this.currentIndex - 1]) {
                     this.changeIndex(-1);
                 } else {
                     this.animateTo({ x: 0, y: 0, scale: 1 });
@@ -1124,6 +1488,7 @@
 
         changeIndex(dir) {
             if (this.isAnimating) return;
+            this._stopInertia();
 
             const targetIndex = this.currentIndex + dir;
             if (targetIndex < 0 || targetIndex >= this.items.length) {
@@ -1171,7 +1536,7 @@
                 });
                 this.render();
 
-                this.isAnimating = false;
+                this._endAnimation();
             }, duration);
         }
 
@@ -1186,7 +1551,7 @@
 
             this.render();
             setTimeout(() => {
-                this.isAnimating = false;
+                this._endAnimation();
                 this.updateUiVisibility();
             }, 300);
         }
