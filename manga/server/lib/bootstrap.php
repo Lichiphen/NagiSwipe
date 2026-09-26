@@ -440,6 +440,58 @@ function nm_check_token(array $work, string $token): bool
     return hash_equals(nm_token_sig($work, $exp), $m[2]);
 }
 
+// ---------------------------------------------------------------------------
+// Reader passwords, readable again by the admin
+// ---------------------------------------------------------------------------
+
+/*
+ * A reader password is a shared word the author hands out, so the admin may
+ * want to look it up later. It is stored encrypted with a key derived from the
+ * secret in config.php (never exported in backups). Checking a password still
+ * uses the password_hash only.
+ */
+function nm_seal_key(): string
+{
+    $cfg = nm_config();
+    return hash('sha256', 'reader-password|' . (string)($cfg['secret'] ?? ''), true);
+}
+
+function nm_seal(string $plain): string
+{
+    $key = nm_seal_key();
+    if (function_exists('sodium_crypto_secretbox')) {
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        return 's1:' . base64_encode($nonce . sodium_crypto_secretbox($plain, $nonce, $key));
+    }
+    if (function_exists('openssl_encrypt')) {
+        $iv = random_bytes(12);
+        $tag = '';
+        $ct = openssl_encrypt($plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+        if (is_string($ct)) return 'o1:' . base64_encode($iv . $tag . $ct);
+    }
+    return ''; // No crypto on this server: the password simply cannot be shown later
+}
+
+/** @return string|null the password, or null if it cannot be recovered */
+function nm_unseal(string $sealed): ?string
+{
+    $raw = base64_decode(substr($sealed, 3), true);
+    if ($raw === false) return null;
+    $key = nm_seal_key();
+    if (str_starts_with($sealed, 's1:') && function_exists('sodium_crypto_secretbox_open')) {
+        $n = SODIUM_CRYPTO_SECRETBOX_NONCEBYTES;
+        if (strlen($raw) <= $n) return null;
+        $plain = sodium_crypto_secretbox_open(substr($raw, $n), substr($raw, 0, $n), $key);
+        return $plain === false ? null : $plain;
+    }
+    if (str_starts_with($sealed, 'o1:') && function_exists('openssl_decrypt')) {
+        if (strlen($raw) <= 28) return null;
+        $plain = openssl_decrypt(substr($raw, 28), 'aes-256-gcm', $key, OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+        return $plain === false ? null : $plain;
+    }
+    return null;
+}
+
 function nm_work_is_locked(array $work): bool
 {
     return !empty($work['password_hash']);

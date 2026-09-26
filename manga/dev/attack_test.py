@@ -133,7 +133,7 @@ def php_cmd(port, router, site):
     php = shutil.which("php")
     ext = str(Path(php).parent / "ext")
     cmd = [php, "-n", "-d", f"extension_dir={ext}"]
-    for e in ("gd", "fileinfo", "zip", "mbstring"):
+    for e in ("gd", "fileinfo", "zip", "mbstring", "sodium", "openssl"):
         cmd += ["-d", f"extension={e}"]
     cmd += ["-d", "memory_limit=256M", "-d", "upload_max_filesize=32M", "-d", "post_max_size=40M",
             "-S", f"{HOST}:{port}", "-t", str(site)]
@@ -316,7 +316,13 @@ def run(data_dir):
     # --- Password protection ---------------------------------------------------------------
     work_pw = "yomu-" + secrets.token_hex(3)
     adm.post("/admin/index.php", {"do": "setpw", "id": wid, "password": work_pw, "csrf": csrf})
+    r = adm.get(f"/admin/index.php?p=work&id={wid}")
+    check("管理画面で現在の閲覧パスワードを確認できる（普段は伏せ字）",
+          f'type="password" readonly value="{work_pw}"' in r.text and "js-pw-toggle" in r.text)
+    on_disk = "".join(p.read_text(encoding="utf-8") for p in (data_dir / "works").rglob("work.json"))
+    check("保存ファイルに閲覧パスワードの平文が残らない（暗号化）", work_pw not in on_disk and '"password_enc": "' in on_disk)
     r = anon.get(f"/read.php?a=m&id={wid}")
+    check("公開の窓口は閲覧パスワードを一切返さない", work_pw not in r.text and "password" not in r.text)
     locked = json.loads(r.text)
     check("パスワード付き作品はページ一覧を返さない", locked.get("locked") is True and "pages" not in locked)
     if pages:
@@ -375,6 +381,7 @@ def run(data_dir):
         with zipfile.ZipFile(io.BytesIO(good_zip)) as z:
             names = z.namelist()
         check("バックアップに設定（管理パスワード・秘密鍵）が入らない", not any("config" in n for n in names))
+        check("バックアップに閲覧パスワードの平文が入らない", work_pw.encode() not in good_zip)
 
     def restore(data, overwrite=True):
         body = {"do": "restore", "csrf": csrf}

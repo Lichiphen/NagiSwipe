@@ -245,6 +245,8 @@ function nm_sanitize_work(array $d, string $id): array
         'direction' => in_array($d['direction'] ?? '', ['rtl', 'ltr', 'vertical'], true) ? $d['direction'] : 'rtl',
         // Password hashes are restored as is (they are hashes, not passwords)
         'password_hash' => is_string($d['password_hash'] ?? null) && str_starts_with($d['password_hash'], '$') ? $d['password_hash'] : '',
+        // Readable copy: only works on the server that made it (same secret key)
+        'password_enc' => is_string($d['password_enc'] ?? null) && preg_match('~\A[so]1:[A-Za-z0-9+/=]{1,1000}\z~', $d['password_enc']) ? $d['password_enc'] : '',
         'seq' => max((int)($d['seq'] ?? 0), count($pages)),
         'created' => (int)($d['created'] ?? time()),
         'updated' => time(),

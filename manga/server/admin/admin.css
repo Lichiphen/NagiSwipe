@@ -131,3 +131,6 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .danger-zone { margin-top: 16px; }
 .danger-zone summary { cursor: pointer; color: var(--danger); }
 .log { font-size: .8em; max-height: 320px; overflow: auto; background: var(--bg); padding: 10px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.current-pw { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.current-pw input { width: auto; flex: 1 1 160px; max-width: 280px; font-family: ui-monospace, Consolas, monospace; }

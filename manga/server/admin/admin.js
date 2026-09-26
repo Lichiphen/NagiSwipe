@@ -27,6 +27,16 @@
         });
     });
 
+    // --- Show / hide the current reader password ---------------------------
+    $$('.js-pw-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = $('.js-pw', btn.parentNode);
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            btn.textContent = show ? '隠す' : '表示';
+        });
+    });
+
     // --- Confirm dangerous forms ------------------------------------------
     $$('form.js-confirm').forEach(form => {
         form.addEventListener('submit', e => {

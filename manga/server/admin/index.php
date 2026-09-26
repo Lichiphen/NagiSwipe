@@ -349,6 +349,8 @@ function nm_handle_post(array $cfg): void
             nm_modify_work($id, static function (array $w) use ($pw) {
                 if (mb_strlen($pw) < 4) throw new UnexpectedValueException('パスワードは 4 文字以上にしてください');
                 $w['password_hash'] = password_hash($pw, PASSWORD_DEFAULT);
+                // Encrypted copy so the admin can look it up again (see nm_seal)
+                $w['password_enc'] = nm_seal($pw);
                 return $w;
             });
             nm_log('work_password_set', $id);
@@ -358,6 +360,7 @@ function nm_handle_post(array $cfg): void
         case 'clearpw':
             nm_modify_work($id, static function (array $w) {
                 $w['password_hash'] = '';
+                $w['password_enc'] = '';
                 return $w;
             });
             nm_log('work_password_cleared', $id);
@@ -678,6 +681,7 @@ function nm_view_work(string $id): void
         // --- Password ---
         . '<section class="card"><h2>パスワード（限定公開）</h2>'
         . '<p class="note">設定すると、読む人はリンクをクリックしたときにパスワードを入力します。パスワードを変えると、以前のパスワードで開いていた人も読めなくなります。</p>'
+        . nm_current_password_html($w)
         . '<form method="post" action="index.php" class="form row">' . $hidden . '<input type="hidden" name="do" value="setpw">'
         . '<label>' . ($locked ? '新しいパスワード' : 'パスワード') . '（4 文字以上）<input type="text" name="password" required minlength="4" maxlength="200" autocomplete="off"></label>'
         . '<button class="btn">' . ($locked ? '変更' : '設定') . '</button></form>'
@@ -758,6 +762,20 @@ function nm_view_settings(array $cfg): void
         . '<section class="card"><h2>セキュリティログ（新しい順）</h2>'
         . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>')
         . '</section>');
+}
+
+/** "Current password" row: hidden until the admin presses 表示. */
+function nm_current_password_html(array $w): string
+{
+    if (!nm_work_is_locked($w)) return '';
+    $plain = !empty($w['password_enc']) ? nm_unseal((string)$w['password_enc']) : null;
+    if ($plain === null) {
+        return '<p class="note">現在のパスワードは表示できません（この機能より前に設定したか、別のサーバーから復元したため）。もう一度設定すると、ここに表示されるようになります。</p>';
+    }
+    return '<div class="current-pw"><span>現在のパスワード</span>'
+        . '<input class="copy-src js-pw" type="password" readonly value="' . h($plain) . '" aria-label="現在のパスワード">'
+        . '<button type="button" class="btn small js-pw-toggle">表示</button>'
+        . '<button type="button" class="btn small js-copy">コピー</button></div>';
 }
 
 /** Page images for the admin (session required, so locked works preview too). */
