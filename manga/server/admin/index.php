@@ -11,6 +11,7 @@ require __DIR__ . '/../lib/bootstrap.php';
 require __DIR__ . '/../lib/auth.php';
 require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
+nm_load_plugins();
 
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
 
@@ -27,16 +28,39 @@ if (!$cfg || empty($cfg['admin_hash'])) {
 }
 
 // --- Gate: IP, then login key, then session ----------------------------------
-if (!nm_ip_allowed($cfg)) {
+// A guest plugin may let read-only guests past the IP list; the admin role never is.
+$guestCfg = nm_guest_config();
+$ipOk = nm_ip_allowed($cfg);
+if (!$ipOk && !($guestCfg && $guestCfg['bypass_ip'])) {
     nm_log('admin_ip_denied');
     nm_not_found();
 }
 
 nm_session_start();
 
+// Guest entrance: admin/index.php?guest (or ?guest=KEY when the plugin sets one)
+if ($method === 'GET' && isset($_GET['guest']) && $guestCfg) {
+    nm_guest_enter($guestCfg);
+}
+
 if (!nm_is_logged_in()) {
+    if (!$ipOk) {
+        nm_log('admin_ip_denied');
+        nm_not_found();
+    }
     nm_login_page($method, $cfg);
     exit;
+}
+
+if (nm_is_guest()) {
+    // Plugin removed, or IP rules no longer let guests in: end the guest session
+    if (!$guestCfg || (!$ipOk && !$guestCfg['bypass_ip'])) {
+        nm_logout();
+        nm_not_found();
+    }
+} elseif (!$ipOk) {
+    nm_log('admin_ip_denied');
+    nm_not_found();
 }
 
 // --- Logged in ---------------------------------------------------------------
@@ -45,6 +69,8 @@ if ($method === 'POST') {
         nm_log('csrf_rejected', (string)($_POST['do'] ?? ''));
         nm_not_found();
     }
+    // Guests: everything except leaving is refused, whatever the form says
+    if (nm_is_guest() && ($_POST['do'] ?? '') !== 'logout') nm_guest_refuse();
     nm_handle_post($cfg);
     exit;
 }
@@ -54,8 +80,8 @@ match ($page) {
     '', 'works' => nm_view_dashboard(),
     'work' => nm_view_work(nm_str($_GET, 'id', 12)),
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
-    'backup' => nm_view_backup(),
-    'settings' => nm_view_settings($cfg),
+    'backup' => nm_is_guest() ? nm_view_guest_denied('バックアップ') : nm_view_backup(),
+    'settings' => nm_is_guest() ? nm_view_guest_denied('設定') : nm_view_settings($cfg),
     default => nm_not_found(),
 };
 exit;
@@ -93,9 +119,14 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         unset($_SESSION['nm_flash']);
     }
     $navHtml = '';
+    $banner = '';
     if ($nav) {
-        $navHtml = '<nav class="nav"><a href="index.php">作品一覧</a><a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>'
-            . '<form method="post" action="index.php" class="inline">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">ログアウト</button></form></nav>';
+        $guest = nm_is_guest();
+        $navHtml = '<nav class="nav"><a href="index.php">作品一覧</a>'
+            . ($guest ? '' : '<a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>')
+            . '<form method="post" action="index.php" class="inline">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . ($guest ? 'ゲストを終了' : 'ログアウト') . '</button></form></nav>';
+        $g = $guest ? nm_guest_config() : null;
+        if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
     }
     echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -104,7 +135,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . '</head><body><header class="top"><span class="brand">NagiManga</span>' . $navHtml . '</header>'
-        . '<main class="main">' . $flash . $body . '</main>'
+        . '<main class="main">' . $banner . $flash . $body . '</main>'
         . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
 }
 
@@ -264,8 +295,11 @@ function nm_handle_post(array $cfg): void
 
     switch ($do) {
         case 'logout':
+            $wasGuest = nm_is_guest();
+            $g = $wasGuest ? nm_guest_config() : null;
             nm_logout();
-            header('Location: ' . nm_base_url() . '/', true, 303);
+            $link = $g && $g['exit_url'] !== '' ? '<p><a class="btn primary" href="' . h($g['exit_url']) . '">デモのページへ戻る</a></p>' : '';
+            nm_layout('ログアウト', '<section class="card narrow"><h1>' . ($wasGuest ? 'ゲストを終了しました' : 'ログアウトしました') . '</h1>' . $link . '</section>', false);
             exit;
 
         case 'create':
@@ -457,6 +491,39 @@ function nm_handle_post(array $cfg): void
     nm_not_found();
 }
 
+/** Guest entrance (the plugin decides whether a key is needed). */
+function nm_guest_enter(array $g): never
+{
+    $key = nm_str($_GET, 'guest', 64);
+    if ($g['enter_key'] !== '' && !hash_equals($g['enter_key'], $key)) nm_not_found();
+    // A logged-in admin stays admin
+    if (nm_is_logged_in() && !nm_is_guest()) nm_redirect();
+    // Each entrance makes a session: keep bots from filling the disk
+    if (nm_rate_hit('guest', nm_client_ip(), 3600) > 60) {
+        nm_log('guest_rate_limited');
+        nm_not_found();
+    }
+    nm_rate_gc();
+    nm_start_guest();
+    nm_redirect();
+}
+
+function nm_guest_refuse(): never
+{
+    $do = nm_str($_POST, 'do', 30);
+    nm_log('guest_write_blocked', $do);
+    $msg = 'ゲスト（閲覧のみ）なので変更できません';
+    if ($do === 'upload' || $do === 'order') nm_json(['ok' => false, 'error' => $msg], 403);
+    nm_flash('err', $msg);
+    $id = nm_str($_POST, 'id', 12);
+    nm_redirect(nm_valid_id($id) ? 'p=work&id=' . $id : '');
+}
+
+function nm_view_guest_denied(string $what): void
+{
+    nm_layout($what, '<section class="card"><h1>' . h($what) . '</h1><p>ゲスト（閲覧のみ）では' . h($what) . 'の画面は表示できません。</p><p><a href="index.php">作品一覧へ戻る</a></p></section>');
+}
+
 function nm_direction(string $v): string
 {
     return in_array($v, ['rtl', 'ltr', 'vertical'], true) ? $v : 'rtl';
@@ -595,6 +662,10 @@ function nm_view_dashboard(): void
     }
     if ($rows === '') $rows = '<p class="note">まだ作品がありません。上のフォームから作成してください。</p>';
 
+    if (nm_is_guest()) {
+        nm_layout('作品一覧', '<section class="works">' . $rows . '</section>');
+        return;
+    }
     nm_layout('作品一覧', '<section class="card"><h1>作品を作る</h1>'
         . '<form method="post" action="index.php" class="form row">' . nm_csrf_field()
         . '<input type="hidden" name="do" value="create">'
@@ -618,15 +689,17 @@ function nm_view_work(string $id): void
     $script = $base . '/viewer/NagiManga.js?v=' . $viewerVer;
     $locked = nm_work_is_locked($w);
 
+    $guest = nm_is_guest();
     $pages = '';
     foreach ($w['pages'] as $i => $p) {
-        $pages .= '<li class="page" draggable="true" data-f="' . h($p['f']) . '">'
+        $pages .= '<li class="page"' . ($guest ? '' : ' draggable="true"') . ' data-f="' . h($p['f']) . '">'
             . '<img src="' . h(nm_thumb_url($w, $p)) . '" alt="" loading="lazy">'
             . '<span class="page-no">' . ($i + 1) . '</span>'
             . '<span class="page-name" title="' . h($p['o'] ?? '') . '">' . h(($p['o'] ?? '') !== '' ? $p['o'] : $p['f']) . '</span>'
-            . '<form method="post" action="index.php" class="js-confirm" data-confirm="このページを削除しますか？">' . nm_csrf_field()
+            . ($guest ? '' : '<form method="post" action="index.php" class="js-confirm" data-confirm="このページを削除しますか？">' . nm_csrf_field()
             . '<input type="hidden" name="do" value="delpage"><input type="hidden" name="id" value="' . h($w['id']) . '">'
-            . '<input type="hidden" name="f" value="' . h($p['f']) . '"><button class="btn small danger">削除</button></form></li>';
+            . '<input type="hidden" name="f" value="' . h($p['f']) . '"><button class="btn small danger">削除</button></form>')
+            . '</li>';
     }
 
     $idH = h($w['id']);
@@ -656,6 +729,27 @@ function nm_view_work(string $id): void
         . '<script src="' . h('../viewer/NagiManga.js?v=' . $viewerVer) . '" defer></script>'
         . '</section>'
 
+        . ($guest ? nm_work_sections_guest($w, $pages) : nm_work_sections_admin($w, $pages, $hidden, $locked)));
+}
+
+/** Read-only view of a work for guests: no forms at all. */
+function nm_work_sections_guest(array $w, string $pages): string
+{
+    return '<section class="card" id="pages"><h2>ページ</h2>'
+        . ($pages !== '' ? '<ol class="pages" data-id="' . h($w['id']) . '">' . $pages . '</ol>' : '<p class="note">まだページがありません。</p>')
+        . '</section>'
+        . '<section class="card"><h2>作品の設定</h2><table class="table">'
+        . '<tr><td>タイトル</td><td>' . h($w['title']) . '</td></tr>'
+        . '<tr><td>シリーズ名</td><td>' . h(($w['series'] ?? '') !== '' ? $w['series'] : '（なし）') . '</td></tr>'
+        . '<tr><td>既定の読み方</td><td>' . h(nm_direction_label((string)($w['direction'] ?? 'rtl'))) . '</td></tr>'
+        . '<tr><td>パスワード</td><td>' . (nm_work_is_locked($w) ? 'あり（ゲストには表示されません）' : 'なし（誰でも読めます）') . '</td></tr>'
+        . '</table></section>';
+}
+
+function nm_work_sections_admin(array $w, string $pages, string $hidden, bool $locked): string
+{
+    $idH = h($w['id']);
+    return ''
         // --- Pages ---
         . '<section class="card" id="pages"><h2>ページ</h2>'
         . '<div class="drop js-drop" data-id="' . $idH . '" data-csrf="' . h(nm_csrf_token()) . '">'
@@ -695,7 +789,7 @@ function nm_view_work(string $id): void
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="delete">'
         . '<label>確認のため、タイトル「' . h($w['title']) . '」を入力<input name="confirm" required autocomplete="off"></label>'
         . '<button class="btn danger">完全に削除</button></form></details>'
-        . '</section>');
+        . '</section>';
 }
 
 function nm_view_backup(): void

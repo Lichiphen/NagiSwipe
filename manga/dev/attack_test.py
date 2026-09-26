@@ -441,6 +441,97 @@ def run(data_dir):
     check("許可 IP 以外は管理画面が 404（ログイン済みでも）", blocked)
     check("X-Forwarded-For 偽装で IP 制限を抜けられない", spoof)
 
+    # --- Guest mode plugin (read-only admin for demos) --------------------------------------------
+    plugin_src = HERE.parent / "plugins" / "guest-mode.php"
+    plugin_dst = data_dir.parent / "plugins" / "guest-mode.php"
+    check("プラグインなしではゲストの入口は存在しない（404）", is_404(Client().get("/admin/index.php?guest")))
+    check("plugins フォルダは外から見えない", anon.get("/plugins/").status in (403, 404) and anon.get("/plugins/guest-mode.php").status in (403, 404))
+    plugin_dst.write_text(plugin_src.read_text(encoding="utf-8").replace("'exit_url' => ''", "'exit_url' => '/demo.html'"), encoding="utf-8")
+
+    def snapshot():
+        files = sorted(p for p in data_dir.rglob("*") if p.is_file() and "logs" not in p.parts and "sessions" not in p.parts
+                       and "ratelimit" not in p.parts and "locks" not in p.parts)
+        return {str(p): p.read_bytes() for p in files}
+
+    g = Client()
+    r = g.get("/admin/index.php?guest")
+    check("プラグインを置くとゲストとして入れる", r.status == 303)
+    r = g.get("/admin/index.php")
+    check("ゲストには案内が出て、作品作成フォームは出ない", "デモ用のゲスト表示" in r.text and "作品を作る" not in r.text and wid in r.text)
+    check("ゲストのメニューに設定・バックアップがない", "p=settings" not in r.text and "p=backup" not in r.text and "ゲストを終了" in r.text)
+    gcsrf = csrf_of(r.text)
+    r = g.get(f"/admin/index.php?p=work&id={wid}")
+    forbidden_bits = ['value="upload"', 'js-drop', 'value="delpage"', 'value="setpw"', 'value="clearpw"', 'value="delete"',
+                      'value="update"', 'value="sort_name"', 'js-save-order', 'js-pw', 'draggable="true"']
+    check("ゲストの作品ページには変更用のフォームが一つもない", r.status == 200 and not [b for b in forbidden_bits if b in r.text])
+    check("ゲストには閲覧パスワードが見えない", work_pw not in r.text and "ゲストには表示されません" in r.text)
+    check("ゲストも共有タグと試し読みは使える", "js-share" in r.text and "js-preview" in r.text)
+    img_m = re.search(r'src="(index\.php\?p=img[^"]+)"', r.text)
+    check("ゲストもページ画像を見られる", bool(img_m) and g.get("/admin/" + img_m.group(1).replace("&amp;", "&")).status == 200)
+    r = g.get("/admin/index.php?p=settings")
+    check("ゲストは設定画面を見られない（ログイン URL・IP・ログが出ない）", key not in r.text and "security.log" not in r.text
+          and "ゲスト（閲覧のみ）では設定" in r.text and "127.0.0.1" not in r.text)
+    check("ゲストはバックアップ画面を見られない", "すべてをダウンロード" not in g.get("/admin/index.php?p=backup").text)
+
+    before = snapshot()
+    cfg_before = (data_dir / "config.php").read_bytes()
+    attempts = {
+        "create": {"title": "guest"}, "update": {"id": wid, "title": "x"}, "sort_name": {"id": wid},
+        "order": {"id": wid, "order": "[]"}, "delpage": {"id": wid, "f": "p0001_00000000.webp"},
+        "setpw": {"id": wid, "password": "guestpw"}, "clearpw": {"id": wid}, "delete": {"id": wid, "confirm": xss},
+        "backup": {}, "settings_pw": {"current": admin_pw, "password": "x" * 12, "password2": "x" * 12},
+        "settings_access": {"allowed_ips": "", "allowed_origins": "https://evil.example"},
+        "settings_general": {"base_url": "https://evil.example"}, "regen_key": {},
+    }
+    refused = []
+    for do, extra in attempts.items():
+        r = g.post("/admin/index.php", {"do": do, "csrf": gcsrf, **extra})
+        refused.append(r.status in (303, 403) and r.getheader("Content-Type") != "application/zip")
+    r = g.post("/admin/index.php", {"do": "upload", "id": wid, "csrf": gcsrf}, files={"page": ("g.png", png(20, 20), "image/png")})
+    refused.append(r.status == 403)
+    r = g.post("/admin/index.php", {"do": "restore", "csrf": gcsrf}, files={"backup": ("b.zip", good_zip or b"x", "application/zip")})
+    refused.append(r.status == 303)
+    check("ゲストの変更操作 15 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 15, str(refused))
+    check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
+    check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+
+    # IP allow list: guests still enter, the admin login stays closed to other IPs
+    original = cfg_file.read_text(encoding="utf-8")
+    cfg_file.write_text(re.sub(r"'allowed_ips' =>\s*array \(\s*\)", "'allowed_ips' => array ( 0 => '203.0.113.10' )", original), encoding="utf-8")
+    g2 = Client()
+    guest_ok = g2.get("/admin/index.php?guest").status == 303 and "デモ用のゲスト表示" in g2.get("/admin/index.php").text
+    login_closed = is_404(Client().get(f"/admin/index.php?k={key}"))
+    admin_closed = is_404(adm.get("/admin/index.php"))
+    cfg_file.write_text(original, encoding="utf-8")
+    check("IP 制限中もゲストは入れる（bypass_ip）", guest_ok)
+    check("IP 制限中、他の IP からは管理者ログイン画面も管理者セッションも 404", login_closed and admin_closed)
+
+    # Logout page and exit link
+    r = g2.post("/admin/index.php", {"do": "logout", "csrf": csrf_of(g2.get("/admin/index.php").text)})
+    check("ゲスト終了のページにデモへのリンクが出る", "ゲストを終了しました" in r.text and 'href="/demo.html"' in r.text)
+    plugin_dst.write_text(plugin_src.read_text(encoding="utf-8").replace("'exit_url' => ''", "'exit_url' => 'javascript:alert(1)'"), encoding="utf-8")
+    g3 = Client()
+    g3.get("/admin/index.php?guest")
+    r = g3.post("/admin/index.php", {"do": "logout", "csrf": csrf_of(g3.get("/admin/index.php").text)})
+    check("戻り先に javascript: などは使えない", "javascript:" not in r.text)
+
+    # Entrance key
+    plugin_dst.write_text(plugin_src.read_text(encoding="utf-8").replace("'enter_key' => ''", "'enter_key' => 'open-sesame'"), encoding="utf-8")
+    check("合言葉を設定すると、合言葉なし・違う合言葉では 404",
+          is_404(Client().get("/admin/index.php?guest")) and is_404(Client().get("/admin/index.php?guest=wrong")))
+    check("正しい合言葉なら入れる", Client().get("/admin/index.php?guest=open-sesame").status == 303)
+
+    # Admin keeps admin rights with the plugin present
+    r = adm.get(f"/admin/index.php?p=work&id={wid}")
+    check("プラグインがあっても管理者は今までどおり全部使える", 'value="upload"' in r.text or "js-drop" in r.text)
+
+    # Remove the plugin: guests inside are thrown out
+    g4 = Client()
+    plugin_dst.write_text(plugin_src.read_text(encoding="utf-8"), encoding="utf-8")
+    g4.get("/admin/index.php?guest")
+    plugin_dst.unlink()
+    check("プラグインを消すと、中にいたゲストも 404", is_404(g4.get("/admin/index.php")) and is_404(Client().get("/admin/index.php?guest")))
+
     # --- Admin login brute force (last: it locks this IP) ------------------------------------------
     b = Client()
     locked_at = None

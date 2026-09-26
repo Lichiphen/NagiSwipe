@@ -10,6 +10,10 @@
  *   3. Password + lockout after repeated failures
  *   4. Session bound to the browser, idle / absolute timeouts
  *   5. CSRF token + same-origin check on every POST
+ *
+ * Roles: "admin" (the password above) and, only when a plugin enables it,
+ * "guest" (read only, e.g. for a public demo). What a guest may do is decided
+ * here and in admin/index.php, never by the plugin.
  */
 declare(strict_types=1);
 
@@ -141,6 +145,7 @@ function nm_try_login(string $password): bool
             'nm_seen' => time(),
             'nm_ver' => nm_admin_version(),
             'nm_csrf' => bin2hex(random_bytes(32)),
+            'nm_role' => 'admin',
         ];
         nm_rate_clear('login', $ip);
         nm_log('login_ok');
@@ -165,6 +170,50 @@ function nm_logout(): void
         // New id, old session file deleted
         session_regenerate_id(true);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Guest (read only)
+// ---------------------------------------------------------------------------
+
+/**
+ * Guest settings from a plugin (plugins/guest-mode.php), or null when no
+ * plugin enables guests.
+ *
+ * @return array{enter_key:string, bypass_ip:bool, banner:string, exit_url:string}|null
+ */
+function nm_guest_config(): ?array
+{
+    $g = nm_filter('guest_mode', null);
+    if (!is_array($g)) return null;
+    $exit = (string)($g['exit_url'] ?? '');
+    return [
+        'enter_key' => (string)($g['enter_key'] ?? ''),
+        'bypass_ip' => (bool)($g['bypass_ip'] ?? true),
+        'banner' => (string)($g['banner'] ?? 'ゲスト（閲覧のみ）で表示しています。内容の変更はできません。'),
+        // Where "ゲストを終了" leads: an absolute http(s) URL or a site path, nothing else
+        'exit_url' => preg_match('~\A(https?://|/(?!/))[^\s"\'<>\\\\]*\z~i', $exit) ? $exit : '',
+    ];
+}
+
+function nm_is_guest(): bool
+{
+    return !empty($_SESSION['nm_admin']) && ($_SESSION['nm_role'] ?? '') === 'guest';
+}
+
+function nm_start_guest(): void
+{
+    session_regenerate_id(true);
+    $_SESSION = [
+        'nm_admin' => true,
+        'nm_role' => 'guest',
+        'nm_fp' => nm_browser_fingerprint(),
+        'nm_login' => time(),
+        'nm_seen' => time(),
+        'nm_ver' => nm_admin_version(),
+        'nm_csrf' => bin2hex(random_bytes(32)),
+    ];
+    nm_log('guest_enter');
 }
 
 // ---------------------------------------------------------------------------

@@ -492,6 +492,38 @@ function nm_unseal(string $sealed): ?string
     return null;
 }
 
+// ---------------------------------------------------------------------------
+// Plugins: plugins/*.php, only the files the site owner put there
+// ---------------------------------------------------------------------------
+
+$GLOBALS['nm_filters'] = [];
+
+/** Plugins register filters; the core asks for a value through nm_filter(). */
+function nm_add_filter(string $name, callable $fn): void
+{
+    $GLOBALS['nm_filters'][$name][] = $fn;
+}
+
+function nm_filter(string $name, mixed $value, mixed ...$args): mixed
+{
+    foreach ($GLOBALS['nm_filters'][$name] ?? [] as $fn) {
+        $value = $fn($value, ...$args);
+    }
+    return $value;
+}
+
+function nm_load_plugins(): void
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    foreach (glob(NM_ROOT . '/plugins/*.php') ?: [] as $file) {
+        // Plain names only; never follow links placed there
+        if (!preg_match('/\A[a-z0-9][a-z0-9_-]*\.php\z/', basename($file)) || is_link($file)) continue;
+        require_once $file;
+    }
+}
+
 function nm_work_is_locked(array $work): bool
 {
     return !empty($work['password_hash']);

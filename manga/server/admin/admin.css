@@ -134,3 +134,12 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 
 .current-pw { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
 .current-pw input { width: auto; flex: 1 1 160px; max-width: 280px; font-family: ui-monospace, Consolas, monospace; }
+
+/* Guest (read-only) mode */
+.guest-banner {
+    background: var(--warn-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 0 0 16px;
+}

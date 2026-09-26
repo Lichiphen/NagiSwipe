@@ -14,4 +14,10 @@ Options -Indexes
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
+    # Pages, the viewer and the admin assets: always revalidate (cheap 304s).
+    # Share tags load the viewer with ?v=<content hash>; page images come from
+    # read.php with their own cache headers.
+    <FilesMatch "\.(html|js|css)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
 </IfModule>

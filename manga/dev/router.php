@@ -6,7 +6,7 @@
 $path = rawurldecode((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
 
 $deny = preg_match('~(^|/)\.~', $path)                                    // dot files
-    || preg_match('~^/(lib|data)(/|$)~', $path)                             // lib/, data/
+    || preg_match('~^/(nagimanga/)?(lib|data|plugins)(/|$)~', $path)       // lib/, data/, plugins/ (also under /nagimanga/)
     || preg_match('~\.(md|log|lock|bak|tmp|json|ini|sh|zip)$~i', $path);    // root FilesMatch
 
 // Static (no PHP) mode test files: /_dev/static/* -> dev/results/static/*
