@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core CSS] 
  * Drop-in gallery library
  * 
- * NagiSwipe v1.0.1
+ * NagiSwipe v1.1.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -250,5 +250,92 @@
     
     .ns-viewer.ns-is-zoomed:not(.ns-dragging) .ns-img {
         cursor: zoom-out;
+    }
+}
+
+
+/* ========================================
+   キャプション（画像の alt / data-ns-caption など）
+   画面下部に表示。ズーム中は隠す
+   ======================================== */
+.ns-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    max-height: 32vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 28px calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 16px) calc(env(safe-area-inset-left, 0px) + 20px);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0) 100%);
+    color: rgba(255, 255, 255, 0.95);
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    touch-action: pan-y;
+    user-select: text;
+    -webkit-user-select: text;
+    transition: opacity 0.2s ease-out, visibility 0.2s;
+}
+
+.ns-caption.ns-has-caption {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.ns-caption.ns-caption-switching,
+.ns-viewer.ns-is-zoomed .ns-caption {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ns-caption-text {
+    margin: 0 auto;
+    max-width: 60em;
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* ========================================
+   枚数カウンター（3 / 12）
+   ======================================== */
+.ns-counter {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    left: calc(env(safe-area-inset-left, 0px) + 16px);
+    z-index: 3;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.ns-viewer.ns-is-zoomed .ns-counter {
+    opacity: 0;
+}
+
+/* キーボード操作時のみフォーカスリングを表示 */
+.ns-btn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: -4px;
+    border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ns-caption,
+    .ns-counter {
+        transition: none;
     }
 }

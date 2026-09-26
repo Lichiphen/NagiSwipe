@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.0.1
+ * NagiSwipe v1.1.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -23,6 +23,24 @@
         clamp: (val, min, max) => Math.min(Math.max(val, min), max),
         getDistance: (p1, p2) => Math.hypot(p2.x - p1.x, p2.y - p1.y),
         getCenter: (p1, p2) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }),
+
+        /**
+         * Test the URL path only, so "photo.jpg?v=123" or "photo.jpg#x" still match
+         */
+        isImageUrl: (href, pattern) => {
+            if (!href) return false;
+            let path = href;
+            try { path = new URL(href, document.baseURI).pathname; } catch (e) { /* keep raw */ }
+            return pattern.test(path) || pattern.test(href);
+        },
+
+        /**
+         * Fit scale for an image inside the viewport (never upscale)
+         */
+        getFitScale: (naturalW, naturalH) => {
+            if (!naturalW || !naturalH) return 1;
+            return Math.min(window.innerWidth / naturalW, window.innerHeight / naturalH, 1);
+        },
         
         /**
          * Check if a point (clientX, clientY) is on the visible part of an image
@@ -83,10 +101,13 @@
             this.options = {
                 imageExtensions: DEFAULT_EXTENSIONS,
                 selector: 'a[href]',
-                scope: document
+                scope: document,
+                caption: true,  // Show caption (alt etc.) at the bottom
+                counter: true   // Show "3 / 12" at the top left
             };
 
             this.domGenerated = false;
+            this._savedOverflow = null;
         }
 
         init(options = {}) {
@@ -108,16 +129,21 @@
                 <!-- Shared Spinner -->
                 <div class="ns-loading-spinner" id="ns-spinner"></div>
                 <div class="ns-ui" id="ns-ui">
+                    <div class="ns-counter" id="ns-counter" aria-hidden="true"></div>
                     <button class="ns-btn ns-zoom" id="ns-zoom" aria-label="Zoom">${SVG_ZOOM_IN}</button>
                     <button class="ns-btn ns-close" id="ns-close" aria-label="Close"></button>
                     <button class="ns-btn ns-prev" id="ns-prev" aria-label="Previous">${SVG_ARROW_LEFT}</button>
                     <button class="ns-btn ns-next" id="ns-next" aria-label="Next">${SVG_ARROW_RIGHT}</button>
+                    <div class="ns-caption" id="ns-caption"><p class="ns-caption-text" id="ns-caption-text"></p></div>
                 </div>
             `;
             
             this.viewer = document.createElement('div');
             this.viewer.id = 'ns-viewer';
             this.viewer.className = 'ns-viewer';
+            this.viewer.setAttribute('role', 'dialog');
+            this.viewer.setAttribute('aria-modal', 'true');
+            this.viewer.setAttribute('aria-label', 'Image viewer');
             this.viewer.innerHTML = html;
             document.body.appendChild(this.viewer);
 
@@ -127,6 +153,9 @@
             this.ui = this.viewer.querySelector('#ns-ui');
             this.btnPrev = this.viewer.querySelector('#ns-prev');
             this.btnNext = this.viewer.querySelector('#ns-next');
+            this.counter = this.viewer.querySelector('#ns-counter');
+            this.caption = this.viewer.querySelector('#ns-caption');
+            this.captionText = this.viewer.querySelector('#ns-caption-text');
 
             const closeBtn = this.viewer.querySelector('#ns-close');
 
@@ -140,26 +169,31 @@
                 swallow(e);
                 fn();
             };
-
-            closeBtn.addEventListener('pointerdown', onDown(() => this.close()));
-            closeBtn.addEventListener('click', swallow);
+            // Keyboard activation (Enter / Space) fires click with detail === 0
+            const onKeyClick = (fn) => (e) => {
+                swallow(e);
+                if (e.detail === 0) fn();
+            };
+            const bindBtn = (btn, fn) => {
+                btn.addEventListener('pointerdown', onDown(fn));
+                btn.addEventListener('click', onKeyClick(fn));
+            };
 
             this.btnZoom = this.viewer.querySelector('#ns-zoom');
-            this.btnZoom.addEventListener('pointerdown', onDown(() => this.toggleZoom()));
-            this.btnZoom.addEventListener('click', swallow);
-
-            this.btnPrev.addEventListener('pointerdown', onDown(() => this.changeIndex(-1)));
-            this.btnPrev.addEventListener('click', swallow);
-
-            this.btnNext.addEventListener('pointerdown', onDown(() => this.changeIndex(1)));
-            this.btnNext.addEventListener('click', swallow);
+            bindBtn(closeBtn, () => this.close());
+            bindBtn(this.btnZoom, () => this.toggleZoom());
+            bindBtn(this.btnPrev, () => this.changeIndex(-1));
+            bindBtn(this.btnNext, () => this.changeIndex(1));
 
             // Viewer events
             this.viewer.addEventListener('pointerdown', this.onPointerDown.bind(this));
             this.viewer.addEventListener('pointermove', this.onPointerMove.bind(this));
             this.viewer.addEventListener('pointerup', this.onPointerUp.bind(this));
             this.viewer.addEventListener('pointercancel', this.onPointerUp.bind(this));
-            this.viewer.addEventListener('contextmenu', e => e.preventDefault());
+            // Allow the context menu (copy) on caption text only
+            this.viewer.addEventListener('contextmenu', e => {
+                if (!e.target.closest('.ns-caption')) e.preventDefault();
+            });
         }
 
         _scan() {
@@ -167,7 +201,7 @@
             this.items = [];
             targets.forEach((el, index) => {
                 const href = el.href;
-                if (href && this.options.imageExtensions.test(href)) {
+                if (SmartUtils.isImageUrl(href, this.options.imageExtensions)) {
                     // Try to find a thumb
                     const img = el.querySelector('img');
                     this.items.push({
@@ -175,13 +209,70 @@
                         thumb: img ? img.src : null,
                         thumbEl: img,
                         linkEl: el,
+                        caption: this._resolveCaption(el, img),
                         index: this.items.length // Store its index in our array
                     });
                     
                     // Mark element to know its index easily if clicked later
                     el.dataset.nsIndex = this.items.length - 1;
+                } else if (el.hasAttribute('data-ns-index')) {
+                    // No longer a target after re-scan
+                    el.removeAttribute('data-ns-index');
                 }
             });
+        }
+
+        /**
+         * Caption priority:
+         *   data-ns-caption (on link; empty string disables) > data-caption
+         *   > thumb img alt > link title > thumb img title > figure figcaption
+         */
+        _resolveCaption(linkEl, img) {
+            const pick = (v) => (typeof v === 'string' ? v.trim() : '');
+            if (linkEl.hasAttribute('data-ns-caption')) return pick(linkEl.getAttribute('data-ns-caption'));
+            let text = pick(linkEl.getAttribute('data-caption'));
+            if (!text && img) text = pick(img.getAttribute('alt'));
+            if (!text) text = pick(linkEl.getAttribute('title'));
+            if (!text && img) text = pick(img.getAttribute('title'));
+            if (!text) {
+                const fig = linkEl.closest('figure');
+                const figcaption = fig ? fig.querySelector('figcaption') : null;
+                if (figcaption) text = pick(figcaption.textContent).replace(/\s+/g, ' ');
+            }
+            return text;
+        }
+
+        _updateCaption() {
+            if (!this.caption) return;
+            const item = this.items[this.currentIndex];
+            const text = (this.options.caption && item && item.caption) ? item.caption : '';
+            // textContent: never interpret alt text as HTML
+            this.captionText.textContent = text;
+            this.caption.classList.toggle('ns-has-caption', !!text);
+            this.caption.scrollTop = 0;
+
+            if (this.counter) {
+                const showCounter = this.options.counter && this.items.length > 1;
+                this.counter.textContent = showCounter ? `${this.currentIndex + 1} / ${this.items.length}` : '';
+                this.counter.style.display = showCounter ? '' : 'none';
+            }
+        }
+
+        _lockScroll() {
+            if (this._savedOverflow) return;
+            this._savedOverflow = {
+                html: document.documentElement.style.overflow,
+                body: document.body.style.overflow
+            };
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+        }
+
+        _unlockScroll() {
+            const saved = this._savedOverflow || { html: '', body: '' };
+            document.documentElement.style.overflow = saved.html;
+            document.body.style.overflow = saved.body;
+            this._savedOverflow = null;
         }
 
         _bindGlobalEvents() {
@@ -221,6 +312,34 @@
                 }
             };
             window.addEventListener('keydown', this._keyHandler);
+
+            // Re-fit on rotation / window resize
+            if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
+            this._resizeRaf = null;
+            this._resizeHandler = () => {
+                if (!this.isOpen || this._resizeRaf) return;
+                this._resizeRaf = requestAnimationFrame(() => {
+                    this._resizeRaf = null;
+                    this._refit();
+                });
+            };
+            window.addEventListener('resize', this._resizeHandler);
+        }
+
+        _refit() {
+            if (!this.isOpen || this.isAnimating) return;
+            [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(wrap => {
+                if (!wrap) return;
+                const img = wrap.querySelector('.ns-img-highres');
+                if (img && img.naturalWidth) {
+                    wrap._nsBaseScale = SmartUtils.getFitScale(img.naturalWidth, img.naturalHeight);
+                }
+                wrap.style.transition = 'none';
+            });
+            this.state = { x: 0, y: 0, scale: 1 };
+            this.allowOverZoom = false;
+            this.render();
+            this.updateUiVisibility();
         }
 
         _setSuppressNextClick() {
@@ -266,6 +385,8 @@
 
             this.updateUiVisibility();
             this.setupSlides(index);
+            this._updateCaption();
+            this._lockScroll();
 
             // Animation Opening: Simple Fade In
             this.bg.style.opacity = 0;
@@ -397,6 +518,7 @@
             if (this.viewer) this.viewer.classList.remove('ns-dragging');
             this._setZoomButtonVisible(this.btnZoom, false);
             this.bg.style.opacity = 0;
+            this.ui.style.opacity = 0;
             this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
 
             this.closeTimer = setTimeout(() => {
@@ -412,8 +534,7 @@
             }, 300);
             
             // Re-enable scroll
-            document.documentElement.style.overflow = '';
-            document.body.style.overflow = '';
+            this._unlockScroll();
         }
 
         toggleZoom() {
@@ -434,6 +555,9 @@
             if (this.viewer) this.viewer.remove();
             if (this._clickHandler) document.removeEventListener('click', this._clickHandler);
             if (this._keyHandler) window.removeEventListener('keydown', this._keyHandler);
+            if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
+            if (this.isOpen) this._unlockScroll();
+            this.isOpen = false;
             // Reset
             this.domGenerated = false;
         }
@@ -457,7 +581,7 @@
             const fullImg = document.createElement('img');
             fullImg.className = 'ns-img ns-img-highres';
             fullImg.src = item.src;
-            fullImg.alt = '';
+            fullImg.alt = item.caption || '';
             fullImg.draggable = false;
             
             // 重要: 計算が終わるまで非表示
@@ -475,25 +599,8 @@
                 item.naturalHeight = fullImg.naturalHeight;
                 
                 // --- Dimension Calculation (Load then Show) ---
-                const winW = window.innerWidth;
-                const winH = window.innerHeight;
-                
-                // 画像のアスペクト比
-                const ratio = fullImg.naturalWidth / fullImg.naturalHeight;
-                const screenRatio = winW / winH;
-                
-                let baseScale = 1;
-
                 // 画像が画面より小さい場合は拡大しない（等倍表示）
-                if (fullImg.naturalWidth <= winW && fullImg.naturalHeight <= winH) {
-                    baseScale = 1;
-                } else {
-                    if (ratio > screenRatio) {
-                        baseScale = winW / fullImg.naturalWidth;
-                    } else {
-                        baseScale = winH / fullImg.naturalHeight;
-                    }
-                }
+                const baseScale = SmartUtils.getFitScale(fullImg.naturalWidth, fullImg.naturalHeight);
                 
                 // コンテナに、この画像専用の BaseScale を保存
                 wrapperEl._nsBaseScale = baseScale;
@@ -608,7 +715,8 @@
 
         onPointerDown(e) {
             // Priority 1: Buttons should always be responsive if possible
-            if (e.target.closest('.ns-btn')) return;
+            // Caption: leave it to native text selection / scrolling
+            if (e.target.closest('.ns-btn, .ns-caption')) return;
 
             // Otherwise, don't start new gestures during animation
             if (this.isAnimating) return;
@@ -752,8 +860,8 @@
         }
 
         onPointerUp(e) {
-            const btn = e.target.closest('.ns-btn');
-            if (btn) return; // Handled by click listener
+            const btn = e.target.closest('.ns-btn, .ns-caption');
+            if (btn) return; // Handled by click listener / native behavior
 
             if (this.isAnimating) return;
             
@@ -929,9 +1037,12 @@
             const targetX = dir > 0 ? -(winW + gap) : (winW + gap);
             this.state.x = targetX;
             this.render();
+            if (this.caption) this.caption.classList.add('ns-caption-switching');
 
             window.setTimeout(() => {
                 this.currentIndex = targetIndex;
+                this._updateCaption();
+                if (this.caption) this.caption.classList.remove('ns-caption-switching');
 
                 // Reuse existing slide DOM to avoid flashing
                 this._recycleSlidesAfterNav(dir);

@@ -92,11 +92,15 @@
         const fragment = document.createDocumentFragment();
 
         // Manual items (local images)
+        // ?v= is a content hash (cache busting); alt is shown as the caption
         const manualItems = [
-            { src: 'img/Kyururun.png', thumb: 'img/Kyururun.png' },
-            { src: 'img/Fu-n.png', thumb: 'img/Fu-n.png' },
-            { src: 'img/Shimeshime.png', thumb: 'img/Shimeshime.png' },
-            { src: 'img/chirashi-mini.jpg', thumb: 'img/chirashi-mini.jpg' }
+            { src: 'img/Kyururun.png?v=ace886fd', thumb: 'img/Kyururun.png?v=ace886fd', alt: 'きゅるるん（猫のイラスト）' },
+            { src: 'img/Fu-n.png?v=1041db46', thumb: 'img/Fu-n.png?v=1041db46', alt: 'ふーん（猫のイラスト）' },
+            { src: 'img/Shimeshime.png?v=023fcd6a', thumb: 'img/Shimeshime.png?v=023fcd6a', alt: 'しめしめ（猫のイラスト）' },
+            {
+                src: 'img/chirashi-mini.jpg?v=ad52edca', thumb: 'img/chirashi-mini.jpg?v=ad52edca',
+                alt: 'チラシ用イラスト（モノクロ）。翼に囲まれて手を取り合う二人。\n長いキャプションは折り返され、画面の 3 割を超える分はスクロールできます。'
+            }
         ];
 
         // Combine with generated items
@@ -110,7 +114,9 @@
             
             const src = `https://picsum.photos/seed/${seed}/${w}/${h}`;
             const fullSrc = `https://picsum.photos/seed/${seed}/${w * 2}/${h * 2}.jpg`;
-            allItems.push({ src: fullSrc, thumb: src });
+            // Every third photo has no alt -> no caption is shown
+            const alt = (i % 3 === 2) ? '' : `サンプル写真 #${i + 1}（Lorem Picsum / ${w}×${h}）`;
+            allItems.push({ src: fullSrc, thumb: src, alt });
         }
 
         allItems.forEach(item => {
@@ -123,6 +129,7 @@
 
             const img = document.createElement('img');
             img.src = item.thumb;
+            img.alt = item.alt || '';
             
             link.appendChild(img);
             el.appendChild(link);

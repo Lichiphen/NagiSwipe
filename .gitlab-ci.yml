@@ -4,7 +4,7 @@ pages:
   stage: deploy
   script:
     - mkdir public
-    - cp index.html NagiSwipe-main.css NagiSwipe-main.js public/
+    - cp -r index.html NagiSwipe-main.css NagiSwipe-main.js img public/
   artifacts:
     paths:
       - public
