@@ -29,7 +29,12 @@
     const TURN_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
     const MAX_ZOOM = 4;
 
-    const ICON_CLOSE = '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const ZOOM_STEPS = [1, 1.5, 2, 3, 4];
+    const BAR_REVEAL_PX = 72;   // mouse this close to the top / bottom edge shows the bars
+
+    const ICON_ZOOM_IN = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21M8 11h6M11 8v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const ICON_ZOOM_OUT = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21M8 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const ICON_CLOSE ='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
     const store = {
         get(k) { try { return global.localStorage.getItem(k); } catch (e) { return null; } },
@@ -96,7 +101,16 @@
             this.counterEl = el('div', 'nm-counter', { 'aria-live': 'polite' });
             this.closeBtn = el('button', 'nm-btn nm-close', { type: 'button', 'aria-label': 'Close' });
             this.closeBtn.innerHTML = ICON_CLOSE;
-            top.append(this.titleEl, this.counterEl, this.closeBtn);
+            // Zoom controls (mainly for mouse users: pinch covers touch)
+            const zoomCtl = el('div', 'nm-zoomctl', { role: 'group', 'aria-label': 'Zoom' });
+            this.zoomOutBtn = el('button', 'nm-btn nm-zoom-out', { type: 'button', 'aria-label': 'Zoom out', title: '縮小（-）' });
+            this.zoomOutBtn.innerHTML = ICON_ZOOM_OUT;
+            this.zoomLabel = el('button', 'nm-zoom-label', { type: 'button', title: '元の大きさ（0）' });
+            this.zoomLabel.textContent = '100%';
+            this.zoomInBtn = el('button', 'nm-btn nm-zoom-in', { type: 'button', 'aria-label': 'Zoom in', title: '拡大（+）' });
+            this.zoomInBtn.innerHTML = ICON_ZOOM_IN;
+            zoomCtl.append(this.zoomOutBtn, this.zoomLabel, this.zoomInBtn);
+            top.append(this.titleEl, this.counterEl, zoomCtl, this.closeBtn);
 
             const bottom = this.bottomBar = el('div', 'nm-bar nm-bottom');
             this.slider = el('input', 'nm-slider', { type: 'range', min: '0', max: '0', value: '0', 'aria-label': 'Page' });
@@ -128,7 +142,22 @@
             this.lock.addEventListener('submit', e => { e.preventDefault(); this.unlock(); });
             this.slider.addEventListener('input', () => this.onSlider());
             // Using the bars keeps them on screen
-            [top, bottom].forEach(bar => bar.addEventListener('pointerdown', () => clearTimeout(this.uiTimer)));
+            [top, bottom].forEach(bar => {
+                bar.addEventListener('pointerdown', () => clearTimeout(this.uiTimer));
+                bar.addEventListener('mouseenter', () => { this.overBar = true; clearTimeout(this.uiTimer); });
+                bar.addEventListener('mouseleave', () => {
+                    this.overBar = false;
+                    if (this.barsByHover) this.scheduleHideBars(1200);
+                });
+            });
+            this.zoomInBtn.addEventListener('click', () => this.zoomStep(1));
+            this.zoomOutBtn.addEventListener('click', () => this.zoomStep(-1));
+            this.zoomLabel.addEventListener('click', () => this.resetZoom(true));
+            // Mouse near the top / bottom edge brings the bars back
+            v.addEventListener('pointermove', e => {
+                if (e.pointerType !== 'mouse' || !this.isOpen || this.pointers.size) return;
+                if (e.clientY < BAR_REVEAL_PX || e.clientY > global.innerHeight - BAR_REVEAL_PX) this.revealBarsByHover();
+            });
             this.stage.addEventListener('pointerdown', e => this.onDown(e));
             this.stage.addEventListener('pointermove', e => this.onMove(e));
             this.stage.addEventListener('pointerup', e => this.onUp(e));
@@ -666,9 +695,42 @@
         applyZoom(animate) {
             const inner = this.slides.cur && this.slides.cur.querySelector('.nm-spread-inner');
             this.root.classList.toggle('nm-zoomed', this.zoom.s > 1.01);
+            if (this.zoomLabel) {
+                this.zoomLabel.textContent = Math.round(this.zoom.s * 100) + '%';
+                this.zoomOutBtn.disabled = this.zoom.s <= 1.01;
+                this.zoomInBtn.disabled = this.zoom.s >= MAX_ZOOM - 0.01;
+            }
             if (!inner) return;
             inner.style.transition = animate ? 'transform 0.25s ease-out' : 'none';
             inner.style.transform = `translate3d(${this.zoom.x}px, ${this.zoom.y}px, 0) scale(${this.zoom.s})`;
+        }
+
+        /** Buttons / keys: next zoom step around the centre of the screen. */
+        zoomStep(dir) {
+            if (this.direction === 'vertical' || !this.slides.cur || this.animating) return;
+            const s = this.zoom.s;
+            const next = dir > 0
+                ? ZOOM_STEPS.find(z => z > s + 0.01)
+                : ZOOM_STEPS.slice().reverse().find(z => z < s - 0.01);
+            if (next === undefined) return;
+            const r = this.stage.getBoundingClientRect();
+            this.zoomAt(next, r.left + r.width / 2, r.top + r.height / 2, true);
+        }
+
+        revealBarsByHover() {
+            if (!this.root.classList.contains('nm-ui-hidden') && !this.barsByHover) return;
+            this.barsByHover = true;
+            this.root.classList.remove('nm-ui-hidden');
+            if (!this.overBar) this.scheduleHideBars(1800);
+        }
+
+        scheduleHideBars(ms) {
+            clearTimeout(this.uiTimer);
+            this.uiTimer = setTimeout(() => {
+                if (this.overBar || !this.isOpen) return;
+                this.barsByHover = false;
+                this.root.classList.add('nm-ui-hidden');
+            }, ms);
         }
 
         /** Zoom so that the point (cx, cy) on screen stays under the finger. */
@@ -725,7 +787,7 @@
                 this.drag = null;
                 return;
             }
-            this.drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: false, samples: [] };
+            this.drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: false, samples: [], type: e.pointerType };
         }
 
         onMove(e) {
@@ -747,7 +809,8 @@
             const now = performance.now();
             g.samples.push({ t: now, x: e.clientX });
             while (g.samples.length > 2 && now - g.samples[0].t > 100) g.samples.shift();
-            if (!g.moved && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) > 8) g.moved = true;
+            // A mouse hand shakes a little during a (double) click: allow more slack
+            if (!g.moved && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) > (g.type === 'mouse' ? 14 : 8)) g.moved = true;
             if (!g.moved) return;
 
             if (this.zoom.s > 1.01) {
@@ -779,7 +842,7 @@
             if (!g || this.animating) return;
 
             if (!g.moved) {
-                if (!cancelled) this.onTap(e.clientX, e.clientY);
+                if (!cancelled) this.onTap(e.clientX, e.clientY, g.type);
                 return;
             }
             if (this.zoom.s > 1.01) return;
@@ -796,7 +859,7 @@
             }
         }
 
-        onTap(x, y) {
+        onTap(x, y, pointerType) {
             const rect = this.stage.getBoundingClientRect();
             const rel = (x - rect.left) / rect.width;
             const now = Date.now();
@@ -807,9 +870,12 @@
                 if (dbl) this.resetZoom(true);
                 return;
             }
-            // Edges turn the page at once; the middle toggles the bars or zooms on double tap
-            if (rel < 0.3 || rel > 0.7) {
-                const towardsNext = (rel > 0.7) === (this.nextSide() > 0);
+            // Edges turn the page at once; the middle toggles the bars or zooms on double tap.
+            // With a mouse the edges are narrower, so a double click near the middle zooms
+            // instead of turning the page (the zoom buttons are there too).
+            const edge = pointerType === 'mouse' ? 0.2 : 0.3;
+            if (rel < edge || rel > 1 - edge) {
+                const towardsNext = (rel > 0.5) === (this.nextSide() > 0);
                 this.turn(towardsNext ? 1 : -1);
                 return;
             }
@@ -820,6 +886,8 @@
             }
             this.tapTimer = setTimeout(() => {
                 clearTimeout(this.uiTimer);
+                // A click / tap shows the bars for good (until the next one)
+                this.barsByHover = false;
                 this.root.classList.toggle('nm-ui-hidden');
             }, 260);
         }
@@ -839,6 +907,9 @@
             else if (e.key === back || e.key === 'PageUp') { e.preventDefault(); this.turn(-1); }
             else if (e.key === 'Home') { e.preventDefault(); this.goToPage(0); }
             else if (e.key === 'End') { e.preventDefault(); this.goToPage(this.pages.length - 1); }
+            else if (e.key === '+' || e.key === ';' || e.key === '=') { e.preventDefault(); this.zoomStep(1); }
+            else if (e.key === '-') { e.preventDefault(); this.zoomStep(-1); }
+            else if (e.key === '0') { e.preventDefault(); this.resetZoom(true); }
         }
 
         // --------------------------------------------------------------------
