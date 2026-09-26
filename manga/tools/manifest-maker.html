@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiManga manifest maker</title>
+<!--
+  NagiManga manifest maker (for FTP users, no PHP needed)
+  Copyright (c) 2026 Lichiphen / MIT License
+  Everything runs in this browser tab. Nothing is uploaded anywhere.
+-->
+<style>
+:root { --bg: #f5f5f3; --card: #fff; --text: #222; --muted: #666; --line: #ddd; --accent: #2f6f8f; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16181a; --card: #202326; --text: #e8e8e6; --muted: #a0a4a8; --line: #3a3e42; --accent: #6fb3d2; }
+}
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.7 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 16px; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin: 0 0 16px; }
+h1 { font-size: 1.35rem; }
+h2 { font-size: 1.05rem; margin: 0 0 8px; }
+label { display: grid; gap: 4px; margin: 0 0 12px; font-size: .92em; }
+input, select, textarea { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; }
+textarea { font-family: ui-monospace, Consolas, monospace; font-size: .85em; }
+button { font: inherit; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+.note { color: var(--muted); font-size: .9em; }
+ol { font-size: .85em; color: var(--muted); max-height: 200px; overflow: auto; }
+code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+<h1>NagiManga 一覧ファイル（manifest.json）メーカー</h1>
+<p class="note">PHP を使わず、FTP で画像を置いて読ませたい人向けです。画像はこのブラウザの中で読むだけで、どこにも送信されません。</p>
+
+<section>
+<h2>1. ページ画像を選ぶ</h2>
+<label>画像ファイル（まとめて選択。ファイル名の順 001, 002, … 010 に並びます）
+  <input type="file" id="files" accept="image/*" multiple></label>
+<ol id="list"></ol>
+</section>
+
+<section>
+<h2>2. 設定</h2>
+<label>タイトル<input id="title" value="第1話"></label>
+<label>読み方
+  <select id="direction"><option value="rtl">右から左（漫画）</option><option value="ltr">左から右</option><option value="vertical">縦読み</option></select></label>
+<label>manifest.json から見た画像の場所（同じフォルダに置くなら空欄）<input id="prefix" placeholder="例: images/"></label>
+</section>
+
+<section>
+<h2>3. できあがり</h2>
+<p><button type="button" id="download" disabled>manifest.json をダウンロード</button></p>
+<textarea id="json" rows="8" readonly></textarea>
+<p class="note">manifest.json を画像と一緒にサーバーへ置き、ページの HTML に次のタグを貼ります（manifest.json の URL は置いた場所に合わせてください）。<code>NagiManga.js</code> と <code>NagiManga.css</code> は同じフォルダに置いてください。</p>
+<textarea id="tag" rows="3" readonly></textarea>
+</section>
+</main>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  let pages = [];
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  async function sizeOf(file) {
+    if (window.createImageBitmap) {
+      try {
+        const bmp = await createImageBitmap(file);
+        const s = { w: bmp.width, h: bmp.height };
+        bmp.close && bmp.close();
+        return s;
+      } catch (e) { /* fall through */ }
+    }
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { resolve({ w: img.naturalWidth, h: img.naturalHeight }); URL.revokeObjectURL(url); };
+      img.onerror = () => { resolve({ w: 0, h: 0 }); URL.revokeObjectURL(url); };
+      img.src = url;
+    });
+  }
+
+  function render() {
+    const prefix = $('prefix').value.trim();
+    const manifest = {
+      title: $('title').value.trim(),
+      direction: $('direction').value,
+      pages: pages.map(p => ({ src: prefix + p.name, w: p.w, h: p.h }))
+    };
+    const json = JSON.stringify(manifest, null, 2);
+    $('json').value = json;
+    $('download').disabled = !pages.length;
+    const dir = $('direction').value;
+    $('tag').value = `<a href="#" data-nagimanga-manifest="manifest.json" data-direction="${esc(dir)}">${esc(manifest.title || '読む')}</a>\n<script src="NagiManga.js" defer><\/script>`;
+    return json;
+  }
+
+  $('files').addEventListener('change', async e => {
+    const files = Array.from(e.target.files).filter(f => /^image\//.test(f.type));
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    pages = [];
+    for (const f of files) {
+      const s = await sizeOf(f);
+      pages.push({ name: f.name, w: s.w, h: s.h });
+    }
+    $('list').innerHTML = pages.map(p => `<li>${esc(p.name)} (${p.w}×${p.h})</li>`).join('');
+    render();
+  });
+  ['title', 'direction', 'prefix'].forEach(id => $(id).addEventListener('input', render));
+
+  $('download').addEventListener('click', () => {
+    const blob = new Blob([render()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'manifest.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  render();
+})();
+</script>
+</body>
+</html>

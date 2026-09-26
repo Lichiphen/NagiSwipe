@@ -72,6 +72,9 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 <a href="photo.jpg" data-ns-width="3000" data-ns-height="2000"><img src="photo-thumb.jpg" alt="…"></a>
 ```
 
+## 漫画ビューアー（NagiManga）
+右から左・見開き・縦読みに対応した漫画ビューアーと、データベース不要の簡易 CMS（画像管理・共有タグ発行・パスワード付き公開・バックアップ）を [`manga/`](manga/) に同梱しています。導入方法は [manga/README.md](manga/README.md) を参照してください。
+
 ## 権利・免責事項：掲載画像について
 本プロジェクトのデモ（`index.html`等）で使用されている画像について：
 

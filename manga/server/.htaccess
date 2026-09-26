@@ -1,0 +1,17 @@
+# NagiManga: basic protection (Apache)
+Options -Indexes
+
+# Hidden files, backups and docs are never served
+<FilesMatch "(^\.|\.(md|log|lock|bak|tmp|json|ini|sh|zip)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

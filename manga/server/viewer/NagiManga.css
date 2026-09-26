@@ -1,0 +1,266 @@
+/*
+ * ============================================================================
+ * NagiManga - manga reader for NagiSwipe
+ *
+ * NagiManga v0.1.0
+ * Copyright (c) 2026 Lichiphen
+ * Licensed under the MIT License
+ * ============================================================================
+ */
+
+.nm-viewer {
+    --nm-bg: #0e0e10;
+    --nm-bar: rgba(14, 14, 16, 0.82);
+    --nm-text: #f2f2f2;
+    --nm-muted: rgba(242, 242, 242, 0.65);
+    --nm-accent: #8fc8e0;
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    background: var(--nm-bg);
+    color: var(--nm-text);
+    font: 14px/1.6 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+    overscroll-behavior: contain;
+    -webkit-tap-highlight-color: transparent;
+}
+.nm-viewer[hidden] { display: none; }
+.nm-viewer.nm-open { opacity: 1; }
+.nm-viewer *, .nm-viewer *::before, .nm-viewer *::after { box-sizing: border-box; }
+
+/* --- Paged stage ---------------------------------------------------------- */
+.nm-stage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.nm-stage[hidden] { display: none; }
+.nm-spread {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+    backface-visibility: hidden;
+}
+.nm-spread-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: 50% 50%;
+    will-change: transform;
+}
+.nm-page {
+    position: relative;
+    flex: none;
+    background: #1a1a1d center / contain no-repeat;
+}
+.nm-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+    -webkit-user-drag: none;
+    user-select: none;
+    pointer-events: none;
+}
+.nm-page.nm-loaded .nm-img { opacity: 1; }
+.nm-page.nm-loaded { background-image: none !important; }
+
+/* --- End card ------------------------------------------------------------- */
+.nm-end-card {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    padding: 24px;
+}
+.nm-end-title { margin: 0 0 8px; font-size: 20px; letter-spacing: 0.2em; }
+.nm-end-btn,
+.nm-lock-btn,
+.nm-toast-btn {
+    appearance: none;
+    font: inherit;
+    color: var(--nm-text);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    padding: 8px 22px;
+    min-width: 160px;
+    cursor: pointer;
+}
+.nm-end-btn:hover, .nm-lock-btn:hover, .nm-toast-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+/* --- Vertical (scroll) ---------------------------------------------------- */
+.nm-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+.nm-scroll[hidden] { display: none; }
+.nm-page-v {
+    display: block;
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+    margin: 0 auto;
+    background: #1a1a1d center / contain no-repeat;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* --- Bars ----------------------------------------------------------------- */
+.nm-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--nm-bar);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.nm-top {
+    top: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 6px) calc(env(safe-area-inset-right, 0px) + 8px) 6px calc(env(safe-area-inset-left, 0px) + 16px);
+}
+.nm-bottom {
+    bottom: 0;
+    padding: 10px calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 12px) calc(env(safe-area-inset-left, 0px) + 20px);
+}
+.nm-ui-hidden .nm-top { opacity: 0; transform: translateY(-100%); pointer-events: none; }
+.nm-ui-hidden .nm-bottom { opacity: 0; transform: translateY(100%); pointer-events: none; }
+
+.nm-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+.nm-counter {
+    flex: none;
+    color: var(--nm-muted);
+    font-variant-numeric: tabular-nums;
+}
+.nm-btn {
+    appearance: none;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    color: var(--nm-text);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+}
+.nm-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.nm-btn:focus-visible,
+.nm-end-btn:focus-visible,
+.nm-lock-btn:focus-visible,
+.nm-toast-btn:focus-visible,
+.nm-slider:focus-visible { outline: 2px solid var(--nm-accent); outline-offset: 2px; }
+
+.nm-slider {
+    width: 100%;
+    accent-color: var(--nm-accent);
+    cursor: pointer;
+}
+/* Right-to-left books: the slider runs from right to left too */
+.nm-rtl .nm-slider { direction: rtl; }
+.nm-vertical .nm-bottom,
+.nm-empty .nm-bottom { display: none; }
+
+/* --- States --------------------------------------------------------------- */
+.nm-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    animation: nm-spin 0.8s linear infinite;
+    transition: opacity 0.2s;
+}
+.nm-spinner.nm-visible { opacity: 1; }
+@keyframes nm-spin { to { transform: rotate(360deg); } }
+
+.nm-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(90vw, 420px);
+    text-align: center;
+}
+.nm-message[hidden] { display: none; }
+
+.nm-lock {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(88vw, 360px);
+    display: grid;
+    gap: 12px;
+    text-align: center;
+    z-index: 3;
+}
+.nm-lock[hidden] { display: none; }
+.nm-lock-title { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.nm-lock-note { margin: 0; color: var(--nm-muted); }
+.nm-lock-input {
+    font: inherit;
+    font-size: 16px; /* no zoom on iOS */
+    color: var(--nm-text);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    width: 100%;
+}
+.nm-lock-btn { justify-self: center; }
+.nm-lock-btn:disabled { opacity: 0.5; cursor: wait; }
+.nm-lock-error { margin: 0; min-height: 1.6em; color: #ffb4a9; }
+
+.nm-toast {
+    position: absolute;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+    transform: translateX(-50%);
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 10px 14px;
+    background: rgba(40, 40, 44, 0.95);
+    border-radius: 12px;
+}
+.nm-toast[hidden] { display: none; }
+.nm-toast-btn { min-width: 0; padding: 4px 14px; }
+
+.nm-zoomed .nm-stage { cursor: grab; }
+
+@media (prefers-reduced-motion: reduce) {
+    .nm-viewer, .nm-bar, .nm-img { transition: none; }
+}

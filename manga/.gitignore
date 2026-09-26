@@ -1,0 +1,4 @@
+# Development data (tests, local runs)
+dev/data/
+dev/results/
+__pycache__/

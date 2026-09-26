@@ -1,0 +1,928 @@
+/*
+ * ============================================================================
+ * NagiManga - manga reader for NagiSwipe
+ *
+ * NagiManga v0.1.0
+ * Copyright (c) 2026 Lichiphen
+ * Licensed under the MIT License
+ * ============================================================================
+ *
+ *   <a href="#" data-nagimanga="ID" data-endpoint="https://example.com/nagimanga/read.php"
+ *      data-direction="rtl" data-view="auto" data-cover="1">Read</a>
+ *   <script src="https://example.com/nagimanga/viewer/NagiManga.js" defer></script>
+ *
+ *   data-direction  rtl (default) | ltr | vertical
+ *   data-view       auto (two pages on wide screens) | single
+ *   data-cover      1 (first page alone) | 0
+ *   data-manifest   URL of a static JSON manifest (no PHP needed) instead of data-endpoint
+ */
+(function (global) {
+    'use strict';
+
+    if (global.NagiManga) return;
+
+    const VERSION = '0.1.0';
+    const SCRIPT = document.currentScript;
+    const SCRIPT_URL = SCRIPT ? SCRIPT.src : '';
+
+    const TURN_MS = 280;
+    const TURN_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const MAX_ZOOM = 4;
+
+    const ICON_CLOSE = '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+    const store = {
+        get(k) { try { return global.localStorage.getItem(k); } catch (e) { return null; } },
+        set(k, v) { try { global.localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
+        sget(k) { try { return global.sessionStorage.getItem(k); } catch (e) { return null; } },
+        sset(k, v) { try { global.sessionStorage.setItem(k, v); } catch (e) { /* private mode */ } },
+        sdel(k) { try { global.sessionStorage.removeItem(k); } catch (e) { /* ignore */ } }
+    };
+
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const el = (tag, cls, attrs) => {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (attrs) Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+        return e;
+    };
+
+    // Load the stylesheet next to this script (same version query)
+    function loadCss() {
+        if (!SCRIPT_URL || document.querySelector('link[data-nagimanga-css]')) return;
+        const u = new URL(SCRIPT_URL);
+        u.pathname = u.pathname.replace(/[^/]*$/, 'NagiManga.css');
+        const link = el('link', null, { rel: 'stylesheet', href: u.href, 'data-nagimanga-css': '' });
+        document.head.appendChild(link);
+    }
+
+    class Reader {
+        constructor() {
+            this.isOpen = false;
+            this.pages = [];
+            this.spreads = [];
+            this.spreadIndex = 0;
+            this.opts = {};
+            this.pointers = new Map();
+            this.drag = null;
+            this.zoom = { s: 1, x: 0, y: 0 };
+            this.slides = { prev: null, cur: null, next: null };
+            this.historyPushed = false;
+            this.historyBackPending = false;
+            this.lastTap = { t: 0, x: 0, y: 0 };
+            this.tapTimer = null;
+            this.animating = false;
+            this.built = false;
+        }
+
+        // --------------------------------------------------------------------
+        // DOM
+        // --------------------------------------------------------------------
+
+        build() {
+            if (this.built) return;
+            this.built = true;
+            loadCss();
+
+            const v = this.root = el('div', 'nm-viewer', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Manga reader', tabindex: '-1' });
+            v.hidden = true;
+
+            this.stage = el('div', 'nm-stage');
+            this.scroller = el('div', 'nm-scroll');
+            this.scroller.hidden = true;
+
+            const top = this.topBar = el('div', 'nm-bar nm-top');
+            this.titleEl = el('div', 'nm-title');
+            this.counterEl = el('div', 'nm-counter', { 'aria-live': 'polite' });
+            this.closeBtn = el('button', 'nm-btn nm-close', { type: 'button', 'aria-label': 'Close' });
+            this.closeBtn.innerHTML = ICON_CLOSE;
+            top.append(this.titleEl, this.counterEl, this.closeBtn);
+
+            const bottom = this.bottomBar = el('div', 'nm-bar nm-bottom');
+            this.slider = el('input', 'nm-slider', { type: 'range', min: '0', max: '0', value: '0', 'aria-label': 'Page' });
+            bottom.append(this.slider);
+
+            this.spinner = el('div', 'nm-spinner');
+            this.message = el('div', 'nm-message');
+            this.message.hidden = true;
+            this.toast = el('div', 'nm-toast');
+            this.toast.hidden = true;
+
+            // Password form
+            this.lock = el('form', 'nm-lock');
+            this.lock.hidden = true;
+            this.lockTitle = el('p', 'nm-lock-title');
+            this.lockInput = el('input', 'nm-lock-input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', maxlength: '200', required: '' });
+            this.lockBtn = el('button', 'nm-lock-btn', { type: 'submit' });
+            this.lockBtn.textContent = '読む';
+            this.lockError = el('p', 'nm-lock-error', { role: 'alert' });
+            const lockNote = el('p', 'nm-lock-note');
+            lockNote.textContent = 'この作品を読むにはパスワードが必要です';
+            this.lock.append(this.lockTitle, lockNote, this.lockInput, this.lockBtn, this.lockError);
+
+            v.append(this.stage, this.scroller, top, bottom, this.spinner, this.message, this.lock, this.toast);
+            document.body.appendChild(v);
+
+            // Events
+            this.closeBtn.addEventListener('click', () => this.close());
+            this.lock.addEventListener('submit', e => { e.preventDefault(); this.unlock(); });
+            this.slider.addEventListener('input', () => this.onSlider());
+            // Using the bars keeps them on screen
+            [top, bottom].forEach(bar => bar.addEventListener('pointerdown', () => clearTimeout(this.uiTimer)));
+            this.stage.addEventListener('pointerdown', e => this.onDown(e));
+            this.stage.addEventListener('pointermove', e => this.onMove(e));
+            this.stage.addEventListener('pointerup', e => this.onUp(e));
+            this.stage.addEventListener('pointercancel', e => this.onUp(e, true));
+            this.stage.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+            this.stage.addEventListener('contextmenu', e => e.preventDefault());
+            this.scroller.addEventListener('click', e => {
+                if (e.target.closest('.nm-page-v')) this.root.classList.toggle('nm-ui-hidden');
+            });
+            this.scroller.addEventListener('scroll', () => this.onVerticalScroll(), { passive: true });
+
+            this.keyHandler = e => this.onKey(e);
+            this.resizeHandler = () => {
+                if (!this.isOpen || this.resizeRaf) return;
+                this.resizeRaf = requestAnimationFrame(() => {
+                    this.resizeRaf = null;
+                    this.relayout();
+                });
+            };
+            this.popHandler = () => {
+                if (this.historyBackPending) {
+                    this.historyBackPending = false;
+                    return;
+                }
+                if (this.isOpen && this.historyPushed) {
+                    this.historyPushed = false;
+                    this.close();
+                }
+            };
+            global.addEventListener('popstate', this.popHandler);
+        }
+
+        // --------------------------------------------------------------------
+        // Open / close
+        // --------------------------------------------------------------------
+
+        async open(trigger) {
+            this.build();
+            if (this.isOpen) return;
+            const d = trigger.dataset;
+            this.trigger = trigger;
+            this.opts = {
+                id: d.nagimanga || '',
+                endpoint: d.endpoint || '',
+                manifest: d.manifest || '',
+                direction: d.direction || '',
+                view: d.view === 'single' ? 'single' : 'auto',
+                cover: d.cover !== '0'
+            };
+            if (!this.opts.manifest && !(this.opts.id && this.opts.endpoint)) return;
+
+            this.isOpen = true;
+            this.returnFocus = document.activeElement;
+            this.root.hidden = false;
+            // nm-empty: no pages yet (loading / password), so no slider either
+            this.root.className = 'nm-viewer nm-empty';
+            this.stage.innerHTML = '';
+            this.scroller.innerHTML = '';
+            this.scroller.hidden = true;
+            this.stage.hidden = false;
+            this.lock.hidden = true;
+            this.message.hidden = true;
+            this.toast.hidden = true;
+            this.titleEl.textContent = trigger.textContent.trim();
+            this.counterEl.textContent = '';
+            this.setLoading(true);
+            this.lockScroll();
+            this.pushHistory();
+            document.addEventListener('keydown', this.keyHandler);
+            global.addEventListener('resize', this.resizeHandler);
+            requestAnimationFrame(() => this.root.classList.add('nm-open'));
+            this.closeBtn.focus({ preventScroll: true });
+
+            await this.load();
+        }
+
+        close() {
+            if (!this.isOpen) return;
+            this.isOpen = false;
+            this.saveProgress();
+            this.releaseHistory();
+            document.removeEventListener('keydown', this.keyHandler);
+            global.removeEventListener('resize', this.resizeHandler);
+            if (this.observer) {
+                this.observer.disconnect();
+                this.observer = null;
+            }
+            clearTimeout(this.tapTimer);
+            clearTimeout(this.toastTimer);
+            clearTimeout(this.uiTimer);
+            this.root.classList.remove('nm-open');
+            this.unlockScroll();
+            setTimeout(() => {
+                if (this.isOpen) return;
+                this.root.hidden = true;
+                this.stage.innerHTML = '';
+                this.scroller.innerHTML = '';
+            }, 220);
+            if (this.returnFocus && this.returnFocus.focus) this.returnFocus.focus({ preventScroll: true });
+        }
+
+        lockScroll() {
+            const html = document.documentElement;
+            const sbw = global.innerWidth - html.clientWidth;
+            this.savedScroll = { html: html.style.overflow, body: document.body.style.overflow, pad: document.body.style.paddingRight };
+            if (sbw > 0) {
+                const pad = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+                document.body.style.paddingRight = (pad + sbw) + 'px';
+            }
+            html.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+        }
+
+        unlockScroll() {
+            const s = this.savedScroll || { html: '', body: '', pad: '' };
+            document.documentElement.style.overflow = s.html;
+            document.body.style.overflow = s.body;
+            document.body.style.paddingRight = s.pad;
+        }
+
+        pushHistory() {
+            try {
+                global.history.pushState(Object.assign({}, global.history.state || {}, { nagimanga: true }), '');
+                this.historyPushed = true;
+            } catch (e) { /* sandboxed */ }
+        }
+
+        releaseHistory() {
+            if (!this.historyPushed) return;
+            this.historyPushed = false;
+            try {
+                const st = global.history.state;
+                if (st && st.nagimanga) {
+                    this.historyBackPending = true;
+                    global.history.back();
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        // --------------------------------------------------------------------
+        // Data
+        // --------------------------------------------------------------------
+
+        tokenKey() { return 'nagimanga_t_' + this.opts.id; }
+
+        manifestUrl() {
+            if (this.opts.manifest) return new URL(this.opts.manifest, location.href).href;
+            const u = new URL(this.opts.endpoint, location.href);
+            u.searchParams.set('a', 'm');
+            u.searchParams.set('id', this.opts.id);
+            const t = store.sget(this.tokenKey());
+            if (t) u.searchParams.set('t', t);
+            return u.href;
+        }
+
+        async load() {
+            let data;
+            const url = this.manifestUrl();
+            try {
+                const res = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+                if (!res.ok) throw new Error(String(res.status));
+                data = await res.json();
+            } catch (e) {
+                this.fail('読み込めませんでした。時間をおいて、もう一度お試しください。');
+                return;
+            }
+            if (!this.isOpen) return;
+
+            if (data.title) this.titleEl.textContent = String(data.title);
+            if (data.locked) {
+                store.sdel(this.tokenKey());
+                this.showLock(String(data.title || ''));
+                return;
+            }
+            const base = new URL(this.opts.manifest || this.opts.endpoint, location.href);
+            this.pages = (Array.isArray(data.pages) ? data.pages : []).map(p => ({
+                src: new URL(String(p.src), base).href,
+                thumb: p.thumb ? new URL(String(p.thumb), base).href : '',
+                w: Math.max(1, parseInt(p.w, 10) || 1),
+                h: Math.max(1, parseInt(p.h, 10) || 1)
+            }));
+            if (!this.pages.length) {
+                this.fail('ページがありません。');
+                return;
+            }
+            const dir = ['rtl', 'ltr', 'vertical'].includes(this.opts.direction) ? this.opts.direction
+                : (['rtl', 'ltr', 'vertical'].includes(data.direction) ? data.direction : 'rtl');
+            this.direction = dir;
+            this.root.classList.toggle('nm-rtl', dir === 'rtl');
+            this.root.classList.toggle('nm-vertical', dir === 'vertical');
+            this.setLoading(false);
+            this.lock.hidden = true;
+            this.root.classList.remove('nm-empty');
+
+            const saved = parseInt(store.get('nagimanga_pos_' + this.progressKey()) || '0', 10) || 0;
+            const startPage = saved > 0 && saved < this.pages.length - 1 ? saved : 0;
+
+            if (dir === 'vertical') this.startVertical(startPage);
+            else this.startPaged(startPage);
+
+            if (startPage > 0) this.showResumeToast(startPage);
+
+            // Bars cover the page: tuck them away once the reader has seen them
+            clearTimeout(this.uiTimer);
+            this.uiTimer = setTimeout(() => this.root.classList.add('nm-ui-hidden'), 2500);
+        }
+
+        progressKey() {
+            return this.opts.id || this.opts.manifest;
+        }
+
+        showLock(title) {
+            this.setLoading(false);
+            this.lockTitle.textContent = title;
+            this.lockError.textContent = '';
+            this.lockInput.value = '';
+            this.lock.hidden = false;
+            this.lockInput.focus({ preventScroll: true });
+        }
+
+        async unlock() {
+            const pw = this.lockInput.value;
+            if (!pw) return;
+            this.lockBtn.disabled = true;
+            this.lockError.textContent = '';
+            try {
+                const body = new URLSearchParams({ a: 'u', id: this.opts.id, password: pw });
+                const res = await fetch(new URL(this.opts.endpoint, location.href).href, {
+                    method: 'POST', body, credentials: 'same-origin', cache: 'no-store'
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.ok && data.token) {
+                    store.sset(this.tokenKey(), String(data.token));
+                    this.lock.hidden = true;
+                    this.setLoading(true);
+                    await this.load();
+                } else if (res.status === 429) {
+                    this.lockError.textContent = '何度も間違えたため、しばらく入力できません。時間をおいてお試しください。';
+                } else {
+                    this.lockError.textContent = 'パスワードが違います';
+                    this.lockInput.select();
+                }
+            } catch (e) {
+                this.lockError.textContent = '通信できませんでした';
+            } finally {
+                this.lockBtn.disabled = false;
+            }
+        }
+
+        fail(msg) {
+            this.setLoading(false);
+            this.message.textContent = msg;
+            this.message.hidden = false;
+        }
+
+        setLoading(on) {
+            this.spinner.classList.toggle('nm-visible', on);
+        }
+
+        showResumeToast(page) {
+            this.toast.innerHTML = '';
+            const t = el('span');
+            t.textContent = `前回の続き（${page + 1} ページ目）から開きました`;
+            const b = el('button', 'nm-toast-btn', { type: 'button' });
+            b.textContent = '最初から読む';
+            b.addEventListener('click', () => {
+                this.toast.hidden = true;
+                this.goToPage(0, false);
+            });
+            this.toast.append(t, b);
+            this.toast.hidden = false;
+            clearTimeout(this.toastTimer);
+            this.toastTimer = setTimeout(() => { this.toast.hidden = true; }, 5000);
+        }
+
+        saveProgress() {
+            if (!this.pages.length) return;
+            const page = this.direction === 'vertical' ? this.verticalPage || 0 : this.currentFirstPage();
+            // Finished: start from the beginning next time
+            const last = page >= this.pages.length - 1 || (this.spreads[this.spreadIndex] || {}).end;
+            store.set('nagimanga_pos_' + this.progressKey(), String(last ? 0 : page));
+        }
+
+        // --------------------------------------------------------------------
+        // Paged mode (rtl / ltr)
+        // --------------------------------------------------------------------
+
+        useSpreads() {
+            return this.opts.view !== 'single' && global.innerWidth > global.innerHeight && global.innerWidth >= 700;
+        }
+
+        /** Group pages into spreads. A landscape page is always shown alone. */
+        buildSpreads() {
+            const spreads = [];
+            const two = this.useSpreads();
+            let i = 0;
+            if (two && this.opts.cover && this.pages.length) {
+                spreads.push({ pages: [0] });
+                i = 1;
+            }
+            while (i < this.pages.length) {
+                const p = this.pages[i];
+                const wide = p.w > p.h;
+                const next = this.pages[i + 1];
+                if (two && !wide && next && next.w <= next.h) {
+                    spreads.push({ pages: [i, i + 1] });
+                    i += 2;
+                } else {
+                    spreads.push({ pages: [i] });
+                    i += 1;
+                }
+            }
+            spreads.push({ pages: [], end: true });
+            this.spreads = spreads;
+        }
+
+        spreadOfPage(page) {
+            const i = this.spreads.findIndex(s => s.pages.includes(page));
+            return i < 0 ? 0 : i;
+        }
+
+        currentFirstPage() {
+            const s = this.spreads[this.spreadIndex];
+            if (!s) return 0;
+            return s.end ? this.pages.length - 1 : s.pages[0];
+        }
+
+        startPaged(page) {
+            this.stage.hidden = false;
+            this.scroller.hidden = true;
+            this.buildSpreads();
+            this.spreadIndex = this.spreadOfPage(page);
+            this.slider.max = String(this.pages.length - 1);
+            this.renderSlides();
+        }
+
+        /** The side where the next spread comes from: -1 = left (rtl), 1 = right (ltr) */
+        nextSide() {
+            return this.direction === 'rtl' ? -1 : 1;
+        }
+
+        makeSpread(index) {
+            const s = this.spreads[index];
+            if (!s) return null;
+            const box = el('div', 'nm-spread');
+            box._index = index;
+            if (s.end) {
+                box.classList.add('nm-end');
+                const inner = el('div', 'nm-end-card');
+                const t = el('p', 'nm-end-title');
+                t.textContent = 'おわり';
+                const again = el('button', 'nm-end-btn', { type: 'button' });
+                again.textContent = '最初から読む';
+                again.addEventListener('click', () => this.goToPage(0, false));
+                const close = el('button', 'nm-end-btn', { type: 'button' });
+                close.textContent = '閉じる';
+                close.addEventListener('click', () => this.close());
+                inner.append(t, again, close);
+                box.appendChild(inner);
+                return box;
+            }
+            const inner = el('div', 'nm-spread-inner');
+            // Right-to-left books put the first page on the right
+            const order = this.direction === 'rtl' ? s.pages.slice().reverse() : s.pages;
+            order.forEach(pi => {
+                const p = this.pages[pi];
+                const frame = el('div', 'nm-page');
+                if (p.thumb) frame.style.backgroundImage = `url("${p.thumb.replace(/"/g, '%22')}")`;
+                const img = el('img', 'nm-img', { alt: `${pi + 1}`, draggable: 'false', decoding: 'async' });
+                img.addEventListener('load', () => frame.classList.add('nm-loaded'), { once: true });
+                img.src = p.src;
+                frame.appendChild(img);
+                frame._page = p;
+                inner.appendChild(frame);
+            });
+            box.appendChild(inner);
+            this.sizeSpread(box);
+            return box;
+        }
+
+        /** Fit the spread's pages into the stage at the same height. */
+        sizeSpread(box) {
+            const frames = box.querySelectorAll('.nm-page');
+            if (!frames.length) return;
+            const W = this.stage.clientWidth || global.innerWidth;
+            const H = this.stage.clientHeight || global.innerHeight;
+            const ratioSum = Array.from(frames).reduce((sum, f) => sum + f._page.w / f._page.h, 0);
+            const h = Math.min(H, W / ratioSum);
+            frames.forEach(f => {
+                f.style.width = (f._page.w / f._page.h * h) + 'px';
+                f.style.height = h + 'px';
+            });
+            box._w = ratioSum * h;
+            box._h = h;
+        }
+
+        renderSlides() {
+            this.stage.innerHTML = '';
+            this.resetZoom(false);
+            const i = this.spreadIndex;
+            this.slides = { prev: this.makeSpread(i - 1), cur: this.makeSpread(i), next: this.makeSpread(i + 1) };
+            ['prev', 'cur', 'next'].forEach(k => { if (this.slides[k]) this.stage.appendChild(this.slides[k]); });
+            this.positionSlides(0, false);
+            this.preload();
+            this.updateCounter();
+        }
+
+        positionSlides(offset, animate) {
+            const W = this.stage.clientWidth || global.innerWidth;
+            const side = this.nextSide();
+            const t = animate ? `transform ${TURN_MS}ms ${TURN_EASING}` : 'none';
+            const place = (node, base) => {
+                if (!node) return;
+                node.style.transition = t;
+                node.style.transform = `translate3d(${base + offset}px, 0, 0)`;
+            };
+            place(this.slides.prev, -side * W);
+            place(this.slides.cur, 0);
+            place(this.slides.next, side * W);
+        }
+
+        preload() {
+            // Warm the cache for the next two spreads and the previous one
+            [1, 2, -1].forEach(d => {
+                const s = this.spreads[this.spreadIndex + d];
+                if (!s || s.end) return;
+                s.pages.forEach(pi => {
+                    const img = new Image();
+                    img.decoding = 'async';
+                    img.src = this.pages[pi].src;
+                });
+            });
+        }
+
+        updateCounter() {
+            const s = this.spreads[this.spreadIndex];
+            const n = this.pages.length;
+            if (!s) return;
+            let text;
+            if (s.end) text = `${n} / ${n}`;
+            else if (s.pages.length === 2) text = `${s.pages[0] + 1}-${s.pages[1] + 1} / ${n}`;
+            else text = `${s.pages[0] + 1} / ${n}`;
+            this.counterEl.textContent = text;
+            this.slider.value = String(this.currentFirstPage());
+            this.saveProgress();
+        }
+
+        /** step: +1 = forward, -1 = back */
+        turn(step) {
+            if (this.animating || this.direction === 'vertical') return;
+            const target = this.spreadIndex + step;
+            if (target < 0 || target >= this.spreads.length) {
+                this.positionSlides(0, true);
+                return;
+            }
+            this.animating = true;
+            this.resetZoom(true);
+            const W = this.stage.clientWidth || global.innerWidth;
+            // Moving forward slides everything towards the opposite of nextSide
+            this.positionSlides(-step * this.nextSide() * W, true);
+            setTimeout(() => {
+                this.spreadIndex = target;
+                // Reuse the incoming spread, build only the new neighbour
+                const { prev, cur, next } = this.slides;
+                if (step > 0) {
+                    if (prev) prev.remove();
+                    this.slides = { prev: cur, cur: next, next: this.makeSpread(target + 1) };
+                    if (this.slides.next) this.stage.appendChild(this.slides.next);
+                } else {
+                    if (next) next.remove();
+                    this.slides = { prev: this.makeSpread(target - 1), cur: prev, next: cur };
+                    if (this.slides.prev) this.stage.appendChild(this.slides.prev);
+                }
+                this.positionSlides(0, false);
+                this.preload();
+                this.updateCounter();
+                this.animating = false;
+            }, TURN_MS);
+        }
+
+        goToPage(page, animate) {
+            this.toast.hidden = true;
+            if (this.direction === 'vertical') {
+                const node = this.scroller.children[page];
+                if (node) this.scroller.scrollTo({ top: node.offsetTop, behavior: animate ? 'smooth' : 'auto' });
+                return;
+            }
+            this.spreadIndex = this.spreadOfPage(page);
+            this.renderSlides();
+        }
+
+        onSlider() {
+            const page = parseInt(this.slider.value, 10) || 0;
+            if (this.direction === 'vertical') {
+                this.goToPage(page, false);
+                return;
+            }
+            const idx = this.spreadOfPage(page);
+            if (idx !== this.spreadIndex) {
+                this.spreadIndex = idx;
+                this.renderSlides();
+            }
+        }
+
+        relayout() {
+            if (this.direction === 'vertical' || !this.pages.length) return;
+            const page = this.currentFirstPage();
+            this.buildSpreads();
+            this.spreadIndex = this.spreadOfPage(page);
+            this.renderSlides();
+        }
+
+        // --------------------------------------------------------------------
+        // Zoom (current spread only)
+        // --------------------------------------------------------------------
+
+        resetZoom(animate) {
+            this.zoom = { s: 1, x: 0, y: 0 };
+            this.applyZoom(animate);
+        }
+
+        zoomBounds(s) {
+            const cur = this.slides.cur;
+            const W = this.stage.clientWidth, H = this.stage.clientHeight;
+            const cw = (cur && cur._w) || W, ch = (cur && cur._h) || H;
+            return { x: Math.max(0, (cw * s - W) / 2), y: Math.max(0, (ch * s - H) / 2) };
+        }
+
+        clampZoom() {
+            const b = this.zoomBounds(this.zoom.s);
+            this.zoom.x = clamp(this.zoom.x, -b.x, b.x);
+            this.zoom.y = clamp(this.zoom.y, -b.y, b.y);
+        }
+
+        applyZoom(animate) {
+            const inner = this.slides.cur && this.slides.cur.querySelector('.nm-spread-inner');
+            this.root.classList.toggle('nm-zoomed', this.zoom.s > 1.01);
+            if (!inner) return;
+            inner.style.transition = animate ? 'transform 0.25s ease-out' : 'none';
+            inner.style.transform = `translate3d(${this.zoom.x}px, ${this.zoom.y}px, 0) scale(${this.zoom.s})`;
+        }
+
+        /** Zoom so that the point (cx, cy) on screen stays under the finger. */
+        zoomAt(s, cx, cy, animate) {
+            const W = this.stage.clientWidth, H = this.stage.clientHeight;
+            const rect = this.stage.getBoundingClientRect();
+            const px = cx - rect.left - W / 2, py = cy - rect.top - H / 2;
+            const k = s / this.zoom.s;
+            this.zoom.x = px - (px - this.zoom.x) * k;
+            this.zoom.y = py - (py - this.zoom.y) * k;
+            this.zoom.s = s;
+            this.clampZoom();
+            this.applyZoom(animate);
+        }
+
+        onWheel(e) {
+            if (!this.isOpen || this.direction === 'vertical') return;
+            if (e.ctrlKey || this.zoom.s > 1.01) {
+                // Trackpad pinch (ctrl+wheel) or wheel while zoomed
+                e.preventDefault();
+                if (e.ctrlKey) {
+                    const s = clamp(this.zoom.s * Math.exp(-e.deltaY * 0.01), 1, MAX_ZOOM);
+                    this.zoomAt(s, e.clientX, e.clientY, false);
+                } else {
+                    this.zoom.x -= e.deltaX;
+                    this.zoom.y -= e.deltaY;
+                    this.clampZoom();
+                    this.applyZoom(false);
+                }
+                return;
+            }
+            // Plain wheel turns pages (debounced)
+            e.preventDefault();
+            const now = Date.now();
+            if (now - (this.lastWheel || 0) < 350 || Math.abs(e.deltaY) + Math.abs(e.deltaX) < 20) return;
+            this.lastWheel = now;
+            this.turn((e.deltaY || e.deltaX) > 0 ? 1 : -1);
+        }
+
+        // --------------------------------------------------------------------
+        // Pointer input (paged)
+        // --------------------------------------------------------------------
+
+        onDown(e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            // Keep receiving moves outside the stage (fails harmlessly for synthetic pointers)
+            try { this.stage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (this.pointers.size === 2) {
+                const [a, b] = Array.from(this.pointers.values());
+                this.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: this.zoom.s };
+                this.drag = null;
+                return;
+            }
+            this.drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), moved: false, samples: [] };
+        }
+
+        onMove(e) {
+            if (!this.pointers.has(e.pointerId)) return;
+            this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (this.pinch && this.pointers.size === 2) {
+                const [a, b] = Array.from(this.pointers.values());
+                const d = Math.hypot(a.x - b.x, a.y - b.y);
+                const s = clamp(this.pinch.s * d / this.pinch.d, 1, MAX_ZOOM);
+                this.zoomAt(s, (a.x + b.x) / 2, (a.y + b.y) / 2, false);
+                return;
+            }
+            const g = this.drag;
+            if (!g || this.animating) return;
+            const dx = e.clientX - g.x, dy = e.clientY - g.y;
+            g.x = e.clientX;
+            g.y = e.clientY;
+            const now = performance.now();
+            g.samples.push({ t: now, x: e.clientX });
+            while (g.samples.length > 2 && now - g.samples[0].t > 100) g.samples.shift();
+            if (!g.moved && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) > 8) g.moved = true;
+            if (!g.moved) return;
+
+            if (this.zoom.s > 1.01) {
+                this.zoom.x += dx;
+                this.zoom.y += dy;
+                this.clampZoom();
+                this.applyZoom(false);
+                return;
+            }
+            let off = e.clientX - g.x0;
+            // Resist at the first spread / after the end card
+            const forward = -off * this.nextSide() > 0;
+            if ((forward && this.spreadIndex >= this.spreads.length - 1) || (!forward && this.spreadIndex <= 0)) off *= 0.3;
+            this.positionSlides(off, false);
+        }
+
+        onUp(e, cancelled) {
+            if (!this.pointers.has(e.pointerId)) return;
+            this.pointers.delete(e.pointerId);
+            if (this.pinch) {
+                if (this.pointers.size < 2) this.pinch = null;
+                if (this.zoom.s < 1.05) this.resetZoom(true);
+                // The remaining finger must not start a page turn
+                this.drag = null;
+                return;
+            }
+            const g = this.drag;
+            this.drag = null;
+            if (!g || this.animating) return;
+
+            if (!g.moved) {
+                if (!cancelled) this.onTap(e.clientX, e.clientY);
+                return;
+            }
+            if (this.zoom.s > 1.01) return;
+
+            const off = e.clientX - g.x0;
+            const W = this.stage.clientWidth || global.innerWidth;
+            const first = g.samples[0], last = g.samples[g.samples.length - 1];
+            const v = first && last && last.t > first.t && performance.now() - last.t < 80 ? (last.x - first.x) / (last.t - first.t) : 0;
+            const step = -Math.sign(off) * this.nextSide();
+            if (Math.abs(off) > W * 0.15 || (Math.abs(v) > 0.4 && Math.sign(v) === Math.sign(off) && Math.abs(off) > 20)) {
+                this.turn(step);
+            } else {
+                this.positionSlides(0, true);
+            }
+        }
+
+        onTap(x, y) {
+            const rect = this.stage.getBoundingClientRect();
+            const rel = (x - rect.left) / rect.width;
+            const now = Date.now();
+            const dbl = now - this.lastTap.t < 300 && Math.hypot(x - this.lastTap.x, y - this.lastTap.y) < 30;
+            this.lastTap = { t: now, x, y };
+
+            if (this.zoom.s > 1.01) {
+                if (dbl) this.resetZoom(true);
+                return;
+            }
+            // Edges turn the page at once; the middle toggles the bars or zooms on double tap
+            if (rel < 0.3 || rel > 0.7) {
+                const towardsNext = (rel > 0.7) === (this.nextSide() > 0);
+                this.turn(towardsNext ? 1 : -1);
+                return;
+            }
+            clearTimeout(this.tapTimer);
+            if (dbl) {
+                this.zoomAt(2.5, x, y, true);
+                return;
+            }
+            this.tapTimer = setTimeout(() => {
+                clearTimeout(this.uiTimer);
+                this.root.classList.toggle('nm-ui-hidden');
+            }, 260);
+        }
+
+        onKey(e) {
+            if (!this.isOpen) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.close();
+                return;
+            }
+            if (e.target === this.lockInput || !this.lock.hidden) return;
+            if (this.direction === 'vertical') return;
+            const fwd = this.direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+            const back = this.direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+            if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); this.turn(1); }
+            else if (e.key === back || e.key === 'PageUp') { e.preventDefault(); this.turn(-1); }
+            else if (e.key === 'Home') { e.preventDefault(); this.goToPage(0); }
+            else if (e.key === 'End') { e.preventDefault(); this.goToPage(this.pages.length - 1); }
+        }
+
+        // --------------------------------------------------------------------
+        // Vertical mode (scroll)
+        // --------------------------------------------------------------------
+
+        startVertical(page) {
+            this.stage.hidden = true;
+            this.scroller.hidden = false;
+            this.slider.max = String(this.pages.length - 1);
+            const frag = document.createDocumentFragment();
+            this.pages.forEach((p, i) => {
+                const img = el('img', 'nm-page-v', {
+                    alt: `${i + 1}`, width: String(p.w), height: String(p.h),
+                    loading: i < 3 ? 'eager' : 'lazy', decoding: 'async', draggable: 'false'
+                });
+                if (p.thumb) img.style.backgroundImage = `url("${p.thumb.replace(/"/g, '%22')}")`;
+                img.src = p.src;
+                img._index = i;
+                frag.appendChild(img);
+            });
+            this.scroller.appendChild(frag);
+            this.verticalPage = page;
+            this.updateVerticalCounter(page);
+            requestAnimationFrame(() => this.goToPage(page, false));
+        }
+
+        onVerticalScroll() {
+            if (this.vRaf) return;
+            this.vRaf = requestAnimationFrame(() => {
+                this.vRaf = null;
+                // The page crossing the middle of the screen is the current one
+                const mid = this.scroller.scrollTop + this.scroller.clientHeight / 2;
+                const kids = this.scroller.children;
+                let lo = 0, hi = kids.length - 1;
+                while (lo < hi) {
+                    const m = (lo + hi + 1) >> 1;
+                    if (kids[m].offsetTop <= mid) lo = m; else hi = m - 1;
+                }
+                if (lo !== this.verticalPage) {
+                    this.verticalPage = lo;
+                    this.updateVerticalCounter(lo);
+                }
+            });
+        }
+
+        updateVerticalCounter(page) {
+            this.counterEl.textContent = `${page + 1} / ${this.pages.length}`;
+            this.slider.value = String(page);
+            clearTimeout(this.saveTimer);
+            this.saveTimer = setTimeout(() => this.saveProgress(), 400);
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Triggers
+    // ------------------------------------------------------------------------
+
+    const reader = new Reader();
+
+    function onClick(e) {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const t = e.target.closest('[data-nagimanga], [data-nagimanga-manifest]');
+        if (!t) return;
+        e.preventDefault();
+        if (t.dataset.nagimangaManifest && !t.dataset.manifest) t.dataset.manifest = t.dataset.nagimangaManifest;
+        reader.open(t);
+    }
+
+    document.addEventListener('click', onClick);
+
+    global.NagiManga = {
+        version: VERSION,
+        open: (trigger) => reader.open(trigger),
+        close: () => reader.close()
+    };
+
+    // Drop a stale marker if the page was reloaded while reading
+    try {
+        const st = global.history.state;
+        if (st && st.nagimanga) {
+            const rest = Object.assign({}, st);
+            delete rest.nagimanga;
+            global.history.replaceState(Object.keys(rest).length ? rest : null, '');
+        }
+    } catch (e) { /* ignore */ }
+})(window);
