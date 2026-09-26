@@ -105,6 +105,7 @@ function nm_unlock(array $work): never
     $pw = nm_str($_POST, 'password', 200);
     if ($pw !== '' && password_verify($pw, (string)$work['password_hash'])) {
         nm_rate_clear('unlock', $key);
+        nm_log('unlock_ok', $work['id']);
         nm_json(['ok' => true, 'token' => nm_make_token($work)]);
     }
 

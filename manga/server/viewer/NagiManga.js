@@ -34,14 +34,16 @@
 
     const ICON_ZOOM_IN = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21M8 11h6M11 8v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     const ICON_ZOOM_OUT = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21M8 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-    const ICON_CLOSE ='<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    const chevron = d => `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const ICON_LEFT = chevron('M15 18l-6-6 6-6');
+    const ICON_RIGHT = chevron('M9 18l6-6-6-6');
+    const ICON_UP = chevron('M18 15l-6-6-6 6');
+    const ICON_DOWN = chevron('M6 9l6 6 6-6');
+    const ICON_CLOSE = '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
     const store = {
         get(k) { try { return global.localStorage.getItem(k); } catch (e) { return null; } },
-        set(k, v) { try { global.localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
-        sget(k) { try { return global.sessionStorage.getItem(k); } catch (e) { return null; } },
-        sset(k, v) { try { global.sessionStorage.setItem(k, v); } catch (e) { /* private mode */ } },
-        sdel(k) { try { global.sessionStorage.removeItem(k); } catch (e) { /* ignore */ } }
+        set(k, v) { try { global.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
     };
 
     const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
@@ -114,7 +116,9 @@
 
             const bottom = this.bottomBar = el('div', 'nm-bar nm-bottom');
             this.slider = el('input', 'nm-slider', { type: 'range', min: '0', max: '0', value: '0', 'aria-label': 'Page' });
-            bottom.append(this.slider);
+            this.navA = el('button', 'nm-btn nm-nav', { type: 'button' });
+            this.navB = el('button', 'nm-btn nm-nav', { type: 'button' });
+            bottom.append(this.navA, this.slider, this.navB);
 
             this.spinner = el('div', 'nm-spinner');
             this.message = el('div', 'nm-message');
@@ -153,9 +157,11 @@
             this.zoomInBtn.addEventListener('click', () => this.zoomStep(1));
             this.zoomOutBtn.addEventListener('click', () => this.zoomStep(-1));
             this.zoomLabel.addEventListener('click', () => this.resetZoom(true));
+            this.navA.addEventListener('click', () => this.navStep(this.navAStep));
+            this.navB.addEventListener('click', () => this.navStep(this.navBStep));
             // Mouse near the top / bottom edge brings the bars back
             v.addEventListener('pointermove', e => {
-                if (e.pointerType !== 'mouse' || !this.isOpen || this.pointers.size) return;
+                if (e.pointerType !== 'mouse' || !this.isOpen || this.pointers.size || this.vdrag) return;
                 if (e.clientY < BAR_REVEAL_PX || e.clientY > global.innerHeight - BAR_REVEAL_PX) this.revealBarsByHover();
             });
             this.stage.addEventListener('pointerdown', e => this.onDown(e));
@@ -165,8 +171,21 @@
             this.stage.addEventListener('wheel', e => this.onWheel(e), { passive: false });
             this.stage.addEventListener('contextmenu', e => e.preventDefault());
             this.scroller.addEventListener('click', e => {
-                if (e.target.closest('.nm-page-v')) this.root.classList.toggle('nm-ui-hidden');
+                // The click that ends a mouse drag is not a tap
+                if (this.suppressVClick) {
+                    this.suppressVClick = false;
+                    return;
+                }
+                if (e.target.closest('.nm-page-v')) {
+                    clearTimeout(this.uiTimer);
+                    this.barsByHover = false;
+                    this.root.classList.toggle('nm-ui-hidden');
+                }
             });
+            this.scroller.addEventListener('pointerdown', e => this.onVDown(e));
+            this.scroller.addEventListener('pointermove', e => this.onVMove(e));
+            this.scroller.addEventListener('pointerup', e => this.onVUp(e));
+            this.scroller.addEventListener('pointercancel', e => this.onVUp(e));
             this.scroller.addEventListener('scroll', () => this.onVerticalScroll(), { passive: true });
 
             this.keyHandler = e => this.onKey(e);
@@ -205,8 +224,14 @@
                 manifest: d.manifest || '',
                 direction: d.direction || '',
                 view: d.view === 'single' ? 'single' : 'auto',
-                cover: d.cover !== '0'
+                cover: d.cover !== '0',
+                // Vertical: 'page' = each page fits the window height, 'webtoon' = full width strip
+                vfit: d.vertical === 'webtoon' ? 'webtoon' : 'page'
             };
+            // The reader key of a protected work lives only while the viewer is open:
+            // every opening asks for the password again
+            this.token = null;
+            this.vzoom = 1;
             if (!this.opts.manifest && !(this.opts.id && this.opts.endpoint)) return;
 
             this.isOpen = true;
@@ -238,6 +263,8 @@
             if (!this.isOpen) return;
             this.isOpen = false;
             this.saveProgress();
+            this.token = null;
+            this.stopVInertia();
             this.releaseHistory();
             document.removeEventListener('keydown', this.keyHandler);
             global.removeEventListener('resize', this.resizeHandler);
@@ -301,15 +328,12 @@
         // Data
         // --------------------------------------------------------------------
 
-        tokenKey() { return 'nagimanga_t_' + this.opts.id; }
-
-        manifestUrl() {
+manifestUrl() {
             if (this.opts.manifest) return new URL(this.opts.manifest, location.href).href;
             const u = new URL(this.opts.endpoint, location.href);
             u.searchParams.set('a', 'm');
             u.searchParams.set('id', this.opts.id);
-            const t = store.sget(this.tokenKey());
-            if (t) u.searchParams.set('t', t);
+            if (this.token) u.searchParams.set('t', this.token);
             return u.href;
         }
 
@@ -328,7 +352,7 @@
 
             if (data.title) this.titleEl.textContent = String(data.title);
             if (data.locked) {
-                store.sdel(this.tokenKey());
+                this.token = null;
                 this.showLock(String(data.title || ''));
                 return;
             }
@@ -348,6 +372,8 @@
             this.direction = dir;
             this.root.classList.toggle('nm-rtl', dir === 'rtl');
             this.root.classList.toggle('nm-vertical', dir === 'vertical');
+            this.root.classList.toggle('nm-webtoon', dir === 'vertical' && this.opts.vfit === 'webtoon');
+            this.setupNav();
             this.setLoading(false);
             this.lock.hidden = true;
             this.root.classList.remove('nm-empty');
@@ -390,7 +416,7 @@
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.ok && data.token) {
-                    store.sset(this.tokenKey(), String(data.token));
+                    this.token = String(data.token);
                     this.lock.hidden = true;
                     this.setLoading(true);
                     await this.load();
@@ -663,7 +689,11 @@
         }
 
         relayout() {
-            if (this.direction === 'vertical' || !this.pages.length) return;
+            if (!this.pages.length) return;
+            if (this.direction === 'vertical') {
+                this.keepVerticalAnchor(() => this.layoutVertical());
+                return;
+            }
             const page = this.currentFirstPage();
             this.buildSpreads();
             this.spreadIndex = this.spreadOfPage(page);
@@ -674,7 +704,18 @@
         // Zoom (current spread only)
         // --------------------------------------------------------------------
 
+        updateZoomUi(s) {
+            if (!this.zoomLabel) return;
+            this.zoomLabel.textContent = Math.round(s * 100) + '%';
+            this.zoomOutBtn.disabled = s <= 1.01;
+            this.zoomInBtn.disabled = s >= MAX_ZOOM - 0.01;
+        }
+
         resetZoom(animate) {
+            if (this.direction === 'vertical') {
+                this.setVerticalZoom(1);
+                return;
+            }
             this.zoom = { s: 1, x: 0, y: 0 };
             this.applyZoom(animate);
         }
@@ -695,11 +736,7 @@
         applyZoom(animate) {
             const inner = this.slides.cur && this.slides.cur.querySelector('.nm-spread-inner');
             this.root.classList.toggle('nm-zoomed', this.zoom.s > 1.01);
-            if (this.zoomLabel) {
-                this.zoomLabel.textContent = Math.round(this.zoom.s * 100) + '%';
-                this.zoomOutBtn.disabled = this.zoom.s <= 1.01;
-                this.zoomInBtn.disabled = this.zoom.s >= MAX_ZOOM - 0.01;
-            }
+            this.updateZoomUi(this.zoom.s);
             if (!inner) return;
             inner.style.transition = animate ? 'transform 0.25s ease-out' : 'none';
             inner.style.transform = `translate3d(${this.zoom.x}px, ${this.zoom.y}px, 0) scale(${this.zoom.s})`;
@@ -707,12 +744,17 @@
 
         /** Buttons / keys: next zoom step around the centre of the screen. */
         zoomStep(dir) {
-            if (this.direction === 'vertical' || !this.slides.cur || this.animating) return;
-            const s = this.zoom.s;
+            const vertical = this.direction === 'vertical';
+            if (!vertical && (!this.slides.cur || this.animating)) return;
+            const s = vertical ? this.vzoom : this.zoom.s;
             const next = dir > 0
                 ? ZOOM_STEPS.find(z => z > s + 0.01)
                 : ZOOM_STEPS.slice().reverse().find(z => z < s - 0.01);
             if (next === undefined) return;
+            if (vertical) {
+                this.setVerticalZoom(next);
+                return;
+            }
             const r = this.stage.getBoundingClientRect();
             this.zoomAt(next, r.left + r.width / 2, r.top + r.height / 2, true);
         }
@@ -899,17 +941,52 @@
                 this.close();
                 return;
             }
-            if (e.target === this.lockInput || !this.lock.hidden) return;
-            if (this.direction === 'vertical') return;
-            const fwd = this.direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+            if (e.target === this.lockInput || !this.lock.hidden || !this.pages.length) return;
+            if (e.key === '+' || e.key === ';' || e.key === '=') { e.preventDefault(); this.zoomStep(1); return; }
+            if (e.key === '-') { e.preventDefault(); this.zoomStep(-1); return; }
+            if (e.key === '0') { e.preventDefault(); this.resetZoom(true); return; }
+            if (e.key === 'Home') { e.preventDefault(); this.goToPage(0, true); return; }
+            if (e.key === 'End') { e.preventDefault(); this.goToPage(this.pages.length - 1, true); return; }
+            if (this.direction === 'vertical') {
+                if (e.key === 'ArrowDown' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) { e.preventDefault(); this.vStep(1); }
+                else if (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) { e.preventDefault(); this.vStep(-1); }
+                return;
+            }
+            const fwd= this.direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
             const back = this.direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
             if (e.key === fwd || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); this.turn(1); }
             else if (e.key === back || e.key === 'PageUp') { e.preventDefault(); this.turn(-1); }
-            else if (e.key === 'Home') { e.preventDefault(); this.goToPage(0); }
-            else if (e.key === 'End') { e.preventDefault(); this.goToPage(this.pages.length - 1); }
-            else if (e.key === '+' || e.key === ';' || e.key === '=') { e.preventDefault(); this.zoomStep(1); }
-            else if (e.key === '-') { e.preventDefault(); this.zoomStep(-1); }
-            else if (e.key === '0') { e.preventDefault(); this.resetZoom(true); }
+        }
+
+        // --------------------------------------------------------------------
+        // Prev / next buttons (bottom bar)
+        // --------------------------------------------------------------------
+
+        /** Put "next" on the side the book moves to: left for right-to-left books. */
+        setupNav() {
+            const set = (btn, step, icon) => {
+                btn.innerHTML = icon;
+                const label = step > 0 ? '次のページ' : '前のページ';
+                btn.setAttribute('aria-label', label);
+                btn.title = label;
+                return step;
+            };
+            if (this.direction === 'vertical') {
+                this.navAStep = set(this.navA, -1, ICON_UP);
+                this.navBStep = set(this.navB, 1, ICON_DOWN);
+            } else if (this.direction === 'rtl') {
+                this.navAStep = set(this.navA, 1, ICON_LEFT);
+                this.navBStep = set(this.navB, -1, ICON_RIGHT);
+            } else {
+                this.navAStep = set(this.navA, -1, ICON_LEFT);
+                this.navBStep = set(this.navB, 1, ICON_RIGHT);
+            }
+        }
+
+        navStep(step) {
+            if (!this.pages.length) return;
+            if (this.direction === 'vertical') this.vStep(step);
+            else this.turn(step);
         }
 
         // --------------------------------------------------------------------
@@ -932,9 +1009,139 @@
                 frag.appendChild(img);
             });
             this.scroller.appendChild(frag);
+            this.layoutVertical();
+            this.updateZoomUi(this.vzoom);
             this.verticalPage = page;
             this.updateVerticalCounter(page);
             requestAnimationFrame(() => this.goToPage(page, false));
+        }
+
+        /**
+         * Page manga: every page starts exactly as tall as the window (the whole
+         * page is visible). Webtoon: a strip as wide as the window (max 900px).
+         * Zoom multiplies that width.
+         */
+        layoutVertical() {
+            const W = this.scroller.clientWidth || global.innerWidth;
+            const H = this.scroller.clientHeight || global.innerHeight;
+            const webtoon = this.opts.vfit === 'webtoon';
+            Array.from(this.scroller.children).forEach(img => {
+                const p = this.pages[img._index];
+                const base = webtoon ? Math.min(W, 900) : Math.min(W, H * p.w / p.h);
+                img.style.width = Math.max(1, Math.floor(base * this.vzoom)) + 'px';
+            });
+        }
+
+        /** Run fn (which changes sizes) while keeping the same spot in the middle of the screen. */
+        keepVerticalAnchor(fn) {
+            const sc = this.scroller;
+            const cur = sc.children[this.verticalPage || 0];
+            const H = sc.clientHeight;
+            const frac = cur && cur.offsetHeight ? (sc.scrollTop + H / 2 - cur.offsetTop) / cur.offsetHeight : 0;
+            const fracX = sc.scrollWidth > 0 ? (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth : 0.5;
+            fn();
+            if (cur) sc.scrollTop = cur.offsetTop + frac * cur.offsetHeight - H / 2;
+            sc.scrollLeft = fracX * sc.scrollWidth - sc.clientWidth / 2;
+        }
+
+        setVerticalZoom(z) {
+            z = clamp(z, 1, MAX_ZOOM);
+            if (Math.abs(z - this.vzoom) < 0.001) return;
+            this.stopVInertia();
+            this.keepVerticalAnchor(() => {
+                this.vzoom = z;
+                this.layoutVertical();
+            });
+            this.root.classList.toggle('nm-zoomed', z > 1.01);
+            this.updateZoomUi(z);
+        }
+
+        /** Next / previous page; pages taller than the window scroll by a screenful. */
+        vStep(step) {
+            const sc = this.scroller;
+            const H = sc.clientHeight;
+            const cur = sc.children[this.verticalPage || 0];
+            if (!cur) return;
+            const top = sc.scrollTop;
+            const bottom = top + H;
+            const tall = cur.offsetHeight > H * 1.05;
+            if (tall) {
+                // Still inside the current page: scroll within it first
+                const stillBelow = step > 0 && cur.offsetTop + cur.offsetHeight > bottom + 4;
+                const stillAbove = step < 0 && cur.offsetTop < top - 4;
+                if (stillBelow || stillAbove) {
+                    sc.scrollBy({ top: step * H * 0.85, behavior: 'smooth' });
+                    return;
+                }
+            }
+            const target = clamp((this.verticalPage || 0) + step, 0, this.pages.length - 1);
+            // Going back to a tall page: land on its bottom part
+            const node = sc.children[target];
+            if (step < 0 && node && node.offsetHeight > H * 1.05) {
+                sc.scrollTo({ top: node.offsetTop + node.offsetHeight - H, behavior: 'smooth' });
+            } else {
+                this.goToPage(target, true);
+            }
+        }
+
+        // Mouse drag = grab and scroll, with a little glide after release
+        onVDown(e) {
+            if (e.pointerType !== 'mouse' || e.button !== 0) return;
+            this.stopVInertia();
+            e.preventDefault();
+            try { this.scroller.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+            const now = performance.now();
+            this.vdrag = {
+                x0: e.clientX, y0: e.clientY,
+                sl: this.scroller.scrollLeft, st: this.scroller.scrollTop,
+                moved: false, samples: [{ t: now, x: e.clientX, y: e.clientY }]
+            };
+        }
+
+        onVMove(e) {
+            const d = this.vdrag;
+            if (!d) return;
+            const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+            if (!d.moved && Math.hypot(dx, dy) > 6) {
+                d.moved = true;
+                this.root.classList.add('nm-grabbing');
+            }
+            if (!d.moved) return;
+            this.scroller.scrollTop = d.st - dy;
+            this.scroller.scrollLeft = d.sl - dx;
+            const now = performance.now();
+            d.samples.push({ t: now, x: e.clientX, y: e.clientY });
+            while (d.samples.length > 2 && now - d.samples[0].t > 100) d.samples.shift();
+        }
+
+        onVUp() {
+            const d = this.vdrag;
+            if (!d) return;
+            this.vdrag = null;
+            this.root.classList.remove('nm-grabbing');
+            if (!d.moved) return;
+            this.suppressVClick = true;
+            setTimeout(() => { this.suppressVClick = false; }, 0);
+            const a = d.samples[0], b = d.samples[d.samples.length - 1];
+            if (!a || !b || b.t <= a.t || performance.now() - b.t > 80) return;
+            let vx = (b.x - a.x) / (b.t - a.t), vy = (b.y - a.y) / (b.t - a.t);
+            let last = performance.now();
+            const glide = now => {
+                const dt = Math.min(now - last, 32);
+                last = now;
+                this.scroller.scrollTop -= vy * dt;
+                this.scroller.scrollLeft -= vx * dt;
+                const f = Math.pow(0.994, dt);
+                vx *= f;
+                vy *= f;
+                this.vGlide = Math.abs(vx) + Math.abs(vy) > 0.03 ? requestAnimationFrame(glide) : null;
+            };
+            this.vGlide = requestAnimationFrame(glide);
+        }
+
+        stopVInertia() {
+            if (this.vGlide) cancelAnimationFrame(this.vGlide);
+            this.vGlide = null;
         }
 
         onVerticalScroll() {

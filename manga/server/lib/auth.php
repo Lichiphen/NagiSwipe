@@ -153,19 +153,17 @@ function nm_try_login(string $password): bool
     return false;
 }
 
+/**
+ * Forget the login but keep a (new, empty) session: the same request may still
+ * need it, e.g. the login form token right after an idle timeout. Destroying
+ * the session here made the next login attempt fail.
+ */
 function nm_logout(): void
 {
     $_SESSION = [];
     if (session_status() === PHP_SESSION_ACTIVE) {
-        $p = session_get_cookie_params();
-        setcookie(session_name(), '', [
-            'expires' => time() - 3600,
-            'path' => $p['path'],
-            'secure' => $p['secure'],
-            'httponly' => true,
-            'samesite' => 'Strict',
-        ]);
-        session_destroy();
+        // New id, old session file deleted
+        session_regenerate_id(true);
     }
 }
 

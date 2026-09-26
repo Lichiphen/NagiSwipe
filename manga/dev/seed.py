@@ -79,6 +79,7 @@ def main():
 <li><a href="#" data-nagimanga="{a}" data-endpoint="{ep}" data-direction="rtl" data-view="auto" data-cover="1">第1話を読む（右から左・見開き）</a></li>
 <li><a href="#" data-nagimanga="{a}" data-endpoint="{ep}" data-direction="ltr" data-view="single">第1話を読む（左から右・1ページずつ）</a></li>
 <li><a href="#" data-nagimanga="{a}" data-endpoint="{ep}" data-direction="vertical">第1話を読む（縦読み）</a></li>
+<li><a href="#" data-nagimanga="{a}" data-endpoint="{ep}" data-direction="vertical" data-vertical="webtoon">第1話を読む（縦読み・ウェブトゥーン）</a></li>
 <li><a href="#" data-nagimanga="{b}" data-endpoint="{ep}" data-direction="rtl">第2話を読む（パスワード付き）</a></li>
 </ul>
 <p style="height:1200px">（スクロール用の余白）</p>

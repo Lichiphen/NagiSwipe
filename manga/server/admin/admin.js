@@ -50,6 +50,7 @@
         const dir = $('.js-share-dir', share);
         const view = $('.js-share-view', share);
         const cover = $('.js-share-cover', share);
+        const vfit = $('.js-share-vfit', share);
         const label = $('.js-share-label', share);
         const out = $('.js-share-out', share);
         const preview = $('.js-preview', share);
@@ -58,8 +59,14 @@
             const vertical = dir.value === 'vertical';
             view.disabled = vertical;
             cover.disabled = vertical || view.value === 'single';
+            // Only one of the two groups applies
+            view.closest('label').hidden = vertical;
+            cover.closest('label').hidden = vertical;
+            vfit.closest('label').hidden = !vertical;
             let attrs = `data-nagimanga="${esc(share.dataset.id)}" data-endpoint="${esc(share.dataset.endpoint)}" data-direction="${esc(dir.value)}"`;
-            if (!vertical) {
+            if (vertical) {
+                if (vfit.value === 'webtoon') attrs += ' data-vertical="webtoon"';
+            } else {
                 attrs += ` data-view="${esc(view.value)}"`;
                 if (view.value !== 'single') attrs += ` data-cover="${esc(cover.value)}"`;
             }
@@ -69,8 +76,9 @@
             preview.dataset.direction = dir.value;
             preview.dataset.view = view.value;
             preview.dataset.cover = cover.value;
+            preview.dataset.vertical = vfit.value;
         };
-        [dir, view, cover, label].forEach(el => el.addEventListener('input', update));
+        [dir, view, cover, vfit, label].forEach(el => el.addEventListener('input', update));
         update();
     }
 

@@ -640,6 +640,7 @@ function nm_view_work(string $id): void
         . '<div class="form row">'
         . '<label>読み方<select class="js-share-dir">' . nm_direction_options((string)($w['direction'] ?? 'rtl')) . '</select></label>'
         . '<label>見開き<select class="js-share-view"><option value="auto">横長の画面なら見開き</option><option value="single">常に 1 ページ</option></select></label>'
+        . '<label>縦読みの種類<select class="js-share-vfit"><option value="page">ページ漫画（1 ページが画面に収まる）</option><option value="webtoon">ウェブトゥーン（横幅いっぱいの長い絵）</option></select></label>'
         . '<label>表紙<select class="js-share-cover"><option value="1">1 ページ目は単独（表紙）</option><option value="0">1 ページ目から見開き</option></select></label>'
         . '<label>リンクの文字<input class="js-share-label" maxlength="100" value="' . h($w['title'] . 'を読む') . '"></label>'
         . '</div>'

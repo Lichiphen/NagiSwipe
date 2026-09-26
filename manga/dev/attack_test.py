@@ -210,6 +210,19 @@ def run(data_dir):
     sc = rr.getheader("Set-Cookie") or ""
     check("セッション Cookie は HttpOnly + SameSite=Strict", "HttpOnly" in sc and "SameSite=Strict" in sc)
 
+    # --- Idle timeout, then log in again (the first attempt used to fail) -------------------
+    idle = Client()
+    r = idle.get(f"/admin/index.php?k={key}")
+    idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
+    sess = data_dir / "sessions" / f"sess_{idle.cookies.get('nm_admin', '')}"
+    if sess.exists():
+        sess.write_text(re.sub(r"nm_seen\|i:\d+", "nm_seen|i:1000", sess.read_text()))
+    expired = is_404(idle.get("/admin/index.php"))
+    r = idle.get(f"/admin/index.php?k={key}")
+    r = idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
+    check("30 分放置で自動ログアウトし、そのあと 1 回目でログインし直せる",
+          sess.exists() is False and expired and r.status == 303 and "作品を作る" in idle.get("/admin/index.php").text)
+
     # --- CSRF on actions --------------------------------------------------------------
     check("CSRF トークンなしの操作は 404", is_404(adm.post("/admin/index.php", {"do": "create", "title": "x"})))
     check("別サイトからの POST（Origin 不一致）は 404",
