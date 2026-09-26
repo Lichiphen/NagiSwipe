@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.1.0
+ * NagiSwipe v1.2.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -330,16 +330,18 @@
             if (!this.isOpen || this.isAnimating) return;
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(wrap => {
                 if (!wrap) return;
-                const img = wrap.querySelector('.ns-img-highres');
-                if (img && img.naturalWidth) {
-                    wrap._nsBaseScale = SmartUtils.getFitScale(img.naturalWidth, img.naturalHeight);
-                }
+                if (wrap._nsW) this._setSlideSize(wrap, wrap._nsW, wrap._nsH);
                 wrap.style.transition = 'none';
             });
             this.state = { x: 0, y: 0, scale: 1 };
             this.allowOverZoom = false;
             this.render();
             this.updateUiVisibility();
+        }
+
+        // Space between slides while swiping
+        _getSlideGap() {
+            return Math.round(Math.min(48, window.innerWidth * 0.06));
         }
 
         _setSuppressNextClick() {
@@ -410,6 +412,7 @@
 
                 this.loadHighRes(index, currentEl);
                 this.preloadSurrounding(index);
+                this._updateSpinner();
                 this.isAnimating = false;
             });
         }
@@ -487,10 +490,43 @@
             wrap.style.opacity = '1';
             wrap.innerHTML = '';
             // 初期値
-            wrap._nsBaseScale = 1; 
+            wrap._nsBaseScale = 1;
             wrap._nsValuesCalculated = false;
+            wrap._nsW = 0;
+            wrap._nsH = 0;
+            wrap._nsLoading = false;
+            wrap._nsLoaded = false;
+            wrap._nsFailed = false;
 
-            // スピナー生成は削除（グローバル化）
+            // 既に寸法が分かっていれば（読み込み済み / data-ns-width）先に枠を決める
+            const known = this._getKnownSize(item);
+            if (known) this._setSlideSize(wrap, known.w, known.h);
+
+            // サムネイルを仮画像として即座に置く。
+            // 高画質版が届くまでの間も、スワイプ中の隣のスライドに絵が見える
+            if (item.thumb && item.thumb !== item.src) {
+                const ph = document.createElement('img');
+                ph.className = 'ns-img ns-img-placeholder';
+                ph.alt = '';
+                ph.setAttribute('aria-hidden', 'true');
+                ph.draggable = false;
+                ph.decoding = 'async';
+                const sizeFromThumb = () => {
+                    if (wrap._nsW || wrap._nsIndex !== index) return;
+                    const guess = this._guessSizeFromThumb(ph.naturalWidth, ph.naturalHeight);
+                    if (!guess) return;
+                    this._setSlideSize(wrap, guess.w, guess.h);
+                    if (this.isOpen && !this.isAnimating) this.render();
+                };
+                ph.onload = sizeFromThumb;
+                ph.src = item.thumb;
+                wrap.appendChild(ph);
+                if (wrap._nsW) {
+                    this._setSlideSize(wrap, wrap._nsW, wrap._nsH);
+                } else if (ph.complete && ph.naturalWidth) {
+                    sizeFromThumb();
+                }
+            }
             
             // 初期のズームボタン状態更新用
             const isCurrent = wrap === this.slidePool.current;
@@ -519,7 +555,9 @@
             this._setZoomButtonVisible(this.btnZoom, false);
             this.bg.style.opacity = 0;
             this.ui.style.opacity = 0;
-            this.viewer.style.pointerEvents = 'none'; // prevent interaction during fade out
+            if (this._spinnerTimer) clearTimeout(this._spinnerTimer);
+            this.spinner.style.opacity = '0';
+            this.viewer.style.pointerEvents = 'none';// prevent interaction during fade out
 
             this.closeTimer = setTimeout(() => {
                 this.closeTimer = null;
@@ -564,46 +602,81 @@
 
         // --- Logic ---
 
-        loadHighRes(index, wrapperEl) {
+        /**
+         * Size of the full image when it is already known:
+         * loaded once before, or given by data-ns-width / data-ns-height (optional)
+         */
+        _getKnownSize(item) {
+            if (item.naturalWidth && item.naturalHeight) {
+                return { w: item.naturalWidth, h: item.naturalHeight };
+            }
+            const link = item.linkEl;
+            const w = link ? parseInt(link.getAttribute('data-ns-width'), 10) : 0;
+            const h = link ? parseInt(link.getAttribute('data-ns-height'), 10) : 0;
+            return (w > 0 && h > 0) ? { w, h } : null;
+        }
+
+        /**
+         * Only the thumbnail is known: keep its aspect ratio and assume the full
+         * image is at least as large as the viewport (a thumbnail is usually smaller)
+         */
+        _guessSizeFromThumb(thumbW, thumbH) {
+            if (!thumbW || !thumbH) return null;
+            const fill = Math.min(window.innerWidth / thumbW, window.innerHeight / thumbH);
+            const k = Math.max(fill, 1);
+            return { w: thumbW * k, h: thumbH * k };
+        }
+
+        /**
+         * Logical size of a slide (= full image pixels). Every image in the slide
+         * (placeholder / high-res) is laid out at this size, then scaled by baseScale
+         */
+        _setSlideSize(wrap, w, h) {
+            if (!wrap || !w || !h) return;
+            wrap._nsW = w;
+            wrap._nsH = h;
+            wrap._nsBaseScale = SmartUtils.getFitScale(w, h);
+            wrap.querySelectorAll('.ns-img').forEach(img => {
+                img.style.width = `${w}px`;
+                img.style.height = `${h}px`;
+            });
+        }
+
+        loadHighRes(index, wrapperEl, priority = 'high') {
             if (!wrapperEl) return;
             const item = this.items[index];
             if (!item) return;
 
-            // 既にロード済みなら何もしない（スピナーも出さない）
-            if (wrapperEl.classList.contains('ns-img-loaded')) {
-                this.spinner.style.opacity = '0';
-                return;
-            }
-
-            // ロード開始：スピナー表示
-            this.spinner.style.opacity = '1';
+            // 既にロード済み / ロード中なら何もしない
+            if (wrapperEl._nsLoaded || wrapperEl._nsLoading || wrapperEl._nsFailed) return;
+            wrapperEl._nsLoading = true;
 
             const fullImg = document.createElement('img');
             fullImg.className = 'ns-img ns-img-highres';
-            fullImg.src = item.src;
             fullImg.alt = item.caption || '';
             fullImg.draggable = false;
-            
-            // 重要: 計算が終わるまで非表示
-            fullImg.style.opacity = '0'; 
+            fullImg.decoding = 'async';
+            // 表示中の1枚を優先し、隣は後回しにする（対応ブラウザのみ）
+            fullImg.fetchPriority = priority;
+            if (wrapperEl._nsW) {
+                fullImg.style.width = `${wrapperEl._nsW}px`;
+                fullImg.style.height = `${wrapperEl._nsH}px`;
+            }
 
-            wrapperEl.appendChild(fullImg);
+            // 重要: 計算が終わるまで非表示
+            fullImg.style.opacity = '0';
 
             fullImg.onload = () => {
-                // ロード完了：スピナー非表示
-                this.spinner.style.opacity = '0';
-
-                if(!this.isOpen) return;
-
+                wrapperEl._nsLoading = false;
+                wrapperEl._nsLoaded = true;
                 item.naturalWidth = fullImg.naturalWidth;
                 item.naturalHeight = fullImg.naturalHeight;
-                
-                // --- Dimension Calculation (Load then Show) ---
-                // 画像が画面より小さい場合は拡大しない（等倍表示）
-                const baseScale = SmartUtils.getFitScale(fullImg.naturalWidth, fullImg.naturalHeight);
-                
-                // コンテナに、この画像専用の BaseScale を保存
-                wrapperEl._nsBaseScale = baseScale;
+
+                // スライドが閉じられた / 使い回されて別の画像になった
+                if (!this.isOpen || wrapperEl._nsIndex !== index) return;
+
+                // 実寸で枠を確定（画像が画面より小さい場合は拡大しない）
+                this._setSlideSize(wrapperEl, fullImg.naturalWidth, fullImg.naturalHeight);
                 wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
 
                 // Layout Update Sync
@@ -611,23 +684,62 @@
                     if (this.isOpen && !this.isAnimating) this.render();
                     fullImg.style.opacity = '1';
                     wrapperEl.classList.add('ns-img-loaded');
-                    this._updateZoomButtonDisplay();
+                    if (wrapperEl === this.slidePool.current) this._updateZoomButtonDisplay();
+                    this._updateSpinner();
+                    // 高画質版がフェードインし終えたら仮画像は捨てる
+                    setTimeout(() => {
+                        const ph = wrapperEl.querySelector('.ns-img-placeholder');
+                        if (ph) ph.remove();
+                    }, 450);
                 });
             };
 
             fullImg.onerror = () => {
-                this.spinner.style.opacity = '0';
+                wrapperEl._nsLoading = false;
+                wrapperEl._nsFailed = true;
+                fullImg.remove();
+                this._updateSpinner();
             };
+
+            fullImg.src = item.src;
+            wrapperEl.appendChild(fullImg);
+        }
+
+        /**
+         * Spinner only for the visible slide, and only when loading is not instant.
+         * With a thumbnail placeholder on screen, wait a bit longer.
+         */
+        _updateSpinner() {
+            if (this._spinnerTimer) clearTimeout(this._spinnerTimer);
+            this._spinnerTimer = null;
+            const wrap = this.slidePool.current;
+            const waiting = this.isOpen && wrap && !wrap._nsLoaded && !wrap._nsFailed;
+            if (!waiting) {
+                this.spinner.style.opacity = '0';
+                return;
+            }
+            const hasPlaceholder = !!wrap.querySelector('.ns-img-placeholder');
+            this._spinnerTimer = setTimeout(() => {
+                this._spinnerTimer = null;
+                if (this.slidePool.current === wrap && !wrap._nsLoaded && !wrap._nsFailed) {
+                    this.spinner.style.opacity = '1';
+                }
+            }, hasPlaceholder ? 600 : 250);
         }
 
         preloadSurrounding(index) {
-            this._preloadOne(index + 1);
-            this._preloadOne(index - 1);
+            // 隣のスライドは DOM に置いたまま読み込む（スワイプ中に見える）
+            this.loadHighRes(index + 1, this.slidePool.next, 'low');
+            this.loadHighRes(index - 1, this.slidePool.prev, 'low');
+            // その先はキャッシュを温めるだけ
+            this._preloadOne(index + 2);
+            this._preloadOne(index - 2);
         }
 
         _preloadOne(index) {
             if (index >= 0 && index < this.items.length) {
                 const i = new Image();
+                i.decoding = 'async';
                 i.src = this.items[index].src;
             }
         }
@@ -684,7 +796,9 @@
         }
 
         _getMaxScaleForCurrent() {
-            const baseScale = this._getWrapBaseScale(this.slidePool.current);
+            const wrap = this.slidePool.current;
+            if (!wrap || !wrap._nsLoaded) return 1;
+            const baseScale = this._getWrapBaseScale(wrap);
             if (!baseScale || baseScale <= 0) return 1;
             return Math.min(Math.max(1, 1 / baseScale), 5);
         }
@@ -1024,7 +1138,7 @@
             this.allowOverZoom = false;
 
             const winW = window.innerWidth;
-            const gap = 0; // seamless; avoids visible vertical seam
+            const gap = this._getSlideGap();
             const duration = 260;
             const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
@@ -1049,6 +1163,7 @@
                 this.updateUiVisibility();
                 this.loadHighRes(this.currentIndex, this.slidePool.current);
                 this.preloadSurrounding(this.currentIndex);
+                this._updateSpinner();
              // Reset state & snap to center without animation
                 this.state = { x: 0, y: 0, scale: 1 };
                 [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
@@ -1089,6 +1204,7 @@
             const nextBaseScale = (this.slidePool.next && this.slidePool.next._nsBaseScale) ? this.slidePool.next._nsBaseScale : 1;
             
             const currentScale = scale * currentBaseScale;
+            const step = winW + this._getSlideGap();
 
             // --- Absolute Centering Logic ---
             // CSSのセンタリングを廃止したため、JSで中央位置を計算する
@@ -1098,15 +1214,11 @@
 
             // Helper to calc center offset
             const getCenterOffset = (el, baseSc, sc) => {
-                if (!el || !el.firstChild) return { x: 0, y: 0 };
-                // img要素を探す (highres優先)
-                const img = el.querySelector('.ns-img-highres') || el.querySelector('img');
-                if (!img) return { x: 0, y: 0 };
-                
-                // imgには width/height が style で入っている前提 (loadHighResでセット済み)
-                // もし入ってなければ natural を使う
-                const w = parseFloat(img.style.width) || img.naturalWidth || 0;
-                const h = parseFloat(img.style.height) || img.naturalHeight || 0;
+                // 寸法未確定のスライドは何も描かれていないので位置は問わない
+                if (!el || !el._nsW) return { x: 0, y: 0 };
+                // スライドの論理サイズ（_setSlideSize で確定）
+                const w = el._nsW;
+                const h = el._nsH;
                 
                 const finalW = w * baseSc * sc;
                 const finalH = h * baseSc * sc;
@@ -1141,7 +1253,8 @@
                     // 内部のオフセットを考慮する必要があるが、
                     // 現状の構造だと slidePool 自体に transform をかけているので
                     // 「画面中央へのオフセット」-「画面幅」 で配置すればよい
-                    const finalX = offset.x - winW; 
+                    // 隣のスライドも指に追従させる（スワイプ中に見える）
+                    const finalX = offset.x - step + x;
                     const finalY = offset.y;
                     this.slidePool.prev.style.transform = `translate3d(${finalX}px, ${finalY}px, 0) scale(${prevBaseScale})`;
                 }
@@ -1150,7 +1263,7 @@
                     this.slidePool.next.style.opacity = '1';
                     this.slidePool.next.style.visibility = 'visible';
                     const offset = getCenterOffset(this.slidePool.next, nextBaseScale, 1);
-                    const finalX = offset.x + winW;
+                    const finalX = offset.x + step + x;
                     const finalY = offset.y;
                     this.slidePool.next.style.transform = `translate3d(${finalX}px, ${finalY}px, 0) scale(${nextBaseScale})`;
                 }

@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core CSS] 
  * Drop-in gallery library
  * 
- * NagiSwipe v1.1.0
+ * NagiSwipe v1.2.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -71,6 +71,11 @@
     z-index: 2;
     opacity: 0;
     transition: opacity 0.4s ease-out;
+}
+
+/* サムネイルの仮画像（高画質版が届くまで / スワイプ中の隣のスライド） */
+.ns-img-placeholder {
+    z-index: 1;
 }
 
 /* ローディング完了後の表示 */
