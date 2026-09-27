@@ -7,6 +7,8 @@
 
 [**Demo / Documentation (Cloudflare Pages)**](https://nagiswipe.pages.dev/)
 
+[**漫画ビューアー NagiManga のデモ**](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB 取り込みの作品、管理画面をゲストで見る）— 詳しくは [manga/README.md](manga/README.md)
+
 ## 特徴
 - **ドロップイン導入**: JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。
 - **モバイル最適化**: スワイプ、ピンチズーム、ダブルタップに対応。
