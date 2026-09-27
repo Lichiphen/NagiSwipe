@@ -2,12 +2,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-軽量・単一ファイルで完結する画像ポップアップギャラリー・ライブラリです。
-モバイルファースト、タッチ操作の快適さを目指しています。
+JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。
+モバイルファースト、タッチ操作の快適さを目指しています。漫画ビューアー **NagiManga** も同梱しています。
 
 [**Demo / Documentation (Cloudflare Pages)**](https://nagiswipe.pages.dev/)
 
-[**漫画ビューアー NagiManga のデモ**](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB 取り込みの作品、管理画面をゲストで見る）— 詳しくは [manga/README.md](manga/README.md)
+[**漫画ビューアー NagiManga のデモ**](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る）— 詳しくは [manga/README.md](manga/README.md)
 
 ## 特徴
 - **ドロップイン導入**: JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。
@@ -24,17 +24,17 @@
 HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ### CDN経由 (推奨)
-[jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。最新の安定版を使用する場合は以下のURLをコピーしてください。
+[jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。最新のリリース（v1.3.0）を使う場合は、以下の URL をコピーしてください。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js"></script>
 ```
 
-※常に最新の `main` ブランチを参照したい場合は `@main` を使用してください。
+※ `@v1.3.0` のようにバージョンを固定しておくと、更新で表示が変わることがありません。常に最新の `main` ブランチを使いたい場合は `@main` にしてください（キャッシュの都合で反映が遅れることがあります）。
 
 ### 使い方
 ページ内の `<a href="image.jpg">` のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。
@@ -75,7 +75,14 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 ```
 
 ## 漫画ビューアー（NagiManga）
-右から左・見開き・縦読みに対応した漫画ビューアーと、データベース不要の簡易 CMS（画像管理・共有タグ発行・パスワード付き公開・バックアップ）を [`manga/`](manga/) に同梱しています。導入方法は [manga/README.md](manga/README.md) を参照してください。
+[`manga/`](manga/) に、漫画ビューアーとデータベース不要の簡易 CMS を同梱しています。
+
+- 右から左・見開き・縦読み（ページ漫画／ウェブトゥーン）、しおり、拡大
+- 画像のドラッグ＆ドロップや、CLIP STUDIO PAINT などの漫画 EPUB から作品を作れます
+- スマホ用の小容量版と、パソコン・拡大用の通常版を自動で読み分けます
+- パスワード付きの限定公開、共有タグの発行、ZIP でのバックアップ
+
+デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
 
 ## 権利・免責事項：掲載画像について
 本プロジェクトのデモ（`index.html`等）で使用されている画像について：
@@ -88,6 +95,10 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
     - これらは [Lorem Picsum](https://picsum.photos/) 等の外部サービスから取得しているサンプルです。
     - **これらの写真画像の著作権は Lichiphen には帰属しません。**
     - 写真素材については本ソフトウェア（NagiSwipe）の MIT LICENSE の対象外です。各画像のライセンスについては提供元（Unsplash等）の規定に従ってください。
+
+- **NagiManga のデモに掲載している漫画作品（「送り日」「ガーベラ」など）**
+    - Lichiphen（作者）本人の作品です。このリポジトリには含まれておらず、MIT LICENSE の対象外です。著作権は作者に帰属します。
+    - デモの見本マンガ・見本ウェブトゥーンの絵は、デモ用に自動で描いたものです。
 
 ## ライセンス
 [MIT License](LICENSE) (c) 2026 Lichiphen
