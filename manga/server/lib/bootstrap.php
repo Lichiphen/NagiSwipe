@@ -92,8 +92,14 @@ function nm_client_ip(): string
 
 function nm_is_https(): bool
 {
-    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443) {
+        return true;
+    }
+    // Behind a reverse proxy listed in trusted_proxies (never trusted otherwise)
+    $cfg = nm_config();
+    $peer = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    return $peer !== '' && in_array($peer, $cfg['trusted_proxies'] ?? [], true)
+        && strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 }
 
 function nm_str(array $src, string $key, int $max = 1000): string

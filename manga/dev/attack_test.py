@@ -238,6 +238,16 @@ def run(data_dir):
     check("タイトルの XSS はエスケープされる（一覧）", "<script>alert(1)" not in r.text and "&lt;script&gt;" in r.text)
     r = adm.get(f"/admin/index.php?p=work&id={wid}")
     check("タイトルの XSS はエスケープされる（作品ページ）", "<script>alert(1)" not in r.text)
+    r = adm.get(f"/admin/index.php?p=work&id={wid}", headers={"Host": "notebook.example.test"})
+    check("共有タグの URL は開いているドメインから自動で作る", 'data-endpoint="http://notebook.example.test/read.php"' in r.text
+          and "http://notebook.example.test/viewer/NagiManga.js?v=" in r.text)
+    r = adm.get(f"/admin/index.php?p=work&id={wid}", headers={"Host": "evil.example\"><script>"})
+    check("おかしな Host ヘッダーはタグに入らない", "<script>\"" not in r.text and 'evil.example"' not in r.text)
+    adm.post("/admin/index.php", {"do": "settings_general", "csrf": csrf, "base_url": "https://cdn.example.test/manga",
+                                  "image_quality": "90", "max_upload_mb": "30"})
+    r = adm.get(f"/admin/index.php?p=work&id={wid}")
+    check("設置 URL を設定すると、そちらが優先される", 'data-endpoint="https://cdn.example.test/manga/read.php"' in r.text)
+    adm.post("/admin/index.php", {"do": "settings_general", "csrf": csrf, "base_url": "", "image_quality": "90", "max_upload_mb": "30"})
 
     # --- Uploads -------------------------------------------------------------------------
     def upload(name, data, ctype="image/png"):

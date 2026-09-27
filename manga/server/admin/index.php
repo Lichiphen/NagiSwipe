@@ -203,7 +203,7 @@ function nm_setup(string $method): void
         if (!$errors) {
             $cfg = nm_default_config();
             $cfg['admin_hash'] = password_hash($pw, PASSWORD_DEFAULT);
-            $cfg['base_url'] = nm_detect_base_url();
+            // base_url stays empty: share tags follow the address the admin is opened with
             if (!empty($_POST['lock_ip'])) $cfg['allowed_ips'] = [$ip];
             nm_save_config($cfg);
             @unlink($mark);
@@ -754,6 +754,7 @@ function nm_view_work(string $id): void
         // Preview through a relative URL: the admin may be opened under another host name than base_url
         . '<a href="#" class="btn js-preview" data-nagimanga="' . $idH . '" data-endpoint="../read.php">ここで試し読み</a></p>'
         . '<p class="note">このタグをブログやサイトの HTML に貼るだけで、クリックしたときにビューアーが開きます。<code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。</p>'
+        . '<p class="note">タグの URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「設置 URL」から作っています') . '。</p>'
         . '</div>'
         . '<script src="' . h('../viewer/NagiManga.js?v=' . $viewerVer) . '" defer></script>'
         . '</section>'
@@ -876,7 +877,7 @@ function nm_view_settings(array $cfg): void
 
         . '<section class="card"><h2>その他</h2>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_general">'
-        . '<label>設置 URL（共有タグに使われます）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
+        . '<label>設置 URL（共有タグに使われます。空欄なら、この管理画面を開いているアドレスから自動で決めます。通常は空欄のままで大丈夫です）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
         . '<label>画像の画質（60〜100）<input type="number" name="image_quality" min="60" max="100" value="' . (int)($cfg['image_quality'] ?? 90) . '"></label>'
         . '<label>1 枚あたりの上限（MB）<input type="number" name="max_upload_mb" min="1" max="200" value="' . (int)($cfg['max_upload_mb'] ?? 30) . '"></label>'
         . '<p class="note">サーバー側の上限: upload_max_filesize ' . h((string)ini_get('upload_max_filesize')) . ' / memory_limit ' . h((string)ini_get('memory_limit')) . '</p>'
