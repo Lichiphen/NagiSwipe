@@ -110,7 +110,7 @@ nagimanga/
    画像の拡大表示に NagiSwipe を使っている場合は、NagiSwipe の URL の **うしろに半角スペースを 1 つ入れて** 続けて書きます（1 行のまま続けます）。
 
    ```
-   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
+   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js?93db749 https://example.com/nagimanga/viewer/NagiManga.js?d978231
    ```
 
 3. **画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
