@@ -104,7 +104,7 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 **漫画ビューアー（NagiManga）も使う場合** は、同じ「JavaScriptのURL」欄で、NagiSwipe の URL の **うしろに半角スペースを 1 つ入れて**、NagiManga の URL を続けて書きます（1 行のまま続けます。「CSSのURL」欄はそのままで大丈夫です）。
 
 ```
-https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js?93db749 https://あなたのサイト/nagimanga/viewer/NagiManga.js?d978231
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js?93db749 https://あなたのサイト/nagimanga/viewer/NagiManga.js?377d47e
 ```
 
 あわせて、**画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
