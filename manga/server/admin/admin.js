@@ -12,8 +12,10 @@
     // --- Copy buttons -------------------------------------------------------
     $$('.js-copy').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const scope = btn.closest('p, .share, section') || document;
-            const src = $('.copy-src', scope);
+            // The nearest box that holds a copy source (the button may sit in its own <p>)
+            let scope = btn.parentElement;
+            while (scope && !$('.copy-src', scope)) scope = scope.parentElement;
+            const src = scope && $('.copy-src', scope);
             if (!src) return;
             try {
                 await navigator.clipboard.writeText(src.value);
@@ -63,6 +65,7 @@
         const vfit = $('.js-share-vfit', share);
         const label = $('.js-share-label', share);
         const out = $('.js-share-out', share);
+        const urlOut = $('.js-share-url', share);
         const preview = $('.js-preview', share);
 
         const update = () => {
@@ -82,6 +85,15 @@
             }
             out.value = `<a href="#" ${attrs}>${esc(label.value || share.dataset.title)}</a>\n`
                 + `<script src="${esc(share.dataset.script)}" defer></script>`;
+            // Same options as a plain URL (read.php?nagimanga=ID&...)
+            const q = new URLSearchParams({ nagimanga: share.dataset.id, dir: dir.value });
+            if (vertical) {
+                if (vfit.value === 'webtoon') q.set('vertical', 'webtoon');
+            } else {
+                if (view.value === 'single') q.set('view', 'single');
+                else if (cover.value === '0') q.set('cover', '0');
+            }
+            urlOut.value = share.dataset.endpoint + '?' + q.toString();
             // Preview with the same options
             preview.dataset.direction = dir.value;
             preview.dataset.view = view.value;

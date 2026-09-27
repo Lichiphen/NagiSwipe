@@ -846,6 +846,9 @@ function nm_view_work(string $id): void
         // Preview through a relative URL: the admin may be opened under another host name than base_url
         . '<a href="#" class="btn js-preview" data-nagimanga="' . $idH . '" data-endpoint="../read.php">ここで試し読み</a></p>'
         . '<p class="note">このタグをブログやサイトの HTML に貼るだけで、クリックしたときにビューアーが開きます。<code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。</p>'
+        . '<h3>URL 形式（HTML を書けない場所向け）</h3>'
+        . '<div class="copy-box"><input class="copy-src wide js-share-url" readonly> <button type="button" class="btn small js-copy">コピー</button></div>'
+        . '<p class="note">てがろぐの投稿など、HTML を書けない場所ではこの URL を貼ります。そのページで <code>NagiManga.js</code> を読み込んでいればビューアーが開き、読み込んでいない場所（RSS リーダーなど）では読むためのページが開きます。</p>'
         . '<p class="note">タグの URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「設置 URL」から作っています') . '。</p>'
         . '</div>'
         . '<script src="' . h('../viewer/NagiManga.js?v=' . $viewerVer) . '" defer></script>'

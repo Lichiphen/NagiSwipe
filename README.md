@@ -74,6 +74,27 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 <a href="photo.jpg" data-ns-width="3000" data-ns-height="2000"><img src="photo-thumb.jpg" alt="…"></a>
 ```
 
+## てがろぐで使う
+
+[てがろぐ](https://www.nishishi.com/cgi/tegalog/) では、スキンを編集しなくても、管理画面の設定だけで NagiSwipe を画像の拡大表示に使えます。
+
+1. てがろぐの管理画面で **[設定] → [システム設定] → 【画像拡大スクリプトの選択】** を開きます。
+2. 「**他のスクリプトを使う：URLを指定**」を選び、次の 2 つを入力して保存します。
+   - JavaScript の URL: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js`
+   - CSS の URL: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.css`
+
+投稿に載せた画像（画像ファイルへのリンク）が、自動で NagiSwipe で開くようになります。
+
+**漫画ビューアー（NagiManga）も一緒に使う場合** は、同じ「JavaScript の URL」欄に、NagiSwipe の URL のあとへ **半角スペースを 1 つ空けて** NagiManga.js の URL を続けて書きます（てがろぐは半角スペース区切りで複数のファイルを読み込めます。NagiManga の CSS は自動で読み込まれるので、CSS 欄は NagiSwipe のままで大丈夫です）。
+
+```
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js
+```
+
+てがろぐの投稿本文には HTML を書けないので、作品は管理画面の「URL 形式」をコピーして貼ります。詳しくは [manga/README.md の「てがろぐなど、HTML を書けない場所で使う」](manga/README.md#てがろぐなどhtml-を書けない場所で使う) を見てください。
+
+[NagiMemo](https://github.com/Lichiphen/NagiMemo)（てがろぐ用のスキン）でも同じ方法で使えます。
+
 ## 漫画ビューアー（NagiManga）
 [`manga/`](manga/) に、漫画ビューアーとデータベース不要の簡易 CMS を同梱しています。
 

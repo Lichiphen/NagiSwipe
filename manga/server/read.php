@@ -8,6 +8,7 @@
  *   POST read.php  a=u&id=ID&password=...      unlock -> reader token (JSON)
  *   GET  read.php?a=i&id=ID&f=FILE[&t=TOKEN]   page image
  *   GET  read.php?a=t&id=ID&f=FILE[&t=TOKEN]   page thumbnail
+ *   GET  read.php?nagimanga=ID[&dir=..]        share URL: a small page that opens the viewer
  *
  * Anything else, or anything not found / not allowed: the same plain 404.
  */
@@ -29,6 +30,16 @@ if ($method === 'OPTIONS') {
 
 $src = $method === 'POST' ? $_POST : $_GET;
 $action = nm_str($src, 'a', 2);
+
+// The share URL opened directly (new tab, RSS reader, no script on the page)
+if ($method === 'GET' && $action === '' && isset($_GET['nagimanga'])) {
+    $id = nm_str($_GET, 'nagimanga', 12);
+    if (!nm_valid_id($id)) nm_not_found();
+    $work = nm_load_work($id);
+    if (!$work || empty($work['pages'])) nm_not_found();
+    nm_serve_reader_page($work);
+}
+
 $id = nm_str($src, 'id', 12);
 if (!nm_valid_id($id)) nm_not_found();
 
@@ -55,6 +66,35 @@ function nm_cors(array $cfg): void
         header('Access-Control-Max-Age: 600');
     }
     header('Vary: Origin');
+}
+
+/** A page with one link that opens the viewer, for the share URL opened on its own. */
+function nm_serve_reader_page(array $work): never
+{
+    $viewer = __DIR__ . '/viewer/NagiManga.js';
+    $ver = is_file($viewer) ? substr(sha1_file($viewer), 0, 10) : NM_VERSION;
+    $attrs = 'data-nagimanga="' . h($work['id']) . '" data-endpoint="read.php"';
+    $dir = nm_str($_GET, 'dir', 8);
+    if (in_array($dir, ['rtl', 'ltr', 'vertical'], true)) $attrs .= ' data-direction="' . $dir . '"';
+    if (nm_str($_GET, 'view', 8) === 'single') $attrs .= ' data-view="single"';
+    if (nm_str($_GET, 'cover', 1) === '0') $attrs .= ' data-cover="0"';
+    if (nm_str($_GET, 'vertical', 8) === 'webtoon') $attrs .= ' data-vertical="webtoon"';
+    $title = h((string)($work['title'] ?? ''));
+
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: same-origin');
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+    echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
+        . '<title>' . $title . '</title>'
+        . '<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#111;color:#eee}'
+        . 'a{display:inline-block;padding:.8em 1.6em;border-radius:999px;background:#eee;color:#111;text-decoration:none;font-weight:600}</style>'
+        . '</head><body><p><a href="#" id="nm-open" ' . $attrs . '>' . ($title !== '' ? $title . 'を読む' : '読む') . '</a></p>'
+        . '<script src="viewer/NagiManga.js?v=' . h($ver) . '&amp;open=nm-open" defer></script>'
+        . '</body></html>';
+    exit;
 }
 
 function nm_serve_manifest(array $work, string $token): never

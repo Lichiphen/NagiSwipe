@@ -15,6 +15,9 @@
  *   data-view       auto (two pages on wide screens) | single
  *   data-cover      1 (first page alone) | 0
  *   data-manifest   URL of a static JSON manifest (no PHP needed) instead of data-endpoint
+ *
+ * Where HTML cannot be written (e.g. Tegalog posts), a plain link to the share URL works too:
+ *   https://example.com/nagimanga/read.php?nagimanga=ID&dir=rtl&view=auto&cover=1
  */
 (function (global) {
     'use strict';
@@ -1231,10 +1234,34 @@ manifestUrl() {
 
     const reader = new Reader();
 
+    // A plain link to the share URL (for places that cannot hold HTML, e.g. Tegalog posts):
+    //   https://example.com/nagimanga/read.php?nagimanga=ID&dir=rtl&view=auto&cover=1
+    // The options become the same data-* attributes as the share tag.
+    function fromShareUrl(a) {
+        let u;
+        try { u = new URL(a.getAttribute('href'), location.href); } catch (e) { return false; }
+        const q = u.searchParams;
+        const id = q.get('nagimanga') || '';
+        if (!/^[A-Za-z0-9]{12}$/.test(id) || !/\/read\.php$/.test(u.pathname) || q.has('a')) return false;
+        const d = a.dataset;
+        d.nagimanga = id;
+        d.endpoint = u.origin + u.pathname;
+        const dir = q.get('dir');
+        if (dir === 'rtl' || dir === 'ltr' || dir === 'vertical') d.direction = dir;
+        if (q.get('view') === 'single') d.view = 'single';
+        if (q.get('cover') === '0') d.cover = '0';
+        if (q.get('vertical') === 'webtoon') d.vertical = 'webtoon';
+        return true;
+    }
+
     function onClick(e) {
         if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        const t = e.target.closest('[data-nagimanga], [data-nagimanga-manifest]');
-        if (!t) return;
+        let t = e.target.closest('[data-nagimanga], [data-nagimanga-manifest]');
+        if (!t) {
+            const a = e.target.closest('a[href*="nagimanga="]');
+            if (!a || !fromShareUrl(a)) return;
+            t = a;
+        }
         e.preventDefault();
         if (t.dataset.nagimangaManifest && !t.dataset.manifest) t.dataset.manifest = t.dataset.nagimangaManifest;
         reader.open(t);
@@ -1256,5 +1283,12 @@ manifestUrl() {
             delete rest.nagimanga;
             global.history.replaceState(Object.keys(rest).length ? rest : null, '');
         }
+    } catch (e) { /* ignore */ }
+
+    // read.php's own page for the share URL opens the viewer at once: NagiManga.js?open=<link id>
+    try {
+        const openId = SCRIPT_URL ? new URL(SCRIPT_URL).searchParams.get('open') : null;
+        const link = openId && document.getElementById(openId);
+        if (link) reader.open(link);
     } catch (e) { /* ignore */ }
 })(window);

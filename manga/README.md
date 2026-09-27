@@ -101,6 +101,26 @@ nagimanga/
 - タグの URL は、管理画面を開いているアドレスから自動で作られます。別の URL にしたいときだけ「設定 → 設置 URL」に入力してください。
 - **別のサイト（ドメイン）に埋め込むとき** は、「設定 → 別のサイトに埋め込む場合」にそのサイトのアドレス（例: `https://blog.example.com`）を登録してください。
 
+### てがろぐなど、HTML を書けない場所で使う
+
+てがろぐの投稿本文のように HTML を書けない場所では、共有用のタグの下にある「**URL 形式**」をコピーして貼ります。
+
+```
+https://example.com/nagimanga/read.php?nagimanga=Ab3dE5gH7jK9&dir=rtl
+```
+
+- そのページで `NagiManga.js` を読み込んでいれば、URL のリンクをクリックしたときにビューアーが開きます（読み方・見開きなどの選択も URL に入っています）。
+- `NagiManga.js` を読み込んでいない場所（RSS リーダー、新しいタブで開いたときなど）では、作品を読むためのページが開きます。
+- てがろぐでは、リンクの文字を付けて `[第1話を読む]https://example.com/nagimanga/read.php?nagimanga=…` のように書けます。
+
+**てがろぐでの読み込み方:** スキンを編集する必要はありません。管理画面の **[設定] → [システム設定] → 【画像拡大スクリプトの選択】** で「他のスクリプトを使う：URLを指定」を選び、「JavaScript の URL」欄に NagiManga.js の URL を書きます。NagiSwipe を画像の拡大に使っている場合は、半角スペースで区切って続けて書きます。
+
+```
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
+```
+
+てがろぐと NagiManga を **別のドメイン** に置いている場合は、「設定 → 別のサイトに埋め込む場合」にてがろぐのアドレスを登録してください。
+
 ---
 
 ## 機能の説明

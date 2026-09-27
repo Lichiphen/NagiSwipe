@@ -241,6 +241,7 @@ def run(data_dir):
     r = adm.get(f"/admin/index.php?p=work&id={wid}", headers={"Host": "notebook.example.test"})
     check("共有タグの URL は開いているドメインから自動で作る", 'data-endpoint="http://notebook.example.test/read.php"' in r.text
           and "http://notebook.example.test/viewer/NagiManga.js?v=" in r.text)
+    check("共有タグの欄に URL 形式（HTML を書けない場所向け）もある", "js-share-url" in r.text)
     r = adm.get(f"/admin/index.php?p=work&id={wid}", headers={"Host": "evil.example\"><script>"})
     check("おかしな Host ヘッダーはタグに入らない", "<script>\"" not in r.text and 'evil.example"' not in r.text)
     adm.post("/admin/index.php", {"do": "settings_general", "csrf": csrf, "base_url": "https://cdn.example.test/manga",
@@ -305,6 +306,26 @@ def run(data_dir):
     check("read.php の不正入力はすべて同じ 404", all(is_404(anon.get(u)) for u in fuzz))
     check("read.php の unlock は公開作品では 404", is_404(anon.post("/read.php", {"a": "u", "id": wid, "password": "x"})))
 
+    # --- Share URL (read.php?nagimanga=ID) opened on its own --------------------------------
+    r = anon.get(f"/read.php?nagimanga={wid}&dir=ltr&view=single")
+    body = r.body.decode("utf-8", "replace")
+    csp = r.getheader("Content-Security-Policy") or ""
+    check("共有 URL を直接開くと、ビューアーを開くページが返る",
+          r.status == 200 and f'data-nagimanga="{wid}"' in body and 'data-direction="ltr"' in body
+          and 'data-view="single"' in body and "viewer/NagiManga.js?v=" in body)
+    check("共有 URL のページはインラインスクリプトを持たず、CSP で禁止している",
+          "script-src 'self'" in csp and "frame-ancestors 'none'" in csp and not re.search(r"<script(?![^>]*\bsrc=)", body))
+    r = anon.get(f"/read.php?nagimanga={wid}&dir=%22%3E%3Cscript%3Ealert(1)%3C/script%3E&view=%22onmouseover=x&cover=%3Cb%3E")
+    body = r.body.decode("utf-8", "replace")
+    check("共有 URL の読み方などの値は決まった値だけ使う（書き込みを反映しない）",
+          r.status == 200 and "onmouseover" not in body and "<b>" not in body
+          and not any(a in body for a in ("data-direction", "data-view", "data-cover")))
+    share_bad = ["/read.php?nagimanga=", "/read.php?nagimanga=../../config", "/read.php?nagimanga=" + "A" * 12,
+                 f"/read.php?nagimanga[]={wid}", "/read.php?nagimanga=%C0%AFAAAAAAAAAA"]
+    check("共有 URL の不正な ID・存在しない作品は同じ 404", all(is_404(anon.get(u)) for u in share_bad))
+    check("共有 URL の形でも a= が付けば今までどおりの処理（不正なら 404）",
+          is_404(anon.get(f"/read.php?nagimanga={wid}&a=x")))
+
     # --- Direct file access ----------------------------------------------------------------
     direct = ["/data/config.php", "/data/", "/data/works/", "/data/logs/security.log", "/lib/bootstrap.php",
               "/lib/", "/admin/.htaccess", "/.htaccess", "/data/probe.txt"]
@@ -337,6 +358,9 @@ def run(data_dir):
     check("パスワード付き作品はページ一覧を返さない", locked.get("locked") is True and "pages" not in locked)
     if pages:
         check("パスワード付き作品の画像は鍵なしで 404", is_404(anon.get("/" + pages[0]["src"].split("&t=")[0])))
+    r = anon.get(f"/read.php?nagimanga={wid}")
+    check("パスワード付き作品の共有 URL のページは、ページ画像もパスワードも含まない",
+          r.status == 200 and "a=i" not in r.text and "a=t" not in r.text and work_pw not in r.text)
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": "wrong"})
     check("違うパスワードは 403", r.status == 403)
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": work_pw})
