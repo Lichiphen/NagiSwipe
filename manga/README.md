@@ -110,7 +110,7 @@ nagimanga/
    画像の拡大表示に NagiSwipe を使っている場合は、NagiSwipe の URL の **うしろに半角スペースを 1 つ入れて** 続けて書きます（1 行のまま続けます）。
 
    ```
-   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js?93db749 https://example.com/nagimanga/viewer/NagiManga.js?377d47e
+   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
    ```
 
 3. **画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
@@ -302,7 +302,7 @@ python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html
 python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る
 ```
 
-README の URL には、そのファイルを最後に変更したコミットのハッシュを `?abc1234` の形でキャッシュバスターとして付けています。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css・NagiManga.js を変更したコミットのあとに、README の値を自動で書き換えてコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md`）。
+README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換えてコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md`）。
 
 リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 
