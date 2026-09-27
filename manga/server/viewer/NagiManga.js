@@ -253,7 +253,8 @@
             this.counterEl.textContent = '';
             this.setLoading(true);
             this.lockScroll();
-            this.pushHistory();
+            // On read.php's own page the viewer is the page: the browser's Back leaves it
+            if (!this.standalone) this.pushHistory();
             document.addEventListener('keydown', this.keyHandler);
             global.addEventListener('resize', this.resizeHandler);
             requestAnimationFrame(() => this.root.classList.add('nm-open'));
@@ -287,6 +288,8 @@
                 this.scroller.innerHTML = '';
             }, 220);
             if (this.returnFocus && this.returnFocus.focus) this.returnFocus.focus({ preventScroll: true });
+            // read.php's own page: closing goes back to where the link was (a new tab stays)
+            if (this.standalone && global.history.length > 1) global.history.back();
         }
 
         lockScroll() {
@@ -1289,6 +1292,9 @@ manifestUrl() {
     try {
         const openId = SCRIPT_URL ? new URL(SCRIPT_URL).searchParams.get('open') : null;
         const link = openId && document.getElementById(openId);
-        if (link) reader.open(link);
+        if (link) {
+            reader.standalone = true;
+            reader.open(link);
+        }
     } catch (e) { /* ignore */ }
 })(window);

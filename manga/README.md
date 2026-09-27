@@ -113,8 +113,9 @@ nagimanga/
    https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
    ```
 
-3. NagiManga の管理画面で作品を開き、「URL 形式」の「コピー」を押します。
-4. てがろぐに、リンクの文字（下の例では「第1話を読む」）を付けて投稿します。
+3. **画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
+4. NagiManga の管理画面で作品を開き、「URL 形式」の「コピー」を押します。
+5. てがろぐに、リンクの文字（下の例では「第1話を読む」）を付けて投稿します。
 
    ```
    [第1話を読む]https://example.com/nagimanga/read.php?nagimanga=Ab3dE5gH7jK9&dir=rtl
