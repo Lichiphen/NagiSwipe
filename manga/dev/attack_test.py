@@ -9,7 +9,9 @@ and runs every scenario against them. Nothing touches dev/data.
 
     python dev/attack_test.py
 """
+import hashlib
 import http.client
+import http.server
 import io
 import json
 import os
@@ -19,6 +21,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import threading
 import time
 import urllib.parse
 import zipfile
@@ -30,6 +33,7 @@ SERVER_DIR = HERE.parent / "server"
 RESULTS = HERE / "results"
 PORT = 5191
 PORT_RAW = 5192
+MOCK_PORT = 5193   # stands in for GitHub in the self-update tests
 HOST = "127.0.0.1"
 
 results = []
@@ -145,6 +149,8 @@ def php_cmd(port, router, site):
 def start_servers(site):
     # A copy of server/ with its own data/ inside the web root, exactly like a real install
     env = {k: v for k, v in os.environ.items() if k != "NAGIMANGA_DATA"}
+    env["NAGIMANGA_UPDATE_API"] = f"http://{HOST}:{MOCK_PORT}/releases"
+    env["NAGIMANGA_UPDATE_DL"] = f"http://{HOST}:{MOCK_PORT}/dl/"
     procs = [subprocess.Popen(php_cmd(PORT, True, site), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
              subprocess.Popen(php_cmd(PORT_RAW, False, site), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)]
     for port in (PORT, PORT_RAW):
@@ -160,6 +166,184 @@ def start_servers(site):
 # ---------------------------------------------------------------------------
 # Scenarios
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Mock GitHub for the self-update (release list + package downloads)
+# ---------------------------------------------------------------------------
+
+MOCK = {"releases": b"[]", "files": {}}
+
+
+class MockGitHub(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        name = self.path[len("/dl/"):] if self.path.startswith("/dl/") else ""
+        if self.path.startswith("/releases"):
+            body, ctype = MOCK["releases"], "application/json"
+        elif name in MOCK["files"]:
+            body, ctype = MOCK["files"][name], "application/zip"
+        else:
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+def start_mock():
+    srv = http.server.ThreadingHTTPServer((HOST, MOCK_PORT), MockGitHub)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
+
+
+def make_package(version, marker="", extra=None, drop=()):
+    """A release package like nagimanga-vX.Y.Z.zip, built from the pristine server/ folder."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(SERVER_DIR.rglob("*")):
+            rel = f.relative_to(SERVER_DIR).as_posix()
+            if not f.is_file() or rel in drop or rel == "lib/paths.php":
+                continue
+            if rel.startswith("data/") and rel not in ("data/.htaccess", "data/index.html"):
+                continue
+            if rel.startswith("plugins/") and rel not in ("plugins/.htaccess", "plugins/index.html"):
+                continue
+            data = f.read_bytes()
+            if rel == "lib/bootstrap.php":
+                data = re.sub(rb"const NM_VERSION = '[0-9.]+';", f"const NM_VERSION = '{version}';".encode(), data)
+            if rel == "viewer/NagiManga.js" and marker:
+                data += ("\n" + marker + "\n").encode()
+            z.writestr("nagimanga/" + rel, data)
+        z.writestr("README.txt", "readme")
+        z.writestr("optional/guest-mode.php", "<?php // optional")
+        for name, data in (extra or {}).items():
+            z.writestr(zipfile.ZipInfo(name), data)
+    return buf.getvalue()
+
+
+def publish(version, pkg, digest=None):
+    name = f"nagimanga-v{version}.zip"
+    MOCK["files"][name] = pkg
+    d = "sha256:" + hashlib.sha256(pkg).hexdigest() if digest is None else digest
+    MOCK["releases"] = json.dumps([{
+        "tag_name": "v9.0.0", "draft": False, "prerelease": False,
+        "body": "テスト用のリリース<script>alert(1)</script>", "published_at": "2026-09-27T00:00:00Z",
+        "html_url": "https://github.com/Lichiphen/NagiSwipe/releases/tag/v9.0.0",
+        "assets": [{"name": name, "size": len(pkg), "digest": d,
+                    "browser_download_url": f"http://{HOST}:{MOCK_PORT}/dl/{name}"}],
+    }]).encode()
+
+
+def run_update(adm, csrf, data_dir):
+    site = data_dir.parent
+    cur = re.search(r"const NM_VERSION = '([0-9.]+)'", (SERVER_DIR / "lib" / "bootstrap.php").read_text(encoding="utf-8")).group(1)
+
+    def program():
+        return {p.relative_to(site).as_posix(): p.read_bytes() for p in site.rglob("*")
+                if p.is_file() and not p.relative_to(site).as_posix().startswith("data/")}
+
+    def data_files():
+        return {p.relative_to(data_dir).as_posix(): p.read_bytes() for p in data_dir.rglob("*")
+                if p.is_file() and p.relative_to(data_dir).parts[0] in ("works", "config.php")}
+
+    def apply():
+        adm.post("/admin/index.php", {"do": "update_apply", "csrf": csrf})
+        return adm.get("/admin/index.php?p=update").text
+
+    def check_now():
+        adm.post("/admin/index.php", {"do": "update_check", "csrf": csrf})
+
+    before, data_before = program(), data_files()
+
+    publish(cur, make_package(cur))
+    check_now()
+    r = adm.get("/admin/index.php?p=update")
+    check("更新: 最新なら「最新のバージョンです」と出て、更新ボタンは出ない", "最新のバージョンです" in r.text and 'value="update_apply"' not in r.text)
+
+    marker = "/* nm-update-test */"
+    good = make_package("9.9.9", marker=marker)
+    publish("9.9.9", good)
+    check_now()
+    r = adm.get("/admin/index.php")
+    check("更新: 新しいバージョンがあると、作品一覧にお知らせ、メニューに「新」が出る",
+          "update-banner" in r.text and "9.9.9" in r.text and "badge new" in r.text)
+    r = adm.get("/admin/index.php?p=update")
+    check("更新: リリースノートは文字として出る（HTML は効かない）",
+          'value="update_apply"' in r.text and "<script>alert(1)" not in r.text and "&lt;script&gt;alert(1)" in r.text)
+    check("更新: CSRF トークンなしの更新は 404（何も変わらない）",
+          is_404(adm.post("/admin/index.php", {"do": "update_apply"})) and program() == before)
+
+    publish("9.9.9", good, digest="sha256:" + "0" * 64)
+    t = apply()
+    check("更新: 確認用の値（SHA-256）が合わない更新ファイルは使わない", "正しくない" in t and program() == before)
+    publish("9.9.9", good, digest="")
+    t = apply()
+    check("更新: 確認用の値がない更新ファイルは使わない", "確認用の値" in t and program() == before)
+
+    bad_packages = {
+        "フォルダの外へ書く（../）": make_package("9.9.9", extra={"nagimanga/../evil.php": b"<?php echo 'PWNED';"}),
+        "フォルダの外へ書く（lib/../../）": make_package("9.9.9", extra={"nagimanga/lib/../../evil2.php": b"<?php echo 1;"}),
+        "実行できる別の拡張子（.phtml）": make_package("9.9.9", extra={"nagimanga/admin/shell.phtml": b"<?php system($_GET['c']);"}),
+        "隠しファイル（.user.ini）": make_package("9.9.9", extra={"nagimanga/.user.ini": b"auto_prepend_file=x"}),
+        "バージョンが一致しない": make_package("9.9.8"),
+        "必要なファイルがない": make_package("9.9.9", drop=("read.php",)),
+    }
+    for label, pkg in bad_packages.items():
+        publish("9.9.9", pkg)
+        t = apply()
+        check(f"更新: 不正な更新ファイルは拒否（{label}）",
+              program() == before and "更新しました" not in t and not (site.parent / "evil.php").exists()
+              and not (site / "evil2.php").exists() and not list(site.rglob("*.phtml")))
+
+    pkg = make_package("9.9.9", marker=marker, extra={
+        "nagimanga/data/config.php": b"<?php return ['admin_hash' => ''];",
+        "nagimanga/data/works/x.php": b"<?php echo 1;",
+        "nagimanga/plugins/evil.php": b"<?php echo 1;",
+        "nagimanga/lib/paths.php": b"<?php return '/tmp';",
+    })
+    publish("9.9.9", pkg)
+    t = apply()
+    viewer = (site / "viewer" / "NagiManga.js").read_text(encoding="utf-8")
+    check("更新: 正しい更新ファイルなら更新される（ビューアーとバージョン表示）", marker in viewer and "NagiManga 9.9.9" in t,
+          " / ".join(re.findall(r'class="flash[^"]*">([^<]*)', t)) or t[:300])
+    check("更新: 作品と設定（data フォルダ）は 1 バイトも変わらない", data_files() == data_before)
+    check("更新: 更新ファイルの data/・plugins/・lib/paths.php は無視される",
+          not (site / "plugins" / "evil.php").exists() and not (site / "lib" / "paths.php").exists()
+          and not (data_dir / "works" / "x.php").exists())
+    kept = [p for p in (data_dir / "update").rglob("*") if p.is_file()]
+    check("更新: 更新前のファイルは data の中に .bak として保管され、PHP のまま置かれない",
+          any(p.suffix == ".bak" for p in kept) and not any(p.suffix == ".php" for p in kept))
+    bak = next((p for p in kept if p.name == "read.php.bak"), None)
+    check("更新: 保管したファイルは外から見えない（.htaccess が効くサーバー）",
+          bak is not None and Client().get("/data/" + bak.relative_to(data_dir).as_posix()).status in (403, 404))
+    check("更新: 更新後はお知らせが消える", "update-banner" not in adm.get("/admin/index.php").text)
+    new_ver = hashlib.sha1((site / "viewer" / "NagiManga.js").read_bytes()).hexdigest()[:10]
+    embed = adm.get("/admin/index.php?p=embed").text
+    check("更新: 設置用コード画面に新しいキャッシュバスターが出る",
+          f"NagiManga.js?v={new_ver}" in embed and "nagimanga" in embed and "NagiSwipe-main.js" in embed)
+    check("更新: ログに残る", "update_applied" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+
+    r = adm.get("/admin/index.php?p=update")
+    m = re.search(r'name="backup" value="([^"]+)"', r.text)
+    adm.post("/admin/index.php", {"do": "update_rollback", "backup": m.group(1) if m else "", "csrf": csrf})
+    check("更新: 「元に戻す」で更新前のファイルにすべて戻る", bool(m) and program() == before)
+    check("更新: 元に戻したら、その元に戻すデータは消える", bool(m) and not (data_dir / "update" / m.group(1)).exists())
+    adm.post("/admin/index.php", {"do": "update_rollback", "backup": "../../config", "csrf": csrf})
+    check("更新: 元に戻す先に変な名前を渡しても何も起きない", program() == before and data_files() == data_before)
+
+    publish("9.9.9", good)
+    adm.post("/admin/index.php", {"do": "update_auto", "csrf": csrf})
+    check_now()
+    off = "update-banner" not in adm.get("/admin/index.php").text
+    adm.post("/admin/index.php", {"do": "update_auto", "auto": "1", "csrf": csrf})
+    on = "update-banner" in adm.get("/admin/index.php").text
+    check("更新: 自動の確認をオフにすると、作品一覧にお知らせを出さない", off and on)
+
 
 def run(data_dir):
     admin_pw = secrets.token_urlsafe(18)
@@ -665,6 +849,10 @@ def run(data_dir):
     check("ゲストは設定画面を見られない（ログイン URL・IP・ログが出ない）", key not in r.text and "security.log" not in r.text
           and "ゲスト（閲覧のみ）では設定" in r.text and "127.0.0.1" not in r.text)
     check("ゲストはバックアップ画面を見られない", "すべてをダウンロード" not in g.get("/admin/index.php?p=backup").text)
+    r1, r2 = g.get("/admin/index.php?p=update"), g.get("/admin/index.php?p=embed")
+    check("ゲストは更新画面・設置用コード画面を見られない、メニューにもない",
+          "ゲスト（閲覧のみ）では更新" in r1.text and 'value="update_apply"' not in r1.text
+          and "ゲスト（閲覧のみ）では設置用コード" in r2.text and "p=update" not in g.get("/admin/index.php").text)
 
     before = snapshot()
     cfg_before = (data_dir / "config.php").read_bytes()
@@ -694,6 +882,9 @@ def run(data_dir):
                    files={"epub_light": ("b.epub", good, "application/epub+zip")} if do == "epub_light" else None)
         refused.append(r.status == 303)
     check("ゲストの変更操作 19 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 19, str(refused))
+    upd = [g.post("/admin/index.php", {"do": do, "csrf": gcsrf, "backup": "x", "auto": "1"}).status in (303, 403)
+           for do in ("update_check", "update_apply", "update_rollback", "update_auto")]
+    check("ゲストは更新・元に戻す・自動確認の切り替えもできない", all(upd), str(upd))
     check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
     check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
 
@@ -734,6 +925,9 @@ def run(data_dir):
     plugin_dst.unlink()
     check("プラグインを消すと、中にいたゲストも 404", is_404(g4.get("/admin/index.php")) and is_404(Client().get("/admin/index.php?guest")))
 
+    # --- Self-update ---------------------------------------------------------------------------------
+    run_update(adm, csrf, data_dir)
+
     # --- Admin login brute force (last: it locks this IP) ------------------------------------------
     b = Client()
     locked_at = None
@@ -756,12 +950,14 @@ def main():
     site = RESULTS / ("site-" + time.strftime("%Y%m%d-%H%M%S"))
     shutil.copytree(SERVER_DIR, site, ignore=shutil.ignore_patterns("paths.php"))
     data_dir = site / "data"
+    mock = start_mock()
     procs = start_servers(site)
     try:
         run(data_dir)
     finally:
         for p in procs:
             p.terminate()
+        mock.shutdown()
     passed = sum(1 for _, ok, _ in results if ok)
     lines = [f"# NagiManga attack test ({time.strftime('%Y-%m-%d %H:%M')})", "", f"{passed} / {len(results)} passed", "",
              "| 結果 | テスト |", "|---|---|"]

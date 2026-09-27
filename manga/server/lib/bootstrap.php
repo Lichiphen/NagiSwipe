@@ -11,7 +11,7 @@ if (!defined('NAGIMANGA')) {
     exit;
 }
 
-const NM_VERSION = '0.1.0';
+const NM_VERSION = '0.2.0';
 
 // Never show PHP errors to visitors (they reveal server paths); log them instead
 ini_set('display_errors', '0');

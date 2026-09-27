@@ -12,9 +12,12 @@ require __DIR__ . '/../lib/auth.php';
 require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
+require __DIR__ . '/../lib/update.php';
 nm_load_plugins();
 
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
+// The image-popup script most sites pair with NagiManga (for the Tegalog setting line)
+const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js';
 
 nm_admin_headers();
 
@@ -83,6 +86,8 @@ match ($page) {
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
     'backup' => nm_is_guest() ? nm_view_guest_denied('バックアップ') : nm_view_backup(),
     'settings' => nm_is_guest() ? nm_view_guest_denied('設定') : nm_view_settings($cfg),
+    'embed' => nm_is_guest() ? nm_view_guest_denied('設置用コード') : nm_view_embed(),
+    'update' => nm_is_guest() ? nm_view_guest_denied('更新') : nm_view_update($cfg),
     default => nm_not_found(),
 };
 exit;
@@ -124,7 +129,8 @@ function nm_layout(string $title, string $body, bool $nav = true): void
     if ($nav) {
         $guest = nm_is_guest();
         $navHtml = '<nav class="nav"><a href="index.php">作品一覧</a>'
-            . ($guest ? '' : '<a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>')
+            . ($guest ? '' : '<a href="index.php?p=embed">設置用コード</a><a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>'
+                . '<a href="index.php?p=update">更新' . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">新</span>' : '') . '</a>')
             . '<form method="post" action="index.php" class="inline">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . ($guest ? 'ゲストを終了' : 'ログアウト') . '</button></form></nav>';
         $g = $guest ? nm_guest_config() : null;
         if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
@@ -472,6 +478,30 @@ function nm_handle_post(array $cfg): void
         case 'restore':
             nm_restore_upload();
 
+        case 'update_check':
+            $st = nm_update_status(true);
+            if ($st['error'] !== '') nm_flash('err', $st['error']);
+            elseif (nm_update_available($st)) nm_flash('ok', '新しいバージョン ' . $st['latest'] . ' があります');
+            else nm_flash('ok', '最新のバージョンです');
+            nm_redirect('p=update');
+
+        case 'update_apply':
+            $res = nm_update_apply();
+            nm_flash($res['ok'] ? 'ok' : 'err', $res['msg']);
+            if ($res['ok']) nm_flash('ok', 'ビューアーのキャッシュバスターが変わりました。「設置用コード」の値に貼り直してください');
+            nm_redirect('p=update');
+
+        case 'update_rollback':
+            $res = nm_update_rollback(nm_str($_POST, 'backup', 60));
+            nm_flash($res['ok'] ? 'ok' : 'err', $res['msg']);
+            nm_redirect('p=update');
+
+        case 'update_auto':
+            $cfg['update_check'] = !empty($_POST['auto']);
+            nm_save_config($cfg);
+            nm_flash('ok', $cfg['update_check'] ? 'ログイン時に新しいバージョンを確認します' : 'ログイン時の確認をやめました（更新画面から手動で確認できます）');
+            nm_redirect('p=update');
+
         case 'settings_pw':
             $cur = nm_str($_POST, 'current', 200);
             $new = nm_str($_POST, 'password', 200);
@@ -776,7 +806,8 @@ function nm_view_dashboard(): void
         nm_layout('作品一覧', '<section class="works">' . $rows . '</section>');
         return;
     }
-    nm_layout('作品一覧', '<section class="card"><h1>作品を作る</h1>'
+    nm_layout('作品一覧', nm_update_banner()
+        . '<section class="card"><h1>作品を作る</h1>'
         . '<form method="post" action="index.php" class="form row">' . nm_csrf_field()
         . '<input type="hidden" name="do" value="create">'
         . '<label>タイトル<input name="title" required maxlength="200" placeholder="例: 第1話 はじまり"></label>'
@@ -1005,6 +1036,123 @@ function nm_view_settings(array $cfg): void
         . '<section class="card"><h2>セキュリティログ（新しい順）</h2>'
         . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>')
         . '</section>');
+}
+
+/** After login: a notice when GitHub has a newer NagiManga (checked at most every 12 hours). */
+function nm_update_banner(): string
+{
+    if (!nm_update_auto(nm_config() ?? [])) return '';
+    $st = nm_update_status();
+    if (!nm_update_available($st)) return '';
+    return '<p class="update-banner">新しいバージョン <strong>NagiManga ' . h((string)$st['latest']) . '</strong> が出ています（今は ' . h(NM_VERSION) . '）。'
+        . ' <a class="btn small primary" href="index.php?p=update">更新画面へ</a></p>';
+}
+
+/** One copy field. */
+function nm_copy_box(string $value, string $label = ''): string
+{
+    return ($label !== '' ? '<p class="copy-label">' . h($label) . '</p>' : '')
+        . '<div class="copy-box"><input class="copy-src wide" readonly value="' . h($value) . '"> <button type="button" class="btn small js-copy">コピー</button></div>';
+}
+
+/** Where to put the viewer: URLs with the cache buster, ready to paste. */
+function nm_view_embed(): void
+{
+    $viewerPath = NM_ROOT . '/viewer/NagiManga.js';
+    $ver = is_file($viewerPath) ? substr(sha1_file($viewerPath), 0, 10) : NM_VERSION;
+    $js = nm_base_url() . '/viewer/NagiManga.js?v=' . $ver;
+
+    nm_layout('設置用コード', '<section class="card"><h1>設置用コード</h1>'
+        . '<p>ビューアー（NagiManga.js）をサイトに読み込むためのコードです。末尾の <code>?v=' . h($ver) . '</code> は「キャッシュバスター」です。'
+        . 'NagiManga を更新すると値が変わり、読む人のブラウザに古いビューアーが残らないようにします。</p>'
+        . '<p class="warn">NagiManga を <strong>更新したら</strong>、この画面を開き直して、新しい値を貼り直してください。</p>'
+        . nm_copy_box($js, 'ビューアーの URL（キャッシュバスター付き）')
+        . '</section>'
+
+        . '<section class="card"><h2>てがろぐで使う</h2>'
+        . '<ol class="steps">'
+        . '<li>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開き、「他のスクリプトを使う：URLを指定」を選びます。</li>'
+        . '<li>「JavaScriptのURL」欄を、次の 1 行に置き換えて保存します（NagiSwipe の画像拡大と一緒に読み込みます）。「CSSのURL」欄は NagiSwipe のままで大丈夫です。「JavaScriptをモジュールとして読み込む」はオフにしてください。'
+        . nm_copy_box(NM_NAGISWIPE_JS . ' ' . $js) . '</li>'
+        . '<li>画像のない投稿でも読み込まれるように、<strong>[設定] → [ページの表示] → 【投稿本文の表示／URL処理】</strong> の「画像リンクに独自のclass属性値を追加する」にチェックを入れ、<code>nagimanga</code> と入力して保存します。</li>'
+        . '<li>作品ページの「URL 形式」をコピーして、<code>[第1話を読む]URL</code> のように投稿します。</li>'
+        . '</ol></section>'
+
+        . '<section class="card"><h2>ブログ・HTML で使う</h2>'
+        . '<p>ページの HTML に、次の 1 行を 1 回だけ貼ります。作品ごとのリンクは、作品ページの「共有用のタグ」を使ってください（その中にもこの行が入っています）。</p>'
+        . nm_copy_box('<script src="' . $js . '" defer></script>')
+        . '<p class="note">てがろぐ・ブログと NagiManga を別のドメインに置いている場合は、「設定 → 別のサイトに埋め込む場合」にそのサイトのアドレスを登録してください。</p>'
+        . '</section>');
+}
+
+/** Version, notice of a newer release, update / undo, and the automatic check switch. */
+function nm_view_update(array $cfg): void
+{
+    $st = nm_update_cached() ?? nm_update_status();
+    $newer = nm_update_available($st);
+    $hidden = nm_csrf_field();
+    $checked = !empty($st['checked']) ? date('Y-m-d H:i', (int)$st['checked']) : '—';
+    $transport = nm_update_transport();
+    $zip = nm_zip_available();
+    $write = nm_update_can_write();
+    $canApply = $transport !== '' && $zip && $write;
+
+    $body = '<section class="card"><h1>更新</h1>'
+        . '<p>今のバージョン: <strong>NagiManga ' . h(NM_VERSION) . '</strong></p>';
+    if ($newer) {
+        $body .= '<div class="update-new"><h2>新しいバージョン ' . h((string)$st['latest']) . ' があります</h2>'
+            . (!empty($st['published']) ? '<p class="note">公開日: ' . h(substr((string)$st['published'], 0, 10)) . '</p>' : '')
+            . (!empty($st['notes']) ? '<pre class="notes">' . h((string)$st['notes']) . '</pre>' : '')
+            . (!empty($st['page']) ? '<p><a href="' . h((string)$st['page']) . '" target="_blank" rel="noopener noreferrer">GitHub のリリースページで見る</a></p>' : '')
+            . ($canApply
+                ? '<form method="post" action="index.php" class="js-confirm" data-confirm="NagiManga を ' . h((string)$st['latest']) . ' に更新しますか？作品と設定はそのままです。">' . $hidden
+                  . '<input type="hidden" name="do" value="update_apply"><button class="btn primary">' . h((string)$st['latest']) . ' に更新する</button></form>'
+                : '<p class="warn">このサーバーでは自動で更新できません（下の「このサーバーの状態」を確認してください）。「手動で更新する」の手順で更新できます。</p>')
+            . '</div>';
+    } elseif (!empty($st['error'])) {
+        $body .= '<p class="warn">' . h((string)$st['error']) . '</p>';
+    } else {
+        $body .= '<p>最新のバージョンです。</p>';
+    }
+    $body .= '<form method="post" action="index.php" class="inline">' . $hidden . '<input type="hidden" name="do" value="update_check">'
+        . '<button class="btn">今すぐ確認</button></form> <span class="note">最後に確認した日時: ' . h($checked) . '</span>'
+        . '</section>'
+
+        . '<section class="card"><h2>更新について</h2><ul class="steps">'
+        . '<li>更新するのはプログラムのファイルだけです。作品・設定（<code>data</code> フォルダ）とプラグインはそのままです。</li>'
+        . '<li>更新ファイルは GitHub の公式リリースからダウンロードし、GitHub が公開している確認用の値（SHA-256）と一致したときだけ使います。</li>'
+        . '<li>入れ替える前のファイルは自動で保管されるので、「元に戻す」で戻せます。念のため、先に<a href="index.php?p=backup">作品のバックアップ</a>も取っておくと安心です。</li>'
+        . '<li>更新したあとは、<a href="index.php?p=embed">設置用コード</a>のキャッシュバスター（<code>?v=</code> の値）を、てがろぐなどに貼り直してください。</li>'
+        . '</ul>'
+        . '<h3>このサーバーの状態</h3><ul class="checks">'
+        . '<li>' . ($transport !== '' ? '○' : '×') . ' GitHub への接続（' . h($transport !== '' ? $transport : 'PHP の curl も allow_url_fopen も使えません') . '）</li>'
+        . '<li>' . ($zip ? '○' : '×') . ' ZIP の展開（ZipArchive）</li>'
+        . '<li>' . ($write ? '○' : '×') . ' プログラムのファイルへの書き込み' . ($write ? '' : '（FTP でファイルの権限を確認してください）') . '</li>'
+        . '</ul>'
+        . '<details><summary>手動で更新する</summary><ol class="steps">'
+        . '<li><a href="https://github.com/' . h(NM_UPDATE_REPO) . '/releases" target="_blank" rel="noopener noreferrer">リリースページ</a>から <code>nagimanga-v…zip</code> をダウンロードして展開します。</li>'
+        . '<li>中の <code>nagimanga</code> フォルダの中身を、FTP で上書きアップロードします。<strong><code>data</code> フォルダはアップロードしないでください</strong>（作品と設定が消えます）。</li>'
+        . '</ol></details></section>';
+
+    $backups = nm_update_backups();
+    if ($backups) {
+        $body .= '<section class="card"><h2>元に戻す</h2><p>更新で入れ替えたファイルを、更新前に戻します。作品と設定はそのままです。</p><ul class="backups">';
+        foreach ($backups as $b) {
+            $body .= '<li><span>' . h($b['from']) . ' → ' . h($b['to']) . '（' . h(date('Y-m-d H:i', $b['created'])) . ' に更新）</span> '
+                . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="NagiManga ' . h($b['from']) . ' に戻しますか？">' . $hidden
+                . '<input type="hidden" name="do" value="update_rollback"><input type="hidden" name="backup" value="' . h($b['name']) . '">'
+                . '<button class="btn small">' . h($b['from']) . ' に戻す</button></form></li>';
+        }
+        $body .= '</ul></section>';
+    }
+
+    $auto = nm_update_auto($cfg);
+    $body .= '<section class="card"><h2>自動の確認</h2>'
+        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="update_auto">'
+        . '<label class="check"><input type="checkbox" name="auto" value="1"' . ($auto ? ' checked' : '') . '> ログインしたときに新しいバージョンを確認する（12 時間に 1 回まで、GitHub に接続します）</label>'
+        . '<button class="btn">保存</button></form></section>';
+
+    nm_layout('更新', $body);
 }
 
 /** "Current password" row: hidden until the admin presses 表示. */

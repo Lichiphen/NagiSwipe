@@ -2,7 +2,7 @@
  * ============================================================================
  * NagiManga - manga reader for NagiSwipe
  *
- * NagiManga v0.1.0
+ * NagiManga v0.2.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * ============================================================================
@@ -24,13 +24,15 @@
 
     if (global.NagiManga) return;
 
-    const VERSION = '0.1.0';
+    const VERSION = '0.2.0';
     const SCRIPT = document.currentScript;
     const SCRIPT_URL = SCRIPT ? SCRIPT.src : '';
 
     const TURN_MS = 280;
     const TURN_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
     const MAX_ZOOM = 4;
+    const READY_WAIT_MS = 200;  // longest wait for the next spread's images before a page turn
+    const END_DELAY_MS = 1200;  // vertical: time at the very bottom before "the end" shows up
 
     const ZOOM_STEPS = [1, 1.5, 2, 3, 4];
     const BAR_REVEAL_PX = 72;   // mouse this close to the top / bottom edge shows the bars
@@ -278,6 +280,8 @@
             }
             clearTimeout(this.tapTimer);
             clearTimeout(this.toastTimer);
+            clearTimeout(this.endTimer);
+            this.endTimer = null;
             clearTimeout(this.uiTimer);
             this.root.classList.remove('nm-open');
             this.unlockScroll();
@@ -465,6 +469,7 @@ manifestUrl() {
                 this.goToPage(0, false);
             });
             this.toast.append(t, b);
+            this.toastKind = 'resume';
             this.toast.hidden = false;
             clearTimeout(this.toastTimer);
             this.toastTimer = setTimeout(() => { this.toast.hidden = true; }, 5000);
@@ -574,7 +579,18 @@ manifestUrl() {
             this.sizeSpread(box);
             // Now that the display size is known: light or full version
             box.querySelectorAll('.nm-page').forEach(f => this.setImg(f._img, f._page, parseFloat(f.style.width)));
+            // Decode now, while the spread waits off screen: iOS Safari leaves big
+            // off-screen images undecoded and shows black when they slide in
+            this.spreadReady(box);
             return box;
+        }
+
+        /** Resolves once the spread's images can be painted, or after READY_WAIT_MS. */
+        spreadReady(box) {
+            const imgs = box ? Array.from(box.querySelectorAll('.nm-img')).filter(i => i.src && i.decode) : [];
+            if (!imgs.length) return Promise.resolve();
+            const all = Promise.all(imgs.map(i => i.decode().catch(() => {})));
+            return Promise.race([all, new Promise(r => setTimeout(r, READY_WAIT_MS))]);
         }
 
         /** Fit the spread's pages into the stage at the same height. */
@@ -696,6 +712,16 @@ manifestUrl() {
             }
             this.animating = true;
             this.resetZoom(true);
+            this.spreadReady(step > 0 ? this.slides.next : this.slides.prev).then(() => {
+                if (!this.isOpen) {
+                    this.animating = false;
+                    return;
+                }
+                this.slideTo(target, step);
+            });
+        }
+
+        slideTo(target, step) {
             const W = this.stage.clientWidth || global.innerWidth;
             // Moving forward slides everything towards the opposite of nextSide
             this.positionSlides(-step * this.nextSide() * W, true);
@@ -1205,6 +1231,7 @@ manifestUrl() {
         }
 
         onVerticalScroll() {
+            this.checkVerticalEnd();
             if (this.vRaf) return;
             this.vRaf = requestAnimationFrame(() => {
                 this.vRaf = null;
@@ -1221,6 +1248,44 @@ manifestUrl() {
                     this.updateVerticalCounter(lo);
                 }
             });
+        }
+
+        /** Vertical: resting at the very bottom for a moment offers to close. */
+        checkVerticalEnd() {
+            const sc = this.scroller;
+            const atEnd = sc.scrollHeight > sc.clientHeight && sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4;
+            const showing = !this.toast.hidden && this.toastKind === 'end';
+            if (atEnd) {
+                if (!this.endTimer && !showing) {
+                    this.endTimer = setTimeout(() => {
+                        this.endTimer = null;
+                        if (this.isOpen && this.direction === 'vertical') this.showEndToast();
+                    }, END_DELAY_MS);
+                }
+                return;
+            }
+            clearTimeout(this.endTimer);
+            this.endTimer = null;
+            if (showing) this.toast.hidden = true;
+        }
+
+        showEndToast() {
+            this.toast.innerHTML = '';
+            const t = el('span');
+            t.textContent = 'おわり';
+            const again = el('button', 'nm-toast-btn', { type: 'button' });
+            again.textContent = '最初から読む';
+            again.addEventListener('click', () => {
+                this.toast.hidden = true;
+                this.goToPage(0, false);
+            });
+            const close = el('button', 'nm-toast-btn', { type: 'button' });
+            close.textContent = '閉じる';
+            close.addEventListener('click', () => this.close());
+            this.toast.append(t, again, close);
+            clearTimeout(this.toastTimer);
+            this.toastKind = 'end';
+            this.toast.hidden = false;
         }
 
         updateVerticalCounter(page) {

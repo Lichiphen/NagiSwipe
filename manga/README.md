@@ -173,6 +173,27 @@ CLIP STUDIO PAINT などで書き出した **漫画の EPUB**（固定レイア�
 - 復元は同じ画面から ZIP をアップロードします。ZIP の中身はすべて検査してから戻します。
 - サーバーの PHP に ZipArchive がない場合は、FTP で `data/works` フォルダをまるごとコピーしてください。
 
+### 更新（v0.2.0 以降）
+
+新しいバージョンが出ると、ログインしたときに作品一覧の上にお知らせが出ます（メニューの「更新」にも「新」の印が付きます）。「更新」画面のボタンを押すと、その場で更新できます。
+
+- GitHub の公式リリースから `nagimanga-vX.Y.Z.zip` をダウンロードし、GitHub が公開している確認用の値（SHA-256）と一致したときだけ使います。中身も 1 つずつ検査します。
+- 入れ替えるのはプログラムのファイルだけです。作品・設定（`data` フォルダ）、プラグイン、`lib/paths.php` はそのままです。
+- 入れ替える前のファイルは `data/update/` に保管され（実行できない `.bak` として）、「元に戻す」で戻せます。直近 3 回分を残します。
+- 確認は 12 時間に 1 回までです。「更新」画面で、ログイン時の確認をオフにしたり、今すぐ確認したりできます。
+- サーバーから GitHub に接続できない（PHP の curl も allow_url_fopen も使えない）、ZipArchive がない、プログラムのファイルに書き込めない場合は自動で更新できません。画面の「手動で更新する」の手順（`data` フォルダ以外を上書きアップロード）で更新してください。
+- v0.1.0 から v0.2.0 へは、手動で更新してください（v0.1.0 には更新機能がありません）。
+
+### 設置用コード
+
+メニューの「設置用コード」に、ビューアーを読み込むためのコードがまとまっています。
+
+- ビューアーの URL（末尾の `?v=…` が **キャッシュバスター**。NagiManga を更新すると値が変わり、読む人のブラウザに古いビューアーが残らないようにします）
+- てがろぐの「JavaScriptのURL」欄にそのまま貼れる 1 行（NagiSwipe と一緒）と、てがろぐ側の設定の手順
+- ブログ・HTML 用の `<script>` タグ
+
+**NagiManga を更新したら、この画面を開き直して、新しい値を貼り直してください。**
+
 ### プラグイン（ゲストモード）
 
 `nagimanga/plugins/` フォルダに PHP のプラグインを置くと、機能を足せます（置いたファイルだけが読み込まれます）。同梱のプラグインは次の 1 つです。
@@ -261,7 +282,12 @@ python dev/attack_test.py
 ```bash
 dev\serve.cmd              # http://127.0.0.1:5190 （データは dev/data）
 python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html を作る
+python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る
 ```
+
+README の URL には、そのファイルを最後に変更したコミットのハッシュを `?abc1234` の形でキャッシュバスターとして付けています。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css・NagiManga.js を変更したコミットのあとに、README の値を自動で書き換えてコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md`）。
+
+リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 
 ## ライセンス
 
