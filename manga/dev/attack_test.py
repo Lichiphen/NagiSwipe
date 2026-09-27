@@ -120,6 +120,20 @@ class Client:
         return self.request("POST", path, body=body, **kw)
 
 
+def jpeg_size(data):
+    """(width, height) of a JPEG, or None."""
+    i = 2
+    while i + 9 < len(data):
+        if data[i] != 0xFF:
+            return None
+        marker, length = data[i + 1], struct.unpack(">H", data[i + 2:i + 4])[0]
+        if marker in (0xC0, 0xC1, 0xC2):
+            h, w = struct.unpack(">HH", data[i + 5:i + 9])
+            return w, h
+        i += 2 + length
+    return None
+
+
 def csrf_of(html):
     m = re.search(r'name="csrf" value="([0-9a-f]+)"', html)
     return m.group(1) if m else ""
@@ -510,6 +524,63 @@ def run(data_dir):
     check("共有 URL の形でも a= が付けば今までどおりの処理（不正なら 404）",
           is_404(anon.get(f"/read.php?nagimanga={wid}&a=x")))
 
+    # --- Individual page: link card, switch, back button, hotlink protection ------------------
+    r = anon.get(f"/read.php?nagimanga={wid}")
+    og = dict(re.findall(r'<meta (?:property|name)="((?:og|twitter):[a-z:]+)" content="([^"]*)"', r.text))
+    check("個別ページ: リンクのカード（OGP）のタグがある", og.get("og:title") and og.get("twitter:card") == "summary_large_image"
+          and "a=o&amp;id=" + wid in og.get("og:image", "") and f"nagimanga={wid}" in og.get("og:url", ""))
+    check("個別ページ: 表紙・読む・戻る（自動は最初は隠す）がある",
+          'class="cover"' in r.text and 'id="nm-open"' in r.text and 'data-back="auto" hidden' in r.text)
+    img = anon.get(f"/read.php?a=o&id={wid}")
+    check("個別ページ: カード用の表紙は 1200x630 の JPEG", img.status == 200 and img.getheader("Content-Type") == "image/jpeg"
+          and jpeg_size(img.body) == (1200, 630))
+    check("個別ページ: カード用の表紙はどのサイトからでも取れる（CORP cross-origin）",
+          img.getheader("Cross-Origin-Resource-Policy") == "cross-origin")
+
+    adm.post("/admin/index.php", {"do": "settings_page", "page_back": "javascript:alert(1)", "csrf": csrf})
+    check("個別ページ: 戻る先に javascript: などは保存できない", "javascript:" not in (data_dir / "config.php").read_text(encoding="utf-8"))
+    adm.post("/admin/index.php", {"do": "settings_page", "page_back": "https://blog.example.test/", "csrf": csrf})
+    r = anon.get(f"/read.php?nagimanga={wid}")
+    check("個別ページ: 戻る先を決めると、そのリンクになる", 'id="nm-back" href="https://blog.example.test/"' in r.text)
+    adm.post("/admin/index.php", {"do": "settings_page", "page_back": "", "csrf": csrf})
+
+    adm.post("/admin/index.php", {"do": "page_public", "id": wid, "csrf": csrf})
+    check("個別ページ: 非公開にすると、個別ページとカード用の表紙は 404",
+          is_404(anon.get(f"/read.php?nagimanga={wid}")) and is_404(anon.get(f"/read.php?a=o&id={wid}")))
+    check("個別ページ: 非公開でも、埋め込んだビューアー（ページ一覧）は読める", anon.get(f"/read.php?a=m&id={wid}").status == 200)
+    adm.post("/admin/index.php", {"do": "page_public", "id": wid, "on": "1", "csrf": csrf})
+    check("個別ページ: 公開に戻せる", anon.get(f"/read.php?nagimanga={wid}").status == 200)
+
+    man = json.loads(anon.get(f"/read.php?a=m&id={wid}").text)
+    page_src = "/" + man["pages"][0]["src"]
+    check("直リンク防止: 初期設定はオフ（画像の URL を直接開ける）", anon.get(page_src).status == 200)
+    adm.post("/admin/index.php", {"do": "settings_advanced", "hotlink": "1", "hotlink_allow": "javascript:alert(1)", "csrf": csrf})
+    check("直リンク防止: 許可リストの変な書き方は保存しない", "'hotlink' => true" not in (data_dir / "config.php").read_text(encoding="utf-8"))
+    adm.post("/admin/index.php", {"do": "settings_advanced", "hotlink": "1", "hotlink_allow": "https://note.com", "csrf": csrf})
+    host = f"{HOST}:{PORT}"
+    check("直リンク防止: オンにすると、画像の URL を直接開いても 404", is_404(anon.get(page_src)))
+    check("直リンク防止: ほかのサイトに貼られた画像・ページ一覧も 404",
+          is_404(anon.get(page_src, headers={"Referer": "https://evil.example/", "Sec-Fetch-Site": "cross-site"}))
+          and is_404(anon.get(f"/read.php?a=m&id={wid}", headers={"Origin": "https://evil.example"})))
+    check("直リンク防止: よく似た名前のサイトも 404",
+          is_404(anon.get(page_src, headers={"Referer": f"http://{HOST}.evil.example/"})))
+    check("直リンク防止: このサイトのページからは読める（Sec-Fetch-Site / Referer）",
+          anon.get(page_src, headers={"Sec-Fetch-Site": "same-origin"}).status == 200
+          and anon.get(page_src, headers={"Referer": f"http://{host}/read.php?nagimanga={wid}"}).status == 200)
+    check("直リンク防止: 許可リストのサイトからは読める", anon.get(page_src, headers={"Referer": "https://note.com/"}).status == 200)
+    check("直リンク防止: オンでも、個別ページとカード用の表紙は使える",
+          anon.get(f"/read.php?nagimanga={wid}").status == 200 and anon.get(f"/read.php?a=o&id={wid}").status == 200)
+    adm.post("/admin/index.php", {"do": "settings_advanced", "csrf": csrf})
+    check("直リンク防止: オフに戻せる", anon.get(page_src).status == 200)
+
+    adm.post("/admin/index.php", {"do": "setpw", "id": wid, "password": "og-test-pw", "csrf": csrf})
+    r = anon.get(f"/read.php?nagimanga={wid}")
+    og = dict(re.findall(r'<meta (?:property|name)="((?:og|twitter):[a-z:]+)" content="([^"]*)"', r.text))
+    check("個別ページ: パスワード付きの作品は表紙を出さない（カードは共通の画像）",
+          og.get("og:image", "").endswith("/viewer/og.jpg") and 'class="cover"' not in r.text and "a=t&amp;" not in r.text
+          and is_404(anon.get(f"/read.php?a=o&id={wid}")))
+    adm.post("/admin/index.php", {"do": "clearpw", "id": wid, "csrf": csrf})
+
     # --- Direct file access ----------------------------------------------------------------
     direct = ["/data/config.php", "/data/", "/data/works/", "/data/logs/security.log", "/lib/bootstrap.php",
               "/lib/", "/admin/.htaccess", "/.htaccess", "/data/probe.txt"]
@@ -883,8 +954,8 @@ def run(data_dir):
         refused.append(r.status == 303)
     check("ゲストの変更操作 19 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 19, str(refused))
     upd = [g.post("/admin/index.php", {"do": do, "csrf": gcsrf, "backup": "x", "auto": "1"}).status in (303, 403)
-           for do in ("update_check", "update_apply", "update_rollback", "update_auto")]
-    check("ゲストは更新・元に戻す・自動確認の切り替えもできない", all(upd), str(upd))
+           for do in ("update_check", "update_apply", "update_rollback", "update_auto", "page_public", "settings_page", "settings_advanced")]
+    check("ゲストは更新・元に戻す・自動確認・個別ページの公開・個別ページと上級者向けの設定を変えられない", all(upd), str(upd))
     check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
     check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
 

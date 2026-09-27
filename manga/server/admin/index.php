@@ -139,6 +139,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h($title) . ' - NagiManga</title>'
+        . '<link rel="icon" href="../viewer/favicon.svg" type="image/svg+xml">'
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . '</head><body><header class="top"><span class="brand">NagiManga</span>' . $navHtml . '</header>'
@@ -449,6 +450,15 @@ function nm_handle_post(array $cfg): void
             nm_flash('ok', 'パスワードを設定しました（以前に配った閲覧用の鍵は無効になります）');
             nm_redirect('p=work&id=' . $id);
 
+        case 'page_public':
+            $on = !empty($_POST['on']);
+            nm_modify_work($id, static function (array $w) use ($on) {
+                $w['page'] = $on;
+                return $w;
+            });
+            nm_flash('ok', $on ? '個別ページを公開しました' : '個別ページを非公開にしました（ブログやてがろぐに埋め込んだビューアーは今までどおり読めます）');
+            nm_redirect('p=work&id=' . $id);
+
         case 'clearpw':
             nm_modify_work($id, static function (array $w) {
                 $w['password_hash'] = '';
@@ -561,6 +571,34 @@ function nm_handle_post(array $cfg): void
             $cfg['max_upload_mb'] = max(1, min(200, (int)($_POST['max_upload_mb'] ?? 30)));
             nm_save_config($cfg);
             nm_flash('ok', '保存しました');
+            nm_redirect('p=settings');
+
+        case 'settings_page':
+            $back = trim(nm_str($_POST, 'page_back', 500));
+            if ($back !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $back)) {
+                nm_flash('err', '戻る先の URL の書き方が正しくありません（例: https://example.com/）');
+                nm_redirect('p=settings');
+            }
+            $cfg['page_back'] = $back;
+            nm_save_config($cfg);
+            nm_flash('ok', '個別ページの設定を保存しました');
+            nm_redirect('p=settings');
+
+        case 'settings_advanced':
+            $allow = [];
+            foreach (nm_lines(nm_str($_POST, 'hotlink_allow', 5000)) as $o) {
+                $o = rtrim($o, '/');
+                if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) {
+                    nm_flash('err', 'サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
+                    nm_redirect('p=settings');
+                }
+                $allow[] = strtolower($o);
+            }
+            $cfg['hotlink'] = !empty($_POST['hotlink']);
+            $cfg['hotlink_allow'] = array_values(array_unique($allow));
+            nm_save_config($cfg);
+            nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $allow));
+            nm_flash('ok', $cfg['hotlink'] ? '直リンク防止をオンにしました' : '直リンク防止をオフにしました');
             nm_redirect('p=settings');
 
         case 'regen_key':
@@ -863,8 +901,12 @@ function nm_view_work(string $id): void
         . '<section class="card"><h1>' . h($w['title']) . '</h1>'
         . '<p>ID（ハッシュ）: <code>' . $idH . '</code>・' . count($w['pages']) . ' ページ'
         . ($locked ? '・<span class="badge">パスワード付き</span>' : '・誰でも読めます') . '</p>'
-        . '<h2>共有用のタグ</h2>'
         . '<div class="share js-share" data-id="' . $idH . '" data-endpoint="' . h($endpoint) . '" data-script="' . h($script) . '" data-title="' . h($w['title']) . '">'
+        . '<h2>共有リンク</h2>'
+        . '<p class="note">note・アメブロ・Instagram・X・てがろぐなどには、このリンクを貼ります。押すと、この作品を読むページが開きます。</p>'
+        . '<div class="copy-box"><input class="copy-src wide js-share-url" readonly> <button type="button" class="btn small primary js-copy">コピー</button></div>'
+        . nm_page_public_html($w, $guest)
+        . '<details class="more"><summary>くわしい設定（読み方・ブログ用の HTML タグ・試し読み）</summary>'
         . '<div class="form row">'
         . '<label>読み方<select class="js-share-dir">' . nm_direction_options((string)($w['direction'] ?? 'rtl')) . '</select></label>'
         . '<label>見開き<select class="js-share-view"><option value="auto">横長の画面なら見開き</option><option value="single">常に 1 ページ</option></select></label>'
@@ -876,16 +918,36 @@ function nm_view_work(string $id): void
         . '<p><button type="button" class="btn js-copy">コピー</button> '
         // Preview through a relative URL: the admin may be opened under another host name than base_url
         . '<a href="#" class="btn js-preview" data-nagimanga="' . $idH . '" data-endpoint="../read.php">ここで試し読み</a></p>'
-        . '<p class="note">このタグをブログやサイトの HTML に貼るだけで、クリックしたときにビューアーが開きます。<code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。</p>'
-        . '<h3>URL 形式（HTML を書けない場所向け）</h3>'
-        . '<div class="copy-box"><input class="copy-src wide js-share-url" readonly> <button type="button" class="btn small js-copy">コピー</button></div>'
-        . '<p class="note">てがろぐの投稿など、上のタグが使えない場所ではこの URL を貼ります（てがろぐでは <code>[第1話を読む]URL</code> のように書けます）。てがろぐの設定のしかたは README の「てがろぐに載せる」にあります。RSS リーダーなどで開いたときは、作品を読むためのページが開きます。</p>'
-        . '<p class="note">タグの URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「設置 URL」から作っています') . '。</p>'
+        . '<p class="note">上の欄は、ブログなど HTML を書ける場所に貼るタグです。クリックしたときにその場でビューアーが開きます。<code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。読み方の選択は、共有リンクにも反映されます。</p>'
+        . '<p class="note">てがろぐでは、共有リンクを <code>[第1話を読む]URL</code> のように投稿します（設定のしかたは「<a href="index.php?p=embed">設置用コード</a>」にあります）。</p>'
+        . '<p class="note">URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「設置 URL」から作っています') . '。</p>'
+        . '</details>'
         . '</div>'
         . '<script src="' . h('../viewer/NagiManga.js?v=' . $viewerVer) . '" defer></script>'
         . '</section>'
 
         . ($guest ? nm_work_sections_guest($w, $pages) : nm_work_sections_admin($w, $pages, $hidden, $locked)));
+}
+
+/** Individual page state and switch (the switch is not shown to guests). */
+function nm_page_public_html(array $w, bool $guest): string
+{
+    $public = ($w['page'] ?? true) !== false;
+    $html = '<div class="page-public">個別ページ: <strong>' . ($public ? '公開中' : '非公開') . '</strong>';
+    if ($public) {
+        $html .= ' <a class="btn small" href="../read.php?nagimanga=' . h($w['id']) . '" target="_blank" rel="noopener">個別ページを見る</a>';
+    }
+    if (!$guest) {
+        $html .= ' <form method="post" action="index.php" class="inline">' . nm_csrf_field()
+            . '<input type="hidden" name="do" value="page_public"><input type="hidden" name="id" value="' . h($w['id']) . '">'
+            . '<input type="hidden" name="on" value="' . ($public ? '0' : '1') . '">'
+            . '<button class="btn small">' . ($public ? '非公開にする' : '公開する') . '</button></form>';
+    }
+    $html .= '</div>';
+    if (!$public) {
+        $html .= '<p class="note">非公開の間は、共有リンクを直接開いても表示されません。ブログやてがろぐに埋め込んだビューアーは今までどおり読めます。</p>';
+    }
+    return $html;
 }
 
 /** Read-only view of a work for guests: no forms at all. */
@@ -1033,6 +1095,22 @@ function nm_view_settings(array $cfg): void
         . '<p class="note">サーバー側の上限: upload_max_filesize ' . h((string)ini_get('upload_max_filesize')) . ' / memory_limit ' . h((string)ini_get('memory_limit')) . '</p>'
         . '<button class="btn">保存</button></form></section>'
 
+        . '<section class="card"><h2>個別ページ</h2>'
+        . '<p>作品ごとの共有リンク（<code>read.php?nagimanga=…</code>）を開くと、その作品を読むページが開きます。note・アメブロ・Instagram・X などに貼ると、表紙付きのカードで表示されます（パスワード付きの作品は表紙を出しません）。</p>'
+        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_page">'
+        . '<label>「戻る」ボタンの行き先（空欄なら自動：来たページに戻ります。わからないときは空欄のままで大丈夫です）<input name="page_back" value="' . h((string)($cfg['page_back'] ?? '')) . '" placeholder="例: https://example.com/"></label>'
+        . '<button class="btn">保存</button></form></section>'
+
+        . '<section class="card"><details class="more"><summary>上級者向けの設定</summary>'
+        . '<h3>直リンク防止</h3>'
+        . '<p>オンにすると、漫画の画像は「このサイト」「別のサイトに埋め込む場合に登録したサイト」「下に書いたサイト」のページからしか読めなくなります。画像の URL を直接開いたり、ほかのサイトに貼られたりしたときは表示しません（サーバーの通信量の節約になります）。</p>'
+        . '<p class="note">共有リンクで開く個別ページ、リンクのカード用の表紙は、オンでもそのまま使えます。サイト単位（例: https://note.com）で書いてください。ブラウザは、ほかのサイトからの読み込みでは URL の途中（/ユーザー名/ など）を送らないため、途中までの一致では判定できません。</p>'
+        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_advanced">'
+        . '<label class="check"><input type="checkbox" name="hotlink" value="1"' . (!empty($cfg['hotlink']) ? ' checked' : '') . '> 直リンク防止を使う</label>'
+        . '<label>ほかに読み込みを許可するサイト（1 行に 1 つ）<textarea name="hotlink_allow" rows="3">' . h(implode("\n", $cfg['hotlink_allow'] ?? [])) . '</textarea></label>'
+        . '<button class="btn">保存</button></form>'
+        . '</details></section>'
+
         . '<section class="card"><h2>セキュリティログ（新しい順）</h2>'
         . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>')
         . '</section>');
@@ -1075,7 +1153,7 @@ function nm_view_embed(): void
         . '<li>「JavaScriptのURL」欄を、次の 1 行に置き換えて保存します（NagiSwipe の画像拡大と一緒に読み込みます）。「CSSのURL」欄は NagiSwipe のままで大丈夫です。「JavaScriptをモジュールとして読み込む」はオフにしてください。'
         . nm_copy_box(NM_NAGISWIPE_JS . ' ' . $js) . '</li>'
         . '<li>画像のない投稿でも読み込まれるように、<strong>[設定] → [ページの表示] → 【投稿本文の表示／URL処理】</strong> の「画像リンクに独自のclass属性値を追加する」にチェックを入れ、<code>nagimanga</code> と入力して保存します。</li>'
-        . '<li>作品ページの「URL 形式」をコピーして、<code>[第1話を読む]URL</code> のように投稿します。</li>'
+        . '<li>作品ページの「共有リンク」をコピーして、<code>[第1話を読む]URL</code> のように投稿します。</li>'
         . '</ol></section>'
 
         . '<section class="card"><h2>ブログ・HTML で使う</h2>'

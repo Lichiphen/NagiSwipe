@@ -26,7 +26,7 @@ const NM_UPDATE_MAX_ENTRY = 5 * 1024 * 1024;
 const NM_UPDATE_MAX_TOTAL = 30 * 1024 * 1024;
 const NM_UPDATE_KEEP_BACKUPS = 3;
 const NM_UPDATE_REQUIRED = ['read.php', 'lib/bootstrap.php', 'admin/index.php', 'viewer/NagiManga.js'];
-const NM_UPDATE_EXT = ['php', 'js', 'css', 'html', 'txt', 'json', 'svg', 'png', 'webp', 'ico', 'woff2'];
+const NM_UPDATE_EXT = ['php', 'js', 'css', 'html', 'txt', 'json', 'svg', 'png', 'jpg', 'webp', 'ico', 'woff2'];
 
 /**
  * Development only: NAGIMANGA_UPDATE_API (release list URL) and NAGIMANGA_UPDATE_DL

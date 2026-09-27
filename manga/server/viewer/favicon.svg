@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>NagiManga</title>
+  <rect width="64" height="64" rx="14" fill="#15252e"/>
+  <path d="M32 17 C25 12.5 17 11.5 9 12.5 V49 C17 48 25 49 32 53.5 Z" fill="#f6f2e9"/>
+  <path d="M32 17 C39 12.5 47 11.5 55 12.5 V49 C47 48 39 49 32 53.5 Z" fill="#e6dfcf"/>
+  <g fill="none" stroke="#15252e" stroke-width="2.6" stroke-linejoin="round">
+    <path d="M14 19 H27 V31 H14 Z"/>
+    <path d="M14 35 H27 V45 H14 Z"/>
+    <path d="M37 19 H50 V27 H37 Z"/>
+    <path d="M37 31 H50 V45 H37 Z"/>
+  </g>
+  <path d="M32 17 V53.5" stroke="#7dbad6" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

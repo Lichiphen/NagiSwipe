@@ -163,3 +163,9 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .checks { list-style: none; padding-left: 0; }
 .backups { list-style: none; padding-left: 0; }
 .copy-label { margin: 12px 0 0; font-weight: 600; }
+
+/* --- Share link / folded details -------------------------------------------- */
+details.more { margin: 16px 0 0; border-top: 1px solid var(--line); padding-top: 12px; }
+details.more > summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+details.more[open] > summary { margin-bottom: 12px; }
+.page-public { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }

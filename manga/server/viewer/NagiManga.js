@@ -2,7 +2,7 @@
  * ============================================================================
  * NagiManga - manga reader for NagiSwipe
  *
- * NagiManga v0.2.0
+ * NagiManga v0.3.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * ============================================================================
@@ -24,7 +24,7 @@
 
     if (global.NagiManga) return;
 
-    const VERSION = '0.2.0';
+    const VERSION = '0.3.0';
     const SCRIPT = document.currentScript;
     const SCRIPT_URL = SCRIPT ? SCRIPT.src : '';
 
@@ -1359,7 +1359,36 @@ manifestUrl() {
         const link = openId && document.getElementById(openId);
         if (link) {
             reader.standalone = true;
+            setupBack(document.getElementById('nm-back'));
             reader.open(link);
         }
     } catch (e) { /* ignore */ }
+
+    /**
+     * The work's own page: a "back" button. A fixed address comes from the
+     * settings; "auto" goes back in the history, or links to the page we came
+     * from. Link wrappers of apps (Instagram, X, ...) are no place to go back to,
+     * so without a history the button stays hidden there.
+     */
+    function setupBack(back) {
+        if (!back || back.dataset.back !== 'auto') return;
+        let from = '';
+        try {
+            const r = document.referrer ? new URL(document.referrer) : null;
+            const wrapper = /(^|\.)(l\.instagram\.com|l\.facebook\.com|lm\.facebook\.com|l\.threads\.net|l\.messenger\.com|t\.co|out\.reddit\.com)$/i;
+            if (r && /^https?:$/.test(r.protocol) && r.href !== location.href && !wrapper.test(r.hostname)) from = r.href;
+        } catch (e) { /* ignore */ }
+        if (global.history.length > 1) {
+            back.href = from || '#';
+            back.addEventListener('click', e => {
+                e.preventDefault();
+                global.history.back();
+            });
+        } else if (from) {
+            back.href = from;
+        } else {
+            return;
+        }
+        back.hidden = false;
+    }
 })(window);
