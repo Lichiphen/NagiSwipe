@@ -361,7 +361,12 @@ manifestUrl() {
                 src: new URL(String(p.src), base).href,
                 thumb: p.thumb ? new URL(String(p.thumb), base).href : '',
                 w: Math.max(1, parseInt(p.w, 10) || 1),
-                h: Math.max(1, parseInt(p.h, 10) || 1)
+                h: Math.max(1, parseInt(p.h, 10) || 1),
+                // Optional smaller copy of the page (for phones / slow connections)
+                light: p.light && p.light.src ? {
+                    src: new URL(String(p.light.src), base).href,
+                    w: Math.max(1, parseInt(p.light.w, 10) || 1)
+                } : null
             }));
             if (!this.pages.length) {
                 this.fail('ページがありません。');
@@ -554,13 +559,15 @@ manifestUrl() {
                 if (p.thumb) frame.style.backgroundImage = `url("${p.thumb.replace(/"/g, '%22')}")`;
                 const img = el('img', 'nm-img', { alt: `${pi + 1}`, draggable: 'false', decoding: 'async' });
                 img.addEventListener('load', () => frame.classList.add('nm-loaded'), { once: true });
-                img.src = p.src;
                 frame.appendChild(img);
                 frame._page = p;
+                frame._img = img;
                 inner.appendChild(frame);
             });
             box.appendChild(inner);
             this.sizeSpread(box);
+            // Now that the display size is known: light or full version
+            box.querySelectorAll('.nm-page').forEach(f => this.setImg(f._img, f._page, parseFloat(f.style.width)));
             return box;
         }
 
@@ -578,6 +585,47 @@ manifestUrl() {
             });
             box._w = ratioSum * h;
             box._h = h;
+        }
+
+        /**
+         * Light or full version for a page shown cssWidth CSS pixels wide.
+         * The light copy is used while it is sharp enough for this screen.
+         */
+        pickSrc(p, cssWidth) {
+            if (!p.light) return p.src;
+            const conn = global.navigator && global.navigator.connection;
+            if (conn && conn.saveData) return p.light.src;
+            const need = cssWidth * (global.devicePixelRatio || 1);
+            return need <= p.light.w * 1.1 ? p.light.src : p.src;
+        }
+
+        /** Rough display width of a page (for preloading the right version). */
+        estimateWidth(p, pagesInSpread) {
+            const W = (this.stage.clientWidth || global.innerWidth) / Math.max(1, pagesInSpread);
+            const H = this.stage.clientHeight || global.innerHeight;
+            return Math.min(W, H * p.w / p.h);
+        }
+
+        /**
+         * Point img at the right version. Going from light to full, the full
+         * image is loaded first and swapped in (no blank flash); once a page
+         * shows the full version it never goes back to the light one.
+         */
+        setImg(img, p, cssWidth) {
+            if (!img || img._full) return;
+            const want = this.pickSrc(p, cssWidth);
+            if (img._want === want) return;
+            const upgrade = !!img._want && want === p.src;
+            img._want = want;
+            img._full = want === p.src;
+            if (!upgrade) {
+                img.src = want;
+                return;
+            }
+            const pre = new Image();
+            pre.decoding = 'async';
+            pre.onload = () => { if (img._want === want) img.src = want; };
+            pre.src = want;
         }
 
         renderSlides() {
@@ -611,9 +659,10 @@ manifestUrl() {
                 const s = this.spreads[this.spreadIndex + d];
                 if (!s || s.end) return;
                 s.pages.forEach(pi => {
+                    const p = this.pages[pi];
                     const img = new Image();
                     img.decoding = 'async';
-                    img.src = this.pages[pi].src;
+                    img.src = this.pickSrc(p, this.estimateWidth(p, s.pages.length));
                 });
             });
         }
@@ -734,6 +783,10 @@ manifestUrl() {
         }
 
         applyZoom(animate) {
+            if (this.zoom.s > 1.01 && this.slides.cur) {
+                this.slides.cur.querySelectorAll('.nm-page').forEach(f =>
+                    this.setImg(f._img, f._page, parseFloat(f.style.width) * this.zoom.s));
+            }
             const inner = this.slides.cur && this.slides.cur.querySelector('.nm-spread-inner');
             this.root.classList.toggle('nm-zoomed', this.zoom.s > 1.01);
             this.updateZoomUi(this.zoom.s);
@@ -1004,7 +1057,6 @@ manifestUrl() {
                     loading: i < 3 ? 'eager' : 'lazy', decoding: 'async', draggable: 'false'
                 });
                 if (p.thumb) img.style.backgroundImage = `url("${p.thumb.replace(/"/g, '%22')}")`;
-                img.src = p.src;
                 img._index = i;
                 frag.appendChild(img);
             });
@@ -1028,7 +1080,9 @@ manifestUrl() {
             Array.from(this.scroller.children).forEach(img => {
                 const p = this.pages[img._index];
                 const base = webtoon ? Math.min(W, 900) : Math.min(W, H * p.w / p.h);
-                img.style.width = Math.max(1, Math.floor(base * this.vzoom)) + 'px';
+                const width = Math.max(1, Math.floor(base * this.vzoom));
+                img.style.width = width + 'px';
+                this.setImg(img, p, width);
             });
         }
 

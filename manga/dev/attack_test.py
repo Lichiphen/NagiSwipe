@@ -538,6 +538,78 @@ def run(data_dir):
     check("拒否した EPUB は作品もファイルも残さない", works_count() == n1 and not list((data_dir / "tmp").glob("epub-*")))
     check("XXE の試みはログに残る", "epub_entity_refused" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
 
+    # --- Light (small) versions -----------------------------------------------------------------
+    r = adm.post("/admin/index.php", {"do": "create", "title": "Light", "direction": "rtl", "csrf": csrf})
+    lid = re.search(r"id=([A-Za-z0-9]{12})", r.getheader("Location")).group(1)
+    for i in (1, 2, 3):
+        adm.post("/admin/index.php", {"do": "upload", "id": lid, "csrf": csrf}, files={"page": (f"{i:03d}.png", png(120, 180, seed=i), "image/png")})
+    adm.post("/admin/index.php", {"do": "sort_name", "id": lid, "csrf": csrf})
+    work_html = adm.get(f"/admin/index.php?p=work&id={lid}").text
+    check("作品ページに通常版・小容量版の 2 つのアップロード欄がある", "js-drop" in work_html and "js-drop-light" in work_html and "小容量版（スマホ用・任意）" in work_html)
+    lfiles = re.findall(r'<li class="page" draggable="true" data-f="([^"]+)"', work_html)
+
+    def up_light(f, data=None, work=None):
+        res = adm.post("/admin/index.php", {"do": "upload_light", "id": work or lid, "f": f, "csrf": csrf},
+                       files={"page": ("l.png", data or png(60, 90), "image/png")})
+        try:
+            return json.loads(res.text)
+        except ValueError:
+            return {"ok": False, "status": res.status}
+
+    oks = [up_light(f).get("ok") for f in lfiles[:2]]
+    man = json.loads(anon.get(f"/read.php?a=m&id={lid}").text)
+    lp = man.get("pages", [])
+    check("小容量版を 2 ページに付けられる（3 ページ目は通常版だけ）", all(oks) and len(lp) == 3
+          and lp[0].get("light", {}).get("w") == 60 and lp[1].get("light") and not lp[2].get("light"))
+    check("小容量版の画像が取れる（WebP・長期キャッシュ）", anon.get("/" + lp[0]["light"]["src"]).status == 200)
+    check("別の作品のページを指定して小容量版は付けられない", up_light(lfiles[0], work=wid_b).get("ok") is False)
+    check("存在しないページには付けられない", up_light("p0999_deadbeef.webp").get("ok") is False)
+    check("画像でないものは小容量版にも使えない", up_light(lfiles[2], data=b"GIF89a<?php system('x'); ?>").get("ok") is False)
+    check("管理画面に「小」の印と件数が出る", 'class="page-light"' in adm.get(f"/admin/index.php?p=work&id={lid}").text
+          and "<strong>2 / 3</strong>" in adm.get(f"/admin/index.php?p=work&id={lid}").text)
+
+    # Protected work: the light copy needs the reader key too
+    adm.post("/admin/index.php", {"do": "setpw", "id": lid, "password": "light-pw", "csrf": csrf})
+    check("パスワード付きでは小容量版も鍵なしで 404", is_404(anon.get("/" + lp[0]["light"]["src"].split("&t=")[0])))
+    tok_l = json.loads(anon.post("/read.php", {"a": "u", "id": lid, "password": "light-pw"}).text).get("token", "")
+    lp2 = json.loads(anon.get(f"/read.php?a=m&id={lid}&t={urllib.parse.quote(tok_l)}").text).get("pages", [])
+    check("鍵があれば小容量版も取れる", bool(lp2) and anon.get("/" + lp2[0]["light"]["src"]).status == 200)
+    adm.post("/admin/index.php", {"do": "clearpw", "id": lid, "csrf": csrf})
+
+    # Backup / restore keeps the light versions
+    r = adm.post("/admin/index.php", {"do": "backup", "id": lid, "csrf": csrf})
+    light_zip = r.body
+    adm.post("/admin/index.php", {"do": "delete", "id": lid, "confirm": "Light", "csrf": csrf})
+    adm.post("/admin/index.php", {"do": "restore", "csrf": csrf}, files={"backup": ("b.zip", light_zip, "application/zip")})
+    lp3 = json.loads(anon.get(f"/read.php?a=m&id={lid}").text).get("pages", [])
+    check("バックアップから復元しても小容量版が残る", len(lp3) == 3 and bool(lp3[0].get("light")) and bool(lp3[1].get("light")))
+
+    # Deleting a page deletes its light file; clearing removes the rest
+    pages_dir = next(p.parent for p in (data_dir / "works").rglob("work.json") if json.loads(p.read_text(encoding="utf-8"))["id"] == lid) / "pages"
+    light_names = [p["m"]["f"] for p in json.loads((pages_dir.parent / "work.json").read_text(encoding="utf-8"))["pages"] if "m" in p]
+    adm.post("/admin/index.php", {"do": "delpage", "id": lid, "f": lfiles[0], "csrf": csrf})
+    check("ページを削除すると小容量版のファイルも消える", not (pages_dir / light_names[0]).exists() and (pages_dir / light_names[1]).exists())
+    adm.post("/admin/index.php", {"do": "clear_light", "id": lid, "csrf": csrf})
+    lp4 = json.loads(anon.get(f"/read.php?a=m&id={lid}").text).get("pages", [])
+    check("「小容量版をすべて外す」で外れ、ファイルも消える", not any(p.get("light") for p in lp4) and not (pages_dir / light_names[1]).exists())
+
+    # EPUB: normal + light at once, and light onto an existing work
+    big = make_epub([(svg_page(f"{i}.png"), f"{i}.png", png(120, 180, seed=i)) for i in range(3)])
+    small = make_epub([(svg_page(f"{i}.png"), f"{i}.png", png(60, 90, seed=i)) for i in range(3)])
+    r = adm.post("/admin/index.php", {"do": "epub", "csrf": csrf}, files={"epub": ("a.epub", big, "application/epub+zip"),
+                                                                          "epub_light": ("b.epub", small, "application/epub+zip")})
+    eid_l = re.search(r"id=([A-Za-z0-9]{12})", r.getheader("Location") or "").group(1)
+    ep = json.loads(anon.get(f"/read.php?a=m&id={eid_l}").text).get("pages", [])
+    check("EPUB の通常版と小容量版を一度に取り込める", len(ep) == 3 and all(p.get("light", {}).get("w") == 60 and p["w"] == 120 for p in ep))
+    r = adm.post("/admin/index.php", {"do": "epub", "csrf": csrf}, files={"epub": ("a.epub", big, "application/epub+zip")})
+    eid_m = re.search(r"id=([A-Za-z0-9]{12})", r.getheader("Location") or "").group(1)
+    small2 = make_epub([(svg_page(f"{i}.png"), f"{i}.png", png(60, 90, seed=i)) for i in range(2)])
+    adm.post("/admin/index.php", {"do": "epub_light", "id": eid_m, "csrf": csrf}, files={"epub_light": ("b.epub", small2, "application/epub+zip")})
+    flash = " ".join(re.findall(r'class="flash flash-\w+">([^<]+)', adm.get(f"/admin/index.php?p=work&id={eid_m}").text))
+    em = json.loads(anon.get(f"/read.php?a=m&id={eid_m}").text).get("pages", [])
+    check("あとから小容量版 EPUB を割り当てられ、ページ数の違いは知らせる",
+          [bool(p.get("light")) for p in em] == [True, True, False] and "数が違います" in flash, flash)
+
     # --- Guest mode plugin (read-only admin for demos) --------------------------------------------
     plugin_src = HERE.parent / "plugins" / "guest-mode.php"
     plugin_dst = data_dir.parent / "plugins" / "guest-mode.php"
@@ -590,7 +662,14 @@ def run(data_dir):
     refused.append(r.status == 303)
     r = g.post("/admin/index.php", {"do": "epub", "csrf": gcsrf}, files={"epub": ("b.epub", good, "application/epub+zip")})
     refused.append(r.status == 303)
-    check("ゲストの変更操作 16 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 16, str(refused))
+    r = g.post("/admin/index.php", {"do": "upload_light", "id": wid, "f": "p0001_00000000.webp", "csrf": gcsrf},
+               files={"page": ("l.png", png(20, 20), "image/png")})
+    refused.append(r.status == 403 or r.status == 303)
+    for do in ("clear_light", "epub_light"):
+        r = g.post("/admin/index.php", {"do": do, "id": wid, "csrf": gcsrf},
+                   files={"epub_light": ("b.epub", good, "application/epub+zip")} if do == "epub_light" else None)
+        refused.append(r.status == 303)
+    check("ゲストの変更操作 19 種はすべて拒否される（正しい CSRF トークン付きでも）", all(refused) and len(refused) == 19, str(refused))
     check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
     check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
 

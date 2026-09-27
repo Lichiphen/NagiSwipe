@@ -341,6 +341,32 @@ function nm_handle_post(array $cfg): void
         case 'upload':
             nm_upload_page($id, $cfg);
 
+        case 'upload_light':
+            nm_upload_light($id, $cfg);
+
+        case 'clear_light':
+            nm_modify_work($id, static function (array $w) {
+                $dir = nm_work_dir($w['id']) . '/pages';
+                foreach ($w['pages'] as &$p) {
+                    if (isset($p['m']['f'])) nm_delete_page_files($dir, $p['m']['f']);
+                    unset($p['m']);
+                }
+                unset($p);
+                return $w;
+            });
+            nm_flash('ok', '小容量版をすべて外しました（通常版だけで表示します）');
+            nm_redirect('p=work&id=' . $id . '#pages');
+
+        case 'epub_light':
+            if (!nm_valid_id($id) || !nm_load_work($id)) nm_not_found();
+            $f = $_FILES['epub_light'] ?? null;
+            if (!is_array($f) || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) {
+                nm_flash('err', 'EPUB を受け取れませんでした（サーバーのアップロード上限を超えている可能性があります）');
+                nm_redirect('p=work&id=' . $id . '#pages');
+            }
+            nm_flash_light_result(nm_epub_attach_light($id, (string)$f['tmp_name'], $cfg));
+            nm_redirect('p=work&id=' . $id . '#pages');
+
         case 'epub':
             $f = $_FILES['epub'] ?? null;
             if (!is_array($f) || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$f['tmp_name'])) {
@@ -358,6 +384,10 @@ function nm_handle_post(array $cfg): void
             nm_log('epub_imported', $res['id'] . ' ' . $res['count']);
             nm_flash('ok', '「' . $res['title'] . '」を EPUB から作りました（' . $res['count'] . ' ページ'
                 . ($res['skipped'] ? '、読めなかった ' . $res['skipped'] . ' ページは飛ばしました' : '') . '）');
+            $light = $_FILES['epub_light'] ?? null;
+            if (is_array($light) && ($light['error'] ?? 4) === UPLOAD_ERR_OK && is_uploaded_file((string)$light['tmp_name'])) {
+                nm_flash_light_result(nm_epub_attach_light($res['id'], (string)$light['tmp_name'], $cfg));
+            }
             nm_redirect('p=work&id=' . $res['id']);
 
         case 'sort_name':
@@ -391,8 +421,10 @@ function nm_handle_post(array $cfg): void
         case 'delpage':
             $file = nm_str($_POST, 'f', 40);
             nm_modify_work($id, static function (array $w) use ($file) {
+                foreach ($w['pages'] as $p) {
+                    if ($p['f'] === $file) nm_delete_page(nm_work_dir($w['id']) . '/pages', $p);
+                }
                 $w['pages'] = array_values(array_filter($w['pages'], static fn($p) => $p['f'] !== $file));
-                nm_delete_page_files(nm_work_dir($w['id']) . '/pages', $file);
                 return $w;
             });
             nm_flash('ok', 'ページを削除しました');
@@ -619,6 +651,64 @@ function nm_upload_page(string $id, array $cfg): never
     nm_json(['ok' => true, 'count' => $count]);
 }
 
+/**
+ * Light (small) version of one page. The browser sends the files in name
+ * order and tells which page each one belongs to.
+ */
+function nm_upload_light(string $id, array $cfg): never
+{
+    if (!nm_valid_id($id) || !($work = nm_load_work($id))) nm_not_found();
+    $target = nm_str($_POST, 'f', 40);
+    $index = null;
+    foreach ($work['pages'] as $i => $p) {
+        if ($p['f'] === $target) $index = $i;
+    }
+    if ($index === null) nm_json(['ok' => false, 'error' => 'ページが更新されています。再読み込みしてください'], 400);
+
+    $f = $_FILES['page'] ?? null;
+    if (!is_array($f) || !is_string($f['tmp_name'] ?? null) || ($f['error'] ?? 4) !== UPLOAD_ERR_OK) {
+        nm_json(['ok' => false, 'error' => 'ファイルを受け取れませんでした'], 400);
+    }
+    if (!is_uploaded_file($f['tmp_name'])) nm_not_found();
+
+    $dir = nm_work_dir($id) . '/pages';
+    $res = nm_import_image($f['tmp_name'], $dir, $index + 1, (int)($cfg['image_quality'] ?? 90),
+        (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, false);
+    if (is_string($res)) {
+        nm_log('upload_rejected', "$id light " . $res);
+        nm_json(['ok' => false, 'error' => $res], 400);
+    }
+    $ok = nm_with_lock('work-' . $id, static function () use ($id, $target, $res, $dir) {
+        $w = nm_load_work($id);
+        foreach (($w['pages'] ?? []) as $i => $p) {
+            if ($p['f'] !== $target) continue;
+            if (isset($p['m']['f'])) nm_delete_page_files($dir, $p['m']['f']);
+            $w['pages'][$i]['m'] = $res;
+            nm_save_work($w);
+            return true;
+        }
+        nm_delete_page_files($dir, $res['f']);
+        return false;
+    });
+    if (!$ok) nm_json(['ok' => false, 'error' => 'ページが更新されています。再読み込みしてください'], 400);
+    nm_json(['ok' => true]);
+}
+
+/** Flash message for a light EPUB import. */
+function nm_flash_light_result(array|string $res): void
+{
+    if (is_string($res)) {
+        nm_log('epub_light_rejected', $res);
+        nm_flash('err', '小容量版: ' . $res);
+        return;
+    }
+    $msg = '小容量版を ' . $res['attached'] . ' ページに割り当てました';
+    if ($res['epubPages'] !== $res['pages']) {
+        $msg .= '（作品は ' . $res['pages'] . ' ページ、小容量版の EPUB は ' . $res['epubPages'] . ' ページで、数が違います。順番を確認してください）';
+    }
+    nm_flash($res['epubPages'] === $res['pages'] && $res['attached'] === $res['pages'] ? 'ok' : 'err', $msg);
+}
+
 function nm_restore_upload(): never
 {
     $f = $_FILES['backup'] ?? null;
@@ -697,7 +787,8 @@ function nm_view_dashboard(): void
         . '<p class="note">CLIP STUDIO PAINT などで書き出した漫画の EPUB（画像のページだけのもの）から、ページの順番・読む向き・タイトルをそのまま取り込みます。DRM 付き・文章だけの EPUB は読めません。</p>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="form row">' . nm_csrf_field()
         . '<input type="hidden" name="do" value="epub">'
-        . '<label>EPUB ファイル<input type="file" name="epub" accept=".epub,application/epub+zip" required></label>'
+        . '<label>EPUB ファイル（通常版）<input type="file" name="epub" accept=".epub,application/epub+zip" required></label>'
+        . '<label>小容量版 EPUB（任意・スマホ用）<input type="file" name="epub_light" accept=".epub,application/epub+zip"></label>'
         . '<label>タイトル（空欄なら EPUB のタイトル）<input name="title" maxlength="200"></label>'
         . '<label>シリーズ名（任意）<input name="series" maxlength="200"></label>'
         . '<button class="btn primary">取り込む</button></form>'
@@ -724,6 +815,7 @@ function nm_view_work(string $id): void
         $pages .= '<li class="page"' . ($guest ? '' : ' draggable="true"') . ' data-f="' . h($p['f']) . '">'
             . '<img src="' . h(nm_thumb_url($w, $p)) . '" alt="" loading="lazy">'
             . '<span class="page-no">' . ($i + 1) . '</span>'
+            . (isset($p['m']) ? '<span class="page-light" title="小容量版あり（' . (int)$p['m']['w'] . '×' . (int)$p['m']['h'] . '）">小</span>' : '')
             . '<span class="page-name" title="' . h($p['o'] ?? '') . '">' . h(($p['o'] ?? '') !== '' ? $p['o'] : $p['f']) . '</span>'
             . ($guest ? '' : '<form method="post" action="index.php" class="js-confirm" data-confirm="このページを削除しますか？">' . nm_csrf_field()
             . '<input type="hidden" name="do" value="delpage"><input type="hidden" name="id" value="' . h($w['id']) . '">'
@@ -776,16 +868,40 @@ function nm_work_sections_guest(array $w, string $pages): string
         . '</table></section>';
 }
 
+/** Second upload area: the light (small) version of the pages. */
+function nm_light_upload_html(array $w, string $hidden): string
+{
+    $total = count($w['pages']);
+    $have = count(array_filter($w['pages'], static fn($p) => isset($p['m'])));
+    return '<div class="drop js-drop-light" data-id="' . h($w['id']) . '" data-csrf="' . h(nm_csrf_token()) . '">'
+        . '<h3>小容量版（スマホ用・任意）</h3>'
+        . '<p class="note">同じページを小さく書き出した画像です。スマホではこちらを読み込み、パソコンや拡大したときは通常版に切り替えます。ファイル名の順に、1 ページ目から順番に割り当てます。</p>'
+        . '<p>ここに画像をドラッグ＆ドロップ、または <label class="btn">ファイルを選ぶ<input type="file" class="js-file-light" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" multiple hidden></label></p>'
+        . '<progress class="js-progress" max="1" value="0" hidden></progress><p class="js-status note"></p>'
+        . '<p class="light-count">小容量版があるページ: <strong>' . $have . ' / ' . $total . '</strong></p>'
+        . '<form method="post" action="index.php" enctype="multipart/form-data" class="form row">' . $hidden
+        . '<input type="hidden" name="do" value="epub_light">'
+        . '<label>小容量版 EPUB から割り当てる<input type="file" name="epub_light" accept=".epub,application/epub+zip" required></label>'
+        . '<button class="btn">取り込む</button></form>'
+        . ($have ? '<form method="post" action="index.php" class="inline js-confirm" data-confirm="小容量版をすべて外しますか？（通常版は残ります）">' . $hidden
+            . '<input type="hidden" name="do" value="clear_light"><button class="btn small">小容量版をすべて外す</button></form>' : '')
+        . '</div>';
+}
+
 function nm_work_sections_admin(array $w, string $pages, string $hidden, bool $locked): string
 {
     $idH = h($w['id']);
     return ''
         // --- Pages ---
         . '<section class="card" id="pages"><h2>ページ</h2>'
+        . '<div class="uploads">'
         . '<div class="drop js-drop" data-id="' . $idH . '" data-csrf="' . h(nm_csrf_token()) . '">'
+        . '<h3>通常版（パソコン・拡大用）</h3>'
         . '<p>ここに画像をドラッグ＆ドロップ、または <label class="btn">ファイルを選ぶ<input type="file" class="js-file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" multiple hidden></label></p>'
         . '<label class="check"><input type="checkbox" class="js-sort-after" checked> アップロード後にファイル名の順（001, 002, … 010）に並べる</label>'
         . '<progress class="js-progress" max="1" value="0" hidden></progress><p class="js-status note"></p></div>'
+        . ($w['pages'] ? nm_light_upload_html($w, $hidden) : '')
+        . '</div>'
         . ($pages !== ''
             ? '<p class="note">ドラッグで並べ替えできます。並べ替えたら「並び順を保存」を押してください。</p>'
               . '<ol class="pages js-pages" data-id="' . $idH . '">' . $pages . '</ol>'

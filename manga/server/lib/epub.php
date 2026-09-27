@@ -239,3 +239,66 @@ function nm_epub_import(string $epubPath, string $titleOverride, string $series,
         $zip->close();
     }
 }
+
+/**
+ * Attach the pages of a light (small) EPUB to an existing work, page by page
+ * in reading order.
+ *
+ * @return array{attached:int, pages:int, epubPages:int}|string
+ */
+function nm_epub_attach_light(string $id, string $epubPath, array $cfg): array|string
+{
+    if (!class_exists('ZipArchive')) return 'サーバーの PHP に ZipArchive がありません';
+    $work = nm_load_work($id);
+    if (!$work) return '作品が見つかりません';
+    @set_time_limit(0);
+
+    $zip = new ZipArchive();
+    if ($zip->open($epubPath, ZipArchive::RDONLY) !== true) return 'EPUB（ZIP）として開けません';
+    try {
+        $book = nm_epub_inspect($zip);
+        if (is_string($book)) return $book;
+
+        $dir = nm_work_dir($id) . '/pages';
+        $tmp = NM_DATA . '/tmp/epub-' . bin2hex(random_bytes(6));
+        nm_ensure_dir(dirname($tmp));
+        $imported = []; // page index => light info
+        try {
+            foreach ($book['pages'] as $i => $p) {
+                if ($i >= count($work['pages'])) break;
+                $bytes = nm_zip_read($zip, $p['index'], NM_EPUB_MAX_IMAGE);
+                if ($bytes === null) continue;
+                file_put_contents($tmp, $bytes);
+                unset($bytes);
+                $res = nm_import_image($tmp, $dir, $i + 1, (int)($cfg['image_quality'] ?? 90), NM_EPUB_MAX_IMAGE, false);
+                if (is_string($res)) {
+                    nm_log('epub_page_rejected', "$id light " . mb_substr($p['entry'], 0, 100) . ' ' . $res);
+                    continue;
+                }
+                $imported[$i] = $res;
+            }
+        } finally {
+            @unlink($tmp);
+        }
+
+        nm_with_lock('work-' . $id, static function () use ($id, $imported, $dir) {
+            $w = nm_load_work($id);
+            if (!$w) {
+                foreach ($imported as $m) nm_delete_page_files($dir, $m['f']);
+                return;
+            }
+            foreach ($imported as $i => $m) {
+                if (!isset($w['pages'][$i])) {
+                    nm_delete_page_files($dir, $m['f']);
+                    continue;
+                }
+                if (isset($w['pages'][$i]['m']['f'])) nm_delete_page_files($dir, $w['pages'][$i]['m']['f']);
+                $w['pages'][$i]['m'] = $m;
+            }
+            nm_save_work($w);
+        });
+        return ['attached' => count($imported), 'pages' => count($work['pages']), 'epubPages' => count($book['pages'])];
+    } finally {
+        $zip->close();
+    }
+}

@@ -54,7 +54,7 @@ function nm_memory_available(): int
  *
  * @return array{f:string,w:int,h:int}|string  page info, or an error message
  */
-function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes): array|string
+function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true): array|string
 {
     $sup = nm_image_support();
     if (!$sup['gd'] || !$sup['finfo']) return 'サーバーの PHP に GD / fileinfo がありません';
@@ -107,6 +107,8 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
         $thumbOut = "$pagesDir/t_$base.$ext";
 
         if (!nm_encode($src, $out, $ext, $quality)) return '画像を保存できませんでした';
+
+        if (!$withThumb) return ['f' => $file, 'w' => $w, 'h' => $h];
 
         // Small preview for the admin list and the page slider
         $tw = min(NM_THUMB_W, $w);
@@ -177,6 +179,13 @@ function nm_apply_exif_orientation(GdImage $im, string $file): GdImage
         return $rotated;
     }
     return $im;
+}
+
+/** Delete every file of a page: image, thumbnail and light version. */
+function nm_delete_page(string $pagesDir, array $page): void
+{
+    nm_delete_page_files($pagesDir, (string)($page['f'] ?? ''));
+    if (isset($page['m']['f'])) nm_delete_page_files($pagesDir, (string)$page['m']['f']);
 }
 
 /** Delete a page's files (image + thumbnail). */

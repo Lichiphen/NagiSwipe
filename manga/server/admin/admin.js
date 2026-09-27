@@ -166,6 +166,67 @@
         });
     }
 
+    // --- Light (small) versions: file i goes to page i -------------------------
+    const dropL = $('.js-drop-light');
+    if (dropL) {
+        const inputL = $('.js-file-light', dropL);
+        const progressL = $('.js-progress', dropL);
+        const statusL = $('.js-status', dropL);
+        let busyL = false;
+
+        const uploadLight = async (files) => {
+            if (busyL || !files.length) return;
+            files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+            const pages = $$('.js-pages .page').map(li => li.dataset.f);
+            const n = Math.min(files.length, pages.length);
+            if (files.length !== pages.length &&
+                !window.confirm(`画像は ${files.length} 枚、ページは ${pages.length} ページです。1 ページ目から順に ${n} ページ分を割り当てますか？`)) {
+                return;
+            }
+            busyL = true;
+            progressL.hidden = false;
+            progressL.max = n;
+            progressL.value = 0;
+            const errors = [];
+            for (let i = 0; i < n; i++) {
+                statusL.textContent = `アップロード中… ${i + 1} / ${n}（${files[i].name} → ${i + 1} ページ目）`;
+                const fd = new FormData();
+                fd.append('do', 'upload_light');
+                fd.append('id', dropL.dataset.id);
+                fd.append('f', pages[i]);
+                fd.append('page', files[i]);
+                fd.append('csrf', dropL.dataset.csrf);
+                try {
+                    const res = await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin' });
+                    const data = await res.json().catch(() => ({ ok: false, error: `エラー（${res.status}）` }));
+                    if (!data.ok) errors.push(`${files[i].name}: ${data.error || 'エラー'}`);
+                } catch (e) {
+                    errors.push(`${files[i].name}: 通信エラー`);
+                }
+                progressL.value = i + 1;
+            }
+            busyL = false;
+            if (errors.length) {
+                statusL.textContent = `完了（${errors.length} 件失敗）: ` + errors.join(' / ');
+                return;
+            }
+            location.reload();
+        };
+
+        inputL.addEventListener('change', () => uploadLight(Array.from(inputL.files)));
+        ['dragenter', 'dragover'].forEach(t => dropL.addEventListener(t, e => {
+            if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+            e.preventDefault();
+            dropL.classList.add('is-over');
+        }));
+        ['dragleave', 'drop'].forEach(t => dropL.addEventListener(t, () => dropL.classList.remove('is-over')));
+        dropL.addEventListener('drop', e => {
+            if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+            e.preventDefault();
+            uploadLight(Array.from(e.dataTransfer.files).filter(f => /^image\//.test(f.type)));
+        });
+    }
+
     // --- Reorder pages -----------------------------------------------------
     const list = $('.js-pages');
     const saveBtn = $('.js-save-order');

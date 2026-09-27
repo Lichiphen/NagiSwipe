@@ -53,10 +53,13 @@ function nm_backup_download(array $ids = []): never
         $dir = nm_work_dir($w['id']);
         $zip->addFile("$dir/work.json", "works/{$w['id']}/work.json");
         foreach ($w['pages'] as $p) {
-            foreach (['', 't_'] as $prefix) {
-                $f = "$dir/pages/$prefix{$p['f']}";
+            // Page image, its thumbnail and the light version if any
+            $files = [$p['f'], 't_' . $p['f']];
+            if (isset($p['m']['f'])) $files[] = $p['m']['f'];
+            foreach ($files as $file) {
+                $f = "$dir/pages/$file";
                 if (!is_file($f)) continue;
-                $name = "works/{$w['id']}/pages/$prefix{$p['f']}";
+                $name = "works/{$w['id']}/pages/$file";
                 $zip->addFile($f, $name);
                 // Images are already compressed: store them as is (fast)
                 $zip->setCompressionName($name, ZipArchive::CM_STORE);
@@ -182,6 +185,25 @@ function nm_restore_work(ZipArchive $zip, string $id, array $entries, bool $over
                     $p['h'] = (int)$info[1];
                 }
             }
+            if (isset($p['m'])) {
+                // Light version: same checks as the page image, dropped if missing or wrong
+                $lkey = "pages/{$p['m']['f']}";
+                $lwant = str_ends_with($p['m']['f'], '.webp') ? 'image/webp' : 'image/jpeg';
+                $ldest = "$stage/pages/{$p['m']['f']}";
+                $lbytes = isset($entries[$lkey]) ? nm_zip_read($zip, $entries[$lkey], NM_RESTORE_MAX_ENTRY) : null;
+                $linfo = null;
+                if ($lbytes !== null) {
+                    file_put_contents($ldest, $lbytes);
+                    $linfo = $finfo->file($ldest) === $lwant ? @getimagesize($ldest) : null;
+                }
+                if ($linfo && ($linfo['mime'] ?? '') === $lwant) {
+                    $p['m']['w'] = (int)$linfo[0];
+                    $p['m']['h'] = (int)$linfo[1];
+                } else {
+                    @unlink($ldest);
+                    unset($p['m']);
+                }
+            }
             $kept[] = $p;
         }
         $work['pages'] = $kept;
@@ -231,12 +253,18 @@ function nm_sanitize_work(array $d, string $id): array
         if (!is_array($p) || !is_string($p['f'] ?? null) || !preg_match(NM_PAGE_PATTERN, $p['f'])) continue;
         if (isset($seen[$p['f']])) continue;
         $seen[$p['f']] = true;
-        $pages[] = [
+        $page = [
             'f' => $p['f'],
             'w' => (int)($p['w'] ?? 0),
             'h' => (int)($p['h'] ?? 0),
             'o' => is_string($p['o'] ?? null) ? mb_substr($p['o'], 0, 200) : '',
         ];
+        // Light version: its own unique file name, never shared with another page
+        if (nm_valid_light($p['m'] ?? null) && !isset($seen[$p['m']['f']])) {
+            $seen[$p['m']['f']] = true;
+            $page['m'] = ['f' => $p['m']['f'], 'w' => (int)$p['m']['w'], 'h' => (int)$p['m']['h']];
+        }
+        $pages[] = $page;
     }
     return [
         'id' => $id,

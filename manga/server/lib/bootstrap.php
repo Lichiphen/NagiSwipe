@@ -378,7 +378,19 @@ function nm_load_work(string $id): ?array
     if (!$w || ($w['id'] ?? '') !== $id) return null;
     $w['pages'] = array_values(array_filter($w['pages'] ?? [], static fn($p) =>
         is_array($p) && is_string($p['f'] ?? null) && preg_match(NM_PAGE_PATTERN, $p['f'])));
+    foreach ($w['pages'] as &$p) {
+        // Optional light (small) version of the page: drop it if malformed
+        if (isset($p['m']) && !nm_valid_light($p['m'])) unset($p['m']);
+    }
+    unset($p);
     return $w;
+}
+
+/** A page's light version: ['f' => file, 'w' => int, 'h' => int] */
+function nm_valid_light(mixed $m): bool
+{
+    return is_array($m) && is_string($m['f'] ?? null) && (bool)preg_match(NM_PAGE_PATTERN, $m['f'])
+        && (int)($m['w'] ?? 0) > 0 && (int)($m['h'] ?? 0) > 0;
 }
 
 function nm_save_work(array $w): void
@@ -410,6 +422,11 @@ function nm_page_path(array $work, string $file, bool $thumb = false): ?string
         if ($p['f'] === $file) {
             // The thumbnail has the same name with a "t_" prefix
             $path = nm_work_dir($work['id']) . '/pages/' . ($thumb ? 't_' : '') . $file;
+            return is_file($path) ? $path : null;
+        }
+        // Light version (no thumbnail of its own)
+        if (!$thumb && isset($p['m']) && $p['m']['f'] === $file) {
+            $path = nm_work_dir($work['id']) . '/pages/' . $file;
             return is_file($path) ? $path : null;
         }
     }

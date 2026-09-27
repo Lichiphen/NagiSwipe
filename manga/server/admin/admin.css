@@ -143,3 +143,10 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
     padding: 10px 14px;
     margin: 0 0 16px;
 }
+
+/* Two upload areas: normal / light */
+.uploads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 0 0 16px; }
+.uploads .drop { margin: 0; text-align: left; }
+.uploads h3 { margin: 0 0 6px; font-size: 1rem; }
+.light-count { margin: 8px 0; }
+.page-light { position: absolute; top: 8px; right: 8px; background: var(--card); color: var(--accent); border: 1px solid var(--accent); font-size: .7em; padding: 0 .45em; border-radius: 99px; }

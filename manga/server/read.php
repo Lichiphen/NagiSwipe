@@ -72,13 +72,22 @@ function nm_serve_manifest(array $work, string $token): never
     $pages = [];
     foreach ($work['pages'] as $p) {
         $q = 'id=' . $work['id'] . '&f=' . rawurlencode($p['f']) . $tq;
-        $pages[] = [
+        $page = [
             'w' => (int)$p['w'],
             'h' => (int)$p['h'],
             // Relative to read.php; the viewer resolves it against the endpoint URL
             'src' => "$base?a=i&$q",
             'thumb' => "$base?a=t&$q",
         ];
+        if (isset($p['m'])) {
+            // Light version: the viewer uses it when it is sharp enough for the screen
+            $page['light'] = [
+                'src' => "$base?a=i&id=" . $work['id'] . '&f=' . rawurlencode($p['m']['f']) . $tq,
+                'w' => (int)$p['m']['w'],
+                'h' => (int)$p['m']['h'],
+            ];
+        }
+        $pages[] = $page;
     }
     nm_json([
         'id' => $work['id'],
