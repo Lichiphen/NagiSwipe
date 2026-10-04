@@ -299,7 +299,15 @@ function nm_login_page(string $method, array $cfg): void
     $src = $method === 'POST' ? $_POST : $_GET;
     $key = nm_str($src, 'k', 64);
     // The LOG login alias exposes only a password form; the keyed URL stays valid.
-    if (!$publicLogin && ($key === '' || !hash_equals((string)$cfg['login_key'], $key))) nm_not_found();
+    if (!$publicLogin && ($key === '' || !hash_equals((string)$cfg['login_key'], $key))) {
+        // While the LOG shows its "ログイン" link, the password form is public anyway: send an expired
+        // session (or an old "管理" tab) there instead of a dead end. A wrong key or a hidden link: keep answering 404.
+        if ($method === 'GET' && $key === '' && function_exists('nl_settings') && nl_settings()['show_login'] && !isset($_GET['guest']) && nm_ip_allowed($cfg)) {
+            header('Location: login.php', true, 303);
+            exit;
+        }
+        nm_not_found();
+    }
     if (nm_login_blocked()) {
         nm_log('login_blocked');
         nm_not_found();

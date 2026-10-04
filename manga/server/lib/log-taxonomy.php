@@ -82,11 +82,17 @@ function nl_post_categories(array $input, array &$taxonomy): array
     if (count($out) > 20) throw new UnexpectedValueException('カテゴリは20個まで選べます');
     return array_map('strval', array_keys($out));
 }
+/** The folder mark used for categories everywhere (post footers and the sidebar). */
+function nl_category_icon(): string
+{
+    return '<svg class="log-cat-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+}
+/** "カテゴリ  [folder]日記, [folder]制作" under a post. */
 function nl_category_links(array $p, bool $admin = false): string
 {
-    $taxonomy = nl_taxonomy(); $links = '';
-    foreach ($p['categories'] ?? [] as $id) if (isset($taxonomy['categories'][$id])) $links .= '<a href="' . ($admin ? '../' : '') . './?category=' . h((string)$id) . '">' . h($taxonomy['categories'][$id]) . '</a>';
-    return $links !== '' ? '<nav class="log-categories" aria-label="カテゴリ">' . $links . '</nav>' : '';
+    $taxonomy = nl_taxonomy(); $links = [];
+    foreach ($p['categories'] ?? [] as $id) if (isset($taxonomy['categories'][$id])) $links[] = '<a href="' . ($admin ? '../' : '') . './?category=' . h((string)$id) . '">' . nl_category_icon() . '<span>' . h($taxonomy['categories'][$id]) . '</span></a>';
+    return $links ? '<nav class="log-categories" aria-label="カテゴリ"><span class="log-categories-label">カテゴリ</span>' . implode('<span class="log-cat-sep" aria-hidden="true">,</span>', $links) . '</nav>' : '';
 }
 function nl_taxonomy_rename(array $input): void
 {

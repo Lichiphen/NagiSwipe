@@ -290,10 +290,28 @@ function nm_lscache_active(): bool
 {
     return nm_lscache_server() && (bool)((nm_config() ?? [])['lscache'] ?? true);
 }
+/**
+ * Uploading a new version does not go through the admin, so nothing would purge pages cached by the
+ * old code. Compare the program files' newest change time with the last one seen and purge once.
+ */
+function nm_lscache_code_changed(): bool
+{
+    static $changed = null;
+    if ($changed !== null) return $changed;
+    $newest = 0;
+    foreach (array_merge(glob(NM_ROOT . '/*.php') ?: [], glob(NM_ROOT . '/lib/*.php') ?: [], glob(NM_ROOT . '/viewer/*.css') ?: [], glob(NM_ROOT . '/viewer/*.js') ?: []) as $file) $newest = max($newest, (int)@filemtime($file));
+    $stamp = NM_VERSION . ':' . $newest;
+    $file = NM_DATA . '/lscache-code.txt';
+    $changed = @file_get_contents($file) !== $stamp;
+    if ($changed) @file_put_contents($file, $stamp, LOCK_EX);
+    return $changed;
+}
+
 /** Mark this response: cache it for visitors (public pages only) or never. */
 function nm_lscache_header(bool $public): void
 {
     if (headers_sent() || !nm_lscache_active()) return;
+    if (nm_lscache_code_changed()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
     // Anyone holding the login cookie is looked up separately, so a cached visitor page is never shown to the owner.
     header('X-LiteSpeed-Vary: cookie=nm_admin');
     if ($public) {

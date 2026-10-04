@@ -49,6 +49,12 @@ def run(site,c,csrf,plain,pt):
     check('オフにするとLiteSpeedへの指示を送らない',ls(pub.get('/'))=={} and ls(post(base.payload(body='オフ後\n本文')))=={})
     post({'do':'settings_lscache','lscache':'1'})
     check('オンに戻すと再びキャッシュ',ls(pub.get('/')).get('x-litespeed-cache-control')=='public,max-age=3600')
+    pub.get('/')
+    check('プログラムを変えていなければキャッシュを消さない','x-litespeed-purge' not in ls(pub.get('/')))
+    import time
+    later=time.time()+5; os.utime(site/'lib/log.php',(later,later))
+    first=ls(pub.get('/')); second=ls(pub.get('/'))
+    check('プログラムを上書きしたら最初の表示で古いキャッシュを消す（1回だけ）',first.get('x-litespeed-purge')=='tag=nagilog' and 'x-litespeed-purge' not in second)
     check('.htaccessはLiteSpeedのときだけCacheLookupを使う','<IfModule LiteSpeed>\n    CacheLookup on\n</IfModule>' in (site/'.htaccess').read_text(encoding='utf-8'))
 
     # A server that is not LiteSpeed: nothing changes

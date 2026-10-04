@@ -60,7 +60,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("公開URLはファイル名のないルート", public.get('/').status == 200 and '/log.php' not in public.get('/').text)
     legacy = public.get('/log.php?id=20261004123033')
     check("以前のlog.phpリンクを新URLへ301転送", legacy.status == 301 and legacy.getheader('Location') == './?id=20261004123033')
-    check("未ログインのLOG管理画面は404", public.get("/admin/index.php?p=log").status == 404)
+    check("未ログインのLOG管理画面はログイン画面へ（中身は見せない）", public.get("/admin/index.php?p=log").status == 303 and public.get("/admin/index.php?p=log").getheader("Location") == "login.php")
     check("未ログインの保存は404", public.post("/admin/index.php", payload()).status == 404)
     check("CSRFのない投稿は404", post(payload(), token="wrong").status == 404)
     check("公開窓口へのPOSTは404", public.post("/", payload()).status == 404)
@@ -266,9 +266,9 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     categorized = post(payload(body='分類のある記録。\n#らくがき **#制作メモ** #らくがき\nhttps://example.com/#URL内はタグではない', new_categories='日記、制作'))
     category_pid = json.loads(categorized.text)['id']
     category_post = public.get('/?id=' + category_pid).text
-    category_id = re.search(r'<nav class="log-categories"[^>]*><a href="\./\?category=([a-f0-9]{12})">日記', category_post).group(1)
+    category_id = re.search(r'<nav class="log-categories"[^>]*><span class="log-categories-label">カテゴリ</span><a href="\./\?category=([a-f0-9]{12})"><svg class="log-cat-icon"[^>]*>.*?</svg><span>日記</span>', category_post).group(1)
     tag_query = helper.urllib.parse.quote('らくがき')
-    check("投稿時に複数のカテゴリを作れる", '日記</a>' in category_post and '制作</a>' in category_post)
+    check("投稿時に複数のカテゴリを作れる", '<span>日記</span></a>' in category_post and '<span>制作</span></a>' in category_post)
     check("日本語ハッシュタグを本文でリンクにする", './?tag=' + tag_query in category_post and '>#らくがき</a>' in category_post)
     check("太字の中もハッシュタグになる", '<strong><a class="log-hashtag"' in category_post)
     check("URL内のフラグメントはハッシュタグにしない", '>#URL内はタグではない</a>' not in category_post)

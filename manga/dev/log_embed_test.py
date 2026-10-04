@@ -183,6 +183,14 @@ def run(site,other_site,c,csrf,other,ot):
     owner_top=c.get('/').text
     check('ログイン中の公開ページに「管理」ボタン（スパナ）を出し、訪問者には出さない','<a class="log-fab-admin" href="admin/index.php?p=log">' in owner_top and 'log-fab-admin' not in top)
     check('まとめて削除のボタンに文言を切り替える場所がある','<span data-bulk-label>まとめて削除</span>' in c.get('/admin/index.php?p=log').text)
+    post_page=pub.get('/').text
+    check('記事のカテゴリは「カテゴリ」＋フォルダのアイコン＋名前',re.search(r'<nav class="log-categories" aria-label="カテゴリ"><span class="log-categories-label">カテゴリ</span><a href="\./\?category=[a-f0-9]{12}"><svg class="log-cat-icon"[^>]*>.*?</svg><span>見た目分類</span></a>',post_page) is not None)
+    multi=save('二つの分類\n本文',new_categories='一つ目、二つ目')
+    mp=pub.get('/?id='+multi).text
+    check('カテゴリが複数なら「,」で区切る',re.search(r'<span>一つ目</span></a><span class="log-cat-sep" aria-hidden="true">,</span><a href="\./\?category=[a-f0-9]{12}"><svg',mp) is not None)
+    anon=h.Client(args.port)
+    r=anon.get('/admin/index.php?p=log')
+    check('ログインしていない「管理」はログイン画面へ（ログインリンクを表示中）',r.status==303 and r.getheader('Location')=='login.php')
     settings_page=c.get('/admin/index.php?p=settings&section=log').text
     key=re.search(r'index\.php\?k=([A-Za-z0-9]+)',c.get('/admin/index.php?p=settings&section=common').text).group(1)
     check('ログインリンクを隠す前の確認用に管理用URLを渡す',f'data-login-url="http://127.0.0.1:{args.port}/admin/index.php?k={key}"' in settings_page)

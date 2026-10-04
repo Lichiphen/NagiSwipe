@@ -125,7 +125,7 @@ function nl_taxonomy_sidebar(array $summaries, string $kind = ''): string
     $counts = []; $catLinks = ''; $tagLinks = '';
     foreach ($summaries as $p) foreach ($p['categories'] ?? [] as $id) $counts[$id] = ($counts[$id] ?? 0) + 1;
     // Categories read as a folder list with counts; hashtags as a cloud of small "#" labels, so the two never look alike.
-    $folder = '<svg class="log-cat-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+    $folder = nl_category_icon();
     foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($counts[$id])) $catLinks .= '<li><a href="./?category=' . h((string)$id) . '">' . $folder . '<span>' . h($name) . '</span><small aria-label="' . $counts[$id] . '件">' . $counts[$id] . '</small></a></li>';
     foreach (array_slice(nl_ordered_hashtags(true), 0, 8) as $name) $tagLinks .= '<a href="./?tag=' . h(rawurlencode($name)) . '">#' . h($name) . '</a>';
     return ($kind !== 'hashtags' && $catLinks !== '' ? '<section class="log-widget log-widget-categories"><h2>カテゴリ</h2><ul class="log-cat-list">' . $catLinks . '</ul></section>' : '') . ($kind !== 'categories' && $tagLinks !== '' ? '<section class="log-widget log-widget-tags"><h2>ハッシュタグ</h2><div class="log-tag-cloud">' . $tagLinks . '</div></section>' : '');

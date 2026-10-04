@@ -210,6 +210,11 @@ def is_404(res):
     return res.status == 404 and res.text.strip() == "Not Found"
 
 
+def to_login(res):
+    """No key while the LOG shows its login link: go to the public password form (no other admin page)."""
+    return res.status == 303 and res.getheader("Location") == "login.php"
+
+
 # ---------------------------------------------------------------------------
 # Servers
 # ---------------------------------------------------------------------------
@@ -457,10 +462,10 @@ def run(data_dir):
 
     # --- Admin gate ------------------------------------------------------------------
     c = Client()
-    check("鍵なしの管理画面は 404", is_404(c.get("/admin/index.php")))
+    check("鍵なしの管理画面はパスワード欄だけのログイン画面へ（中身は見せない）", to_login(c.get("/admin/index.php")) and "作品を作る" not in c.get("/admin/login.php").text)
     check("違う鍵の管理画面は 404", is_404(c.get("/admin/index.php?k=" + "A" * 24)))
     check("セットアップ後にセットアップの POST をしても 404", is_404(c.post("/admin/index.php", {"csrf": "x", "password": "x" * 12, "password2": "x" * 12})))
-    check("ログイン前の作品ページは 404", is_404(c.get("/admin/index.php?p=work&id=AAAAAAAAAAAA")))
+    check("ログイン前の作品ページはログイン画面へ（作品は見せない）", to_login(c.get("/admin/index.php?p=work&id=AAAAAAAAAAAA")))
     check("PUT などのメソッドは 404", is_404(c.request("PUT", "/admin/index.php")) and is_404(c.request("DELETE", "/read.php")))
 
     r = adm.get(f"/admin/index.php?k={key}")
@@ -516,12 +521,12 @@ def run(data_dir):
     age_login(10)
     idle.post("/admin/index.php", {"do": "settings_login_days", "csrf": idle_csrf, "login_days": "30"})
     age_login(31)
-    expired = is_404(idle.get("/admin/index.php"))
+    expired = to_login(idle.get("/admin/index.php"))
     r = idle.get(f"/admin/index.php?k={key}")
     r = idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
     check("30 日を過ぎると自動ログアウトし、そのあと 1 回目でログインし直せる",
           sess.exists() is False and expired and r.status == 303 and "作品を作る" in idle.get("/admin/index.php").text)
-    check("別のブラウザ（UA）では同じ Cookie でもログインにならない", is_404(idle.get("/admin/index.php", headers={"User-Agent": "Other Browser"})))
+    check("別のブラウザ（UA）では同じ Cookie でもログインにならない", to_login(idle.get("/admin/index.php", headers={"User-Agent": "Other Browser"})))
 
     # --- CSRF on actions --------------------------------------------------------------
     check("CSRF トークンなしの操作は 404", is_404(adm.post("/admin/index.php", {"do": "create", "title": "x"})))
