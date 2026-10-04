@@ -9,6 +9,8 @@ JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポ
 
 [**漫画ビューアー NagiManga のデモ**](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る）— 詳しくは [manga/README.md](manga/README.md)
 
+[**個人用LOG のデモ**](https://notebook.lichiphen.com/nagimanga/)（文章・画像・漫画を自分のサイトに投稿できる、データベース不要の LOG）— 詳しくは [manga/README-LOG.md](manga/README-LOG.md)
+
 <!-- TOC -->
 ## 目次
 
@@ -120,8 +122,11 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.js https:
 - 画像のドラッグ＆ドロップや、CLIP STUDIO PAINT などの漫画 EPUB から作品を作れます
 - スマホ用の小容量版と、パソコン・拡大用の通常版を自動で読み分けます
 - パスワード付きの限定公開、共有タグの発行、ZIP でのバックアップ
+- 文章・画像・漫画を投稿できる個人用 LOG（スマホ対応、6 種類のデザイン、ログインは 30 日〜1 年保持）
 
-デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
+![個人用LOGのトップ（パソコン）](manga/docs/images/log-pc.jpg)
+
+デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ LOG のデモ: https://notebook.lichiphen.com/nagimanga/ ／ LOG の説明: [manga/README-LOG.md](manga/README-LOG.md) ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
 
 ## 権利・免責事項：掲載画像について
 本プロジェクトのデモ（`index.html`等）で使用されている画像について：

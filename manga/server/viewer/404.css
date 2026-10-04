@@ -1,23 +1,25 @@
-/* Inside the black hole: dozens of beige ribbons rippling, with no scripts or external images. MIT (c) 2026 Lichiphen. */
+/* Inside the black hole: beige ribbons rippling as light waves crash through, with no scripts or external images. MIT (c) 2026 Lichiphen. */
 :root { color-scheme:light; }
 * { box-sizing:border-box; }
 body { margin:0; min-height:100svh; display:flex; align-items:flex-end; justify-content:center; overflow-x:hidden; background:#ead9bf; color:#4a3627; font:16px/1.8 system-ui,-apple-system,"Hiragino Sans",sans-serif; }
 .nm-universe { position:fixed; inset:0; overflow:hidden; pointer-events:none; background:#ead9bf; }
-.nm-blackhole { position:absolute; inset:-4%; width:108%; height:108%; animation:nm-sway 18s ease-in-out infinite alternate; }
-.nm-wave { animation:nm-flow 24s linear infinite; }.nm-wave-rev { animation-direction:reverse; }
-.nm-wave:nth-child(3n) { animation-duration:17s; }.nm-wave:nth-child(4n+1) { animation-duration:31s; }.nm-wave:nth-child(5n+2) { animation-duration:13s; }.nm-wave:nth-child(7n) { animation-duration:39s; }
-.nm-l400 { --nm-l:-400px; }.nm-l500 { --nm-l:-500px; }.nm-l640 { --nm-l:-640px; }.nm-l800 { --nm-l:-800px; }
-.nm-waves { animation:nm-breathe 9s ease-in-out infinite alternate; transform-origin:800px 450px; }
-.nm-inner-glow { opacity:.42; filter:blur(60px); animation:nm-glow 7s ease-in-out infinite alternate; transform-box:fill-box; transform-origin:center; }
+.nm-blackhole { position:absolute; inset:0; width:100%; height:100%; }
+.nm-drift { animation:nm-flow 26s linear infinite; }.nm-rev { animation-direction:reverse; }
+.nm-band-2 .nm-drift { animation-duration:19s; }.nm-band-3 .nm-drift { animation-duration:33s; }.nm-band-4 .nm-drift { animation-duration:23s; }.nm-band-5 .nm-drift { animation-duration:17s; }.nm-band-6 .nm-drift { animation-duration:29s; }
+.nm-l640 { --nm-l:-640px; }.nm-l800 { --nm-l:-800px; }.nm-l1000 { --nm-l:-1000px; }
+.nm-band { transform-box:fill-box; transform-origin:center; animation:nm-strike 5.4s cubic-bezier(.33,0,.2,1) infinite; }
+.nm-band-2 { animation-delay:.16s; }.nm-band-3 { animation-delay:.32s; }.nm-band-4 { animation-delay:.48s; }.nm-band-5 { animation-delay:.64s; }.nm-band-6 { animation-delay:.8s; }
+.nm-crest { opacity:0; animation:nm-crash 5.4s cubic-bezier(.16,.84,.3,1) infinite; }.nm-crest-2 { animation-delay:.45s; }.nm-crest-3 { animation-delay:.9s; }
+.nm-inner-glow { transform-box:fill-box; transform-origin:center; animation:nm-glow 5.4s ease-out infinite; }
 .nm-space-vignette { position:absolute; inset:0; background:linear-gradient(transparent 46%,#f3e7d4c4 70%,#f6ecdde6 92%),radial-gradient(ellipse at 50% 42%,transparent 45%,#8a684733 100%); }
 main { position:relative; z-index:1; text-align:center; width:min(660px,100%); padding:0 20px max(28px,env(safe-area-inset-bottom)); margin-top:55svh; }
 .nm-error-number { margin:0; font-size:clamp(72px,9vw,124px); font-weight:200; line-height:1.1; letter-spacing:.18em; padding-left:.18em; color:#5a3f2b; text-shadow:0 0 30px #fff8ec; }
 h1 { font-size:clamp(18px,2.6vw,26px); font-weight:500; letter-spacing:.07em; margin:16px 0 6px; }main > p:not(.nm-error-number) { color:#6e5644; font-size:14px; margin:8px 0; }
 a { display:inline-flex; align-items:center; gap:32px; padding:12px 25px; min-height:48px; margin-top:20px; border:1px solid #9b7a5a80; border-radius:999px; background:#fff8eeb3; color:#4a3627; text-decoration:none; box-shadow:0 6px 24px #8a684722; transition:background .2s,border-color .2s; }a:hover,a:focus-visible { border-color:#7a5a3e; background:#fffaf3; outline:2px solid #7a5a3e; outline-offset:4px; }small { display:block; margin-top:20px; color:#8d7562; font-size:11px; letter-spacing:.12em; }
 @keyframes nm-flow { to { transform:translateX(var(--nm-l,-800px)); } }
-@keyframes nm-breathe { to { transform:scaleY(1.08) translateY(-10px); } }
-@keyframes nm-sway { to { transform:rotate(-1.5deg) scale(1.03); } }
-@keyframes nm-glow { to { opacity:.7; transform:scale(1.12); } }
+@keyframes nm-strike { 0% { transform:scaleY(1); } 9% { transform:scaleY(1.7); } 24% { transform:scaleY(.78); } 40% { transform:scaleY(1.28); } 58% { transform:scaleY(.92); } 76% { transform:scaleY(1.06); } 100% { transform:scaleY(1); } }
+@keyframes nm-crash { 0% { opacity:0; transform:translateX(-1400px); } 8% { opacity:1; } 55% { opacity:.85; } 100% { opacity:0; transform:translateX(1700px); } }
+@keyframes nm-glow { 0%,100% { opacity:.55; transform:scale(1); } 10% { opacity:1; transform:scale(1.08); } }
 @media(max-width:600px) { main { margin-top:51svh; padding-bottom:max(26px,env(safe-area-inset-bottom)); }.nm-error-number { font-size:82px; }h1 { margin-top:12px; } }
 @media(max-height:600px) and (min-width:601px) { main { margin-top:40svh; padding-bottom:16px; }.nm-error-number { font-size:60px; }h1 { margin-top:8px; }a { margin-top:8px; }small { margin-top:10px; } }
-@media(prefers-reduced-motion:reduce) { .nm-blackhole,.nm-wave,.nm-waves,.nm-inner-glow { animation:none!important; }a { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .nm-drift,.nm-band,.nm-crest,.nm-inner-glow { animation:none!important; }.nm-crest { opacity:0; }a { transition:none; } }
