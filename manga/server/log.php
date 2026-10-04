@@ -40,8 +40,10 @@ $filter = nl_archive_filter($single ? ['month' => nl_date($post['created'], 'Y-m
 $all = $single ? [$post] : array_values(array_filter($summaries, static function ($p) use ($filter) {
     if ($filter['category'] !== '') return in_array($filter['category'], $p['categories'] ?? [], true);
     if ($filter['tag'] !== '') return in_array($filter['tag'], $p['hashtags'] ?? [], true);
+    if ($filter['search'] !== '') return true;
     return $filter['query'] === '' || nl_date($p['created'], $filter['date'] !== '' ? 'Y-m-d' : 'Y-m') === ($filter['date'] ?: $filter['month']);
 }));
+if ($filter['search'] !== '') $all = nl_search_posts($all, $filter['terms']);
 $page = max(1, min(100000, (int)nm_str($_GET, 'page', 6)));
 $perPage = $s['posts_per_page'];
 // A page past the end (old bookmark, typed URL) is not an empty list.
@@ -103,6 +105,6 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <?php foreach ($posts as $p): ?><article class="log-post"><div class="log-post-meta"><?= nl_icon_html($s) ?><strong><?= h($s['name']) ?></strong><a href="./?id=<?= h($p['id']) ?>"><time datetime="<?= h(nl_date($p['created'], 'c')) ?>" title="<?= h(nl_date($p['created'])) ?>"><?= h(nl_date($p['created'], 'Y/m/d')) ?></time></a><?php if ($owner): ?><a class="log-edit-link" href="admin/index.php?p=log_edit&id=<?= h($p['id']) ?>"><?= nl_ui_icon() ?><span>編集</span></a><?php endif; ?></div>
 <?php if ($single): ?><h1><?= h(nl_post_title($p, 0)) ?></h1><?php else: ?><h2><a href="./?id=<?= h($p['id']) ?>"><?= h(nl_post_title($p, 0)) ?></a></h2><?php endif; ?>
 <?= nl_render_body($p) ?><?= nl_category_links($p) ?></article><?php endforeach; ?>
-<?php if (!$posts): ?><p class="log-empty"><?= $filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。') ?></p><?php endif; ?>
+<?php if (!$posts): ?><p class="log-empty"><?= $filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。')) ?></p><?php endif; ?>
 <?= $single ? ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : nl_pager($s, $filter['query'], $page, count($all)) ?>
 </main><?= nl_sidebar($summaries, $filter, $s, $owner) ?></div><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>

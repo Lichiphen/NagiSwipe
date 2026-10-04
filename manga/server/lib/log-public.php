@@ -5,7 +5,13 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 function nl_archive_filter(array $src): array
 {
-    $base = ['date' => '', 'month' => nl_date(time(), 'Y-m'), 'query' => '', 'label' => '', 'category' => '', 'tag' => ''];
+    $base = ['date' => '', 'month' => nl_date(time(), 'Y-m'), 'query' => '', 'label' => '', 'category' => '', 'tag' => '', 'search' => '', 'terms' => []];
+    if (isset($src['q'])) {
+        $q = trim((string)preg_replace('/[\s　]+/u', ' ', nm_str($src, 'q', 400)));
+        if (mb_strlen($q) > 100) $q = mb_substr($q, 0, 100);
+        $terms = nl_search_terms($q);
+        if ($terms) return ['search' => $q, 'terms' => $terms, 'query' => 'q=' . rawurlencode($q), 'label' => '「' . $q . '」の検索結果'] + $base;
+    }
     if (isset($src['category'])) {
         $id = nm_str($src, 'category', 12); $tax = nl_taxonomy();
         if (!isset($tax['categories'][$id])) nm_not_found();
@@ -109,6 +115,10 @@ function nl_post_nav(array $summaries, array $post): string
     return '<nav class="log-post-nav" aria-label="前後の投稿">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
         . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
 }
+function nl_search_form(string $q): string
+{
+    return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">LOGを検索</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="ことば・#タグで探す" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="検索する"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
+}
 function nl_all_icon(): string
 {
     return '<svg class="log-all-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
@@ -184,6 +194,7 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
     foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
     $blocks = [
         'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . ($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
+        'search' => nl_search_form($filter['search']),
         'calendar' => nl_calendar($summaries, $filter),
         'latest' => '<section class="log-widget"><h2>最新ポスト</h2><ol class="log-latest">' . ($latest ?: '<li>まだ記録はありません。</li>') . '</ol></section>',
         'categories' => nl_taxonomy_sidebar($summaries, 'categories'),

@@ -1,6 +1,13 @@
 /* LOG list selection and taxonomy ordering. MIT (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    // "/" jumps to the post search, unless the user is already typing somewhere.
+    document.addEventListener('keydown', event => {
+        const search = document.querySelector('[data-log-search]');
+        if (!search || event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+        if (event.target.closest?.('input, textarea, select, [contenteditable="true"], dialog[open]')) return;
+        event.preventDefault(); search.focus(); search.select();
+    });
     const deleteDialog = document.createElement('dialog');
     deleteDialog.className = 'log-delete-dialog';
     deleteDialog.setAttribute('aria-labelledby', 'log-delete-title');

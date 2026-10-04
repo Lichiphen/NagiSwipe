@@ -398,6 +398,69 @@ function nl_post_title(array $p, int $limit = 80): string
     $first = nl_post_parts($p)['title'];
     return $limit > 0 && mb_strlen($first) > $limit ? mb_substr($first, 0, $limit) . '…' : $first;
 }
+/** Search folds width, case and katakana/hiragana one character to one, so match positions map back to the original text. */
+function nl_search_norm(string $s): string
+{
+    return mb_strtolower(mb_convert_kana($s, 'asc', 'UTF-8'), 'UTF-8');
+}
+/** Up to 5 words; every word must match (AND). */
+function nl_search_terms(string $q): array
+{
+    $words = preg_split('/[\s　]+/u', trim($q), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    return array_slice(array_values(array_unique(array_filter(array_map('nl_search_norm', $words), static fn($t) => $t !== ''))), 0, 5);
+}
+/** Readable text of a post: the body without image/manga tags (manga titles stay), plus its category names. */
+function nl_search_text(array $p, array $categories): string
+{
+    $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], (string)$p['body']);
+    $text = str_replace('**', '', $text);
+    foreach ($p['categories'] ?? [] as $id) if (isset($categories[$id])) $text .= "\n" . $categories[$id];
+    return $text;
+}
+/** Summaries whose post contains every term. */
+function nl_search_posts(array $summaries, array $terms): array
+{
+    if (!$terms) return $summaries;
+    $categories = nl_taxonomy()['categories'];
+    return array_values(array_filter($summaries, static function ($s) use ($terms, $categories) {
+        $p = nl_load_post($s['id']);
+        if (!$p) return false;
+        $hay = nl_search_norm(nl_search_text($p, $categories));
+        foreach ($terms as $t) if (!str_contains($hay, $t)) return false;
+        return true;
+    }));
+}
+/** Escaped text with each match wrapped in <mark>. */
+function nl_search_mark(string $text, array $terms): string
+{
+    $orig = mb_str_split($text);
+    $norm = mb_str_split(nl_search_norm($text));
+    if (!$terms || count($orig) !== count($norm)) return h($text);
+    $flat = implode('', $norm); $hit = [];
+    foreach ($terms as $t) {
+        $len = mb_strlen($t);
+        for ($at = mb_strpos($flat, $t); $at !== false; $at = mb_strpos($flat, $t, $at + 1)) for ($i = 0; $i < $len; $i++) $hit[$at + $i] = true;
+    }
+    $out = ''; $open = false;
+    foreach ($orig as $i => $ch) {
+        $on = isset($hit[$i]);
+        if ($on !== $open) { $out .= $on ? '<mark>' : '</mark>'; $open = $on; }
+        $out .= h($ch);
+    }
+    return $out . ($open ? '</mark>' : '');
+}
+/** One line around the first match in the body (after the title line), for search results. */
+function nl_search_snippet(array $p, array $terms, int $length = 80): string
+{
+    $parts = preg_split('/\r?\n/', nl_search_text($p, nl_taxonomy()['categories']), 2);
+    $text = trim((string)preg_replace('/\s+/u', ' ', $parts[1] ?? ''));
+    if ($text === '') return '';
+    $norm = nl_search_norm($text); $first = null;
+    foreach ($terms as $t) { $at = mb_strpos($norm, $t); if ($at !== false && ($first === null || $at < $first)) $first = $at; }
+    $start = $first === null ? 0 : max(0, $first - 24);
+    $piece = mb_substr($text, $start, $length);
+    return ($start > 0 ? '…' : '') . nl_search_mark($piece, $terms) . ($start + $length < mb_strlen($text) ? '…' : '');
+}
 function nl_render_text(string $text, bool $admin = false): string
 {
     $parts = preg_split('~(https?://[^\s<>"\[\]]+)~u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);

@@ -367,6 +367,29 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     simple = public.get('/?page=2').text
     check("新しい・過去だけの形式と前後リンクの非表示", 'log-pager is-simple' in simple and 'log-pager-num' not in simple and 'class="log-post-nav"' not in public.get('/?id=' + newest[1]).text)
     pager_settings(pager_form='1', pager='numbers', pager_status='1', post_nav='1')
+    from urllib.parse import quote
+    def found(q):
+        return public.get('/?q=' + quote(q))
+    def main_of(r):
+        return r.text.split('<main', 1)[1].split('</main>', 1)[0]
+    r = found('最新の記録')
+    check("検索結果を見出しと件数で表示しnoindex", '「最新の記録」の検索結果' in r.text and all(x in r.text for x in newest) and r.getheader('X-Robots-Tag') == 'noindex,follow')
+    page3 = main_of(found('最新の記録３'))
+    check("全角数字でも半角の本文を見つける", newest[3] in page3 and newest[2] not in page3)
+    both = main_of(found('最新　3'))
+    check("空白で区切った言葉はすべて含む記録だけ", newest[3] in both and newest[1] not in both)
+    check("ひらがなでカタカナの本文を見つける", '一覧のページ送り' in main_of(found('ぺーじ')))
+    check("カテゴリ名でも見つける", '分類のある記録' in main_of(found('日々の記録')))
+    check("検索に下書きを出さない", 'バックアップでも非公開の下書き' not in found('非公開の下書き').text and '見つかりませんでした' in found('非公開の下書き').text)
+    odd = found('<b>"x').text
+    check("サイドバーの検索欄に入力を安全に戻す", 'class="log-search" role="search"' in odd and 'value="&lt;b&gt;&quot;x"' in odd and '<b>"x' not in odd)
+    check("空の検索はふだんの一覧", 'log-archive-head' not in public.get('/?q=+').text and public.get('/?q=+').text.count('<article class="log-post">') == 10)
+    check("検索結果もページ送りで条件を保つ", 'href="./?q=' + quote('一覧のページ送り') + '&amp;page=2"' in found('一覧のページ送り').text)
+    admin = c.get('/admin/index.php?p=log&q=' + quote('非公開の下書き')).text
+    check("管理画面の検索は下書きも探して強調", keep_draft in admin and '<mark>非公開の下書き</mark>' in admin and '下書きのため非公開' in admin and '検索をやめる' in admin)
+    check("管理画面の検索を公開状態で絞る", keep_draft not in c.get('/admin/index.php?p=log&status=published&q=' + quote('非公開の下書き')).text and keep_draft in c.get('/admin/index.php?p=log&status=draft').text)
+    where = c.get('/admin/index.php?p=log&q=' + quote('最新の記録3')).text
+    check("管理画面の検索結果に公開一覧の何ページ目かを出す", 'href="../#log-main">トップの1ページ目</a>' in where)
     monthly = public.get('/?month=' + today[:7]).text
     check("カレンダーを月で送れる", today[:7] + 'の記録' in monthly and '前の月' in monthly and '次の月' in monthly)
     check("記録がない日も表示できる", 'この日の記録はありません' in public.get('/?date=2025-01-02').text)

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
-const NL_SIDEBAR_BUILTINS = ['links' => 'プロフィール・リンク集', 'login' => 'ログイン・管理ページ', 'calendar' => 'カレンダー', 'latest' => '最新ポスト', 'categories' => 'カテゴリ', 'hashtags' => 'ハッシュタグ', 'updated' => '最終更新日', 'all' => 'すべての投稿'];
+const NL_SIDEBAR_BUILTINS = ['links' => 'プロフィール・リンク集', 'search' => '検索', 'login' => 'ログイン・管理ページ', 'calendar' => 'カレンダー', 'latest' => '最新ポスト', 'categories' => 'カテゴリ', 'hashtags' => 'ハッシュタグ', 'updated' => '最終更新日', 'all' => 'すべての投稿'];
 const NL_SIDEBAR_CLASSES = ['log-link-grid', 'log-banner-link', 'log-banner'];
 
 function nl_sidebar_defaults(): array
@@ -15,8 +15,20 @@ function nl_sidebar_defaults(): array
 function nl_sidebar_settings(): array
 {
     $s = nl_read_record(nl_root() . '/sidebar.php') ?? nl_sidebar_defaults();
-    $s['items'] = nl_sidebar_with_links($s['items']);
+    $s['items'] = nl_sidebar_with_builtins(nl_sidebar_with_links($s['items']));
     return $s;
+}
+/** Sidebars saved before a standard block existed get it (search: right after the profile, shown). */
+function nl_sidebar_with_builtins(array $items, ?array $only = null): array
+{
+    $ids = array_map(static fn($i) => is_array($i) ? ($i['id'] ?? '') : '', $items);
+    foreach ($only ?? array_keys(NL_SIDEBAR_BUILTINS) as $id) {
+        if (in_array($id, $ids, true)) continue;
+        $at = $id === 'search' ? array_search('links', $ids, true) : false;
+        array_splice($items, $at === false ? count($items) : $at + 1, 0, [['id' => $id, 'kind' => $id, 'enabled' => true]]);
+        $ids = array_map(static fn($i) => is_array($i) ? ($i['id'] ?? '') : '', $items);
+    }
+    return $items;
 }
 /** Allow ordinary links and image paths, never active URL schemes. */
 function nl_sidebar_url(string $url, bool $image = false): string
@@ -76,7 +88,8 @@ function nl_sidebar_html(string $html): string
 function nl_sidebar_validate(mixed $items): array
 {
     if (!is_array($items) || !array_is_list($items)) throw new UnexpectedValueException('サイドバーの項目を確認してください');
-    $items = nl_sidebar_with_links($items);
+    // Older backups and pages cached before search existed; removing any other standard block is still refused.
+    $items = nl_sidebar_with_builtins(nl_sidebar_with_links($items), ['search']);
     $out = []; $ids = []; $builtins = [];
     foreach ($items as $item) {
         if (!is_array($item) || !is_string($item['id'] ?? null) || !is_string($item['kind'] ?? null) || !is_bool($item['enabled'] ?? null) || isset($ids[$item['id']])) throw new UnexpectedValueException('サイドバーの項目が重複しているか、形式が違います');
@@ -200,6 +213,7 @@ function nl_sidebar_edit_row(array $item, bool $loginShown = true): string
     $enabled = $item['enabled'] && ($item['kind'] !== 'login' || $loginShown);
     $chip = match ($item['kind']) { 'html' => 'HTML枠', 'links' => count($item['links']) . '件のリンク', default => '標準' };
     $body = match ($item['kind']) {
+        'search' => '<p class="note">投稿の本文・タイトル・ハッシュタグ・カテゴリ名から探せる検索欄です。スマホではMENUの中に出ます。</p>',
         'login' => '<p class="note">公開ページのメニューに「ログイン」、ログイン中は「管理ページ」へのリンクを出します。隠しても、パスワードによる保護はそのままです。</p>',
         'links' => nl_links_editor($item),
         'html' => '<details class="log-sidebar-editor log-sidebar-html-editor"><summary>HTMLと表示を編集</summary><div class="log-sidebar-editor-body"><label>見出し（空欄なら表示しません）<input data-sidebar-title maxlength="100" value="' . h($item['title']) . '"></label><label class="check"><input type="checkbox" data-sidebar-framed' . ($item['framed'] ? ' checked' : '') . '>枠と背景を表示する</label><label>HTML<textarea data-sidebar-html rows="7" spellcheck="false">' . h($item['html']) . '</textarea></label><div class="log-sidebar-remove"><button class="btn danger" type="button" data-sidebar-remove>' . nl_sidebar_ui_icon('remove') . 'このHTML枠を外す</button><p class="note">保存するまで取り消せます。外しても、リンク先や画像そのものは削除しません。</p></div></div></details>',
