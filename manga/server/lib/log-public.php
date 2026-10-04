@@ -108,6 +108,10 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
     $html = '';
     foreach ($sidebar['items'] as $item) {
         if (!$item['enabled']) continue;
+        if ($item['kind'] === 'links') {
+            $html .= '<div class="log-sidebar-block" data-sidebar-id="links">' . nl_links_html($item, $s) . '</div>';
+            continue;
+        }
         $block = $item['kind'] === 'html'
             ? '<section class="' . ($item['framed'] ? 'log-widget log-custom-block' : 'log-custom-block') . '">' . ($item['title'] !== '' ? '<h2>' . h($item['title']) . '</h2>' : '') . nl_sidebar_html($item['html']) . '</section>'
             : ($blocks[$item['kind']] ?? '');

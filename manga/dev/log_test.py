@@ -352,7 +352,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("不正な日付や配列を拒否", public.get('/?date=2026-02-30').status == 404 and public.get('/?month=2026-13').status == 404 and public.get('/?date[]=2026-10-04').status == 404)
     check("日付別ページのcanonicalと索引設定", '?date=' + today in daily and 'content="noindex,follow"' in daily)
     check("サイドメニューに最終更新日を表示", '最終更新日</h2><time datetime=' in page)
-    check("スマホ用のひし形ハンバーガーメニューを用意", 'aria-controls="log-sidebar"' in page and 'M4 6h16M4 12h16M4 18h16' in page and '◆</span>' not in page and 'viewer/log-menu.js' in page)
+    check("スマホ用のMENU付きハンバーガーメニューを用意", 'aria-controls="log-sidebar"' in page and 'M5 7h14M5 12h14M5 17h14' in page and '<span class="log-menu-label" aria-hidden="true">MENU</span>' in page and '◆</span>' not in page and 'viewer/log-menu.js' in page)
     post({**settings, 'theme': 'light-blue', 'remove_icon': '1'})
     check("アイコンを外すと頭文字に戻り画像も非公開", '<span class="log-site-avatar"' in public.get('/').text and public.get(icon_url).status == 404)
     def asset_key(path, html):

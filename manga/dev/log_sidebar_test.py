@@ -57,29 +57,78 @@ def run(site,other_site,c,csrf,other,ot):
     def image_path(m): return '/?media='+m['id']
     def delete(pid): return post({'do':'log_delete','post_id':pid,'revision':'1'})
     builtins=side(site)['items']; names=[x['id'] for x in builtins]
-    check('保存前は標準7項目・revision0',names==['login','calendar','latest','categories','hashtags','updated','all'] and side(site)['revision']==0)
+    check('保存前はリンク集を含む標準8項目・revision0',names==['links','login','calendar','latest','categories','hashtags','updated','all'] and side(site)['revision']==0)
     save('分類を表示する記事\n本文 #監査タグ',new_categories='監査分類')
-    check('標準7項目を既定順で公開',re.findall(r'data-sidebar-id="([^"]+)"',pub.get('/').text)==names)
+    check('標準8項目を既定順で公開',re.findall(r'data-sidebar-id="([^"]+)"',pub.get('/').text)==names)
+    links=block(pub.get('/').text,'links')
+    check('リンク集は枠なし・中央アイコン・5本の横長ボタン','log-widget' not in links and 'log-profile-icon' in links and links.count('class="log-link-button"')==5)
+    check('5サービスは用途を表す線画とテキストで表示',all('<span>'+x+'</span>' in links for x in ('X','Instagram','Bluesky','GitHub','YouTube')) and links.count('class="log-link-icon" aria-hidden="true" focusable="false"')==5)
+    check('SVG7点とMIT全文を配信',all(pub.get('/viewer/link-icons/'+name+'.svg').status==200 for name in ('conversation','pictures','sky-network','code-branch','film','mail','link')) and 'Permission is hereby granted' in pub.get('/viewer/link-icons/LICENSE.txt').text)
     panel=c.get('/admin/index.php?p=settings&section=log').text
     check('LOG設定へ並び替え・3テンプレート・保存操作を用意','data-sidebar-manager' in panel and all('data-sidebar-template="'+x+'"' in panel for x in ('grid','banner','blank')) and 'data-sidebar-step="-1"' in panel and 'data-sidebar-step="1"' in panel)
     check('JavaScript無効時の案内・サイズ・外部画像の説明','<noscript>' in panel and '50KB' in panel and '1MB' in panel and '外部画像' in panel)
     check('バナーテンプレートのローカル画像が実在',pub.get('/viewer/og.jpg').status==200)
-    check('ログイン項目に公開範囲設定との関係を説明','ログインリンクの表示もオンにしたときに出ます' in panel)
+    check('ログインリンクの切り替えはサイドバーの1か所だけ','name="show_login"' not in panel and 'パスワードによる保護はそのまま' in panel and panel.count('role="switch" data-sidebar-enabled')==8+3)
+    check('スマホのメニューボタンにMENU表記',re.search(r'<button class="log-menu-toggle"[^>]*aria-label="メニューを開く">.*?<span class="log-menu-label" aria-hidden="true">MENU</span></button>',pub.get('/').text) is not None)
+    check('リンク集はHTMLなしで編集・追加・並び替え可能','data-link-add' in panel and 'data-link-remove' in panel and 'data-link-step="-1"' in panel and 'data-link-icon' in panel and '自分のプロフィールURL' in panel)
     templates=php(site,'echo json_encode(nl_sidebar_templates(),JSON_UNESCAPED_UNICODE);')
     additions=[custom(**{'text':t['html'],'title':t['title'],'framed':t['framed']}) for t in templates.values()]
-    reordered=[builtins[2],additions[0],builtins[0],builtins[4],additions[1],builtins[1],builtins[3],additions[2],builtins[5],builtins[6]]
+    old=builtins[1:]
+    reordered=[old[2],additions[0],old[0],old[4],additions[1],old[1],old[3],additions[2],old[5],old[6],builtins[0]]
     response=ok_sidebar(reordered); stored=side(site)
-    check('7項目と3HTML枠の順序を保存しrevisionを増加',response['ok'] is True and response['revision']==1 and stored['revision']==1 and response['items']==stored['items'])
+    check('8項目と3HTML枠の順序を保存しrevisionを増加',response['ok'] is True and response['revision']==1 and stored['revision']==1 and response['items']==stored['items'])
     text=pub.get('/').text
     check('公開サイドバーをHTML枠を含む指定順で表示',re.findall(r'data-sidebar-id="([^"]+)"',text)==[x['id'] for x in reordered])
     check('グリッド・枠なしバナー・通常HTMLの装飾',all(x in block(text,additions[0]['id']) for x in ('log-link-grid','log-widget')) and 'log-widget' not in block(text,additions[1]['id']) and 'log-banner-link' in block(text,additions[1]['id']) and '<h2>' not in block(text,additions[1]['id']) and '<h2>自由なHTML</h2>' in block(text,additions[2]['id']))
     revised=copy.deepcopy(stored['items']); revised[0]['enabled']=False; revised[1]['enabled']=False
     ok_sidebar(revised)
     check('標準項目とHTML枠を個別に非表示','data-sidebar-id="latest"' not in pub.get('/').text and additions[0]['id'] not in pub.get('/').text and side(site)['items'][1]['html']==stored['items'][1]['html'])
+    shown=lambda: php(site,"echo json_encode(nl_settings()['show_login']);")
+    hidden=copy.deepcopy(stored['items']); next(x for x in hidden if x['id']=='login')['enabled']=False; ok_sidebar(hidden)
+    check('ログイン行のオフで公開リンクと保存フラグをそろえて隠す','data-sidebar-id="login"' not in pub.get('/').text and shown() is False)
     post({'do':'log_preferences','visibility':'public','posts_per_page':'10'})
-    check('既存ログイン非表示設定を標準ブロックより優先','data-sidebar-id="login"' not in pub.get('/').text)
+    row=re.search(r'data-sidebar-id="login".*?data-sidebar-enabled([^>]*)>',c.get('/admin/index.php?p=settings&section=log').text,re.S)
+    check('公開範囲の保存ではログイン表示を変えず編集画面もオフ',shown() is False and row is not None and 'checked' not in row.group(1))
     post({'do':'log_preferences','visibility':'public','show_login':'1','posts_per_page':'10'})
-    ok_sidebar(stored['items']); keep=side(site)
+    check('旧フォームのshow_login=1は引き続き反映',shown() is True)
+    post({'do':'log_preferences','visibility':'public','show_login':'0','posts_per_page':'10'}); ok_sidebar(stored['items']); keep=side(site)
+    check('ログイン行をオンで保存すると表示を戻す','data-sidebar-id="login"' in pub.get('/').text and shown() is True)
+    edited=copy.deepcopy(builtins)
+    edited[0]['links']=[{'label':'<b>My site</b>','url':'https://example.com/profile?a=1&b=2','icon':'link'},{'label':'コード','url':'./?category=unknown','icon':'code-branch'}]
+    ok_sidebar(edited); view=block(pub.get('/').text,'links')
+    check('任意リンクの追加・削除・順番・用途アイコンを保存',side(site)['items'][0]['links']==edited[0]['links'] and view.count('class="log-link-button"')==2 and view.index('My site')<view.index('コード'))
+    check('表示名・URLをエスケープし別窓を保護','&lt;b&gt;My site&lt;/b&gt;' in view and 'a=1&amp;b=2' in view and 'target="_blank" rel="noopener noreferrer"' in view)
+    mail=copy.deepcopy(edited); mail[0]['links'].append({'label':'メール','url':'  mailto:me%40example.com ','icon':'mail'}); ok_sidebar(mail); mview=block(pub.get('/').text,'links')
+    check('メールアイコンとmailtoリンクを別タブにせず表示',side(site)['items'][0]['links'][-1]=={'label':'メール','url':'mailto:me@example.com','icon':'mail'} and '<a class="log-link-button" href="mailto:me@example.com">' in mview and 'm4.5 7.5 6.3 5' in mview and pub.get('/viewer/link-icons/mail.svg').status==200)
+    for name,url in [('mailtoの件名',"mailto:me@example.com?subject=x"),('mailtoの複数宛先','mailto:a@example.com,b@example.com'),('mailtoの空','mailto:'),('不正アドレス','mailto:not-an-address')]:
+        bad=copy.deepcopy(mail); bad[0]['links'][-1]['url']=url; before=hashes(site); r=save_sidebar(bad)
+        check('不正なmailtoを拒否 '+name,r.status==422 and hashes(site)==before)
+    ok_sidebar(edited); view=block(pub.get('/').text,'links')
+    check('アイコンのフチは既定でオン・メッセージは空なら出さない','log-profile-icon-framed' in view and 'log-profile-message' not in view and edited[0]['icon_frame'] is True and edited[0]['message']=='')
+    edited[0].update(message='  依頼はDMへ\r\n<b>どうぞ</b>\n\n\n\n末尾  ',icon_frame=False); response=ok_sidebar(edited); view=block(pub.get('/').text,'links')
+    saved=side(site)['items'][0]
+    check('メッセージを整えて保存しフチをオフにできる',saved['message']=='依頼はDMへ\n<b>どうぞ</b>\n\n末尾' and saved['icon_frame'] is False and response['items'][0]['message']==saved['message'])
+    check('メッセージは改行付き・エスケープしてリンクの上へ表示','依頼はDMへ<br>\n&lt;b&gt;どうぞ&lt;/b&gt;' in view and view.index('log-profile-message')<view.index('log-link-buttons') and 'log-profile-icon-framed' not in view)
+    for name,value in [('長いメッセージ',{'message':'字'*301}),('制御文字',{'message':'a\x07b'}),('配列メッセージ',{'message':[]}),('文字列のフチ',{'icon_frame':'1'}),('フチなし',{'icon_frame':None})]:
+        bad=copy.deepcopy(edited); bad[0].update(value); before=hashes(site); r=save_sidebar(bad)
+        check('プロフィールの不正入力を拒否 '+name,r.status==422 and hashes(site)==before)
+    edited[0]['enabled']=False; ok_sidebar(edited)
+    check('リンク集を非表示にしても設定を保持','data-sidebar-id="links"' not in pub.get('/').text and side(site)['items'][0]['links']==edited[0]['links'])
+    edited[0]['enabled']=True; edited[0]['links']=[]; ok_sidebar(edited)
+    check('リンクをすべて外してもプロフィールを表示','log-profile-icon' in block(pub.get('/').text,'links') and 'class="log-link-button"' not in block(pub.get('/').text,'links'))
+    legacy_items=list(reversed(old)); response=ok_sidebar(legacy_items)
+    check('旧7項目の保存へリンク集を補い既存の順番を保持',[x['id'] for x in response['items']]==['links']+[x['id'] for x in legacy_items])
+    # Simulate a saved pre-link settings file; reading does not rewrite the file.
+    result=php(site,"$saved=nl_sidebar_settings();try{nl_write_record(nl_root().'/sidebar.php',['revision'=>42,'updated'=>123,'items'=>"+literal(legacy_items)+"]);$before=file_get_contents(nl_root().'/sidebar.php');$read=nl_sidebar_settings();$same=$before===file_get_contents(nl_root().'/sidebar.php');}finally{nl_write_record(nl_root().'/sidebar.php',$saved);}echo json_encode([$read,$same]);")
+    check('旧設定の読み込みで表示を補いファイル・revisionを変更しない',result[1] and result[0]['revision']==42 and result[0]['updated']==123 and [x['id'] for x in result[0]['items']]==['links']+[x['id'] for x in legacy_items])
+    linked=image('link-reference'); edited=copy.deepcopy(builtins); edited[0]['links']=[{'label':'画像','url':'./?media='+linked['id'],'icon':'pictures'}]; ok_sidebar(edited)
+    check('リンク集から参照するLOG画像を公開',pub.get(image_path(linked)).status==200)
+    before=hashes(site); post({'do':'log_media_delete','media':linked['id'],'revision':'1'})
+    check('リンク集で使う画像の削除を防止',hashes(site)==before)
+    ok_sidebar(keep['items'])
+    for name,value in [('script URL',{'url':'javascript:alert(1)'}),('相対protocol URL',{'url':'//evil.example/'}),('未知アイコン',{'icon':'../../evil'}),('空名',{'label':' '}),('長い表示名',{'label':'字'*101}),('改行',{'label':'a\nb'}),('配列URL',{'url':[]})]:
+        bad=copy.deepcopy(builtins); bad[0]['links'][0].update(value); before=hashes(site); r=save_sidebar(bad)
+        check('リンク集の不正入力を拒否 '+name,r.status==422 and hashes(site)==before)
     for name,items in [
         ('標準項目の削除',builtins[:-1]),('重複ID',builtins+[builtins[0]]),('未知の標準項目',builtins+[{'id':'unknown','kind':'unknown','enabled':True}]),
         ('文字列のenabled',[{**x,'enabled':'true'} for x in builtins]),('不正HTML枠ID',builtins+[custom()|{'id':'html-wrong'}]),('文字列のframed',builtins+[custom()|{'framed':'true'}]),
@@ -97,7 +146,7 @@ def run(site,other_site,c,csrf,other,ot):
     boundary=custom('a'*50000,title='字'*100)
     ok_sidebar(builtins+[boundary]); check('100文字タイトルと50000byteHTMLを保存',side(site)['items'][-1]['html']=='a'*50000 and len(side(site)['items'][-1]['title'])==100)
     many=[custom('<p>枠'+str(i)+'</p>') for i in range(105)]
-    ok_sidebar(builtins+many); check('少なくとも105枠を固定個数制限なく保存',len(side(site)['items'])==112 and len(re.findall(r'data-sidebar-id="html-',pub.get('/').text))==105)
+    ok_sidebar(builtins+many); check('少なくとも105枠を固定個数制限なく保存',len(side(site)['items'])==113 and len(re.findall(r'data-sidebar-id="html-',pub.get('/').text))==105)
     evil=custom('<p onclick="alert(1)" style="color:red" id="x">日本語 <strong>太字</strong> &amp; 文字</p><script>alert(2)</script><iframe src="https://evil.example"></iframe><form><input></form><a href="javascript:alert(1)">危険</a><a href="https://example.com/" target="_blank">リンク</a><img src="http://example.org/x.png" onerror="alert(3)"><div class="log-link-grid unknown">二列</div>',title='<script>見出し</script>')
     returned=ok_sidebar(builtins+[evil]); cleaned=returned['items'][-1]['html']; view=block(pub.get('/').text,evil['id'])
     check('サニタイズしたHTMLを保存結果として返す',cleaned==side(site)['items'][-1]['html'] and cleaned in view and '<strong>太字</strong>' in cleaned)
@@ -162,6 +211,9 @@ def run(site,other_site,c,csrf,other,ot):
     legacy=zip_edit(backup,lambda x:x.pop('sidebar')); before=side(other_site)
     post({'do':'log_restore','overwrite':'1'},files={'backup':('legacy.zip',legacy,'application/zip')},client=other,token=ot)
     check('サイドバー欠落の旧ZIPは既存サイドバーを保持',side(other_site)==before)
+    oldzip=zip_edit(backup,lambda x:x['sidebar'].__setitem__('items',[item for item in x['sidebar']['items'] if item['id']!='links']))
+    post({'do':'log_restore','overwrite':'1'},files={'backup':('pre-links.zip',oldzip,'application/zip')},client=other,token=ot)
+    check('リンク集のない旧ZIPも既存の順番を保って復元',[x['id'] for x in side(other_site)['items']]==['links']+[x['id'] for x in final['items'] if x['id']!='links'])
     for name,edit in [('標準欠落',lambda x:x['sidebar']['items'].pop(0)),('重複',lambda x:x['sidebar']['items'].append(x['sidebar']['items'][0])),('不正revision',lambda x:x['sidebar'].__setitem__('revision',-1)),('数字キーJSONobject',lambda x:x['sidebar'].__setitem__('items',{str(i):v for i,v in enumerate(x['sidebar']['items'])}))]:
         before=hashes(other_site); post({'do':'log_restore','overwrite':'1'},files={'backup':('invalid.zip',zip_edit(backup,edit),'application/zip')},client=other,token=ot)
         check('不正サイドバーZIPを拒否し既存データ保持 '+name,hashes(other_site)==before)

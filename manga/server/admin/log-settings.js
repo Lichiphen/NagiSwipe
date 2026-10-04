@@ -30,11 +30,22 @@
     const status = form.querySelector('[data-sidebar-status]');
     let busy = false, dragging = null, before = null, pointer = null;
     const rows = () => Array.from(group.children);
-    const dirty = () => { status.textContent = '未保存の変更があります。「サイドバーを保存」で反映します。'; };
-    const buttons = () => rows().forEach((row, i, all) => {
-        row.querySelector('[data-sidebar-step="-1"]').disabled = busy || i === 0;
-        row.querySelector('[data-sidebar-step="1"]').disabled = busy || i === all.length - 1;
-    });
+    const dirty = () => { form.dataset.dirty = '1'; status.textContent = '未保存の変更があります。「サイドバーを保存」で反映します。'; };
+    const count = editor => { editor.closest('[data-sidebar-item]').querySelector('[data-sidebar-chip]').textContent = `${editor.querySelector('[data-link-items]').children.length}件のリンク`; };
+    const preview = select => {
+        const source = select.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelector(`[data-link-icon-source="${select.value}"] svg`);
+        if (source) select.closest('[data-link-item]').querySelector('[data-link-preview]').replaceChildren(source.cloneNode(true));
+    };
+    const buttons = () => {
+        rows().forEach((row, i, all) => {
+            row.querySelector('[data-sidebar-step="-1"]').disabled = busy || i === 0;
+            row.querySelector('[data-sidebar-step="1"]').disabled = busy || i === all.length - 1;
+        });
+        form.querySelectorAll('[data-link-items]').forEach(list => Array.from(list.children).forEach((row, i, all) => {
+            row.querySelector('[data-link-step="-1"]').disabled = busy || i === 0;
+            row.querySelector('[data-link-step="1"]').disabled = busy || i === all.length - 1;
+        }));
+    };
     const label = row => {
         if (!row || row.dataset.sidebarKind !== 'html') return;
         const text = row.querySelector('[data-sidebar-title]').value.trim() || 'HTML枠（見出しなし）';
@@ -72,10 +83,35 @@
         handle.addEventListener('lostpointercapture', () => { if (dragging && pointer !== null) end(true); });
     };
     rows().forEach(wire);
+    form.addEventListener('invalid', event => {
+        const editor = event.target.closest('.log-links-editor');
+        if (editor) editor.open = true;
+    }, true);
     form.addEventListener('input', event => { label(event.target.closest('[data-sidebar-item]')); dirty(); });
+    form.addEventListener('change', event => { if (event.target.matches('[data-link-icon]')) preview(event.target); });
     form.addEventListener('keydown', event => { if (event.key === 'Escape' && dragging) { event.preventDefault(); end(true); } });
     form.addEventListener('click', event => {
         if (busy || dragging) return;
+        const linkAdd = event.target.closest('[data-link-add]');
+        if (linkAdd) {
+            const editor = linkAdd.closest('.log-links-editor');
+            const row = editor.querySelector('[data-link-template]').content.firstElementChild.cloneNode(true);
+            editor.querySelector('[data-link-items]').append(row);
+            count(editor); dirty(); buttons(); row.querySelector('[data-link-label]').focus(); return;
+        }
+        const linkRemove = event.target.closest('[data-link-remove]');
+        if (linkRemove) {
+            const row = linkRemove.closest('[data-link-item]'), next = row.nextElementSibling || row.previousElementSibling;
+            const editor = row.closest('.log-links-editor'), add = editor.querySelector('[data-link-add]');
+            row.remove(); (next?.querySelector('[data-link-label]') || add).focus(); count(editor); dirty(); buttons(); return;
+        }
+        const linkStep = event.target.closest('[data-link-step]');
+        if (linkStep) {
+            const row = linkStep.closest('[data-link-item]'), list = row.parentElement;
+            if (linkStep.dataset.linkStep === '-1' && row.previousElementSibling) list.insertBefore(row, row.previousElementSibling);
+            else if (linkStep.dataset.linkStep === '1' && row.nextElementSibling) list.insertBefore(row.nextElementSibling, row);
+            linkStep.focus(); dirty(); buttons(); return;
+        }
         const step = event.target.closest('[data-sidebar-step]');
         if (step) {
             const row = step.closest('[data-sidebar-item]');
@@ -105,6 +141,8 @@
         const items = rows().map(row => {
             const item = {id: row.dataset.sidebarId, kind: row.dataset.sidebarKind, enabled: row.querySelector('[data-sidebar-enabled]').checked};
             if (item.kind === 'html') Object.assign(item, {title: row.querySelector('[data-sidebar-title]').value, html: row.querySelector('[data-sidebar-html]').value, framed: row.querySelector('[data-sidebar-framed]').checked});
+            if (item.kind === 'links') Object.assign(item, {icon_frame: row.querySelector('[data-links-frame]').checked, message: row.querySelector('[data-links-message]').value});
+            if (item.kind === 'links') item.links = Array.from(row.querySelector('[data-link-items]').children).map(link => ({label: link.querySelector('[data-link-label]').value, url: link.querySelector('[data-link-url]').value, icon: link.querySelector('[data-link-icon]').value}));
             return item;
         });
         const data = new FormData(form);
@@ -117,12 +155,21 @@
             if (!response.ok || !result.ok || !Number.isInteger(result.revision) || !Array.isArray(result.items)) throw new Error(result.error || '保存できませんでした。画面を開き直してください');
             form.dataset.revision = String(result.revision);
             result.items.forEach(item => {
+                if (item.kind === 'links') {
+                    const block = rows().find(row => row.dataset.sidebarId === item.id), list = block.querySelector('[data-link-items]');
+                    block.querySelector('[data-links-message]').value = item.message;
+                    item.links.forEach((link, i) => {
+                        list.children[i].querySelector('[data-link-label]').value = link.label;
+                        list.children[i].querySelector('[data-link-url]').value = link.url;
+                        list.children[i].querySelector('[data-link-icon]').value = link.icon;
+                    });
+                }
                 if (item.kind !== 'html') return;
                 const row = rows().find(row => row.dataset.sidebarId === item.id);
                 row.querySelector('[data-sidebar-html]').value = item.html;
                 row.querySelector('[data-sidebar-title]').value = item.title; label(row);
             });
-            status.textContent = 'サイドバーを保存しました。HTMLは使える要素と属性だけを残しています。';
+            delete form.dataset.dirty; status.textContent = 'サイドバーを保存しました。';
         } catch (error) { status.textContent = error.message || '通信できませんでした。変更内容はこの画面に残しています。'; }
         finally { busy = false; controls.forEach(control => { control.disabled = false; }); buttons(); }
     });

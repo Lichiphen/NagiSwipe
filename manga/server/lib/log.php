@@ -11,6 +11,7 @@ const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライ
     'dark-navy' => 'ダークネイビー', 'dark-charcoal' => 'ダークチャコール', 'dark-plum' => 'ダークプラム'];
 require_once __DIR__ . '/log-taxonomy.php';
 require_once __DIR__ . '/log-sidebar.php';
+require_once __DIR__ . '/log-links.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }

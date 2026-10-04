@@ -127,7 +127,8 @@ function nl_handle_post(string $do): never
                 nm_with_lock('personal-log', static function () use ($visibility, $count) {
                     $s = nl_settings();
                     $s['public'] = $visibility === 'public';
-                    $s['show_login'] = nm_str($_POST, 'show_login', 1) === '1';
+                    // Older forms still post this; the sidebar's login row owns it now.
+                    if (array_key_exists('show_login', $_POST)) $s['show_login'] = nm_str($_POST, 'show_login', 1) === '1';
                     $s['posts_per_page'] = (int)$count;
                     $s['updated'] = time();
                     nl_write_record(nl_root() . '/settings.php', $s);
@@ -291,7 +292,6 @@ function nl_preferences_panel(): string
     return '<section class="card"><h2>公開範囲・表示件数</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_preferences">'
         . '<fieldset class="log-visibility"><legend>LOGをどう使いますか？</legend><label class="check"><input type="radio" name="visibility" value="public"' . ($s['public'] ? ' checked' : '') . '>全体公開のLOG</label><p class="note">保存済みの記事と投稿画像も、ログインしていない人が読めるようになります。下書きは公開しません。</p><label class="check"><input type="radio" name="visibility" value="private"' . (!$s['public'] ? ' checked' : '') . '>自分専用のMemo</label><p class="note">記事とLOGの画像は、管理者としてログインしたときだけ読めます。NagiMANGAの作品の公開範囲は、作品ごとに設定してください。</p></fieldset>'
         . '<label>1ページの投稿数（1〜100件）<input type="number" name="posts_per_page" min="1" max="100" required value="' . $s['posts_per_page'] . '"></label><p class="note">トップ・日付アーカイブ・カテゴリ・タグの一覧に使います。標準は10件です。管理画面の一覧は、一覧の上部で別に変えられます。</p>'
-        . '<label class="check"><input type="checkbox" name="show_login" value="1"' . ($s['show_login'] ? ' checked' : '') . '>サイトのメニューにログイン・管理ページへのリンクを表示する</label><p class="note">オフにすると、このリンクを隠します。ログインするには管理画面をブックマークしてください。リンクを隠しても、パスワードによる保護はそのままです。</p>'
         . '<button class="btn primary">公開範囲と表示を保存</button></form></section>';
 }
 function nl_footer_panel(): string
@@ -315,7 +315,7 @@ function nl_settings_panel(): string
         . '<input type="hidden" name="do" value="log_settings"><label>サイト名<input name="title" maxlength="100" required value="' . h($s['title']) . '"></label><label>紹介文<textarea name="description" maxlength="300">' . h($s['description']) . '</textarea></label><label>名前<input name="name" maxlength="100" required value="' . h($s['name']) . '"></label>'
         . '<h3>デザイン</h3><p class="note">色を選ぶと、この画面で見比べられます。保存すると公開サイトにも反映されます。</p>' . $choices
         . '<h3>アイコン</h3><div class="log-icon-preview">' . nl_icon_html($s, '../', 'log-settings-avatar') . '</div><label>新しいアイコン<input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
-        . '<p class="note">サイト名の横・投稿者表示・ログイン画面で使います。画像は丸く表示します。</p>'
+        . '<p class="note">サイト名の横・投稿者表示・サイドバーのプロフィール・ログイン画面で使います。画像は丸く表示します。</p>'
         . ($s['icon'] !== '' ? '<label class="check"><input type="checkbox" name="remove_icon" value="1">今のアイコンを外す</label>' : '')
         . '<h3>共通のOGP画像</h3><p class="note">リンクを共有したときに表示される紹介画像です。投稿に画像がないときと、トップ・分類一覧で使います。横1200×縦630pxの画像が目安です。</p><div class="log-og-preview">' . ($og ? '<img src="' . h('../' . nl_media_url($og, true)) . '" alt="共通の紹介画像">' : '') . '</div><label>OGP画像<input type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
         . ($og ? '<label class="check"><input type="checkbox" name="remove_og_image" value="1">共通のOGP画像を外す</label>' : '')
