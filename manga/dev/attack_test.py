@@ -233,6 +233,9 @@ def make_package(version, marker="", extra=None, drop=()):
             if rel == "viewer/NagiManga.js" and marker:
                 data += ("\n" + marker + "\n").encode()
             z.writestr("nagimanga/" + rel, data)
+        for name in ('NagiSwipe-main.js', 'NagiSwipe-main.css'):
+            if 'viewer/' + name not in drop:
+                z.write(SERVER_DIR.parents[1] / name, 'nagimanga/viewer/' + name)
         z.writestr("README.txt", "readme")
         z.writestr("optional/guest-mode.php", "<?php // optional")
         for name, data in (extra or {}).items():
@@ -306,6 +309,8 @@ def run_update(adm, csrf, data_dir):
         "隠しファイル（.user.ini）": make_package("9.9.9", extra={"nagimanga/.user.ini": b"auto_prepend_file=x"}),
         "バージョンが一致しない": make_package("9.9.8"),
         "必要なファイルがない": make_package("9.9.9", drop=("read.php",)),
+        "LOGの保存処理がない": make_package("9.9.9", drop=("lib/log.php",)),
+        "画像ビューアーがない": make_package("9.9.9", drop=("viewer/NagiSwipe-main.js",)),
     }
     for label, pkg in bad_packages.items():
         publish("9.9.9", pkg)
@@ -336,7 +341,7 @@ def run_update(adm, csrf, data_dir):
     check("更新: 保管したファイルは外から見えない（.htaccess が効くサーバー）",
           bak is not None and Client().get("/data/" + bak.relative_to(data_dir).as_posix()).status in (403, 404))
     check("更新: 更新後はお知らせが消える", "update-banner" not in adm.get("/admin/index.php").text)
-    new_ver = hashlib.sha1((site / "viewer" / "NagiManga.js").read_bytes()).hexdigest()[:10]
+    new_ver = hashlib.sha256((site / "viewer" / "NagiManga.js").read_bytes() + (site / "viewer" / "NagiManga.css").read_bytes()).hexdigest()[:12]
     embed = adm.get("/admin/index.php?p=embed").text
     check("更新: 設置用コード画面に新しいキャッシュバスターが出る",
           f"NagiManga.js?v={new_ver}" in embed and "nagimanga" in embed and "NagiSwipe-main.js" in embed)

@@ -13,6 +13,10 @@ require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
 require __DIR__ . '/../lib/update.php';
+require __DIR__ . '/../lib/log.php';
+require __DIR__ . '/../lib/log-public.php';
+require __DIR__ . '/../lib/log-backup.php';
+require __DIR__ . '/../lib/log-admin.php';
 nm_load_plugins();
 
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
@@ -27,6 +31,7 @@ if ($method !== 'GET' && $method !== 'POST') nm_not_found();
 
 // --- First run -------------------------------------------------------------
 if (!$cfg || empty($cfg['admin_hash'])) {
+    if (defined('NL_PUBLIC_LOGIN')) nm_not_found();
     nm_setup($method);
     exit;
 }
@@ -83,6 +88,12 @@ $page = nm_str($_GET, 'p', 20);
 match ($page) {
     '', 'works' => nm_view_dashboard(),
     'work' => nm_view_work(nm_str($_GET, 'id', 12)),
+    'log' => nm_is_guest() ? nm_view_guest_denied('LOG') : nl_view_log(),
+    'log_edit' => nm_is_guest() ? nm_view_guest_denied('LOG') : nl_view_edit(nm_str($_GET, 'id', 24)),
+    'log_media' => nm_is_guest() ? nm_view_guest_denied('LOGの画像') : nl_view_media(),
+    'log_image' => nm_is_guest() ? nm_not_found() : nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), true),
+    'log_media_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(false),
+    'log_manga_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(true),
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
     'backup' => nm_is_guest() ? nm_view_guest_denied('バックアップ') : nm_view_backup(),
     'settings' => nm_is_guest() ? nm_view_guest_denied('設定') : nm_view_settings($cfg),
@@ -111,7 +122,7 @@ function nm_admin_headers(): void
 function nm_asset(string $file): string
 {
     $path = __DIR__ . '/' . $file;
-    $v = is_file($path) ? substr(sha1_file($path), 0, 10) : NM_VERSION;
+    $v = nm_asset_version($path);
     return h($file . '?v=' . $v);
 }
 
@@ -129,21 +140,32 @@ function nm_layout(string $title, string $body, bool $nav = true): void
     if ($nav) {
         $guest = nm_is_guest();
         $navHtml = '<nav class="nav"><a href="index.php">作品一覧</a>'
+            . ($guest ? '' : '<a href="index.php?p=log">LOG・投稿</a>')
             . ($guest ? '' : '<a href="index.php?p=embed">設置用コード</a><a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>'
                 . '<a href="index.php?p=update">更新' . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">新</span>' : '') . '</a>')
             . '<form method="post" action="index.php" class="inline">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . ($guest ? 'ゲストを終了' : 'ログアウト') . '</button></form></nav>';
         $g = $guest ? nm_guest_config() : null;
         if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
     }
-    echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
+    $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
+    $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
+    echo '<!DOCTYPE html><html lang="ja"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '"' : '') . '><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h($title) . ' - NagiManga</title>'
-        . '<link rel="icon" href="../viewer/favicon.svg" type="image/svg+xml">'
+        . '<link rel="icon" href="' . nm_asset('../viewer/favicon.svg') . '" type="image/svg+xml">'
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
+        . ($logUi
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '">'
+              . '<script src="' . nm_asset('log-settings.js') . '" defer></script>' : '')
+        . ($logPage
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/NagiSwipe-main.css') . '">'
+              . '<script src="' . nm_asset('log-editor.js') . '" defer></script>'
+              . '<script src="' . nm_asset('../viewer/NagiSwipe-main.js') . '" defer></script>'
+              . '<script src="' . nm_asset('../viewer/NagiManga.js') . '" defer></script>' : '')
         . '</head><body><header class="top"><span class="brand">NagiManga</span>' . $navHtml . '</header>'
-        . '<main class="main">' . $banner . $flash . $body . '</main>'
+        . '<main class="main' . ($logPage ? ' log-admin-main' : '') . '">' . $banner . $flash . $body . '</main>'
         . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
 }
 
@@ -222,7 +244,7 @@ function nm_setup(string $method): void
             $login = nm_base_url() . '/admin/index.php?k=' . $cfg['login_key'];
             $_SESSION = [];
             nm_layout('セットアップ完了', '<section class="card"><h1>セットアップが完了しました</h1>'
-                . '<p><strong>次の URL をブックマークしてください。</strong>この URL 以外からは管理画面を開けません（他の URL は「Not Found」になります）。</p>'
+                . '<p><strong>次の URL をブックマークしてください。</strong>LOGのメニューにある「ログイン」からも、パスワードで入れます。</p>'
                 . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
                 . '<p class="note">忘れた場合は、FTP で <code>data/config.php</code> の <code>login_key</code> を確認し、<code>admin/index.php?k=</code> の後ろに付けてください。</p>'
                 . '<p><a class="btn primary" href="' . h($login) . '">ログイン画面へ</a></p></section>', false);
@@ -265,10 +287,11 @@ function nm_setup(string $method): void
 
 function nm_login_page(string $method, array $cfg): void
 {
+    $publicLogin = defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN;
     $src = $method === 'POST' ? $_POST : $_GET;
     $key = nm_str($src, 'k', 64);
-    // Wrong or missing key: the admin does not exist
-    if ($key === '' || !hash_equals((string)$cfg['login_key'], $key)) nm_not_found();
+    // The LOG login alias exposes only a password form; the keyed URL stays valid.
+    if (!$publicLogin && ($key === '' || !hash_equals((string)$cfg['login_key'], $key))) nm_not_found();
     if (nm_login_blocked()) {
         nm_log('login_blocked');
         nm_not_found();
@@ -278,18 +301,19 @@ function nm_login_page(string $method, array $cfg): void
     if ($method === 'POST') {
         $pre = (string)($_SESSION['nm_pre'] ?? '');
         if ($pre === '' || !hash_equals($pre, (string)($_POST['csrf'] ?? ''))) nm_not_found();
-        if (nm_try_login(nm_str($_POST, 'password', 200))) nm_redirect();
+        if (nm_try_login(nm_str($_POST, 'password', 200))) nm_redirect($publicLogin ? 'p=log' : '');
         if (nm_login_blocked()) nm_not_found();
         $error = '<p class="flash flash-err">パスワードが違います</p>';
     }
 
     $_SESSION['nm_pre'] = bin2hex(random_bytes(32));
-    nm_layout('ログイン', $error . '<section class="card narrow"><h1>ログイン</h1>'
-        . '<form method="post" action="index.php" class="form">'
+    nm_layout('ログイン', $error . '<section class="card narrow log-login-card"><h1>' . ($publicLogin ? nl_icon_html(nl_settings(), '../', 'log-login-avatar') : '') . 'ログイン</h1>'
+        . '<form method="post" action="' . ($publicLogin ? 'login.php' : 'index.php') . '" class="form">'
         . '<input type="hidden" name="csrf" value="' . h((string)$_SESSION['nm_pre']) . '">'
-        . '<input type="hidden" name="k" value="' . h($key) . '">'
+        . ($publicLogin ? '' : '<input type="hidden" name="k" value="' . h($key) . '">')
         . '<label>パスワード<input type="password" name="password" autocomplete="current-password" required autofocus></label>'
-        . '<button class="btn primary">ログイン</button></form></section>', false);
+        . '<button class="btn primary">' . ($publicLogin ? nl_login_icon() : '') . 'ログイン</button></form>'
+        . ($publicLogin ? '<p><a href="../">LOGへ戻る</a></p>' : '') . '</section>', false);
 }
 
 // ===========================================================================
@@ -299,6 +323,7 @@ function nm_login_page(string $method, array $cfg): void
 function nm_handle_post(array $cfg): void
 {
     $do = nm_str($_POST, 'do', 30);
+    if (str_starts_with($do, 'log_')) nl_handle_post($do);
     $id = nm_str($_POST, 'id', 12);
 
     switch ($do) {
@@ -563,7 +588,7 @@ function nm_handle_post(array $cfg): void
         case 'settings_general':
             $base = rtrim(trim(nm_str($_POST, 'base_url', 500)), '/');
             if ($base !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $base)) {
-                nm_flash('err', '設置 URL の書き方が正しくありません');
+                nm_flash('err', '公開URLの書き方が正しくありません');
                 nm_redirect('p=settings');
             }
             $cfg['base_url'] = $base;
@@ -633,7 +658,7 @@ function nm_guest_refuse(): never
     $do = nm_str($_POST, 'do', 30);
     nm_log('guest_write_blocked', $do);
     $msg = 'ゲスト（閲覧のみ）なので変更できません';
-    if ($do === 'upload' || $do === 'order') nm_json(['ok' => false, 'error' => $msg], 403);
+    if ($do === 'upload' || $do === 'order' || str_starts_with($do, 'log_')) nm_json(['ok' => false, 'error' => $msg], 403);
     nm_flash('err', $msg);
     $id = nm_str($_POST, 'id', 12);
     nm_redirect(nm_valid_id($id) ? 'p=work&id=' . $id : '');
@@ -874,7 +899,7 @@ function nm_view_work(string $id): void
     $base = nm_base_url();
     $endpoint = $base . '/read.php';
     $viewerPath = NM_ROOT . '/viewer/NagiManga.js';
-    $viewerVer = is_file($viewerPath) ? substr(sha1_file($viewerPath), 0, 10) : NM_VERSION;
+    $viewerVer = nm_asset_version($viewerPath);
     $script = $base . '/viewer/NagiManga.js?v=' . $viewerVer;
     $locked = nm_work_is_locked($w);
 
@@ -920,7 +945,7 @@ function nm_view_work(string $id): void
         . '<a href="#" class="btn js-preview" data-nagimanga="' . $idH . '" data-endpoint="../read.php">ここで試し読み</a></p>'
         . '<p class="note">上の欄は、ブログなど HTML を書ける場所に貼るタグです。クリックしたときにその場でビューアーが開きます。<code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。読み方の選択は、共有リンクにも反映されます。</p>'
         . '<p class="note">てがろぐでは、共有リンクを <code>[第1話を読む]URL</code> のように投稿します（設定のしかたは「<a href="index.php?p=embed">設置用コード</a>」にあります）。</p>'
-        . '<p class="note">URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「設置 URL」から作っています') . '。</p>'
+        . '<p class="note">URL（<code>' . h($base) . '</code>）は、' . (empty(nm_config()['base_url']) ? 'この管理画面を開いているアドレスから自動で作っています' : '設定の「公開URL」から作っています') . '。</p>'
         . '</details>'
         . '</div>'
         . '<script src="' . h('../viewer/NagiManga.js?v=' . $viewerVer) . '" defer></script>'
@@ -1053,7 +1078,7 @@ function nm_view_backup(): void
         . '<label class="check"><input type="checkbox" name="overwrite" value="1"> 同じ作品がある場合は上書きする</label>'
         . '<button class="btn"' . ($zip ? '' : ' disabled') . '>復元する</button></form>'
         . '<p class="note">サーバーのアップロード上限: ' . h($max) . '。これより大きいバックアップは作品ごとに分けて復元してください。</p>'
-        . '</section>');
+        . '</section>' . nl_backup_panel());
 }
 
 function nm_view_settings(array $cfg): void
@@ -1072,6 +1097,10 @@ function nm_view_settings(array $cfg): void
         . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
         . '<input type="hidden" name="do" value="regen_key"><button class="btn">ログイン URL を変更する</button></form></section>'
 
+        . nl_settings_panel()
+        . nl_taxonomy_panel()
+        . nl_guard_panel()
+
         . '<section class="card"><h2>管理画面を開ける場所（IP 制限）</h2>'
         . '<p>今の IP アドレス: <code>' . h(nm_client_ip()) . '</code></p>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_access">'
@@ -1089,7 +1118,7 @@ function nm_view_settings(array $cfg): void
 
         . '<section class="card"><h2>その他</h2>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_general">'
-        . '<label>設置 URL（共有タグに使われます。空欄なら、この管理画面を開いているアドレスから自動で決めます。通常は空欄のままで大丈夫です）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
+        . '<label>公開URL（共有リンク・OGPに使います。設置先を入力し、末尾にlog.phpは付けません。空欄ならアクセス時のアドレスから作ります）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
         . '<label>画像の画質（60〜100）<input type="number" name="image_quality" min="60" max="100" value="' . (int)($cfg['image_quality'] ?? 90) . '"></label>'
         . '<label>1 枚あたりの上限（MB）<input type="number" name="max_upload_mb" min="1" max="200" value="' . (int)($cfg['max_upload_mb'] ?? 30) . '"></label>'
         . '<p class="note">サーバー側の上限: upload_max_filesize ' . h((string)ini_get('upload_max_filesize')) . ' / memory_limit ' . h((string)ini_get('memory_limit')) . '</p>'
@@ -1137,7 +1166,7 @@ function nm_copy_box(string $value, string $label = ''): string
 function nm_view_embed(): void
 {
     $viewerPath = NM_ROOT . '/viewer/NagiManga.js';
-    $ver = is_file($viewerPath) ? substr(sha1_file($viewerPath), 0, 10) : NM_VERSION;
+    $ver = nm_asset_version($viewerPath);
     $js = nm_base_url() . '/viewer/NagiManga.js?v=' . $ver;
 
     nm_layout('設置用コード', '<section class="card"><h1>設置用コード</h1>'

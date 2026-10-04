@@ -5,6 +5,14 @@
  */
 $path = rawurldecode((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
 
+// Release packages bundle these root sources; development serves the same files.
+if (preg_match('~^/(?:nagimanga/)?viewer/(NagiSwipe-main\.(js|css))$~', $path, $m)) {
+    header('Content-Type: ' . ($m[2] === 'js' ? 'application/javascript' : 'text/css'));
+    header('Cache-Control: no-cache');
+    readfile(dirname(__DIR__, 2) . '/' . $m[1]);
+    return true;
+}
+
 $deny = preg_match('~(^|/)\.~', $path)                                    // dot files
     || preg_match('~^/(nagimanga/)?(lib|data|plugins)(/|$)~', $path)       // lib/, data/, plugins/ (also under /nagimanga/)
     || preg_match('~\.(md|log|lock|bak|tmp|json|ini|sh|zip)$~i', $path);    // root FilesMatch
@@ -44,4 +52,9 @@ if (is_dir($file) && !is_file(rtrim($file, '/') . '/index.php') && !is_file(rtri
     return true;
 }
 
+if (!is_file($file) && !is_dir($file)) {
+    $_SERVER['SCRIPT_NAME'] = '/404.php';
+    require $_SERVER['DOCUMENT_ROOT'] . '/404.php';
+    return true;
+}
 return false; // let the built-in server handle it

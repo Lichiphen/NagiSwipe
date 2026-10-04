@@ -1,5 +1,6 @@
 # Development data (tests, local runs)
 dev/data/
 dev/results/
+dev/reference-nagimemo/
 __pycache__/
 demo-site/

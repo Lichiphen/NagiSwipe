@@ -11,7 +11,7 @@ if (!defined('NAGIMANGA')) {
     exit;
 }
 
-const NM_VERSION = '0.3.0';
+const NM_VERSION = '0.4.0';
 
 // Never show PHP errors to visitors (they reveal server paths); log them instead
 ini_set('display_errors', '0');
@@ -34,6 +34,21 @@ define('NM_DATA', (static function (): string {
 
 const NM_ID_PATTERN = '/\A[A-Za-z0-9]{12}\z/';
 const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg)\z/';
+require_once __DIR__ . '/image-guard.php';
+
+/** Content-based cache keys, including the reader's automatically loaded CSS. */
+function nm_asset_version(string $file): string
+{
+    if (!is_file($file) && in_array(basename($file), ['NagiSwipe-main.js', 'NagiSwipe-main.css'], true)) {
+        // The development router serves these from the repository root.
+        $file = dirname(NM_ROOT, 2) . '/' . basename($file);
+    }
+    if (!is_file($file)) return NM_VERSION;
+    $hash = hash_init('sha256');
+    hash_update_file($hash, $file);
+    if (basename($file) === 'NagiManga.js' && is_file(dirname($file) . '/NagiManga.css')) hash_update_file($hash, dirname($file) . '/NagiManga.css');
+    return substr(hash_final($hash), 0, 12);
+}
 
 // ---------------------------------------------------------------------------
 // Responses
@@ -44,11 +59,23 @@ const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg)\z/';
  */
 function nm_not_found(): never
 {
+    $html = str_contains(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'text/html');
     if (!headers_sent()) {
         http_response_code(404);
-        header('Content-Type: text/plain; charset=UTF-8');
+        header('Content-Type: ' . ($html ? 'text/html' : 'text/plain') . '; charset=UTF-8');
         header('Cache-Control: no-store');
         header('X-Content-Type-Options: nosniff');
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Vary: Accept');
+        if ($html) header("Content-Security-Policy: default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'");
+    }
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'HEAD') exit;
+    if ($html) {
+        $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/404.php'))), '/');
+        if (str_ends_with($dir, '/admin')) $dir = substr($dir, 0, -6);
+        $base = $dir === '.' ? '' : $dir;
+        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void"><div class="nm-blackhole" aria-hidden="true"><div class="nm-orbit"></div><div class="nm-core"></div></div><main><p class="nm-error-number">404</p><h1>ここには、何もないみたい。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る</a><small>Not Found</small></main></body></html>';
+        exit;
     }
     echo 'Not Found';
     exit;
@@ -550,4 +577,10 @@ function nm_load_plugins(): void
 function nm_work_is_locked(array $work): bool
 {
     return !empty($work['password_hash']);
+}
+
+/** Individual pages can be switched off; embedded viewers keep working. */
+function nm_work_page_public(array $work): bool
+{
+    return ($work['page'] ?? true) !== false;
 }

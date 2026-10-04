@@ -25,7 +25,10 @@ const NM_UPDATE_MAX_ZIP = 20 * 1024 * 1024;
 const NM_UPDATE_MAX_ENTRY = 5 * 1024 * 1024;
 const NM_UPDATE_MAX_TOTAL = 30 * 1024 * 1024;
 const NM_UPDATE_KEEP_BACKUPS = 3;
-const NM_UPDATE_REQUIRED = ['read.php', 'lib/bootstrap.php', 'admin/index.php', 'viewer/NagiManga.js'];
+const NM_UPDATE_REQUIRED = ['index.php', 'read.php', 'log.php', 'lib/bootstrap.php', 'admin/index.php', 'viewer/NagiManga.js',
+    '404.php', 'viewer/404.css', 'lib/image-guard.php',
+    'lib/log.php', 'lib/log-taxonomy.php', 'lib/log-admin.php', 'lib/log-public.php', 'lib/log-backup.php', 'admin/login.php', 'admin/log-editor.js', 'admin/log-settings.js', 'viewer/log.css', 'viewer/log-menu.js',
+    'viewer/NagiSwipe-main.js', 'viewer/NagiSwipe-main.css'];
 const NM_UPDATE_EXT = ['php', 'js', 'css', 'html', 'txt', 'json', 'svg', 'png', 'jpg', 'webp', 'ico', 'woff2'];
 
 /**

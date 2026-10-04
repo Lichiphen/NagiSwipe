@@ -30,6 +30,14 @@ README = """NagiManga v{version}
 2. ブラウザで https://あなたのサイト/nagimanga/admin/ を開き、30 分以内にセットアップします。
 3. 表示されたログイン URL をブックマークします。
 4. ログインして、作品一覧に「data フォルダがインターネットから見える状態です」が出ていないことを確認します。
+5. 設定の「公開URL」に設置先を入れます。log.php は付けません。
+
+個人用LOG
+・公開サイトは https://あなたのサイト/nagimanga/ です。
+・「LOG・投稿」で、文章、画像、漫画、カテゴリ、ハッシュタグを投稿できます。
+・既定パスワードはありません。初回に自分で設定します。
+・メリット・デメリットと設置の注意点は、同梱の README-LOG.md にまとめています。
+・.htaccess が使えない環境では、data を公開フォルダの外へ移すか、サーバー側でアクセスを拒否してください。
 
 更新するとき
 ・v0.2.0 以降は、管理画面の「更新」から更新できます（新しいバージョンが出るとログイン時にお知らせします）。
@@ -64,7 +72,14 @@ def main():
             if top in ("data", "plugins") and rel not in (f"{top}/.htaccess", f"{top}/index.html"):
                 continue
             z.write(f, "nagimanga/" + rel)
+        # Bundle the root gallery without keeping a second source copy in Git.
+        for name in ("NagiSwipe-main.js", "NagiSwipe-main.css"):
+            z.write(MANGA.parent / name, "nagimanga/viewer/" + name)
         z.write(MANGA / "plugins" / "guest-mode.php", "optional/guest-mode.php")
+        for name in ("README.md", "README-LOG.md"):
+            z.write(MANGA / name, name)
+        for doc in sorted((MANGA / "docs").glob("*.md")):
+            z.write(doc, "docs/" + doc.name)
         z.writestr("README.txt", ("﻿" + README.format(version=version)).replace("\n", "\r\n").encode("utf-8"))
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     print(f"{out}\nsha256:{digest}")

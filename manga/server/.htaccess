@@ -1,5 +1,14 @@
 # NagiManga: basic protection (Apache)
 Options -Indexes
+DirectoryIndex index.php
+
+# Use the animated 404 page for missing paths, at any installation depth.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ 404.php [L]
+</IfModule>
 
 # Hidden files, backups and docs are never served
 <FilesMatch "(^\.|\.(md|log|lock|bak|tmp|json|ini|sh|zip)$)">

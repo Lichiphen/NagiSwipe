@@ -1,0 +1,15 @@
+/* A quiet black hole, without scripts or external assets. MIT (c) 2026 Lichiphen. */
+:root { color-scheme:dark; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100svh; overflow-x:hidden; display:grid; place-content:center; text-align:center; color:#ebedf7; background:radial-gradient(ellipse at 50% 32%,#242037 0, #100f1e 38%,#080910 76%); font:16px/1.8 system-ui,-apple-system,"Hiragino Sans",sans-serif; }
+.nm-void::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.5; background-image:radial-gradient(circle,#b9b5db 1px,transparent 1.5px),radial-gradient(circle,#918eae 1px,transparent 1.5px); background-size:97px 139px,173px 181px; background-position:11px 37px,67px 83px; }
+.nm-blackhole { position:relative; width:min(320px,74vw); aspect-ratio:1; margin:0 auto -20px; }
+.nm-core { position:absolute; inset:24%; border-radius:50%; background:#020309; box-shadow:0 0 0 1px #f5e2ba,0 0 8px 2px #ffe7bdcc,0 0 22px 9px #c688bf88,0 0 65px 22px #635da844; animation:nm-breathe 5s ease-in-out infinite; }
+.nm-orbit { position:absolute; inset:14%; border-radius:50%; border:1px solid #c5acd7; background:conic-gradient(from 0deg,transparent 0deg,#dbc7e96b 130deg,#ffdeb3 175deg,transparent 200deg,#a18cc966 310deg,transparent 360deg); filter:blur(.5px); transform:rotate(-22deg) scaleY(.4); box-shadow:0 0 22px #e0bce166; animation:nm-orbit 14s linear infinite; }
+main { position:relative; padding:0 20px 50px; max-width:600px; margin:auto; }
+.nm-error-number { font-size:60px; letter-spacing:.12em; line-height:1.2; margin:0 0 18px; font-weight:300; color:#d7cce8; }
+h1 { font-size:clamp(18px,5vw,24px); font-weight:500; margin:0 0 8px; }main > p:not(.nm-error-number) { color:#a8a4b9; font-size:14px; }
+a { display:inline-block; padding:10px 24px; border:1px solid #857696; border-radius:999px; color:#e7dbf2; text-decoration:none; margin-top:16px; }a:hover,a:focus-visible { border-color:#e8caec; background:#ffffff0b; }small { display:block; margin-top:22px; color:#706a80; font-size:11px; }
+@keyframes nm-breathe { 50% { box-shadow:0 0 0 1px #ffe9c8,0 0 12px 4px #ffe7bddd,0 0 30px 10px #c688bf99,0 0 80px 28px #635da855; } }
+@keyframes nm-orbit { to { transform:rotate(-22deg) scaleY(.4) rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .nm-core,.nm-orbit { animation:none; } }

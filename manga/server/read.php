@@ -31,6 +31,7 @@ if ($method === 'OPTIONS') {
 
 $src = $method === 'POST' ? $_POST : $_GET;
 $action = nm_str($src, 'a', 2);
+if ($method === 'GET' && in_array($action, ['i', 't', 'o'], true)) nm_image_guard($cfg);
 
 // The share URL opened directly (new tab, RSS reader, no script on the page)
 if ($method === 'GET' && $action === '' && isset($_GET['nagimanga'])) {
@@ -74,12 +75,6 @@ function nm_cors(array $cfg): void
     header('Vary: Origin');
 }
 
-/** Individual pages can be switched off per work (the embedded viewer keeps working). */
-function nm_work_page_public(array $work): bool
-{
-    return ($work['page'] ?? true) !== false;
-}
-
 /**
  * Hotlink protection. Off by default. When on, the manifest, unlock and page
  * images answer only this site, the sites listed for embedding and the extra
@@ -115,7 +110,7 @@ function nm_public_base(array $cfg): string
 function nm_serve_reader_page(array $work, array $cfg): never
 {
     $viewer = __DIR__ . '/viewer/NagiManga.js';
-    $ver = is_file($viewer) ? substr(sha1_file($viewer), 0, 10) : NM_VERSION;
+    $ver = nm_asset_version($viewer);
     $attrs = 'data-nagimanga="' . h($work['id']) . '" data-endpoint="read.php"';
     $dir = nm_str($_GET, 'dir', 8);
     if (in_array($dir, ['rtl', 'ltr', 'vertical'], true)) $attrs .= ' data-direction="' . $dir . '"';
