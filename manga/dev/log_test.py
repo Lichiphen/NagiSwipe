@@ -173,7 +173,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     rendered_body = r.text.split('<div class="log-body">', 1)[1]
     check("本文の好きな位置に漫画カード", rendered_body.index("読む前の文") < rendered_body.index('class="log-manga"') < rendered_body.index("読んだ後の文"))
     check("漫画カードから既存ビューアーを開く", 'data-nagimanga="' + manga["id"] + '"' in r.text)
-    check("漫画だけの投稿のOGPは共通画像", 'property="og:image" content="http://127.0.0.1:' + str(c.port) + '/viewer/og.jpg"' in r.text)
+    check("漫画だけの投稿のOGPは共通画像", re.search(r'property="og:image" content="http://127\.0\.0\.1:' + str(c.port) + r'/viewer/log-og\.png\?v=[0-9a-f]{12}"', r.text) and public.get('/viewer/log-og.png').status == 200)
     post({"do": "update", "id": manga["id"], "title": "改題した漫画", "direction": "rtl"})
     check("漫画の改題後もIDで読める", "改題した漫画" in public.get("/?id=" + mpid).text)
     post({'do': 'page_public', 'id': manga['id']})

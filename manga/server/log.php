@@ -50,7 +50,7 @@ $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 
 $canonical = $base . '/' . ($single ? '?id=' . rawurlencode($id) : ($query !== '' ? '?' . $query : ''));
 $title = $single ? nl_post_title($post) : ($filter['label'] !== '' ? $filter['label'] . '｜' . $s['title'] : $s['title']);
 $desc = $single ? (nl_excerpt($post) ?: $s['description']) : $s['description'];
-$ogImage = ($og = nl_load_media($s['og_image'])) ? $base . '/' . nl_media_url($og) : $base . '/viewer/og.jpg';
+$ogImage = ($og = nl_load_media($s['og_image'])) ? $base . '/' . nl_media_url($og) : $base . '/viewer/log-og.png?v=' . nm_asset_version(__DIR__ . '/viewer/log-og.png');
 if ($single) {
     // Article images take priority; text/manga-only posts use the shared image.
     preg_match_all('/\[Image:([a-f0-9]{16})\]/', $post['body'], $matches, PREG_SET_ORDER);

@@ -35,4 +35,8 @@ DirectoryIndex index.php
     <FilesMatch "\.(html|js|css)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
+    # The bundled LOG share image is always requested with ?v=<content hash>.
+    <FilesMatch "^log-og\.png$">
+        Header set Cache-Control "max-age=31536000, immutable"
+    </FilesMatch>
 </IfModule>
