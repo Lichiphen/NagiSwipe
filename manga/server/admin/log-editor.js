@@ -194,7 +194,9 @@
     let scrollTicking = false;
     function checkFab() {
         scrollTicking = false;
-        fab.classList.toggle('log-fab-visible', !panel.classList.contains('active') && (collapsed || (publicEditor && slot.getBoundingClientRect().bottom <= 0)));
+        const show = !panel.classList.contains('active') && (collapsed || (publicEditor && slot.getBoundingClientRect().bottom <= 0));
+        fab.classList.toggle('log-fab-visible', show);
+        $('.log-fab-admin')?.classList.toggle('log-fab-visible', show);
     }
     function scrollFab() { if (!scrollTicking) { scrollTicking = true; requestAnimationFrame(checkFab); } }
     if (publicEditor) { window.addEventListener('scroll', scrollFab, { passive: true }); window.addEventListener('resize', scrollFab, { passive: true }); }

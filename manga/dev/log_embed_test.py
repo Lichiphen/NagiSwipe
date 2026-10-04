@@ -177,6 +177,16 @@ def run(site,other_site,c,csrf,other,ot):
     check('取得先は公開アドレスだけ（内部・予約・ループバックを拒否）',blocked==[False]*11+[True,True])
     check('URLに認証情報や80/443以外のポートがあれば取得しない',php(site,"echo json_encode([nl_http_get('http://user:pw@example.com/',1000,'text/html',microtime(true)+2,true), nl_http_get('http://example.com:8080/',1000,'text/html',microtime(true)+2,true)]);")==[None,None])
 
+    save('分類の見た目\n本文 #見た目タグ',new_categories='見た目分類')
+    top=pub.get('/').text
+    check('サイドバーのカテゴリはフォルダの一覧、タグは#の並びで見分けられる','<ul class="log-cat-list"><li><a href="./?category=' in top and 'class="log-cat-icon"' in top and '<div class="log-tag-cloud"><a href="./?tag=' in top and '>#見た目タグ</a>' in top)
+    owner_top=c.get('/').text
+    check('ログイン中の公開ページに「管理」ボタン（スパナ）を出し、訪問者には出さない','<a class="log-fab-admin" href="admin/index.php?p=log">' in owner_top and 'log-fab-admin' not in top)
+    check('まとめて削除のボタンに文言を切り替える場所がある','<span data-bulk-label>まとめて削除</span>' in c.get('/admin/index.php?p=log').text)
+    settings_page=c.get('/admin/index.php?p=settings&section=log').text
+    key=re.search(r'index\.php\?k=([A-Za-z0-9]+)',c.get('/admin/index.php?p=settings&section=common').text).group(1)
+    check('ログインリンクを隠す前の確認用に管理用URLを渡す',f'data-login-url="http://127.0.0.1:{args.port}/admin/index.php?k={key}"' in settings_page)
+    check('訪問者の公開ページには管理用URLを出さない',key not in top)
     media_page=c.get('/admin/index.php?p=log_media').text
     check('画像一覧の各枠にドロップで差し替えられると案内','log-drop-hint' in media_page and media_page.count('data-media-card=')==media_page.count('log-drop-hint'))
     php(site,"$f=nl_root().'/settings.php'; nl_write_record($f, array_replace(nl_read_record($f) ?? [], ['footer_text'=>'Powered by NagiManga / NagiSwipe']));")

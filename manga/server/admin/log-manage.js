@@ -44,6 +44,9 @@
             const active = bulk.hidden;
             bulk.hidden = !active;
             toggle.setAttribute('aria-expanded', String(active));
+            // While choosing, the same button ends the mode: say so and look different from the delete button.
+            toggle.classList.toggle('log-bulk-on', active);
+            toggle.querySelector('[data-bulk-label]').textContent = active ? '選ぶのをやめる' : 'まとめて削除';
             list.classList.toggle('log-bulk-active', active);
             document.body.classList.toggle('log-bulk-mode', active);
             items.forEach(input => { input.closest('.log-bulk-choice').hidden = !active; if (!active) input.checked = false; });
