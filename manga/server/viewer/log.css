@@ -360,3 +360,16 @@ a.log-list-where { background:color-mix(in srgb,var(--log-accent) 12%,var(--log-
     .log-post-list.is-search .log-list-view,.log-post-list.is-search .log-list-edit,.log-post-list.is-search .log-list-delete { grid-row:4; }
 }
 @media(prefers-reduced-motion:reduce) { .log-search button,.log-site .log-search input { transition:none; } }
+
+/* Site header on phones: only the title row keeps clear of the MENU button; the description uses the full width.
+   Titles of 8+ characters (class from nl_title_fit) shrink to fit one line. */
+.log-site-header > a > span { min-width:0; line-height:1.25; overflow-wrap:anywhere; }
+@media(max-width:900px) {
+    .log-site-header { padding-right:24px; }
+    .log-site-header > a { max-width:calc(100% - 60px); }
+    .log-site-header > a.log-title-long { font-size:clamp(15px, calc((100vw - 24px - 84px - 62px) / var(--log-title-em, 9)), 1.7rem); }
+}
+@media(max-width:480px) {
+    .log-site-header { padding:32px 16px 20px; }
+    .log-site-header > a.log-title-long { font-size:clamp(15px, calc((100vw - 16px - 76px - 62px) / var(--log-title-em, 9)), 1.7rem); }
+}

@@ -135,6 +135,7 @@ function nl_taxonomy_rename(array $input): void
                 if (is_string($bytes)) nm_write_atomic($file, $bytes); else @unlink($file);
                 if (function_exists('opcache_invalidate')) @opcache_invalidate($file, true);
             }
+            nl_search_index_drop();
             throw $e;
         }
     });

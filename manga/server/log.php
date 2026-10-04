@@ -96,7 +96,7 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <?php if (!$single && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
-</head><body class="log-site"><header class="log-site-header"><a href="./"><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
+</head><body class="log-site"><header class="log-site-header"><a href="./"<?= nl_title_fit($s['title']) ?>><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
 <button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
 <?php if ($single): ?><nav aria-label="Breadcrumb" class="log-breadcrumb"><ol><li><a href="./"><?= h($s['title']) ?></a></li><li><?= h($title) ?></li></ol></nav><?php else: ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>

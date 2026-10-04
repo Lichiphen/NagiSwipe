@@ -119,6 +119,18 @@ function nl_search_form(string $q): string
 {
     return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">LOGを検索</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="ことば・#タグで探す" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="検索する"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
 }
+/**
+ * Site titles of 8 characters or more shrink on phones to stay on one line.
+ * The width in em is estimated from the characters (full width 1em, half width about 0.62em, plus letter spacing).
+ */
+function nl_title_fit(string $title): string
+{
+    $chars = mb_strlen($title);
+    if ($chars < 8) return '';
+    $full = mb_strwidth($title) - $chars;
+    $em = ($full + ($chars - $full) * 0.62 + $chars * 0.04) * 1.04;
+    return ' class="log-title-long" style="--log-title-em:' . number_format($em, 2, '.', '') . '"';
+}
 function nl_all_icon(): string
 {
     return '<svg class="log-all-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
@@ -188,10 +200,15 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
         foreach ($p['media'] as $id) $media[$id] = true;
         foreach ($p['manga'] as $id) $works[$id] = true;
     }
-    if ($s['icon'] !== '') $media[$s['icon']] = true;
-    if ($s['og_image'] !== '') $media[$s['og_image']] = true;
-    foreach (array_keys($media) as $id) { $m = nl_load_media((string)$id); if ($m) $last = max($last, (int)$m['updated']); }
-    foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
+    if (($changed = nm_content_updated()) !== null) {
+        $last = max($last, $changed);
+    } else {
+        // Installs that have not saved an image or work since the timestamp existed.
+        if ($s['icon'] !== '') $media[$s['icon']] = true;
+        if ($s['og_image'] !== '') $media[$s['og_image']] = true;
+        foreach (array_keys($media) as $id) { $m = nl_load_media((string)$id); if ($m) $last = max($last, (int)$m['updated']); }
+        foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
+    }
     $blocks = [
         'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . ($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
         'search' => nl_search_form($filter['search']),

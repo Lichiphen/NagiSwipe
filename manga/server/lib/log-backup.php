@@ -151,6 +151,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
                     if ($old) $m['revision'] = max($m['revision'], $old['revision'] + 1);
                     $new = $stage . '/media/' . $id;
                     nl_write_record($new . '/media.php', $m);
+                    nm_touch_content();
                     $dest = nl_media_dir($id); nm_ensure_dir(dirname($dest));
                     $backup = $stage . '/old-media-' . $id;
                     if (is_dir($dest) && !rename($dest, $backup)) throw new RuntimeException('swap failed');

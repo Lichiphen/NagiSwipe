@@ -21,7 +21,16 @@ def run(site,c,csrf,plain,pt):
     def post(data,client=c,token=csrf): return client.post('/admin/index.php',{'csrf':token,**data})
     r=post(base.payload(body='キャッシュの記録\n本文'))
     pid=json.loads(r.text)['id']
-    check('投稿などの変更でLOGのキャッシュを消す',ls(r).get('x-litespeed-purge')=='tag=nagilog')
+    check('公開の投稿は古いページを1回返しながら作り直す（stale）',ls(r).get('x-litespeed-purge')=='stale,tag=nagilog')
+    r=post(base.payload(body='下書きの記録\n本文',status='draft'))
+    check('下書きへの保存はすぐ消す',ls(r).get('x-litespeed-purge')=='tag=nagilog')
+    gone=json.loads(post(base.payload(body='消す記録\n本文')).text)['id']
+    r=post({'do':'log_delete','post_id':gone,'revision':'1'})
+    check('記事の削除はすぐ消す',ls(r).get('x-litespeed-purge')=='tag=nagilog')
+    r=post({'do':'log_preferences','visibility':'public','posts_per_page':'10'})
+    check('公開範囲・表示の保存はすぐ消す',ls(r).get('x-litespeed-purge')=='tag=nagilog')
+    r=post({'do':'log_settings','title':'キャッシュLOG','name':'記録する人','description':'説明'})
+    check('デザイン・サイト名の保存はstaleで消す',ls(r).get('x-litespeed-purge')=='stale,tag=nagilog')
     top=ls(pub.get('/'))
     check('訪問者の公開トップはキャッシュ（1時間・タグ付き）',top.get('x-litespeed-cache-control')=='public,max-age=3600' and top.get('x-litespeed-tag')=='nagilog')
     check('ログインCookieの有無でキャッシュを分ける',top.get('x-litespeed-vary')=='cookie=nm_admin')

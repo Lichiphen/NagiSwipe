@@ -81,7 +81,7 @@ if ($method === 'POST') {
     // Guests: everything except leaving is refused, whatever the form says
     if (nm_is_guest() && ($_POST['do'] ?? '') !== 'logout') nm_guest_refuse();
     // Any change (posts, images, works, settings, restore) can show on the cached LOG pages.
-    nm_lscache_purge();
+    nm_lscache_purge(nm_lscache_soft_action($_POST));
     nm_handle_post($cfg);
     exit;
 }

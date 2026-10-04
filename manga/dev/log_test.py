@@ -133,6 +133,15 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("初めての公開で日時番号を発行", not image_pid.startswith("d") and image_pid != did)
     check("公開後の下書き保存の再送信にも対応", post(pub_input).status == 200)
     check("公開画像を配信", public.get(public_media_url).status == 200)
+    served = public.get(public_media_url); media_etag = served.getheader('ETag') or ''
+    check("公開画像はブラウザーに1日保存させETagと更新日時を付ける", served.getheader('Cache-Control') == 'public, max-age=86400' and re.fullmatch(r'"[0-9a-f]{16}-[0-9]+-[0-9]+"', media_etag) and served.getheader('Last-Modified', '').endswith(' GMT'))
+    same = public.get(public_media_url, headers={"If-None-Match": media_etag})
+    check("変わっていない画像は304で本体を送らない", same.status == 304 and len(same.body) == 0)
+    check("更新日時での確認にも304", public.get(public_media_url, headers={"If-Modified-Since": served.getheader('Last-Modified')}).status == 304)
+    check("違うETagなら画像を送り直す", public.get(public_media_url, headers={"If-None-Match": '"old"'}).status == 200)
+    check("サムネイルは別のETag", (public.get(public_media_url + "&thumb=1").getheader('ETag') or '') not in ('', media_etag))
+    check("管理画面の画像は保存させない", c.get("/admin/" + media["url"]).getheader('Cache-Control') == 'private, no-store')
+    check("画像を保存すると最終更新の時刻を1つ記録", (site / 'data/content-updated.txt').read_text().strip().isdigit())
     check("画像に埋めたPHPを落とす", b"payload" not in public.get(public_media_url).body)
     check("画像入り投稿のOGPを設定", "./?media=" + mid in public.get("/?id=" + image_pid).text)
     check("使用中の画像を削除しない", "公開した画像" in public.get("/?id=" + image_pid).text and post({"do": "log_media_delete", "media": mid, "revision": 1}).status == 303 and public.get(public_media_url).status == 200)
@@ -331,7 +340,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     image_revision = re.search(r'name="revision" value="([0-9]+)"', image_edit.text).group(1)
     post(payload(body="公開した画像\n" + media["tag"], status="draft", post_id=image_pid, revision=image_revision))
     check("公開を取り消すと投稿も画像も404", public.get("/?id=" + image_pid).status == 404 and public.get(public_media_url).status == 404)
-    check("非公開化した画像をキャッシュで公開しない", public.get(public_media_url, headers={"If-None-Match": '"old"'}).status == 404)
+    check("非公開化した画像をキャッシュで公開しない", public.get(public_media_url, headers={"If-None-Match": '"old"'}).status == 404 and public.get(public_media_url, headers={"If-None-Match": media_etag}).status == 404)
     check("保存時に一覧情報を作り直す", index_file.is_file())
     for i in range(21):
         post(payload(body=f'一覧のページ送り {i}'))
@@ -371,6 +380,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     def found(q):
         return public.get('/?q=' + quote(q))
     def main_of(r):
+        if '<main' not in r.text: raise RuntimeError('no main: HTTP %s %s' % (r.status, r.text[:300]))
         return r.text.split('<main', 1)[1].split('</main>', 1)[0]
     r = found('最新の記録')
     check("検索結果を見出しと件数で表示しnoindex", '「最新の記録」の検索結果' in r.text and all(x in r.text for x in newest) and r.getheader('X-Robots-Tag') == 'noindex,follow')
@@ -390,6 +400,20 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("管理画面の検索を公開状態で絞る", keep_draft not in c.get('/admin/index.php?p=log&status=published&q=' + quote('非公開の下書き')).text and keep_draft in c.get('/admin/index.php?p=log&status=draft').text)
     where = c.get('/admin/index.php?p=log&q=' + quote('最新の記録3')).text
     check("管理画面の検索結果に公開一覧の何ページ目かを出す", 'href="../#log-main">トップの1ページ目</a>' in where)
+    search_file = site / 'data/log/search.php'
+    check("保存のたびに検索用ファイルを作る", search_file.is_file() and '一覧のぺーじ送り' in search_file.read_text(encoding='utf-8') and '最新の記録3' in search_file.read_text(encoding='utf-8'))
+    search_file.unlink()
+    check("検索用ファイルがなくても投稿を読んで探す", newest[3] in main_of(found('最新の記録3')))
+    post(payload(body='検索ファイルを作り直す記録'))
+    check("次の保存で検索用ファイルを全件作り直す", search_file.is_file() and '一覧のぺーじ送り 20' in search_file.read_text(encoding='utf-8'))
+    search_file.write_text(search_file.read_text(encoding='utf-8').replace('最新の記録3', '古い本文の記録'), encoding='utf-8')
+    check("検索は検索用ファイルの本文で探す", newest[3] in main_of(found('古い本文の記録')))
+    search_file.write_text(re.sub(r"'u' => [0-9]+,(\s*'t' => '[^']*古い本文の記録)", r"'u' => 1,\1", search_file.read_text(encoding='utf-8')), encoding='utf-8')
+    check("更新日時が合わない古い項目は使わず投稿を読む", newest[3] not in main_of(found('古い本文の記録')) and newest[3] in main_of(found('最新の記録3')))
+    search_file.write_text('<?php return [', encoding='utf-8')
+    check("壊れた検索用ファイルでもエラーにせず探す", newest[3] in main_of(found('最新の記録3')))
+    post(payload(body='壊れた検索ファイルのあと'))
+    check("壊れた検索用ファイルは次の保存で作り直す", '壊れた検索ふぁいるのあと' in search_file.read_text(encoding='utf-8'))
     monthly = public.get('/?month=' + today[:7]).text
     check("カレンダーを月で送れる", today[:7] + 'の記録' in monthly and '前の月' in monthly and '次の月' in monthly)
     check("記録がない日も表示できる", 'この日の記録はありません' in public.get('/?date=2025-01-02').text)

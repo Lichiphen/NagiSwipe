@@ -322,10 +322,21 @@ function nm_lscache_header(bool $public): void
         header_remove('X-LiteSpeed-Tag');
     }
 }
-/** Drop every cached LOG page (after posts, images, settings or works change). */
-function nm_lscache_purge(): void
+/**
+ * Drop every cached LOG page (after posts, images, settings or works change).
+ * $stale: LiteSpeed serves the old copy once more while it builds the new one, so the first visitor
+ * after a post does not wait. Never for removals or visibility changes: those must disappear at once.
+ */
+function nm_lscache_purge(bool $stale = false): void
 {
-    if (!headers_sent() && nm_lscache_active()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
+    if (!headers_sent() && nm_lscache_active()) header('X-LiteSpeed-Purge: ' . ($stale ? 'stale,' : '') . 'tag=' . NM_LSCACHE_TAG);
+}
+/** Admin actions that only add or edit visible content (a published post, design, order, manga works). */
+function nm_lscache_soft_action(array $post): bool
+{
+    $do = (string)($post['do'] ?? '');
+    if ($do === 'log_save') return ($post['status'] ?? '') === 'published';
+    return in_array($do, ['log_preview', 'log_upload', 'log_media_alt', 'log_settings', 'log_sidebar_settings', 'log_footer_settings', 'log_taxonomy_order', 'log_taxonomy_rename', 'log_backup', 'backup', 'create', 'update', 'upload', 'upload_light', 'sort_name', 'order'], true);
 }
 
 /** Content-Type for a stored page or LOG image, by its extension. */
@@ -509,6 +520,21 @@ function nm_save_work(array $w): void
 {
     $w['updated'] = time();
     nm_write_json(nm_work_dir($w['id']) . '/work.json', $w);
+    nm_touch_content();
+}
+
+/**
+ * One timestamp for "images or works changed", so the LOG's 最終更新日 does not open every
+ * image and work file on each page. Missing on older installs until the next change.
+ */
+function nm_touch_content(): void
+{
+    try { nm_write_atomic(NM_DATA . '/content-updated.txt', (string)time()); } catch (Throwable) {}
+}
+function nm_content_updated(): ?int
+{
+    $raw = @file_get_contents(NM_DATA . '/content-updated.txt');
+    return is_string($raw) && preg_match('/\A[0-9]{1,12}\z/', trim($raw)) ? (int)trim($raw) : null;
 }
 
 /** @return array<int, array> newest first */

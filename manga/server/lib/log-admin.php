@@ -89,6 +89,7 @@ function nl_handle_post(string $do): never
                     $m['revision']++;
                     $m['updated'] = time();
                     nl_write_record(nl_media_dir($m['id']) . '/media.php', $m);
+                    nm_touch_content();
                 });
                 nm_flash('ok', '画像の説明を保存しました');
                 nm_redirect('p=log_media');

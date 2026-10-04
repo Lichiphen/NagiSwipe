@@ -18,6 +18,8 @@ require_once __DIR__ . '/log-card.php';
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
 function nl_root(): string { return NM_DATA . '/log'; }
+/** Browser cache for public LOG images (seconds). */
+const NL_MEDIA_MAX_AGE = 86400;
 function nl_post_file(string $id): string
 {
     if (!nl_valid_post($id)) throw new InvalidArgumentException('bad post');
@@ -93,15 +95,21 @@ function nl_update_index(?array $post, string $remove = ''): void
     foreach (nl_post_summaries(false) as $s) if ($s['id'] !== $remove) $summaries[$s['id']] = $s;
     if ($post) $summaries[$post['id']] = nl_post_summary($post);
     nl_write_record(nl_root() . '/index.php', ['schema' => NL_INDEX_SCHEMA, 'posts' => $summaries]);
+    $entries = nl_search_index_read();
+    if ($entries === null) { nl_search_index_rebuild(); return; }
+    $entries = array_intersect_key($entries, $summaries);
+    if ($post) $entries[$post['id']] = nl_search_entry($post);
+    nl_search_index_write($entries);
 }
 function nl_rebuild_index(): void
 {
-    $summaries = [];
+    $summaries = []; $entries = [];
     foreach (glob(nl_root() . '/posts/*/*.php') ?: [] as $file) {
         $p = nl_load_post(basename($file, '.php'));
-        if ($p) $summaries[$p['id']] = nl_post_summary($p);
+        if ($p) { $summaries[$p['id']] = nl_post_summary($p); $entries[$p['id']] = nl_search_entry($p); }
     }
     nl_write_record(nl_root() . '/index.php', ['schema' => NL_INDEX_SCHEMA, 'posts' => $summaries]);
+    nl_search_index_write($entries);
 }
 function nl_list_media(): array
 {
@@ -181,6 +189,7 @@ function nl_delete_posts(mixed $items): array
             }
             if (is_string($oldIndex)) nm_write_atomic($indexFile, $oldIndex); else @unlink($indexFile);
             if (function_exists('opcache_invalidate')) @opcache_invalidate($indexFile, true);
+            nl_search_index_drop();
             if (!nl_prune_empty_dir($stage)) throw new RuntimeException('delete rollback cleanup failed', 0, $e);
             throw $e;
         }
@@ -292,6 +301,7 @@ function nl_save_post(array $input): array
             else @unlink(nl_post_file($id));
             if (is_string($oldIndex)) nm_write_atomic($indexFile, $oldIndex); else @unlink($indexFile);
             if (function_exists('opcache_invalidate')) @opcache_invalidate($indexFile, true);
+            nl_search_index_drop();
             if (is_string($oldTaxBytes)) nm_write_atomic($taxFile, $oldTaxBytes); else @unlink($taxFile);
             if (function_exists('opcache_invalidate')) @opcache_invalidate($taxFile, true);
             throw $e;
@@ -324,6 +334,7 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         $m = array_merge($page, ['id' => $id, 'alt' => $old['alt'] ?? $name, 'created' => $old['created'] ?? time(), 'updated' => time(), 'revision' => (int)($old['revision'] ?? 0) + 1]);
         try { nl_write_record($dir . '/media.php', $m); }
         catch (Throwable $e) { nm_delete_page_files($dir, $page['f']); throw $e; }
+        nm_touch_content();
         if ($old) nm_delete_page_files($dir, $old['f']);
         nm_log($old ? 'log_image_replaced' : 'log_image_uploaded', $id);
         return $m;
@@ -364,8 +375,24 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
     if (!is_file($file)) nm_not_found();
     header('Content-Type: ' . nm_image_mime($m['f']));
     header('X-Content-Type-Options: nosniff');
-    header('Cache-Control: ' . ($admin ? 'private, no-store' : 'public, max-age=0, must-revalidate'));
     header('Vary: Cookie');
+    if ($admin) {
+        header('Cache-Control: private, no-store');
+    } else {
+        // URLs carry &v=<revision>, so a replaced image gets a new URL. Browsers keep the bytes for a day
+        // and then ask again; the visibility check above still runs first, so unpublished images answer 404.
+        $mtime = (int)filemtime($file);
+        $etag = '"' . $id . '-' . $m['revision'] . ($thumb ? 't' : '') . '-' . $mtime . '"';
+        header('Cache-Control: public, max-age=' . NL_MEDIA_MAX_AGE);
+        header('ETag: ' . $etag);
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $mtime) . ' GMT');
+        $match = (string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '');
+        $since = strtotime((string)($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? ''));
+        if ($match !== '' ? in_array($etag, array_map('trim', explode(',', $match)), true) : ($since !== false && $since >= $mtime)) {
+            http_response_code(304);
+            exit;
+        }
+    }
     header('Content-Length: ' . filesize($file));
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') readfile($file);
     exit;
@@ -412,20 +439,58 @@ function nl_search_terms(string $q): array
 /** Readable text of a post: the body without image/manga tags (manga titles stay), plus its category names. */
 function nl_search_text(array $p, array $categories): string
 {
-    $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], (string)$p['body']);
-    $text = str_replace('**', '', $text);
+    $text = nl_search_body($p);
     foreach ($p['categories'] ?? [] as $id) if (isset($categories[$id])) $text .= "\n" . $categories[$id];
     return $text;
+}
+function nl_search_body(array $p): string
+{
+    return str_replace('**', '', (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], (string)$p['body']));
+}
+/**
+ * Derived search file: folded body text per post, read only when someone searches.
+ * An entry counts only while its "updated" equals the post summary's; otherwise the post file is read.
+ */
+function nl_search_file(): string { return nl_root() . '/search.php'; }
+function nl_search_entry(array $p): array { return ['u' => (int)$p['updated'], 't' => nl_search_norm(nl_search_body($p))]; }
+function nl_search_index_write(array $entries): void
+{
+    try { nl_write_record(nl_search_file(), ['schema' => 1, 'posts' => $entries]); }
+    catch (Throwable) { nl_search_index_drop(); }
+}
+/** Entries of the search file, or null when it is missing or unreadable (it is only a shortcut). */
+function nl_search_index_read(): ?array
+{
+    try { $record = nl_read_record(nl_search_file()); } catch (Throwable) { return null; }
+    return ($record['schema'] ?? 0) === 1 && is_array($record['posts'] ?? null) ? $record['posts'] : null;
+}
+function nl_search_index_rebuild(): void
+{
+    $entries = [];
+    foreach (nl_post_summaries(false) as $s) if ($p = nl_load_post($s['id'])) $entries[$p['id']] = nl_search_entry($p);
+    nl_search_index_write($entries);
+}
+function nl_search_index_drop(): void
+{
+    @unlink(nl_search_file());
+    if (function_exists('opcache_invalidate')) @opcache_invalidate(nl_search_file(), true);
 }
 /** Summaries whose post contains every term. */
 function nl_search_posts(array $summaries, array $terms): array
 {
     if (!$terms) return $summaries;
-    $categories = nl_taxonomy()['categories'];
-    return array_values(array_filter($summaries, static function ($s) use ($terms, $categories) {
-        $p = nl_load_post($s['id']);
-        if (!$p) return false;
-        $hay = nl_search_norm(nl_search_text($p, $categories));
+    $categories = array_map('nl_search_norm', nl_taxonomy()['categories']);
+    $index = nl_search_index_read() ?? [];
+    return array_values(array_filter($summaries, static function ($s) use ($terms, $categories, $index) {
+        $e = $index[$s['id']] ?? null;
+        if (is_array($e) && ($e['u'] ?? null) === (int)$s['updated'] && is_string($e['t'] ?? null)) {
+            $hay = $e['t'];
+        } else {
+            $p = nl_load_post($s['id']);
+            if (!$p) return false;
+            $hay = nl_search_norm(nl_search_body($p));
+        }
+        foreach ($s['categories'] ?? [] as $id) if (isset($categories[$id])) $hay .= "\n" . $categories[$id];
         foreach ($terms as $t) if (!str_contains($hay, $t)) return false;
         return true;
     }));
