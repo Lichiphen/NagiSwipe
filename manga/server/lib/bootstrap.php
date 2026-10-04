@@ -74,44 +74,58 @@ function nm_not_found(): never
         $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/404.php'))), '/');
         if (str_ends_with($dir, '/admin')) $dir = substr($dir, 0, -6);
         $base = $dir === '.' ? '' : $dir;
-        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void">' . nm_blackhole_scene() . '<main><p class="nm-error-number">404</p><h1>このページは、宇宙の彼方へ。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る <span aria-hidden="true">↗</span></a><small>Not Found</small></main></body></html>';
+        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void">' . nm_blackhole_scene() . '<main><p class="nm-error-number">404</p><h1>このページは、ブラックホールの中へ。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る <span aria-hidden="true">↗</span></a><small>Not Found</small></main></body></html>';
         exit;
     }
     echo 'Not Found';
     exit;
 }
 
-/** Self-contained SVG: layered light, a warped disk, and an unlit event horizon. */
+/** Self-contained SVG: the inside of the hole, dozens of beige ribbons rippling in warm light. */
 function nm_blackhole_scene(): string
 {
     return <<<'HTML'
-<div class="nm-universe" aria-hidden="true"><div class="nm-stars nm-stars-near"></div><div class="nm-stars nm-stars-far"></div><div class="nm-nebula"></div>
-<svg class="nm-blackhole" viewBox="0 0 1600 900" focusable="false" xmlns="http://www.w3.org/2000/svg">
-<defs>
-<radialGradient id="nm-aura"><stop stop-color="#ffd2a1" stop-opacity=".46"/><stop offset=".35" stop-color="#d47852" stop-opacity=".2"/><stop offset=".7" stop-color="#654399" stop-opacity=".08"/><stop offset="1" stop-color="#12091b" stop-opacity="0"/></radialGradient>
-<linearGradient id="nm-disk"><stop stop-color="#62334b" stop-opacity="0"/><stop offset=".16" stop-color="#cf7258"/><stop offset=".4" stop-color="#fff0c9"/><stop offset=".51" stop-color="#fffef1"/><stop offset=".65" stop-color="#ffd996"/><stop offset=".86" stop-color="#a54d42"/><stop offset="1" stop-color="#5d2a44" stop-opacity="0"/></linearGradient>
-<linearGradient id="nm-lens" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffce6"/><stop offset=".36" stop-color="#ffce83"/><stop offset="1" stop-color="#bc5d45" stop-opacity=".4"/></linearGradient>
-<radialGradient id="nm-core-light"><stop offset=".78" stop-color="#020206"/><stop offset=".88" stop-color="#030307"/><stop offset=".935" stop-color="#714635"/><stop offset=".961" stop-color="#fff1be"/><stop offset=".98" stop-color="#ad6044"/><stop offset="1" stop-color="#3a1723" stop-opacity="0"/></radialGradient>
-<filter id="nm-blur" x="-50%" y="-70%" width="200%" height="240%"><feGaussianBlur stdDeviation="19"/></filter><filter id="nm-glow" x="-30%" y="-70%" width="160%" height="240%"><feGaussianBlur stdDeviation="5"/></filter><clipPath id="nm-front"><path d="M0 400H1600V900H0Z"/></clipPath>
-</defs>
-<ellipse cx="800" cy="410" rx="670" ry="370" fill="url(#nm-aura)"/>
-<g class="nm-disk-glow" fill="none" stroke="url(#nm-disk)" filter="url(#nm-blur)"><ellipse cx="800" cy="413" rx="545" ry="51" stroke-width="29"/><path d="M566 415C586 130 1014 130 1034 415" stroke-width="38"/></g>
-<g class="nm-lensing" fill="none" stroke="url(#nm-lens)">
-<path d="M569 411C596 133 1004 133 1031 411" stroke-width="14" opacity=".45" filter="url(#nm-glow)"/><path d="M576 406C605 153 995 153 1024 406" stroke-width="7" opacity=".7"/>
-<path d="M586 407C621 183 979 183 1014 407" stroke-width="3"/><path d="M596 408C635 206 965 206 1004 408" stroke-width="1.4" opacity=".7"/><path d="M610 407C647 236 953 236 990 407" stroke-width="1.2" opacity=".5"/>
-<path d="M576 423C603 628 997 628 1024 423" stroke-width="4" opacity=".26"/>
+<div class="nm-universe" aria-hidden="true">
+<svg class="nm-blackhole" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" focusable="false" xmlns="http://www.w3.org/2000/svg">
+<defs><radialGradient id="nm-inner-light" cx=".5" cy=".42" r=".7"><stop stop-color="#fffaf0"/><stop offset=".45" stop-color="#f1e3cc"/><stop offset="1" stop-color="#c9ab86"/></radialGradient><filter id="nm-silk" x="-5%" y="-30%" width="110%" height="160%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>
+<rect width="1600" height="900" fill="url(#nm-inner-light)"/>
+<g class="nm-waves" fill="none" stroke-linecap="round" filter="url(#nm-silk)">
+<path class="nm-wave nm-l500" d="M-500 56Q-375 37 -250 56T0 56T250 56T500 56T750 56T1000 56T1250 56T1500 56T1750 56T2000 56T2250 56T2500 56" stroke="#c8a983" stroke-width="10" opacity="0.54"/>
+<path class="nm-wave nm-l800 nm-wave-rev" d="M-800 78Q-600 55 -400 78T0 78T400 78T800 78T1200 78T1600 78T2000 78T2400 78T2800 78T3200 78" stroke="#dfc6a2" stroke-width="16" opacity="0.77"/>
+<path class="nm-wave nm-l640" d="M-640 99Q-480 62 -320 99T0 99T320 99T640 99T960 99T1280 99T1600 99T1920 99T2240 99T2560 99T2880 99" stroke="#c8a983" stroke-width="16" opacity="0.49"/>
+<path class="nm-wave nm-l400" d="M-400 128Q-300 108 -200 128T0 128T200 128T400 128T600 128T800 128T1000 128T1200 128T1400 128T1600 128T1800 128T2000 128T2200 128T2400 128" stroke="#d4b791" stroke-width="24" opacity="0.78"/>
+<path class="nm-wave nm-l400 nm-wave-rev" d="M-400 147Q-300 113 -200 147T0 147T200 147T400 147T600 147T800 147T1000 147T1200 147T1400 147T1600 147T1800 147T2000 147T2200 147T2400 147" stroke="#efdfc6" stroke-width="48" opacity="0.78"/>
+<path class="nm-wave nm-l500" d="M-500 184Q-375 170 -250 184T0 184T250 184T500 184T750 184T1000 184T1250 184T1500 184T1750 184T2000 184T2250 184T2500 184" stroke="#dfc6a2" stroke-width="16" opacity="0.41"/>
+<path class="nm-wave nm-l500" d="M-500 211Q-375 187 -250 211T0 211T250 211T500 211T750 211T1000 211T1250 211T1500 211T1750 211T2000 211T2250 211T2500 211" stroke="#ad8b6a" stroke-width="34" opacity="0.36"/>
+<path class="nm-wave nm-l400 nm-wave-rev" d="M-400 221Q-300 189 -200 221T0 221T200 221T400 221T600 221T800 221T1000 221T1200 221T1400 221T1600 221T1800 221T2000 221T2200 221T2400 221" stroke="#c8a983" stroke-width="10" opacity="0.37"/>
+<path class="nm-wave nm-l640" d="M-640 252Q-480 227 -320 252T0 252T320 252T640 252T960 252T1280 252T1600 252T1920 252T2240 252T2560 252T2880 252" stroke="#ad8b6a" stroke-width="16" opacity="0.43"/>
+<path class="nm-wave nm-l400" d="M-400 277Q-300 240 -200 277T0 277T200 277T400 277T600 277T800 277T1000 277T1200 277T1400 277T1600 277T1800 277T2000 277T2200 277T2400 277" stroke="#c8a983" stroke-width="48" opacity="0.63"/>
+<path class="nm-wave nm-l500 nm-wave-rev" d="M-500 287Q-375 259 -250 287T0 287T250 287T500 287T750 287T1000 287T1250 287T1500 287T1750 287T2000 287T2250 287T2500 287" stroke="#e2cdb0" stroke-width="48" opacity="0.37"/>
+<path class="nm-wave nm-l640" d="M-640 324Q-480 288 -320 324T0 324T320 324T640 324T960 324T1280 324T1600 324T1920 324T2240 324T2560 324T2880 324" stroke="#bb9a76" stroke-width="34" opacity="0.59"/>
+<path class="nm-wave nm-l640" d="M-640 347Q-480 303 -320 347T0 347T320 347T640 347T960 347T1280 347T1600 347T1920 347T2240 347T2560 347T2880 347" stroke="#dfc6a2" stroke-width="48" opacity="0.73"/>
+<path class="nm-wave nm-l400 nm-wave-rev" d="M-400 374Q-300 324 -200 374T0 374T200 374T400 374T600 374T800 374T1000 374T1200 374T1400 374T1600 374T1800 374T2000 374T2200 374T2400 374" stroke="#efdfc6" stroke-width="6" opacity="0.50"/>
+<path class="nm-wave nm-l640" d="M-640 384Q-480 363 -320 384T0 384T320 384T640 384T960 384T1280 384T1600 384T1920 384T2240 384T2560 384T2880 384" stroke="#e8d3b4" stroke-width="24" opacity="0.79"/>
+<path class="nm-wave nm-l400" d="M-400 414Q-300 377 -200 414T0 414T200 414T400 414T600 414T800 414T1000 414T1200 414T1400 414T1600 414T1800 414T2000 414T2200 414T2400 414" stroke="#dfc6a2" stroke-width="24" opacity="0.71"/>
+<path class="nm-wave nm-l500 nm-wave-rev" d="M-500 428Q-375 380 -250 428T0 428T250 428T500 428T750 428T1000 428T1250 428T1500 428T1750 428T2000 428T2250 428T2500 428" stroke="#e2cdb0" stroke-width="16" opacity="0.45"/>
+<path class="nm-wave nm-l500" d="M-500 453Q-375 428 -250 453T0 453T250 453T500 453T750 453T1000 453T1250 453T1500 453T1750 453T2000 453T2250 453T2500 453" stroke="#f6ecdc" stroke-width="16" opacity="0.79"/>
+<path class="nm-wave nm-l400" d="M-400 477Q-300 436 -200 477T0 477T200 477T400 477T600 477T800 477T1000 477T1200 477T1400 477T1600 477T1800 477T2000 477T2200 477T2400 477" stroke="#dfc6a2" stroke-width="24" opacity="0.77"/>
+<path class="nm-wave nm-l500 nm-wave-rev" d="M-500 503Q-375 464 -250 503T0 503T250 503T500 503T750 503T1000 503T1250 503T1500 503T1750 503T2000 503T2250 503T2500 503" stroke="#e8d3b4" stroke-width="24" opacity="0.52"/>
+<path class="nm-wave nm-l640" d="M-640 540Q-480 500 -320 540T0 540T320 540T640 540T960 540T1280 540T1600 540T1920 540T2240 540T2560 540T2880 540" stroke="#f6ecdc" stroke-width="34" opacity="0.67"/>
+<path class="nm-wave nm-l800" d="M-800 544Q-600 513 -400 544T0 544T400 544T800 544T1200 544T1600 544T2000 544T2400 544T2800 544T3200 544" stroke="#e2cdb0" stroke-width="24" opacity="0.38"/>
+<path class="nm-wave nm-l640 nm-wave-rev" d="M-640 580Q-480 544 -320 580T0 580T320 580T640 580T960 580T1280 580T1600 580T1920 580T2240 580T2560 580T2880 580" stroke="#d4b791" stroke-width="34" opacity="0.50"/>
+<path class="nm-wave nm-l800" d="M-800 609Q-600 573 -400 609T0 609T400 609T800 609T1200 609T1600 609T2000 609T2400 609T2800 609T3200 609" stroke="#e2cdb0" stroke-width="16" opacity="0.77"/>
+<path class="nm-wave nm-l640" d="M-640 623Q-480 558 -320 623T0 623T320 623T640 623T960 623T1280 623T1600 623T1920 623T2240 623T2560 623T2880 623" stroke="#efdfc6" stroke-width="6" opacity="0.78"/>
+<path class="nm-wave nm-l400 nm-wave-rev" d="M-400 639Q-300 572 -200 639T0 639T200 639T400 639T600 639T800 639T1000 639T1200 639T1400 639T1600 639T1800 639T2000 639T2200 639T2400 639" stroke="#c8a983" stroke-width="16" opacity="0.50"/>
+<path class="nm-wave nm-l400" d="M-400 680Q-300 634 -200 680T0 680T200 680T400 680T600 680T800 680T1000 680T1200 680T1400 680T1600 680T1800 680T2000 680T2200 680T2400 680" stroke="#efdfc6" stroke-width="10" opacity="0.50"/>
+<path class="nm-wave nm-l640" d="M-640 689Q-480 631 -320 689T0 689T320 689T640 689T960 689T1280 689T1600 689T1920 689T2240 689T2560 689T2880 689" stroke="#d4b791" stroke-width="6" opacity="0.60"/>
+<path class="nm-wave nm-l800 nm-wave-rev" d="M-800 713Q-600 660 -400 713T0 713T400 713T800 713T1200 713T1600 713T2000 713T2400 713T2800 713T3200 713" stroke="#f6ecdc" stroke-width="16" opacity="0.43"/>
+<path class="nm-wave nm-l500" d="M-500 751Q-375 711 -250 751T0 751T250 751T500 751T750 751T1000 751T1250 751T1500 751T1750 751T2000 751T2250 751T2500 751" stroke="#efdfc6" stroke-width="10" opacity="0.73"/>
+<path class="nm-wave nm-l500" d="M-500 758Q-375 711 -250 758T0 758T250 758T500 758T750 758T1000 758T1250 758T1500 758T1750 758T2000 758T2250 758T2500 758" stroke="#e8d3b4" stroke-width="48" opacity="0.60"/>
+<path class="nm-wave nm-l400 nm-wave-rev" d="M-400 791Q-300 760 -200 791T0 791T200 791T400 791T600 791T800 791T1000 791T1200 791T1400 791T1600 791T1800 791T2000 791T2200 791T2400 791" stroke="#dfc6a2" stroke-width="6" opacity="0.69"/>
+<path class="nm-wave nm-l500" d="M-500 810Q-375 739 -250 810T0 810T250 810T500 810T750 810T1000 810T1250 810T1500 810T1750 810T2000 810T2250 810T2500 810" stroke="#f6ecdc" stroke-width="10" opacity="0.50"/>
+<path class="nm-wave nm-l400" d="M-400 828Q-300 753 -200 828T0 828T200 828T400 828T600 828T800 828T1000 828T1200 828T1400 828T1600 828T1800 828T2000 828T2200 828T2400 828" stroke="#e8d3b4" stroke-width="6" opacity="0.39"/>
 </g>
-<g fill="none" stroke="url(#nm-disk)">
-<ellipse cx="800" cy="413" rx="589" ry="57" stroke-width="2" opacity=".24"/><ellipse cx="800" cy="413" rx="564" ry="51" stroke-width="2" opacity=".36"/><ellipse cx="800" cy="413" rx="530" ry="45" stroke-width="3" opacity=".65"/>
-<ellipse cx="800" cy="413" rx="507" ry="40" stroke-width="4" opacity=".85"/><ellipse cx="800" cy="413" rx="473" ry="35" stroke-width="5"/><ellipse cx="800" cy="413" rx="441" ry="30" stroke-width="6"/><ellipse cx="800" cy="413" rx="409" ry="26" stroke-width="3"/>
-</g>
-<circle cx="800" cy="408" r="155" fill="url(#nm-core-light)"/><circle cx="800" cy="408" r="141" fill="#010105"/><circle cx="800" cy="408" r="146" fill="none" stroke="#ffde9b" stroke-width="1.5" opacity=".84"/>
-<g class="nm-front-disk" clip-path="url(#nm-front)" fill="none" stroke="url(#nm-disk)">
-<ellipse cx="800" cy="413" rx="535" ry="50" stroke-width="20" opacity=".7" filter="url(#nm-glow)"/><ellipse cx="800" cy="413" rx="540" ry="53" stroke-width="1" opacity=".5"/>
-<ellipse cx="800" cy="413" rx="512" ry="48" stroke-width="2"/><ellipse cx="800" cy="413" rx="486" ry="43" stroke-width="3"/><ellipse cx="800" cy="413" rx="458" ry="39" stroke-width="4"/><ellipse cx="800" cy="413" rx="428" ry="34" stroke-width="5"/>
-<ellipse cx="800" cy="413" rx="400" ry="29" stroke-width="2"/><ellipse cx="800" cy="413" rx="370" ry="26" stroke-width="1" opacity=".7"/>
-</g>
-<g fill="#fff3dc"><circle cx="248" cy="202" r="1.4"/><circle cx="1345" cy="119" r="1.2"/><circle cx="1261" cy="657" r="1.6"/><circle cx="467" cy="673" r="1.1"/><circle cx="1034" cy="77" r="1"/></g>
+<ellipse class="nm-inner-glow" cx="800" cy="380" rx="520" ry="260" fill="#fffaf2"/>
 </svg><div class="nm-space-vignette"></div></div>
 HTML;
 }

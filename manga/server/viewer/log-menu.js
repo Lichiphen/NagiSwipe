@@ -27,7 +27,7 @@
     menu.querySelector('.log-menu-close').addEventListener('click', () => setOpen(false));
     backdrop.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', event => {
-        if (!opened) return;
+        if (!opened || document.querySelector('dialog[open]')) return;
         if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
         if (event.key === 'Tab') {
             const items = [...menu.querySelectorAll('a[href],button:not([disabled])')].filter(el => el.getClientRects().length);

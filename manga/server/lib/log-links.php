@@ -44,20 +44,23 @@ function nl_links_validate(mixed $links): array
             || !isset(NL_LINK_ICONS[$link['icon']]) || !mb_check_encoding($link['label'], 'UTF-8')
             || mb_strlen($link['label']) > 100 || preg_match('/[\x00-\x1F\x7F]/', $link['label'])) throw new UnexpectedValueException('リンクの表示名は100文字以内で、アイコンは一覧から選んでください');
         $label = trim($link['label']); $url = nl_link_url($link['url']);
-        if ($label === '' || $url === '') throw new UnexpectedValueException('リンクの表示名とURLを入力してください。URLはhttp・https・mailto:か、このサイト内のパスを使います');
+        if ($label === '' || $url === '') throw new UnexpectedValueException('リンクの表示名とURLを入力してください。URLはhttp・https・メールアドレスか、このサイト内のパスを使います');
         $out[] = ['label' => $label, 'url' => $url, 'icon' => $link['icon']];
     }
     return $out;
 }
-/** Link buttons also accept one plain mail address (no ?subject= or other headers). */
+/** Link buttons also accept one mail address, typed bare or as mailto: (no ?subject= or other headers). */
 function nl_link_url(string $url): string
 {
     $url = trim($url);
-    if (preg_match('/\Amailto:(.+)\z/i', $url, $m)) {
-        $address = rawurldecode($m[1]);
-        return strlen($address) <= 254 && filter_var($address, FILTER_VALIDATE_EMAIL) ? 'mailto:' . $address : '';
-    }
+    $address = preg_match('/\Amailto:(.+)\z/i', $url, $m) ? rawurldecode($m[1]) : (str_contains($url, '@') && !str_contains($url, '/') ? $url : null);
+    if ($address !== null) return strlen($address) <= 254 && filter_var($address, FILTER_VALIDATE_EMAIL) ? 'mailto:' . $address : '';
     return nl_sidebar_url($url);
+}
+/** The editor shows a mail link as the plain address the owner typed. */
+function nl_link_edit_url(string $url): string
+{
+    return str_starts_with($url, 'mailto:') ? substr($url, 7) : $url;
 }
 /** Inline only our own bundled SVGs; user HTML cannot supply SVG markup. */
 function nl_link_icon(string $icon): string
@@ -79,7 +82,7 @@ function nl_links_html(array $item, array $s): string
     foreach ($item['links'] as $link) {
         $url = nl_link_url($link['url']);
         if ($url === '') continue;
-        $html .= '<a class="log-link-button" href="' . h($url) . '"' . (str_starts_with($url, 'mailto:') ? '' : ' target="_blank" rel="noopener noreferrer"') . '>' . nl_link_icon($link['icon']) . '<span>' . h($link['label']) . '</span></a>';
+        $html .= '<a class="log-link-button" href="' . h($url) . '"' . (str_starts_with($url, 'mailto:') ? ' data-mail="' . h(substr($url, 7)) . '"' : ' target="_blank" rel="noopener noreferrer"') . '>' . nl_link_icon($link['icon']) . '<span>' . h($link['label']) . '</span></a>';
     }
     return $html . '</nav></section>';
 }
@@ -89,7 +92,7 @@ function nl_link_edit_row(array $link): string
     foreach (NL_LINK_ICONS as $key => $label) $options .= '<option value="' . $key . '"' . ($link['icon'] === $key ? ' selected' : '') . '>' . h($label) . '</option>';
     return '<div class="log-link-edit-row" data-link-item><span class="log-link-edit-preview" data-link-preview>' . nl_link_icon($link['icon']) . '</span>'
         . '<label class="log-link-edit-label">表示名<input data-link-label maxlength="100" required placeholder="例：X" value="' . h($link['label']) . '"></label>'
-        . '<label class="log-link-edit-url">URL<input data-link-url maxlength="2000" required placeholder="https://example.com/your-profile または mailto:you@example.com" value="' . h($link['url']) . '"></label>'
+        . '<label class="log-link-edit-url">URL・メール<input data-link-url maxlength="2000" required placeholder="https://example.com/your-profile または you@example.com" value="' . h(nl_link_edit_url($link['url'])) . '"></label>'
         . '<label class="log-link-edit-icon">アイコン<select data-link-icon>' . $options . '</select></label><div class="log-link-edit-actions">'
         . '<button class="btn log-icon-btn" type="button" data-link-step="-1" aria-label="リンクを上へ移動">' . nl_sidebar_ui_icon('up') . '</button><button class="btn log-icon-btn" type="button" data-link-step="1" aria-label="リンクを下へ移動">' . nl_sidebar_ui_icon('down') . '</button>'
         . '<button class="btn log-icon-btn danger" type="button" data-link-remove aria-label="このリンクを削除">' . nl_sidebar_ui_icon('remove') . '</button></div></div>';
@@ -104,6 +107,6 @@ function nl_links_editor(array $item): string
         . '<label>メッセージ（リンクの上に表示・任意）<textarea data-links-message rows="3" maxlength="' . NL_LINKS_MESSAGE_MAX . '" placeholder="例：イラストの依頼はDMへどうぞ。">' . h($item['message'] ?? '') . '</textarea></label>'
         . '<p class="note">サイトの紹介文とは別に、訪問者へ伝えたいことを書けます。' . NL_LINKS_MESSAGE_MAX . '文字まで、改行できます。HTMLは使いません。空欄なら表示しません。</p></fieldset>'
         . '<fieldset class="log-links-list"><legend>リンク</legend><div data-link-items>' . $rows . '</div><button class="btn" type="button" data-link-add>' . nl_sidebar_ui_icon('add') . 'リンクを追加</button>'
-        . '<p class="note">初期のURLは各サービスのトップページです。自分のプロフィールURLに書き換えて使えます。メールは「mailto:you@example.com」の形で入力し、アイコンに「メール」を選びます。アイコンは用途を表すオリジナルの線画で、公式ロゴは使っていません。</p></fieldset>'
+        . '<p class="note">初期のURLは各サービスのトップページです。自分のプロフィールURLに書き換えて使えます。メールは「you@example.com」のようにアドレスだけを入力し、アイコンに「メール」を選びます。訪問者が押すと、アドレスのコピーかメールアプリでの送信を選べます。アイコンは用途を表すオリジナルの線画で、公式ロゴは使っていません。</p></fieldset>'
         . '<template data-link-template>' . nl_link_edit_row(['label' => '', 'url' => '', 'icon' => 'link']) . '</template><template data-link-icon-set>' . $icons . '</template></div></details>';
 }

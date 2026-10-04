@@ -160,7 +160,7 @@
                     block.querySelector('[data-links-message]').value = item.message;
                     item.links.forEach((link, i) => {
                         list.children[i].querySelector('[data-link-label]').value = link.label;
-                        list.children[i].querySelector('[data-link-url]').value = link.url;
+                        list.children[i].querySelector('[data-link-url]').value = link.url.replace(/^mailto:/, '');
                         list.children[i].querySelector('[data-link-icon]').value = link.icon;
                     });
                 }

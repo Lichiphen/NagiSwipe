@@ -99,8 +99,10 @@ def run(site,other_site,c,csrf,other,ot):
     check('任意リンクの追加・削除・順番・用途アイコンを保存',side(site)['items'][0]['links']==edited[0]['links'] and view.count('class="log-link-button"')==2 and view.index('My site')<view.index('コード'))
     check('表示名・URLをエスケープし別窓を保護','&lt;b&gt;My site&lt;/b&gt;' in view and 'a=1&amp;b=2' in view and 'target="_blank" rel="noopener noreferrer"' in view)
     mail=copy.deepcopy(edited); mail[0]['links'].append({'label':'メール','url':'  mailto:me%40example.com ','icon':'mail'}); ok_sidebar(mail); mview=block(pub.get('/').text,'links')
-    check('メールアイコンとmailtoリンクを別タブにせず表示',side(site)['items'][0]['links'][-1]=={'label':'メール','url':'mailto:me@example.com','icon':'mail'} and '<a class="log-link-button" href="mailto:me@example.com">' in mview and 'm4.5 7.5 6.3 5' in mview and pub.get('/viewer/link-icons/mail.svg').status==200)
-    for name,url in [('mailtoの件名',"mailto:me@example.com?subject=x"),('mailtoの複数宛先','mailto:a@example.com,b@example.com'),('mailtoの空','mailto:'),('不正アドレス','mailto:not-an-address')]:
+    check('メールアイコンとmailtoリンクを別タブにせず表示',side(site)['items'][0]['links'][-1]=={'label':'メール','url':'mailto:me@example.com','icon':'mail'} and '<a class="log-link-button" href="mailto:me@example.com" data-mail="me@example.com">' in mview and 'm4.5 7.5 6.3 5' in mview and pub.get('/viewer/link-icons/mail.svg').status==200)
+    bare=copy.deepcopy(mail); bare[0]['links'][-1]['url']=' you@example.com '; ok_sidebar(bare); bview=pub.get('/').text
+    check('アドレスだけのメールを受け付けてダイアログ用に表示',side(site)['items'][0]['links'][-1]['url']=='mailto:you@example.com' and 'href="mailto:you@example.com" data-mail="you@example.com"' in block(bview,'links') and 'viewer/log-mail.js?v=' in bview and pub.get('/viewer/log-mail.js').status==200)
+    for name,url in [('アドレスだけの件名','you@example.com?subject=x'),('mailtoの件名',"mailto:me@example.com?subject=x"),('mailtoの複数宛先','mailto:a@example.com,b@example.com'),('mailtoの空','mailto:'),('不正アドレス','mailto:not-an-address')]:
         bad=copy.deepcopy(mail); bad[0]['links'][-1]['url']=url; before=hashes(site); r=save_sidebar(bad)
         check('不正なmailtoを拒否 '+name,r.status==422 and hashes(site)==before)
     ok_sidebar(edited); view=block(pub.get('/').text,'links')

@@ -358,7 +358,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     def asset_key(path, html):
         return re.search(re.escape(path) + r'\?v=([a-z0-9.]+)', html).group(1)
     before = public.get('/').text
-    for path in ('viewer/log.css', 'viewer/log-menu.js'):
+    for path in ('viewer/log.css', 'viewer/log-menu.js', 'viewer/log-mail.js'):
         original = (site / path).read_bytes()
         (site / path).write_bytes(original + b'\n/* cache-key fixture */\n')
         after = public.get('/').text

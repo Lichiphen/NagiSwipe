@@ -83,6 +83,7 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
+<script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site"><header class="log-site-header"><a href="./"><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
@@ -91,7 +92,7 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <?php if ($single): ?><nav aria-label="Breadcrumb" class="log-breadcrumb"><ol><li><a href="./"><?= h($s['title']) ?></a></li><li><?= h($title) ?></li></ol></nav><?php else: ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>
 <?php if (!$single && $filter['label'] !== ''): ?><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><?php endif; ?>
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
-<?php foreach ($posts as $p): ?><article class="log-post"><div class="log-post-meta"><?= nl_icon_html($s) ?><strong><?= h($s['name']) ?></strong><a href="./?id=<?= h($p['id']) ?>"><time datetime="<?= h(nl_date($p['created'], 'c')) ?>"><?= h(nl_date($p['created'])) ?></time></a><?php if ($owner): ?><a class="log-edit-link" href="admin/index.php?p=log_edit&id=<?= h($p['id']) ?>"><?= nl_ui_icon() ?><span>編集</span></a><?php endif; ?></div>
+<?php foreach ($posts as $p): ?><article class="log-post"><div class="log-post-meta"><?= nl_icon_html($s) ?><strong><?= h($s['name']) ?></strong><a href="./?id=<?= h($p['id']) ?>"><time datetime="<?= h(nl_date($p['created'], 'c')) ?>" title="<?= h(nl_date($p['created'])) ?>"><?= h(nl_date($p['created'], 'Y/m/d')) ?></time></a><?php if ($owner): ?><a class="log-edit-link" href="admin/index.php?p=log_edit&id=<?= h($p['id']) ?>"><?= nl_ui_icon() ?><span>編集</span></a><?php endif; ?></div>
 <?php if ($single): ?><h1><?= h(nl_post_title($p, 0)) ?></h1><?php else: ?><h2><a href="./?id=<?= h($p['id']) ?>"><?= h(nl_post_title($p, 0)) ?></a></h2><?php endif; ?>
 <?= nl_render_body($p) ?><?= nl_category_links($p) ?></article><?php endforeach; ?>
 <?php if (!$posts): ?><p class="log-empty"><?= $filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。') ?></p><?php endif; ?>
