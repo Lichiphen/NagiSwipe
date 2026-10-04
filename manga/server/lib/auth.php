@@ -8,7 +8,8 @@
  *   1. IP allow list (config, checked here even if .htaccess is not honoured)
  *   2. Secret login key in the URL (scanners never find the login form)
  *   3. Password + lockout after repeated failures
- *   4. Session bound to the browser, idle / absolute timeouts
+ *   4. Session bound to the browser; the owner stays signed in for 30 or 365
+ *      days after logging in (setting), guests keep the short idle / absolute timeouts
  *   5. CSRF token + same-origin check on every POST
  *
  * Roles: "admin" (the password above) and, only when a plugin enables it,
@@ -22,8 +23,10 @@ if (!defined('NAGIMANGA')) {
     exit;
 }
 
-const NM_SESSION_IDLE = 1800;       // 30 min
-const NM_SESSION_MAX = 43200;       // 12 h
+const NM_SESSION_IDLE = 1800;       // 30 min (guest)
+const NM_SESSION_MAX = 43200;       // 12 h (guest)
+const NM_LOGIN_DAYS = [30, 365];    // owner: days from the last login, first one is the default
+const NM_SESSION_GC = 31708800;     // 367 days: PHP must not collect a session that is still valid
 const NM_LOGIN_FAIL_MAX = 5;        // per IP / 15 min
 const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing)
 
@@ -80,7 +83,7 @@ function nm_session_start(): void
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_trans_sid', '0');
-    ini_set('session.gc_maxlifetime', (string)NM_SESSION_MAX);
+    ini_set('session.gc_maxlifetime', (string)NM_SESSION_GC);
     session_name('nm_admin');
     $script = (string)($_SERVER['SCRIPT_NAME'] ?? '/');
     $path = rtrim(dirname($script), '/\\') . '/';
@@ -92,7 +95,9 @@ function nm_session_start(): void
         'httponly' => true,
         'samesite' => 'Strict',
     ]);
+    $GLOBALS['nm_session_path'] = $path;
     session_start();
+    nm_session_sweep($dir);
     // The public LOG can recognize the owner with the same protected session.
     // Migrate the former /admin/ cookie when an existing admin visits this page.
     if (preg_match('~/admin/[^/]+$~', $script)) {
@@ -102,18 +107,50 @@ function nm_session_start(): void
     }
 }
 
+/**
+ * Sessions now live up to a year, so PHP's own collector is set far out. Now and
+ * then drop the files that never became a login (login form visits) after a day.
+ */
+function nm_session_sweep(string $dir): void
+{
+    if (random_int(1, 50) !== 1) return;
+    $now = time();
+    foreach (glob($dir . '/sess_*') ?: [] as $file) {
+        $age = $now - (int)@filemtime($file);
+        if ($file === $dir . '/sess_' . session_id() || $age < 86400) continue;
+        if ($age > NM_SESSION_GC || !str_contains((string)@file_get_contents($file, false, null, 0, 4096), 'nm_admin|b:1;')) @unlink($file);
+    }
+}
+
+/** How long the owner stays signed in after logging in (setting: 30 or 365 days). */
+function nm_login_days(): int
+{
+    $days = (int)(nm_config()['login_days'] ?? NM_LOGIN_DAYS[0]);
+    return in_array($days, NM_LOGIN_DAYS, true) ? $days : NM_LOGIN_DAYS[0];
+}
+
+/** Keep the owner's cookie until the login expires, so closing the browser does not log out. */
+function nm_session_keep(): void
+{
+    if (headers_sent() || ($_SESSION['nm_role'] ?? '') !== 'admin') return;
+    $params = session_get_cookie_params();
+    setcookie('nm_admin', session_id(), ['expires' => (int)$_SESSION['nm_login'] + nm_login_days() * 86400, 'path' => $GLOBALS['nm_session_path'] ?? $params['path'], 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
+}
+
+/** Version numbers are left out: browser updates must not end a year-long login. */
 function nm_browser_fingerprint(): string
 {
-    return hash('sha256', (string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    return hash('sha256', (string)preg_replace('/[0-9]+(?:[._][0-9]+)*/', '', (string)($_SERVER['HTTP_USER_AGENT'] ?? '')));
 }
 
 function nm_is_logged_in(): bool
 {
     if (empty($_SESSION['nm_admin'])) return false;
     $now = time();
+    $guest = ($_SESSION['nm_role'] ?? '') === 'guest';
     $ok = ($_SESSION['nm_fp'] ?? '') === nm_browser_fingerprint()
-        && $now - (int)($_SESSION['nm_seen'] ?? 0) < NM_SESSION_IDLE
-        && $now - (int)($_SESSION['nm_login'] ?? 0) < NM_SESSION_MAX
+        && (!$guest || $now - (int)($_SESSION['nm_seen'] ?? 0) < NM_SESSION_IDLE)
+        && $now - (int)($_SESSION['nm_login'] ?? 0) < ($guest ? NM_SESSION_MAX : nm_login_days() * 86400)
         // Password changed elsewhere: log this session out
         && ($_SESSION['nm_ver'] ?? '') === nm_admin_version();
     if (!$ok) {
@@ -121,6 +158,7 @@ function nm_is_logged_in(): bool
         return false;
     }
     $_SESSION['nm_seen'] = $now;
+    nm_session_keep();
     return true;
 }
 
@@ -156,6 +194,7 @@ function nm_try_login(string $password): bool
             'nm_csrf' => bin2hex(random_bytes(32)),
             'nm_role' => 'admin',
         ];
+        nm_session_keep();
         nm_rate_clear('login', $ip);
         nm_log('login_ok');
         return true;

@@ -480,18 +480,48 @@ def run(data_dir):
     sc = rr.getheader("Set-Cookie") or ""
     check("セッション Cookie は HttpOnly + SameSite=Strict", "HttpOnly" in sc and "SameSite=Strict" in sc)
 
-    # --- Idle timeout, then log in again (the first attempt used to fail) -------------------
+    # --- Owner login lasts 30 days (or 365), then log in again (the first attempt used to fail) ---
     idle = Client()
     r = idle.get(f"/admin/index.php?k={key}")
-    idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
+    r = idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
+    cookie_header = next((v for h, v in r.getheaders() if h.lower() == "set-cookie" and "expires=" in v.lower()), "")
+    m = re.search(r"expires=([^;]+)", cookie_header, re.I)
+    days = (parsedate_to_datetime(m.group(1)).timestamp() - time.time()) / 86400 if m else 0
+    check("ログイン Cookie はブラウザを閉じても 30 日残る", 29.9 < days <= 30.01 and "HttpOnly" in cookie_header and "SameSite=Strict" in cookie_header)
     sess = data_dir / "sessions" / f"sess_{idle.cookies.get('nm_admin', '')}"
-    if sess.exists():
-        sess.write_text(re.sub(r"nm_seen\|i:\d+", "nm_seen|i:1000", sess.read_text()))
+    def age_login(days_ago):
+        if sess.exists():
+            data = re.sub(rb"nm_seen\|i:\d+", b"nm_seen|i:1000", sess.read_bytes())
+            sess.write_bytes(re.sub(rb"nm_login\|i:\d+", f"nm_login|i:{int(time.time()) - days_ago * 86400}".encode(), data))
+    age_login(29)
+    kept = "作品を作る" in idle.get("/admin/index.php").text
+    check("最後のログインから 29 日・長く放置してもログインしたまま", kept)
+    chrome = Client()
+    ua = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.6668.90 Safari/537.36"}
+    r = chrome.get(f"/admin/index.php?k={key}", headers=ua)
+    chrome.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw}, headers=ua)
+    updated = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.6723.59 Safari/537.36"}
+    check("ブラウザの更新でバージョンが変わってもログインしたまま", "作品を作る" in chrome.get("/admin/index.php", headers=updated).text)
+    idle_csrf = csrf_of(idle.get("/admin/index.php?p=settings&section=common").text)
+    r = idle.post("/admin/index.php", {"do": "settings_login_days", "csrf": idle_csrf, "login_days": "365"})
+    long_cookie = [v for h, v in r.getheaders() if h.lower() == "set-cookie" and "expires=" in v.lower()][-1:] or [""]
+    long_cookie = long_cookie[0]
+    m = re.search(r"expires=([^;]+)", long_cookie, re.I)
+    check("設定で 1 年にすると、最後のログインから 365 日の Cookie になる", "'login_days' => 365" in (data_dir / "config.php").read_text(encoding="utf-8")
+          and m and 335.5 < (parsedate_to_datetime(m.group(1)).timestamp() - time.time()) / 86400 <= 336.01)
+    age_login(300)
+    year = "作品を作る" in idle.get("/admin/index.php").text
+    bad = idle.post("/admin/index.php", {"do": "settings_login_days", "csrf": idle_csrf, "login_days": "9999"})
+    check("1 年の設定なら 300 日後もログインしたまま・変な日数は保存しない", year and "'login_days' => 365" in (data_dir / "config.php").read_text(encoding="utf-8"))
+    age_login(10)
+    idle.post("/admin/index.php", {"do": "settings_login_days", "csrf": idle_csrf, "login_days": "30"})
+    age_login(31)
     expired = is_404(idle.get("/admin/index.php"))
     r = idle.get(f"/admin/index.php?k={key}")
     r = idle.post("/admin/index.php", {"csrf": csrf_of(r.text), "k": key, "password": admin_pw})
-    check("30 分放置で自動ログアウトし、そのあと 1 回目でログインし直せる",
+    check("30 日を過ぎると自動ログアウトし、そのあと 1 回目でログインし直せる",
           sess.exists() is False and expired and r.status == 303 and "作品を作る" in idle.get("/admin/index.php").text)
+    check("別のブラウザ（UA）では同じ Cookie でもログインにならない", is_404(idle.get("/admin/index.php", headers={"User-Agent": "Other Browser"})))
 
     # --- CSRF on actions --------------------------------------------------------------
     check("CSRF トークンなしの操作は 404", is_404(adm.post("/admin/index.php", {"do": "create", "title": "x"})))

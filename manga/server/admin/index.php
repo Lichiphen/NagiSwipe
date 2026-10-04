@@ -558,6 +558,19 @@ function nm_handle_post(array $cfg): void
             }
             nm_redirect('p=settings&section=common');
 
+        case 'settings_login_days':
+            $days = (int)nm_str($_POST, 'login_days', 3);
+            if (!in_array($days, NM_LOGIN_DAYS, true)) {
+                nm_flash('err', 'ログインを保つ期間を選んでください');
+                nm_redirect('p=settings&section=common');
+            }
+            $cfg['login_days'] = $days;
+            nm_save_config($cfg);
+            nm_session_keep();
+            nm_log('settings_login_days_changed', (string)$days);
+            nm_flash('ok', 'ログインを保つ期間を ' . $days . ' 日にしました');
+            nm_redirect('p=settings&section=common');
+
         case 'settings_access':
             $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
             foreach ($ips as $r) {
@@ -1106,6 +1119,13 @@ function nm_view_settings(array $cfg): void
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
         . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
         . '<input type="hidden" name="do" value="regen_key"><button class="btn">ログイン URL を変更する</button></form></section>'
+
+        . '<section class="card"><h2>ログインを保つ期間</h2>'
+        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_login_days">'
+        . '<label class="check"><input type="radio" name="login_days" value="30"' . (nm_login_days() === 30 ? ' checked' : '') . '>30 日（おすすめ）</label>'
+        . '<label class="check"><input type="radio" name="login_days" value="365"' . (nm_login_days() === 365 ? ' checked' : '') . '>1 年（365 日）</label>'
+        . '<p class="note">最後にログインした日から数えます。期間中はブラウザを閉じてもログインしたままです。共用のパソコンでは使わず、使い終わったらログアウトしてください。パスワードを変えると、ほかの端末はログアウトされます。</p>'
+        . '<button class="btn">保存</button></form></section>'
 
         . nl_guard_panel()
 
