@@ -31,12 +31,24 @@ function nl_archive_filter(array $src): array
 function nl_icon_html(array $s, string $prefix = '', string $class = 'log-avatar'): string
 {
     $m = nl_load_media($s['icon']);
+    if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER) && !(function_exists('nm_is_logged_in') && nm_is_logged_in() && !nm_is_guest())) $m = null;
     return $m ? '<img class="' . h($class) . '" src="' . h($prefix . nl_media_url($m, true)) . '" alt="' . h($s['name'] . 'のアイコン') . '">'
         : '<span class="' . h($class) . '" aria-hidden="true">' . h(mb_substr($s['name'], 0, 1)) . '</span>';
 }
 function nl_login_icon(): string
 {
     return '<svg class="log-login-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/></svg>';
+}
+function nl_ui_icon(string $name = 'pen'): string
+{
+    $paths = [
+        'pen' => '<path d="m15 4 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16l-1 4Z"/>',
+        'time' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'title' => '<path d="M5 4h14M12 4v16M8 20h8"/>',
+        'delete' => '<path d="M4 6h16M9 6V3h6v3M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
+        'view' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    ];
+    return '<svg class="log-ui-icon" viewBox="0 0 24 24" aria-hidden="true">' . ($paths[$name] ?? $paths['pen']) . '</svg>';
 }
 function nl_calendar(array $summaries, array $filter): string
 {
@@ -68,11 +80,12 @@ function nl_calendar(array $summaries, array $filter): string
     for ($i = 0; $i < $remaining; $i++) $html .= '<td></td>';
     return $html . '</tr></tbody></table></section>';
 }
-function nl_sidebar(array $summaries, array $filter, array $s): string
+function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = false): string
 {
     $latest = '';
     foreach (array_slice($summaries, 0, 3) as $p) $latest .= '<li><a href="./?id=' . h($p['id']) . '">' . h($p['title']) . '</a><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></li>';
-    $last = max((int)$s['updated'], (int)nl_taxonomy()['updated']);
+    $sidebar = nl_sidebar_settings();
+    $last = max((int)$s['updated'], (int)nl_taxonomy()['updated'], (int)$sidebar['updated']);
     $media = []; $works = [];
     foreach ($summaries as $p) {
         $last = max($last, (int)$p['updated']);
@@ -83,16 +96,30 @@ function nl_sidebar(array $summaries, array $filter, array $s): string
     if ($s['og_image'] !== '') $media[$s['og_image']] = true;
     foreach (array_keys($media) as $id) { $m = nl_load_media((string)$id); if ($m) $last = max($last, (int)$m['updated']); }
     foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
-    return '<aside class="log-sidebar" id="log-sidebar" aria-labelledby="log-menu-title"><div class="log-sidebar-head"><h2 id="log-menu-title">メニュー</h2><button class="log-menu-close" type="button" aria-label="メニューを閉じる">×</button></div>'
-        . '<a class="log-login-link" href="admin/login.php">' . nl_login_icon() . '<span>ログイン</span></a>'
-        . nl_calendar($summaries, $filter) . '<section class="log-widget"><h2>最新ポスト</h2><ol class="log-latest">' . ($latest ?: '<li>まだ記録はありません。</li>') . '</ol></section>' . nl_taxonomy_sidebar($summaries)
-        . '<section class="log-widget"><h2>最終更新日</h2>' . ($last > 0 ? '<time datetime="' . h(nl_date($last, 'c')) . '">' . h(nl_date($last)) . '</time>' : '<p>まだ更新はありません。</p>') . '</section><a href="./">すべての投稿</a></aside>';
+    $blocks = [
+        'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . ($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
+        'calendar' => nl_calendar($summaries, $filter),
+        'latest' => '<section class="log-widget"><h2>最新ポスト</h2><ol class="log-latest">' . ($latest ?: '<li>まだ記録はありません。</li>') . '</ol></section>',
+        'categories' => nl_taxonomy_sidebar($summaries, 'categories'),
+        'hashtags' => nl_taxonomy_sidebar($summaries, 'hashtags'),
+        'updated' => '<section class="log-widget"><h2>最終更新日</h2>' . ($last > 0 ? '<time datetime="' . h(nl_date($last, 'c')) . '">' . h(nl_date($last)) . '</time>' : '<p>まだ更新はありません。</p>') . '</section>',
+        'all' => '<a href="./">すべての投稿</a>',
+    ];
+    $html = '';
+    foreach ($sidebar['items'] as $item) {
+        if (!$item['enabled']) continue;
+        $block = $item['kind'] === 'html'
+            ? '<section class="' . ($item['framed'] ? 'log-widget log-custom-block' : 'log-custom-block') . '">' . ($item['title'] !== '' ? '<h2>' . h($item['title']) . '</h2>' : '') . nl_sidebar_html($item['html']) . '</section>'
+            : ($blocks[$item['kind']] ?? '');
+        if ($block !== '') $html .= '<div class="log-sidebar-block" data-sidebar-id="' . h($item['id']) . '">' . $block . '</div>';
+    }
+    return '<aside class="log-sidebar" id="log-sidebar" aria-labelledby="log-menu-title"><div class="log-sidebar-head"><h2 id="log-menu-title">メニュー</h2><button class="log-menu-close" type="button" aria-label="メニューを閉じる">×</button></div>' . $html . '</aside>';
 }
-function nl_taxonomy_sidebar(array $summaries): string
+function nl_taxonomy_sidebar(array $summaries, string $kind = ''): string
 {
     $counts = []; $catLinks = ''; $tagLinks = '';
     foreach ($summaries as $p) foreach ($p['categories'] ?? [] as $id) $counts[$id] = ($counts[$id] ?? 0) + 1;
     foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($counts[$id])) $catLinks .= '<a href="./?category=' . h((string)$id) . '">' . h($name) . '<small>' . $counts[$id] . '</small></a>';
-    foreach (nl_recent_hashtags(true) as $name) $tagLinks .= '<a href="./?tag=' . h(rawurlencode($name)) . '">#' . h($name) . '</a>';
-    return ($catLinks !== '' ? '<section class="log-widget"><h2>カテゴリ</h2><div class="log-chip-list">' . $catLinks . '</div></section>' : '') . ($tagLinks !== '' ? '<section class="log-widget"><h2>ハッシュタグ</h2><div class="log-chip-list">' . $tagLinks . '</div></section>' : '');
+    foreach (array_slice(nl_ordered_hashtags(true), 0, 8) as $name) $tagLinks .= '<a href="./?tag=' . h(rawurlencode($name)) . '">#' . h($name) . '</a>';
+    return ($kind !== 'hashtags' && $catLinks !== '' ? '<section class="log-widget"><h2>カテゴリ</h2><div class="log-chip-list">' . $catLinks . '</div></section>' : '') . ($kind !== 'categories' && $tagLinks !== '' ? '<section class="log-widget"><h2>ハッシュタグ</h2><div class="log-chip-list">' . $tagLinks . '</div></section>' : '');
 }

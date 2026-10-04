@@ -194,7 +194,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("複数文でも1行目全体をタイトルにする", '<h1>' + title_line + '</h1>' in split_html)
     check("タイトル行は本文に重複させず2行目から表示", title_line not in body_html and '本文の先頭。' in body_html and '<strong>強調</strong>' in body_html)
     admin_cards = c.get('/admin/index.php?p=log').text
-    check("管理一覧の本文でもタイトル行を繰り返さない", '<h2>' + title_line + '</h2><div class="log-body">本文の先頭。' in admin_cards)
+    check("管理一覧は本文を省いた短い投稿行で表示", title_line in admin_cards and 'log-list-row' in admin_cards and '<div class="log-body">本文の先頭。' not in admin_cards and '<table' not in admin_cards)
     preview = json.loads(post({**payload(body=title_line + '\nプレビューの本文'), 'do': 'log_preview'}).text)['html']
     check("プレビューもタイトルと本文を分ける", preview.count(title_line) == 1 and '<div class="log-body">プレビューの本文</div>' in preview)
     title_only = json.loads(post(payload(body='タイトルだけの投稿。')).text)['id']
@@ -278,11 +278,11 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("カテゴリとトップだけをインデックス対象にする", category_page.getheader('X-Robots-Tag') == 'index,follow' and public.get('/').getheader('X-Robots-Tag') == 'index,follow' and public.get('/?page=2').getheader('X-Robots-Tag') == 'noindex,follow')
     tag_page = public.get('/?tag=' + tag_query)
     check("ハッシュタグ別に公開投稿を絞る", category_pid in tag_page.text and second_cat in tag_page.text and tag_page.getheader('X-Robots-Tag') == 'noindex,follow')
-    tax_revision = re.search(r'name="kind" value="category".*?name="revision" value="([0-9]+)"', c.get('/admin/index.php?p=settings').text).group(1)
+    tax_revision = re.search(r'name="kind" value="category".*?name="revision" value="([0-9]+)"', c.get('/admin/index.php?p=log&view=taxonomy').text).group(1)
     post({'do': 'log_taxonomy_rename', 'kind': 'category', 'old': category_id, 'name': '日々の記録', 'revision': tax_revision})
     check("カテゴリを設定画面で改名してもリンク番号を維持", '日々の記録の記録' in public.get('/?category=' + category_id).text)
     tag_draft = json.loads(post(payload(body='非公開の分類メモ #らくがき', status='draft')).text)['id']
-    tax_revision = re.search(r'name="kind" value="hashtag".*?name="revision" value="([0-9]+)"', c.get('/admin/index.php?p=settings').text).group(1)
+    tax_revision = re.search(r'name="kind" value="hashtag".*?name="revision" value="([0-9]+)"', c.get('/admin/index.php?p=log&view=taxonomy').text).group(1)
     post({'do': 'log_taxonomy_rename', 'kind': 'hashtag', 'old': 'らくがき', 'name': 'お絵描き', 'revision': tax_revision})
     check("ハッシュタグ改名を本文と下書きに反映", '>#お絵描き</a>' in public.get('/?id=' + category_pid).text and '#お絵描き' in c.get('/admin/index.php?p=log_edit&id=' + tag_draft).text)
     check("分類の古い設定画面からの上書きを拒否", post({'do': 'log_taxonomy_rename', 'kind': 'hashtag', 'old': 'お絵描き', 'name': '古い更新', 'revision': tax_revision}).status == 303 and '>#お絵描き</a>' in public.get('/?id=' + category_pid).text)
@@ -324,7 +324,9 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("不正な復元で既存投稿を変えない", "公開した画像" in public.get("/?id=" + image_pid).text)
     index_file = site / 'data/log/index.php'
     index_file.unlink()
-    check("一覧情報がなくても投稿原本から読める", '編集した本文' in public.get('/').text)
+    post_count = len(list((site / 'data/log/posts').glob('*/*.php')))
+    recovered_pages = ''.join(public.get('/?page=' + str(n)).text for n in range(1, 1 + (post_count + 9) // 10))
+    check("一覧情報がなくても投稿原本から読める", '編集した本文' in recovered_pages and public.get('/?id=' + pid).status == 200)
     image_edit = c.get("/admin/index.php?p=log_edit&id=" + image_pid)
     image_revision = re.search(r'name="revision" value="([0-9]+)"', image_edit.text).group(1)
     post(payload(body="公開した画像\n" + media["tag"], status="draft", post_id=image_pid, revision=image_revision))
@@ -333,7 +335,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("保存時に一覧情報を作り直す", index_file.is_file())
     for i in range(21):
         post(payload(body=f'一覧のページ送り {i}'))
-    check("公開一覧を20件ずつ表示", '前の投稿' in public.get('/').text and public.get('/?page=2').status == 200)
+    check("公開一覧を10件ずつ表示", public.get('/').text.count('<article class="log-post">') == 10 and '前の投稿' in public.get('/').text and public.get('/?page=2').status == 200)
     newest = [json.loads(post(payload(body=f'最新の記録{i}。\n2行目は本文です。', title='手動タイトルは使わない')).text)['id'] for i in range(4)]
     page = public.get('/').text
     check("最初の1行を投稿タイトルにする", '<h2><a href="./?id=' + newest[-1] + '">最新の記録3。</a></h2>' in page and '手動タイトルは使わない' not in page)

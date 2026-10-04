@@ -1,15 +1,22 @@
-/* A quiet black hole, without scripts or external assets. MIT (c) 2026 Lichiphen. */
+/* Black-hole horizon, with no scripts or external images. MIT (c) 2026 Lichiphen. */
 :root { color-scheme:dark; }
 * { box-sizing:border-box; }
-body { margin:0; min-height:100svh; overflow-x:hidden; display:grid; place-content:center; text-align:center; color:#ebedf7; background:radial-gradient(ellipse at 50% 32%,#242037 0, #100f1e 38%,#080910 76%); font:16px/1.8 system-ui,-apple-system,"Hiragino Sans",sans-serif; }
-.nm-void::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.5; background-image:radial-gradient(circle,#b9b5db 1px,transparent 1.5px),radial-gradient(circle,#918eae 1px,transparent 1.5px); background-size:97px 139px,173px 181px; background-position:11px 37px,67px 83px; }
-.nm-blackhole { position:relative; width:min(320px,74vw); aspect-ratio:1; margin:0 auto -20px; }
-.nm-core { position:absolute; inset:24%; border-radius:50%; background:#020309; box-shadow:0 0 0 1px #f5e2ba,0 0 8px 2px #ffe7bdcc,0 0 22px 9px #c688bf88,0 0 65px 22px #635da844; animation:nm-breathe 5s ease-in-out infinite; }
-.nm-orbit { position:absolute; inset:14%; border-radius:50%; border:1px solid #c5acd7; background:conic-gradient(from 0deg,transparent 0deg,#dbc7e96b 130deg,#ffdeb3 175deg,transparent 200deg,#a18cc966 310deg,transparent 360deg); filter:blur(.5px); transform:rotate(-22deg) scaleY(.4); box-shadow:0 0 22px #e0bce166; animation:nm-orbit 14s linear infinite; }
-main { position:relative; padding:0 20px 50px; max-width:600px; margin:auto; }
-.nm-error-number { font-size:60px; letter-spacing:.12em; line-height:1.2; margin:0 0 18px; font-weight:300; color:#d7cce8; }
-h1 { font-size:clamp(18px,5vw,24px); font-weight:500; margin:0 0 8px; }main > p:not(.nm-error-number) { color:#a8a4b9; font-size:14px; }
-a { display:inline-block; padding:10px 24px; border:1px solid #857696; border-radius:999px; color:#e7dbf2; text-decoration:none; margin-top:16px; }a:hover,a:focus-visible { border-color:#e8caec; background:#ffffff0b; }small { display:block; margin-top:22px; color:#706a80; font-size:11px; }
-@keyframes nm-breathe { 50% { box-shadow:0 0 0 1px #ffe9c8,0 0 12px 4px #ffe7bddd,0 0 30px 10px #c688bf99,0 0 80px 28px #635da855; } }
-@keyframes nm-orbit { to { transform:rotate(-22deg) scaleY(.4) rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .nm-core,.nm-orbit { animation:none; } }
+body { margin:0; min-height:100svh; display:flex; align-items:flex-end; justify-content:center; overflow-x:hidden; background:#03040b; color:#f5e9df; font:16px/1.8 system-ui,-apple-system,"Hiragino Sans",sans-serif; }
+.nm-universe { position:fixed; inset:0; overflow:hidden; pointer-events:none; background:radial-gradient(ellipse at 50% 40%,#221629 0,#0b0917 40%,#03040b 75%); }
+.nm-stars { position:absolute; inset:-10%; background-image:radial-gradient(circle at 17% 31%,#fff8e7 0 1px,transparent 1.6px),radial-gradient(circle at 71% 13%,#bdc8ef 0 .7px,transparent 1.3px),radial-gradient(circle at 39% 82%,#f7d5b9 0 .6px,transparent 1.2px),radial-gradient(circle at 93% 61%,#d6c7ec 0 .8px,transparent 1.4px); background-size:227px 251px,337px 389px,191px 223px,419px 307px; animation:nm-star-drift 100s linear infinite alternate; }
+.nm-stars-far { opacity:.34; transform:rotate(13deg) scale(1.15); background-size:103px 149px,167px 193px,241px 207px,137px 311px; animation-duration:140s; animation-direction:alternate-reverse; }
+.nm-stars-near { opacity:.7; }
+.nm-nebula { position:absolute; inset:-30%; background:radial-gradient(ellipse at 28% 42%,#40244626,transparent 30%),radial-gradient(ellipse at 70% 37%,#824c2725,transparent 24%); filter:blur(40px); transform:rotate(-20deg); }
+.nm-blackhole { position:absolute; left:50%; top:46%; width:max(112vw,1000px); max-width:2000px; height:auto; transform:translate(-50%,-50%) rotate(-9deg); overflow:visible; animation:nm-horizon-drift 28s ease-in-out infinite alternate; }
+.nm-disk-glow { animation:nm-disk-pulse 7s ease-in-out infinite alternate; }.nm-front-disk { animation:nm-disk-pulse 9s ease-in-out infinite alternate-reverse; }
+.nm-space-vignette { position:absolute; inset:0; background:linear-gradient(transparent 43%,#03040b50 64%,#03040be6 88%),radial-gradient(ellipse,transparent 40%,#01020888 100%); }
+main { position:relative; z-index:1; text-align:center; width:min(660px,100%); padding:0 20px max(28px,env(safe-area-inset-bottom)); margin-top:55svh; }
+.nm-error-number { margin:0; font-size:clamp(72px,9vw,124px); font-weight:200; line-height:1.1; letter-spacing:.18em; padding-left:.18em; color:#fff2de; text-shadow:0 0 30px #ec97642b; }
+h1 { font-size:clamp(18px,2.6vw,26px); font-weight:500; letter-spacing:.07em; margin:16px 0 6px; }main > p:not(.nm-error-number) { color:#b7adba; font-size:14px; margin:8px 0; }
+a { display:inline-flex; align-items:center; gap:32px; padding:12px 25px; min-height:48px; margin-top:20px; border:1px solid #e4b48c70; border-radius:999px; background:#20141da6; color:#ffebd6; text-decoration:none; box-shadow:0 0 25px #bb734010; transition:background .2s,border-color .2s; }a:hover,a:focus-visible { border-color:#ffdeae; background:#37202b; outline:2px solid #ffdeae; outline-offset:4px; }small { display:block; margin-top:20px; color:#716979; font-size:11px; letter-spacing:.12em; }
+@keyframes nm-star-drift { to { translate:1.6% 3%; } }
+@keyframes nm-disk-pulse { to { opacity:.72; } }
+@keyframes nm-horizon-drift { to { transform:translate(-50%,-51%) rotate(-7deg) scale(1.025); } }
+@media(max-width:600px) { .nm-blackhole { top:36%; width:1020px; }main { margin-top:51svh; padding-bottom:max(26px,env(safe-area-inset-bottom)); }.nm-error-number { font-size:82px; }h1 { margin-top:12px; } }
+@media(max-height:600px) and (min-width:601px) { .nm-blackhole { top:24%; width:1000px; }main { margin-top:40svh; padding-bottom:16px; }.nm-error-number { font-size:60px; }h1 { margin-top:8px; }a { margin-top:8px; }small { margin-top:10px; } }
+@media(prefers-reduced-motion:reduce) { .nm-stars,.nm-blackhole,.nm-disk-glow,.nm-front-disk { animation:none; }a { transition:none; } }

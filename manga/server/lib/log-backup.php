@@ -12,7 +12,7 @@ function nl_backup_download(): never
         $zip = new ZipArchive();
         if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::EXCL) !== true) throw new RuntimeException('zip failed');
         try {
-            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
             foreach (nl_post_summaries(false) as $summary) {
                 $p = nl_load_post($summary['id']);
                 if ($p) $zip->addFromString('posts/' . $p['id'] . '.json', json_encode($p, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -39,11 +39,12 @@ function nl_restore_string(array $data, string $key, int $max): string
     if (!is_string($value) || strlen($value) > $max || !mb_check_encoding($value, 'UTF-8') || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value)) throw new UnexpectedValueException('バックアップの文字データが壊れています');
     return $value;
 }
-function nl_restore_json(ZipArchive $zip, int $index): array
+function nl_restore_json(ZipArchive $zip, int $index, mixed &$native = null): array
 {
-    $raw = nm_zip_read($zip, $index, 1024 * 1024);
+    $raw = nm_zip_read($zip, $index, 2 * 1024 * 1024);
     $data = $raw !== null ? json_decode($raw, true) : null;
     if (!is_array($data)) throw new UnexpectedValueException('バックアップのデータを読めません');
+    $native = json_decode($raw);
     return $data;
 }
 function nl_backup_restore(string $file, bool $overwrite): array
@@ -69,15 +70,34 @@ function nl_backup_restore(string $file, bool $overwrite): array
             else throw new UnexpectedValueException('LOG以外のファイルが入っています');
         }
         if (!isset($entries['backup.json'])) throw new UnexpectedValueException('LOGのバックアップではありません');
-        $mark = nl_restore_json($zip, $entries['backup.json']);
+        $mark = nl_restore_json($zip, $entries['backup.json'], $nativeMark);
         if (($mark['app'] ?? '') !== 'NagiMangaLog' || ($mark['schema'] ?? 0) !== 1) throw new UnexpectedValueException('LOGのバックアップではありません');
+        $sidebar = null;
+        if (array_key_exists('sidebar', $mark)) {
+            if (!is_object($nativeMark) || !is_object($nativeMark->sidebar ?? null) || !is_array($nativeMark->sidebar->items ?? null) || !is_array($mark['sidebar']) || !is_int($mark['sidebar']['revision'] ?? null) || $mark['sidebar']['revision'] < 0) throw new UnexpectedValueException('サイドバーの設定が壊れています');
+            $sidebar = nl_sidebar_validate($mark['sidebar']['items'] ?? null);
+        }
         $settings = (array)($mark['settings'] ?? []);
+        $preferences = [];
+        foreach (['public', 'show_login', 'show_footer'] as $field) {
+            if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException('LOGの公開設定が壊れています');
+            $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
+        }
+        if (array_key_exists('posts_per_page', $settings) && (!is_int($settings['posts_per_page']) || $settings['posts_per_page'] < 1 || $settings['posts_per_page'] > 100)) throw new UnexpectedValueException('LOGの表示件数が壊れています');
+        $preferences['posts_per_page'] = $settings['posts_per_page'] ?? nl_settings()['posts_per_page'];
+        $preferences['footer_text'] = nl_restore_string($settings + ['footer_text' => nl_settings()['footer_text']], 'footer_text', 800);
+        if (mb_strlen($preferences['footer_text']) > 200 || preg_match('/[\x00-\x1F\x7F]/', $preferences['footer_text'])) throw new UnexpectedValueException('フッターの文字データが壊れています');
         $settings = ['title' => nl_restore_string($settings, 'title', 600), 'description' => nl_restore_string($settings, 'description', 1500), 'name' => nl_restore_string($settings, 'name', 600),
             'theme' => nl_restore_string($settings + ['theme' => 'light-blue'], 'theme', 30), 'icon' => nl_restore_string($settings, 'icon', 16), 'og_image' => nl_restore_string($settings, 'og_image', 16), 'updated' => time()];
         if (!isset(NL_THEMES[$settings['theme']]) || ($settings['icon'] !== '' && !nl_valid_media($settings['icon'])) || ($settings['og_image'] !== '' && !nl_valid_media($settings['og_image']))) throw new UnexpectedValueException('デザインや紹介画像の設定が壊れています');
+        $settings = array_replace($settings, $preferences);
         $tax = $mark['taxonomy']['categories'] ?? [];
         if (!is_array($tax) || count($tax) > 10000) throw new UnexpectedValueException('カテゴリの設定が壊れています');
         foreach ($tax as $id => $name) if (!preg_match('/\A[a-f0-9]{12}\z/', (string)$id) || !is_string($name) || nl_category_name($name) !== $name) throw new UnexpectedValueException('カテゴリの設定が壊れています');
+        $tagOrder = $mark['taxonomy']['hashtag_order'] ?? nl_taxonomy()['hashtag_order'];
+        if (!is_array($tagOrder) || !array_is_list($tagOrder) || count($tagOrder) > 10000) throw new UnexpectedValueException('ハッシュタグの順序が壊れています');
+        foreach ($tagOrder as $tag) if (!is_string($tag) || !preg_match('/\A[\p{L}\p{M}\p{N}_]{1,60}\z/u', $tag)) throw new UnexpectedValueException('ハッシュタグの順序が壊れています');
+        if (count(array_unique($tagOrder)) !== count($tagOrder)) throw new UnexpectedValueException('ハッシュタグの順序が重複しています');
         $media = []; $posts = [];
         foreach ($mediaEntries as $id => $files) {
             $id = (string)$id;
@@ -107,12 +127,13 @@ function nl_backup_restore(string $file, bool $overwrite): array
             $categories = array_map('strval', $categories);
             $posts[$id] = ['id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'status' => $p['status'], 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
         }
-        return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $settings, $tax, $overwrite) {
+        return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $settings, $tax, $tagOrder, $sidebar, $overwrite) {
             // Validate all references before replacing any live file.
             if ($settings['icon'] !== '' && !isset($media[$settings['icon']]) && !nl_load_media($settings['icon'])) throw new UnexpectedValueException('アイコンの画像がバックアップにありません');
             if ($settings['og_image'] !== '' && !isset($media[$settings['og_image']]) && !nl_load_media($settings['og_image'])) throw new UnexpectedValueException('紹介画像がバックアップにありません');
             $taxonomy = nl_taxonomy();
-            $taxonomy['categories'] = $overwrite ? array_replace($taxonomy['categories'], $tax) : $taxonomy['categories'] + $tax;
+            $taxonomy['categories'] = $overwrite ? $tax + $taxonomy['categories'] : $taxonomy['categories'] + $tax;
+            $taxonomy['hashtag_order'] = $overwrite ? $tagOrder : array_values(array_unique(array_merge($taxonomy['hashtag_order'], $tagOrder)));
             foreach ($posts as $p) foreach ($p['categories'] as $id) if (!isset($taxonomy['categories'][$id])) throw new UnexpectedValueException('投稿のカテゴリがバックアップにありません');
             foreach ($posts as $p) foreach ($p['media'] as $id) if (!isset($media[$id]) && !nl_load_media($id)) throw new UnexpectedValueException('投稿に必要な画像がバックアップにありません');
             $changes = []; $result = ['media' => 0, 'posts' => 0];
@@ -147,6 +168,12 @@ function nl_backup_restore(string $file, bool $overwrite): array
                     $dest = nl_root() . '/settings.php';
                     $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
                     nl_write_record($dest, $settings);
+                }
+                if ($sidebar !== null && ($overwrite || !is_file(nl_root() . '/sidebar.php'))) {
+                    $dest = nl_root() . '/sidebar.php';
+                    $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
+                    $oldSidebar = nl_sidebar_settings();
+                    nl_write_record($dest, ['revision' => $oldSidebar['revision'] + 1, 'updated' => time(), 'items' => $sidebar]);
                 }
                 $dest = nl_root() . '/index.php';
                 $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];

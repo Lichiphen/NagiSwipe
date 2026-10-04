@@ -6,7 +6,7 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 const NL_HASHTAG_PATTERN = '/(?<![A-Za-z0-9_\/#])#([\p{L}\p{M}\p{N}_]{1,60})(?![\p{L}\p{M}\p{N}_])/u';
 function nl_taxonomy(): array
 {
-    return array_replace(['categories' => [], 'revision' => 0, 'updated' => 0], nl_read_record(nl_root() . '/taxonomy.php') ?? []);
+    return array_replace(['categories' => [], 'hashtag_order' => [], 'revision' => 0, 'updated' => 0], nl_read_record(nl_root() . '/taxonomy.php') ?? []);
 }
 /** URLs, image tokens and manga labels are never parsed as hashtags. */
 function nl_hashtag_segments(string $body): array
@@ -38,6 +38,29 @@ function nl_category_name(string $name): string
     $name = trim($name);
     if ($name === '' || mb_strlen($name) > 40 || !mb_check_encoding($name, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $name)) throw new UnexpectedValueException('カテゴリ名は1〜40文字にしてください');
     return $name;
+}
+function nl_ordered_hashtags(bool $public = false): array
+{
+    $recent = nl_recent_hashtags($public, PHP_INT_MAX);
+    $ordered = array_values(array_filter(nl_taxonomy()['hashtag_order'], static fn($name) => is_string($name) && in_array($name, $recent, true)));
+    return array_values(array_unique(array_merge($ordered, $recent)));
+}
+function nl_taxonomy_reorder(string $kind, mixed $order, int $revision): int
+{
+    return nm_with_lock('personal-log', static function () use ($kind, $order, $revision) {
+        $tax = nl_taxonomy();
+        if ($revision !== (int)$tax['revision']) throw new UnexpectedValueException('別の画面で分類を更新しています。開き直してください');
+        $known = match ($kind) { 'category' => array_map('strval', array_keys($tax['categories'])), 'hashtag' => nl_ordered_hashtags(), default => throw new UnexpectedValueException('分類を選び直してください') };
+        if (!is_array($order) || !array_is_list($order) || count($order) !== count($known) || count($order) > 10000) throw new UnexpectedValueException('分類の一覧を開き直してください');
+        foreach ($order as $id) if (!is_string($id) || !in_array($id, $known, true)) throw new UnexpectedValueException('分類の一覧を開き直してください');
+        if (count(array_unique($order)) !== count($order)) throw new UnexpectedValueException('分類が重複しています');
+        if ($kind === 'category') {
+            $categories = []; foreach ($order as $id) $categories[$id] = $tax['categories'][$id]; $tax['categories'] = $categories;
+        } else $tax['hashtag_order'] = $order;
+        $tax['revision']++; $tax['updated'] = time();
+        nl_write_record(nl_root() . '/taxonomy.php', $tax);
+        return $tax['revision'];
+    });
 }
 /** Prepare under the shared lock; write alongside the post for rollback. */
 function nl_post_categories(array $input, array &$taxonomy): array
@@ -89,6 +112,7 @@ function nl_taxonomy_rename(array $input): void
                 $changed[nl_post_file($p['id'])] = $p;
             }
             if (!$changed) throw new UnexpectedValueException('そのハッシュタグを使う投稿がありません。画面を開き直してください');
+            $taxonomy['hashtag_order'] = array_values(array_unique(array_map(static fn($tag) => $tag === $old ? $name : $tag, $taxonomy['hashtag_order'])));
         } else throw new UnexpectedValueException('分類を選び直してください');
         $taxonomy['revision']++; $taxonomy['updated'] = time();
         $changed[nl_root() . '/taxonomy.php'] = $taxonomy;

@@ -139,11 +139,13 @@ function nm_layout(string $title, string $body, bool $nav = true): void
     $banner = '';
     if ($nav) {
         $guest = nm_is_guest();
-        $navHtml = '<nav class="nav"><a href="index.php">作品一覧</a>'
-            . ($guest ? '' : '<a href="index.php?p=log">LOG・投稿</a>')
-            . ($guest ? '' : '<a href="index.php?p=embed">設置用コード</a><a href="index.php?p=backup">バックアップ</a><a href="index.php?p=settings">設定</a>'
-                . '<a href="index.php?p=update">更新' . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">新</span>' : '') . '</a>')
-            . '<form method="post" action="index.php" class="inline">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . ($guest ? 'ゲストを終了' : 'ログアウト') . '</button></form></nav>';
+        $p = nm_str($_GET, 'p', 20);
+        $isLog = str_starts_with($p, 'log');
+        $navHtml = '<nav class="nav workspace-nav" aria-label="管理メニュー"><a href="index.php"' . (!$isLog && $p !== 'settings' ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
+            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>LOG・投稿</a><a href="index.php?p=settings"' . ($p === 'settings' ? ' aria-current="page"' : '') . '>設定</a>')
+            . '<details class="nav-more"><summary>管理メニュー</summary><div>'
+            . ($guest ? '' : '<a href="index.php?p=embed">漫画の設置用コード</a><a href="index.php?p=backup">バックアップ</a><a href="index.php?p=update">更新' . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">新</span>' : '') . '</a>')
+            . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . ($guest ? 'ゲストを終了' : 'ログアウト') . '</button></form></div></details></nav>';
         $g = $guest ? nm_guest_config() : null;
         if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
     }
@@ -162,9 +164,10 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . ($logPage
             ? '<link rel="stylesheet" href="' . nm_asset('../viewer/NagiSwipe-main.css') . '">'
               . '<script src="' . nm_asset('log-editor.js') . '" defer></script>'
+              . '<script src="' . nm_asset('log-manage.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiSwipe-main.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiManga.js') . '" defer></script>' : '')
-        . '</head><body><header class="top"><span class="brand">NagiManga</span>' . $navHtml . '</header>'
+        . '</head><body><header class="top"><span class="brand">' . nl_ui_icon() . '<span>NagiManga / LOG</span></span>' . $navHtml . '</header>'
         . '<main class="main' . ($logPage ? ' log-admin-main' : '') . '">' . $banner . $flash . $body . '</main>'
         . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
 }
@@ -553,28 +556,28 @@ function nm_handle_post(array $cfg): void
                 nm_log('admin_password_changed');
                 nm_flash('ok', '管理者パスワードを変更しました（他の端末はログアウトされます）');
             }
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=common');
 
         case 'settings_access':
             $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
             foreach ($ips as $r) {
                 if (!nm_valid_ip_rule($r)) {
                     nm_flash('err', 'IP アドレスの書き方が正しくありません: ' . $r);
-                    nm_redirect('p=settings');
+                    nm_redirect('p=settings&section=common');
                 }
             }
             // Never lock yourself out with one click
             $me = nm_client_ip();
             if ($ips && !array_filter($ips, static fn($r) => nm_ip_match($me, $r))) {
                 nm_flash('err', '今の IP アドレス（' . $me . '）が含まれていないため保存しませんでした');
-                nm_redirect('p=settings');
+                nm_redirect('p=settings&section=common');
             }
             $origins = [];
             foreach (nm_lines(nm_str($_POST, 'allowed_origins', 5000)) as $o) {
                 $o = rtrim($o, '/');
                 if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) {
                     nm_flash('err', 'サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
-                    nm_redirect('p=settings');
+                    nm_redirect('p=settings&section=common');
                 }
                 $origins[] = strtolower($o);
             }
@@ -583,31 +586,31 @@ function nm_handle_post(array $cfg): void
             nm_save_config($cfg);
             nm_log('settings_access_changed', implode(',', $ips));
             nm_flash('ok', 'アクセス設定を保存しました');
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=common');
 
         case 'settings_general':
             $base = rtrim(trim(nm_str($_POST, 'base_url', 500)), '/');
             if ($base !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $base)) {
                 nm_flash('err', '公開URLの書き方が正しくありません');
-                nm_redirect('p=settings');
+                nm_redirect('p=settings&section=common');
             }
             $cfg['base_url'] = $base;
             $cfg['image_quality'] = max(60, min(100, (int)($_POST['image_quality'] ?? 90)));
             $cfg['max_upload_mb'] = max(1, min(200, (int)($_POST['max_upload_mb'] ?? 30)));
             nm_save_config($cfg);
             nm_flash('ok', '保存しました');
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=common');
 
         case 'settings_page':
             $back = trim(nm_str($_POST, 'page_back', 500));
             if ($back !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $back)) {
                 nm_flash('err', '戻る先の URL の書き方が正しくありません（例: https://example.com/）');
-                nm_redirect('p=settings');
+                nm_redirect('p=settings&section=manga');
             }
             $cfg['page_back'] = $back;
             nm_save_config($cfg);
             nm_flash('ok', '個別ページの設定を保存しました');
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=manga');
 
         case 'settings_advanced':
             $allow = [];
@@ -615,7 +618,7 @@ function nm_handle_post(array $cfg): void
                 $o = rtrim($o, '/');
                 if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) {
                     nm_flash('err', 'サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
-                    nm_redirect('p=settings');
+                    nm_redirect('p=settings&section=manga');
                 }
                 $allow[] = strtolower($o);
             }
@@ -624,14 +627,14 @@ function nm_handle_post(array $cfg): void
             nm_save_config($cfg);
             nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $allow));
             nm_flash('ok', $cfg['hotlink'] ? '直リンク防止をオンにしました' : '直リンク防止をオフにしました');
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=manga');
 
         case 'regen_key':
             $cfg['login_key'] = nm_random_id(24);
             nm_save_config($cfg);
             nm_log('login_key_changed');
             nm_flash('ok', 'ログイン URL を変更しました。新しい URL をブックマークし直してください');
-            nm_redirect('p=settings');
+            nm_redirect('p=settings&section=common');
     }
     nm_not_found();
 }
@@ -1092,13 +1095,18 @@ function nm_view_settings(array $cfg): void
     }
     $hidden = nm_csrf_field();
 
-    nm_layout('設定', '<section class="card"><h1>設定</h1><h2>ログイン URL</h2>'
+    $section = nm_str($_GET, 'section', 20);
+    if (!in_array($section, ['manga', 'log', 'common'], true)) $section = 'log';
+    $tabs = '<h1>設定</h1><p class="note">使いたい機能を選んで、必要な項目だけ設定できます。各ブロックの保存ボタンで反映します。</p><nav class="workspace-tabs" data-settings-tabs aria-label="設定の種類">';
+    foreach (['manga' => 'NagiMANGA', 'log' => 'LOG', 'common' => '共通・安全'] as $key => $label) $tabs .= '<a href="index.php?p=settings&amp;section=' . $key . '" data-settings-tab="' . $key . '"' . ($key === $section ? ' aria-current="page"' : '') . '>' . $label . '</a>';
+    $tabs .= '</nav>';
+    $panel = static fn($key) => '<div id="settings-' . $key . '" data-settings-panel="' . $key . '"' . ($key === $section ? '' : ' hidden') . '>';
+    nm_layout('設定', $tabs . $panel('log') . nl_preferences_panel() . nl_settings_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
+        . '<section class="card"><h2>ログイン URL</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
         . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
         . '<input type="hidden" name="do" value="regen_key"><button class="btn">ログイン URL を変更する</button></form></section>'
 
-        . nl_settings_panel()
-        . nl_taxonomy_panel()
         . nl_guard_panel()
 
         . '<section class="card"><h2>管理画面を開ける場所（IP 制限）</h2>'
@@ -1116,7 +1124,7 @@ function nm_view_settings(array $cfg): void
         . '<label>もう一度<input type="password" name="password2" autocomplete="new-password" required minlength="10"></label>'
         . '<button class="btn">変更</button></form></section>'
 
-        . '<section class="card"><h2>その他</h2>'
+        . '<section class="card"><h2>設置先と画像アップロード</h2>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_general">'
         . '<label>公開URL（共有リンク・OGPに使います。設置先を入力し、末尾にlog.phpは付けません。空欄ならアクセス時のアドレスから作ります）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
         . '<label>画像の画質（60〜100）<input type="number" name="image_quality" min="60" max="100" value="' . (int)($cfg['image_quality'] ?? 90) . '"></label>'
@@ -1124,7 +1132,8 @@ function nm_view_settings(array $cfg): void
         . '<p class="note">サーバー側の上限: upload_max_filesize ' . h((string)ini_get('upload_max_filesize')) . ' / memory_limit ' . h((string)ini_get('memory_limit')) . '</p>'
         . '<button class="btn">保存</button></form></section>'
 
-        . '<section class="card"><h2>個別ページ</h2>'
+        . '<section class="card"><details><summary>セキュリティログを見る</summary>' . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>') . '</details></section></div>' . $panel('manga')
+        . '<section class="card"><h2>NagiMANGAの作品ページ</h2>'
         . '<p>作品ごとの共有リンク（<code>read.php?nagimanga=…</code>）を開くと、その作品を読むページが開きます。note・アメブロ・Instagram・X などに貼ると、表紙付きのカードで表示されます（パスワード付きの作品は表紙を出しません）。</p>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_page">'
         . '<label>「戻る」ボタンの行き先（空欄なら自動：来たページに戻ります。わからないときは空欄のままで大丈夫です）<input name="page_back" value="' . h((string)($cfg['page_back'] ?? '')) . '" placeholder="例: https://example.com/"></label>'
@@ -1140,9 +1149,7 @@ function nm_view_settings(array $cfg): void
         . '<button class="btn">保存</button></form>'
         . '</details></section>'
 
-        . '<section class="card"><h2>セキュリティログ（新しい順）</h2>'
-        . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>')
-        . '</section>');
+        . '</div>');
 }
 
 /** After login: a notice when GitHub has a newer NagiManga (checked at most every 12 hours). */

@@ -66,7 +66,7 @@ function nm_not_found(): never
         header('Cache-Control: no-store');
         header('X-Content-Type-Options: nosniff');
         header('X-Robots-Tag: noindex, nofollow');
-        header('Vary: Accept');
+        header('Vary: Accept, Cookie');
         if ($html) header("Content-Security-Policy: default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'");
     }
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'HEAD') exit;
@@ -74,11 +74,46 @@ function nm_not_found(): never
         $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/404.php'))), '/');
         if (str_ends_with($dir, '/admin')) $dir = substr($dir, 0, -6);
         $base = $dir === '.' ? '' : $dir;
-        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void"><div class="nm-blackhole" aria-hidden="true"><div class="nm-orbit"></div><div class="nm-core"></div></div><main><p class="nm-error-number">404</p><h1>ここには、何もないみたい。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る</a><small>Not Found</small></main></body></html>';
+        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void">' . nm_blackhole_scene() . '<main><p class="nm-error-number">404</p><h1>このページは、宇宙の彼方へ。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る <span aria-hidden="true">↗</span></a><small>Not Found</small></main></body></html>';
         exit;
     }
     echo 'Not Found';
     exit;
+}
+
+/** Self-contained SVG: layered light, a warped disk, and an unlit event horizon. */
+function nm_blackhole_scene(): string
+{
+    return <<<'HTML'
+<div class="nm-universe" aria-hidden="true"><div class="nm-stars nm-stars-near"></div><div class="nm-stars nm-stars-far"></div><div class="nm-nebula"></div>
+<svg class="nm-blackhole" viewBox="0 0 1600 900" focusable="false" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="nm-aura"><stop stop-color="#ffd2a1" stop-opacity=".46"/><stop offset=".35" stop-color="#d47852" stop-opacity=".2"/><stop offset=".7" stop-color="#654399" stop-opacity=".08"/><stop offset="1" stop-color="#12091b" stop-opacity="0"/></radialGradient>
+<linearGradient id="nm-disk"><stop stop-color="#62334b" stop-opacity="0"/><stop offset=".16" stop-color="#cf7258"/><stop offset=".4" stop-color="#fff0c9"/><stop offset=".51" stop-color="#fffef1"/><stop offset=".65" stop-color="#ffd996"/><stop offset=".86" stop-color="#a54d42"/><stop offset="1" stop-color="#5d2a44" stop-opacity="0"/></linearGradient>
+<linearGradient id="nm-lens" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffce6"/><stop offset=".36" stop-color="#ffce83"/><stop offset="1" stop-color="#bc5d45" stop-opacity=".4"/></linearGradient>
+<radialGradient id="nm-core-light"><stop offset=".78" stop-color="#020206"/><stop offset=".88" stop-color="#030307"/><stop offset=".935" stop-color="#714635"/><stop offset=".961" stop-color="#fff1be"/><stop offset=".98" stop-color="#ad6044"/><stop offset="1" stop-color="#3a1723" stop-opacity="0"/></radialGradient>
+<filter id="nm-blur" x="-50%" y="-70%" width="200%" height="240%"><feGaussianBlur stdDeviation="19"/></filter><filter id="nm-glow" x="-30%" y="-70%" width="160%" height="240%"><feGaussianBlur stdDeviation="5"/></filter><clipPath id="nm-front"><path d="M0 400H1600V900H0Z"/></clipPath>
+</defs>
+<ellipse cx="800" cy="410" rx="670" ry="370" fill="url(#nm-aura)"/>
+<g class="nm-disk-glow" fill="none" stroke="url(#nm-disk)" filter="url(#nm-blur)"><ellipse cx="800" cy="413" rx="545" ry="51" stroke-width="29"/><path d="M566 415C586 130 1014 130 1034 415" stroke-width="38"/></g>
+<g class="nm-lensing" fill="none" stroke="url(#nm-lens)">
+<path d="M569 411C596 133 1004 133 1031 411" stroke-width="14" opacity=".45" filter="url(#nm-glow)"/><path d="M576 406C605 153 995 153 1024 406" stroke-width="7" opacity=".7"/>
+<path d="M586 407C621 183 979 183 1014 407" stroke-width="3"/><path d="M596 408C635 206 965 206 1004 408" stroke-width="1.4" opacity=".7"/><path d="M610 407C647 236 953 236 990 407" stroke-width="1.2" opacity=".5"/>
+<path d="M576 423C603 628 997 628 1024 423" stroke-width="4" opacity=".26"/>
+</g>
+<g fill="none" stroke="url(#nm-disk)">
+<ellipse cx="800" cy="413" rx="589" ry="57" stroke-width="2" opacity=".24"/><ellipse cx="800" cy="413" rx="564" ry="51" stroke-width="2" opacity=".36"/><ellipse cx="800" cy="413" rx="530" ry="45" stroke-width="3" opacity=".65"/>
+<ellipse cx="800" cy="413" rx="507" ry="40" stroke-width="4" opacity=".85"/><ellipse cx="800" cy="413" rx="473" ry="35" stroke-width="5"/><ellipse cx="800" cy="413" rx="441" ry="30" stroke-width="6"/><ellipse cx="800" cy="413" rx="409" ry="26" stroke-width="3"/>
+</g>
+<circle cx="800" cy="408" r="155" fill="url(#nm-core-light)"/><circle cx="800" cy="408" r="141" fill="#010105"/><circle cx="800" cy="408" r="146" fill="none" stroke="#ffde9b" stroke-width="1.5" opacity=".84"/>
+<g class="nm-front-disk" clip-path="url(#nm-front)" fill="none" stroke="url(#nm-disk)">
+<ellipse cx="800" cy="413" rx="535" ry="50" stroke-width="20" opacity=".7" filter="url(#nm-glow)"/><ellipse cx="800" cy="413" rx="540" ry="53" stroke-width="1" opacity=".5"/>
+<ellipse cx="800" cy="413" rx="512" ry="48" stroke-width="2"/><ellipse cx="800" cy="413" rx="486" ry="43" stroke-width="3"/><ellipse cx="800" cy="413" rx="458" ry="39" stroke-width="4"/><ellipse cx="800" cy="413" rx="428" ry="34" stroke-width="5"/>
+<ellipse cx="800" cy="413" rx="400" ry="29" stroke-width="2"/><ellipse cx="800" cy="413" rx="370" ry="26" stroke-width="1" opacity=".7"/>
+</g>
+<g fill="#fff3dc"><circle cx="248" cy="202" r="1.4"/><circle cx="1345" cy="119" r="1.2"/><circle cx="1261" cy="657" r="1.6"/><circle cx="467" cy="673" r="1.1"/><circle cx="1034" cy="77" r="1"/></g>
+</svg><div class="nm-space-vignette"></div></div>
+HTML;
 }
 
 function nm_json(array $data, int $status = 200): never

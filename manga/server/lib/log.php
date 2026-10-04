@@ -10,6 +10,7 @@ const NL_INDEX_SCHEMA = 5;
 const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライトセージ', 'light-paper' => 'ライトペーパー',
     'dark-navy' => 'ダークネイビー', 'dark-charcoal' => 'ダークチャコール', 'dark-plum' => 'ダークプラム'];
 require_once __DIR__ . '/log-taxonomy.php';
+require_once __DIR__ . '/log-sidebar.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -110,9 +111,92 @@ function nl_list_media(): array
     usort($out, static fn($a, $b) => [$b['created'], $b['id']] <=> [$a['created'], $a['id']]);
     return $out;
 }
+/** Remove only an empty folder or its automatically created, empty guard. */
+function nl_prune_empty_dir(string $dir): bool
+{
+    if (!is_dir($dir)) return true;
+    if (is_link($dir)) return false;
+    $names = @scandir($dir);
+    if ($names === false) return false;
+    $names = array_values(array_diff($names, ['.', '..']));
+    if ($names === ['index.html'] && !is_link($dir . '/index.html') && is_file($dir . '/index.html') && filesize($dir . '/index.html') === 0) {
+        if (!@unlink($dir . '/index.html')) return false;
+        $names = [];
+    }
+    return $names !== [] || @rmdir($dir);
+}
+/** Delete a reviewed batch and its unshared images; roll back before commit. */
+function nl_delete_posts(mixed $items): array
+{
+    return nm_with_lock('personal-log', static function () use ($items) {
+        if (!is_array($items) || !array_is_list($items) || count($items) < 1 || count($items) > 100) throw new UnexpectedValueException('削除する記事を1〜100件選んでください');
+        $selected = []; $candidates = [];
+        foreach ($items as $item) {
+            if (!is_array($item) || !is_string($item['id'] ?? null) || !is_int($item['revision'] ?? null) || !nl_valid_post($item['id']) || isset($selected[$item['id']])) throw new UnexpectedValueException('記事の選択を確認してください');
+            $p = nl_load_post($item['id']);
+            if (!$p) throw new UnexpectedValueException('記事が見つかりません。一覧を開き直してください');
+            if ($p['revision'] !== $item['revision']) throw new UnexpectedValueException('別の画面で更新された記事があります。一覧を開き直してください');
+            $selected[$p['id']] = $p;
+            foreach (nl_media_refs($p['body']) as $id) $candidates[$id] = true;
+        }
+        // Originals protect shared images even when the derived index is stale.
+        $used = [];
+        foreach (glob(nl_root() . '/posts/*/*.php') ?: [] as $file) {
+            $p = nl_load_post(basename($file, '.php'));
+            if ($p && !isset($selected[$p['id']])) foreach (nl_media_refs($p['body']) as $id) $used[$id] = true;
+        }
+        $s = nl_settings(); $used[$s['icon']] = true; $used[$s['og_image']] = true;
+        foreach (nl_sidebar_media_ids() as $id) $used[$id] = true;
+        $indexFile = nl_root() . '/index.php';
+        $oldIndex = is_file($indexFile) ? file_get_contents($indexFile) : null;
+        if ($oldIndex === false) throw new RuntimeException('cannot read index before delete');
+        $stage = nl_root() . '/.delete-' . bin2hex(random_bytes(8));
+        nm_ensure_dir($stage);
+        $moved = [];
+        $images = 0;
+        $move = static function (string $from, string $to) use (&$moved): void {
+            if (!rename($from, $to)) throw new RuntimeException('delete staging failed');
+            $moved[] = [$from, $to];
+            if (is_file($to) && function_exists('opcache_invalidate')) @opcache_invalidate($from, true);
+        };
+        try {
+            foreach ($selected as $p) $move(nl_post_file($p['id']), $stage . '/post-' . $p['id'] . '.php');
+            foreach (array_keys($candidates) as $id) {
+                $id = (string)$id;
+                if (isset($used[$id]) || !nl_load_media($id)) continue;
+                $move(nl_media_dir($id), $stage . '/media-' . $id); $images++;
+            }
+            foreach (glob(nl_root() . '/receipts/*.php') ?: [] as $file) {
+                $receipt = nl_read_record($file); $id = $receipt['id'] ?? '';
+                if (is_string($id) && (isset($selected[$id]) || !nl_load_post($id))) $move($file, $stage . '/receipt-' . basename($file));
+            }
+            nl_rebuild_index();
+        } catch (Throwable $e) {
+            foreach (array_reverse($moved) as [$from, $to]) {
+                if (!rename($to, $from)) throw new RuntimeException('delete rollback failed', 0, $e);
+                if (is_file($from) && function_exists('opcache_invalidate')) @opcache_invalidate($from, true);
+            }
+            if (is_string($oldIndex)) nm_write_atomic($indexFile, $oldIndex); else @unlink($indexFile);
+            if (function_exists('opcache_invalidate')) @opcache_invalidate($indexFile, true);
+            if (!nl_prune_empty_dir($stage)) throw new RuntimeException('delete rollback cleanup failed', 0, $e);
+            throw $e;
+        }
+        // The temporary transaction folder is removed, never retained as trash.
+        nm_rmdir_recursive($stage);
+        $clean = !is_dir($stage);
+        foreach ($selected as $p) $clean = nl_prune_empty_dir(dirname(nl_post_file($p['id']))) && $clean;
+        foreach (['posts', 'media', 'receipts'] as $dir) $clean = nl_prune_empty_dir(nl_root() . '/' . $dir) && $clean;
+        nm_log('log_deleted', count($selected) . ' posts / ' . $images . ' images' . ($clean ? '' : ' / cleanup incomplete'));
+        return ['posts' => count($selected), 'media' => $images, 'clean' => $clean];
+    });
+}
 function nl_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'show_footer' => true, 'footer_text' => 'Powered by NagiManga / NagiSwipe', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s['public'] = $s['public'] === true;
+    $s['show_login'] = $s['show_login'] === true;
+    $s['show_footer'] = $s['show_footer'] === true;
+    $s['posts_per_page'] = max(1, min(100, (int)$s['posts_per_page']));
     if (!isset(NL_THEMES[$s['theme']])) $s['theme'] = 'light-blue';
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';
     if ($s['og_image'] !== '' && !nl_valid_media($s['og_image'])) $s['og_image'] = '';
@@ -238,7 +322,9 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
 function nl_media_public(string $id): bool
 {
     $s = nl_settings();
+    if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER)) return false;
     if ($s['icon'] === $id || $s['og_image'] === $id) return true;
+    if (in_array($id, nl_sidebar_media_ids(true), true)) return true;
     static $refs = null;
     if ($refs === null) {
         $refs = [];
@@ -259,6 +345,7 @@ function nl_media_url(array $m, bool $thumb = false, bool $admin = false): strin
 function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
 {
     if (!nl_valid_media($id)) nm_not_found();
+    if (!$admin && !nl_settings()['public']) nm_not_found();
     if (!$admin) nm_image_guard(nm_config());
     // Check visibility before conditional responses, including after unpublishing.
     $m = nl_load_media($id);
@@ -267,7 +354,8 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
     if (!is_file($file)) nm_not_found();
     header('Content-Type: ' . (str_ends_with($m['f'], '.webp') ? 'image/webp' : 'image/jpeg'));
     header('X-Content-Type-Options: nosniff');
-    header('Cache-Control: ' . ($admin ? 'no-store' : 'public, max-age=0, must-revalidate'));
+    header('Cache-Control: ' . ($admin ? 'private, no-store' : 'public, max-age=0, must-revalidate'));
+    header('Vary: Cookie');
     header('Content-Length: ' . filesize($file));
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') readfile($file);
     exit;
@@ -343,5 +431,6 @@ function nl_base_url(): string
     $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
     if (!preg_match('/\A[a-z0-9.\-:\[\]]+\z/i', $host)) $host = 'localhost';
     $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/log.php'))), '/');
+    if (!defined('NL_FRONT')) $dir = (string)preg_replace('~/admin\z~', '', $dir);
     return (nm_is_https() ? 'https' : 'http') . '://' . $host . $dir;
 }

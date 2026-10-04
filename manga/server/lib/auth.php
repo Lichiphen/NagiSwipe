@@ -82,7 +82,9 @@ function nm_session_start(): void
     ini_set('session.use_trans_sid', '0');
     ini_set('session.gc_maxlifetime', (string)NM_SESSION_MAX);
     session_name('nm_admin');
-    $path = rtrim(dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/')), '/\\') . '/';
+    $script = (string)($_SERVER['SCRIPT_NAME'] ?? '/');
+    $path = rtrim(dirname($script), '/\\') . '/';
+    if (preg_match('~/admin/[^/]+$~', $script)) $path = rtrim(dirname($script, 2), '/\\') . '/';
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => $path,
@@ -91,6 +93,13 @@ function nm_session_start(): void
         'samesite' => 'Strict',
     ]);
     session_start();
+    // The public LOG can recognize the owner with the same protected session.
+    // Migrate the former /admin/ cookie when an existing admin visits this page.
+    if (preg_match('~/admin/[^/]+$~', $script)) {
+        $params = session_get_cookie_params();
+        setcookie('nm_admin', session_id(), ['expires' => 0, 'path' => $path, 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
+        setcookie('nm_admin', '', ['expires' => time() - 3600, 'path' => rtrim(dirname($script), '/\\') . '/', 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
+    }
 }
 
 function nm_browser_fingerprint(): string

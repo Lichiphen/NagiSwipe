@@ -9,6 +9,45 @@
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+    // Keep edits in each settings tab while switching between modules.
+    const settingsTabs = $('[data-settings-tabs]');
+    if (settingsTabs) {
+        const tabs = $$('[data-settings-tab]', settingsTabs);
+        settingsTabs.setAttribute('role', 'tablist');
+        function select(tab, focus = false) {
+            tabs.forEach(t => {
+                const active = t === tab;
+                t.setAttribute('role', 'tab'); t.setAttribute('aria-selected', String(active));
+                t.id = 'settings-tab-' + t.dataset.settingsTab;
+                t.setAttribute('aria-controls', 'settings-' + t.dataset.settingsTab);
+                t.tabIndex = active ? 0 : -1;
+                if (active) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+            });
+            $$('[data-settings-panel]').forEach(p => { p.hidden = p.dataset.settingsPanel !== tab.dataset.settingsTab; p.setAttribute('role', 'tabpanel'); p.setAttribute('aria-labelledby', 'settings-tab-' + p.dataset.settingsPanel); });
+            if (focus) tab.focus();
+        }
+        tabs.forEach((tab, i) => {
+            tab.addEventListener('click', e => {
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                e.preventDefault(); select(tab); history.replaceState(null, '', tab.href);
+            });
+            tab.addEventListener('keydown', e => {
+                let next = i;
+                if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+                else if (e.key === 'ArrowLeft') next = (i + tabs.length - 1) % tabs.length;
+                else if (e.key === 'Home') next = 0;
+                else if (e.key === 'End') next = tabs.length - 1;
+                else return;
+                e.preventDefault(); select(tabs[next], true); history.replaceState(null, '', tabs[next].href);
+            });
+        });
+        select(tabs.find(t => t.hasAttribute('aria-current')) || tabs[0]);
+    }
+    $$('.nav-more').forEach(menu => {
+        document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && menu.open) { menu.open = false; $('summary', menu).focus(); } });
+    });
+
     // --- Copy buttons -------------------------------------------------------
     $$('.js-copy').forEach(btn => {
         btn.addEventListener('click', async () => {

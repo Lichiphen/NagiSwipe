@@ -11,6 +11,7 @@ and runs every scenario against them. Nothing touches dev/data.
 """
 import hashlib
 import http.client
+import http.cookies
 import http.server
 import io
 import json
@@ -26,6 +27,7 @@ import time
 import urllib.parse
 import zipfile
 import zlib
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -71,7 +73,75 @@ def png(w, h, seed=0, extra_after_iend=b"", ihdr_override=None):
 class Client:
     def __init__(self, port=PORT):
         self.port = port
-        self.cookies = {}
+        self._cookie_jar = {}
+
+    @property
+    def cookies(self):
+        """Name-only compatibility view for copying authenticated test clients."""
+        self._expire_cookies()
+        return {name: record["value"] for (name, _), record in self._cookie_jar.items()}
+
+    @cookies.setter
+    def cookies(self, values):
+        # Existing parallel-save fixtures explicitly import an owner's session.
+        self._cookie_jar = {(name, "/"): {"value": value, "expires": None, "secure": False}
+                            for name, value in dict(values).items()}
+
+    def _expire_cookies(self):
+        now = time.time()
+        for key, record in list(self._cookie_jar.items()):
+            if record["expires"] is not None and record["expires"] <= now:
+                del self._cookie_jar[key]
+
+    @staticmethod
+    def _default_cookie_path(request_path):
+        path = urllib.parse.urlsplit(request_path).path
+        if not path.startswith("/"):
+            return "/"
+        return path.rsplit("/", 1)[0] or "/"
+
+    def _store_cookie(self, header, request_path):
+        parsed = http.cookies.SimpleCookie()
+        try:
+            parsed.load(header)
+        except http.cookies.CookieError:
+            return
+        for name, morsel in parsed.items():
+            domain = morsel["domain"].lstrip(".").lower()
+            if domain and domain != HOST.lower():
+                continue
+            cookie_path = morsel["path"]
+            if not cookie_path.startswith("/"):
+                cookie_path = self._default_cookie_path(request_path)
+            expires = None
+            if morsel["max-age"]:
+                try:
+                    expires = time.time() + int(morsel["max-age"])
+                except ValueError:
+                    pass
+            elif morsel["expires"]:
+                try:
+                    expires = parsedate_to_datetime(morsel["expires"]).timestamp()
+                except (ValueError, TypeError, OverflowError):
+                    pass
+            key = (name, cookie_path)
+            if expires is not None and expires <= time.time():
+                self._cookie_jar.pop(key, None)
+            else:
+                self._cookie_jar[key] = {"value": morsel.value, "expires": expires, "secure": bool(morsel["secure"])}
+
+    def _cookie_header(self, request_path):
+        self._expire_cookies()
+        path = urllib.parse.urlsplit(request_path).path or "/"
+        matched = []
+        for (name, cookie_path), record in self._cookie_jar.items():
+            path_matches = path == cookie_path or (path.startswith(cookie_path)
+                           and (cookie_path.endswith("/") or path[len(cookie_path):].startswith("/")))
+            # These test servers use HTTP; browsers do not send Secure cookies.
+            if path_matches and not record["secure"]:
+                matched.append((len(cookie_path), name, record["value"]))
+        matched.sort(key=lambda item: item[0], reverse=True)
+        return "; ".join(f"{name}={value}" for _, name, value in matched)
 
     def request(self, method, path, body=None, headers=None, files=None, cookies=True):
         headers = dict(headers or {})
@@ -93,8 +163,10 @@ class Client:
             headers["Content-Type"] = "application/x-www-form-urlencoded"
         else:
             payload = body
-        if cookies and self.cookies:
-            headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in self.cookies.items())
+        if cookies:
+            cookie_header = self._cookie_header(path)
+            if cookie_header:
+                headers["Cookie"] = cookie_header
         headers.setdefault("User-Agent", "nm-attack-test")
         conn = http.client.HTTPConnection(HOST, self.port, timeout=60)
         conn.request(method, path, body=payload, headers=headers)
@@ -102,12 +174,7 @@ class Client:
         data = res.read()
         for h, v in res.getheaders():
             if h.lower() == "set-cookie":
-                name, _, rest = v.partition("=")
-                value = rest.split(";", 1)[0]
-                if "expires=Thu, 01 Jan 1970" in v or value == "deleted" or "Max-Age=0" in v:
-                    self.cookies.pop(name, None)
-                else:
-                    self.cookies[name] = value
+                self._store_cookie(v, path)
         res.body = data
         res.text = data.decode("utf-8", "replace")
         conn.close()
