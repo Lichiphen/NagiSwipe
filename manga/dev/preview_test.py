@@ -15,7 +15,7 @@ def stop(process):
         process.wait(timeout=15)
 def start(data,log):
     with log.open('wb') as output:
-        process=subprocess.Popen(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'manga/dev/start_preview.ps1'),'-Port',str(args.port),'-DataDirectory',str(data)],stdout=output,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
+        process=subprocess.Popen(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'manga/dev/start_preview.ps1'),'-Port',str(args.port),'-DataDirectory',str(data),'-Empty'],stdout=output,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
     for _ in range(120):
         if process.poll() is not None: raise RuntimeError(f'Preview exited {process.returncode}: '+log.read_text(errors='replace')[:500])
         try:
@@ -45,10 +45,11 @@ def main():
         response=client.post('/admin/index.php',{'csrf':ct,**base.payload(body='再起動後に編集できる記録',post_id=pid,revision=2)})
         check('再起動後に同じ管理者でログイン・編集できる',response.status==200 and '再起動後に編集できる記録' in h.Client(args.port).get('/?id='+pid).text)
         existing=file_hashes(data); alternative=root/'never-created'
-        busy=subprocess.run(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'manga/dev/start_preview.ps1'),'-Port',str(args.port),'-DataDirectory',str(alternative)],capture_output=True,timeout=20,creationflags=subprocess.CREATE_NO_WINDOW)
+        busy=subprocess.run(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'manga/dev/start_preview.ps1'),'-Port',str(args.port),'-DataDirectory',str(alternative),'-Empty'],capture_output=True,timeout=20,creationflags=subprocess.CREATE_NO_WINDOW)
         (root/'busy-port.txt').write_bytes(busy.stdout+busy.stderr)
         check('使用中ポートへ再起動しても既存データを変えない',busy.returncode==0 and not alternative.exists() and file_hashes(data)==existing and h.Client(args.port).get('/?id='+pid).status==200)
-        check('起動指定は外部公開しないloopbackだけ','-S "127.0.0.1:$Port"' in (ROOT/'manga/dev/start_preview.ps1').read_text(encoding='utf-8-sig'))
+        script=(ROOT/'manga/dev/start_preview.ps1').read_text(encoding='utf-8-sig')
+        check('起動指定は-Lanを付けない限りloopbackだけ',re.search(r"\$taskListen = '127\.0\.0\.1'\s+if \(\$Lan\) \{\s+\$taskListen = '0\.0\.0\.0'",script) and '-S "${taskListen}:$Port"' in script)
     finally: stop(process)
     passed=sum(ok for _,ok in checks); print(f'\n{passed} / {len(checks)} passed')
     (root/'preview-report.md').write_text('# ローカル起動スクリプトの再起動試験\n\n'+f'{passed} / {len(checks)} passed\n\n'+'\n'.join(f"- {'PASS' if ok else 'FAIL'}: {name}" for name,ok in checks)+'\n',encoding='utf-8')
