@@ -177,6 +177,11 @@ def run(site,other_site,c,csrf,other,ot):
     check('取得先は公開アドレスだけ（内部・予約・ループバックを拒否）',blocked==[False]*11+[True,True])
     check('URLに認証情報や80/443以外のポートがあれば取得しない',php(site,"echo json_encode([nl_http_get('http://user:pw@example.com/',1000,'text/html',microtime(true)+2,true), nl_http_get('http://example.com:8080/',1000,'text/html',microtime(true)+2,true)]);")==[None,None])
 
+    media_page=c.get('/admin/index.php?p=log_media').text
+    check('画像一覧の各枠にドロップで差し替えられると案内','log-drop-hint' in media_page and media_page.count('data-media-card=')==media_page.count('log-drop-hint'))
+    php(site,"$f=nl_root().'/settings.php'; nl_write_record($f, array_replace(nl_read_record($f) ?? [], ['footer_text'=>'Powered by NagiManga / NagiSwipe']));")
+    check('以前の標準フッターを保存したサイトは新しい標準に変わる',"Powered by NagiManga / NagiSwipe" in (site/'data/log/settings.php').read_text(encoding='utf-8') and '<footer class="log-site-footer">Powered by NagiLog＆NagiManga</footer>' in pub.get('/').text)
+
     # --- Backup and restore keep the animation -------------------------------------------
     anim=json.loads(upload('again.gif',gif(frames=3),'image/gif').text)['media']
     save('復元するGIF\n[Image:'+anim['id']+']')

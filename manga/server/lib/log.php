@@ -197,6 +197,8 @@ function nl_settings(): array
 {
     $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
+    // Sites that saved the former default footer follow the new default; edited text is left alone.
+    if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
     $s['show_login'] = $s['show_login'] === true;
     $s['show_footer'] = $s['show_footer'] === true;
     $s['posts_per_page'] = max(1, min(100, (int)$s['posts_per_page']));

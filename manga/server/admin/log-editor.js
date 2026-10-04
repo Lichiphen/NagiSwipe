@@ -16,13 +16,14 @@
         if (!response.ok || result.error) throw new Error(result.error || '保存できませんでした。もう一度お試しください。');
         return result;
     }
-    $$('.log-replace').forEach(input => input.addEventListener('change', async () => {
-        const card = input.closest('[data-media-card]');
-        const file = input.files[0];
-        if (!file) return;
+    // Replace from the file picker or by dropping an image anywhere on the card.
+    async function replaceImage(card, file) {
+        const input = $('.log-replace', card);
+        if (!file || card.dataset.busy) return;
+        if (!/^image\/(jpeg|png|webp|gif|avif|bmp)$/.test(file.type)) { $('[data-replace-status]', card).textContent = 'JPEG・PNG・WebP・GIF・AVIF・BMPの画像を選んでください。'; return; }
         if (!window.confirm('この画像を使うすべての投稿が変わります。差し替えますか？')) { input.value = ''; return; }
         const status = $('[data-replace-status]', card);
-        input.disabled = true;
+        input.disabled = true; card.dataset.busy = '1';
         status.textContent = '画像を差し替えています…';
         try {
             const data = new FormData();
@@ -35,8 +36,24 @@
             window.NagiSwipe?.init();
             status.textContent = '差し替えました。本文のタグはそのまま使えます。';
         } catch (e) { status.textContent = e.message; }
-        finally { input.disabled = false; input.value = ''; }
-    }));
+        finally { input.disabled = false; input.value = ''; delete card.dataset.busy; }
+    }
+    $$('.log-replace').forEach(input => input.addEventListener('change', () => replaceImage(input.closest('[data-media-card]'), input.files[0])));
+    $$('[data-media-card]').forEach(card => {
+        let depth = 0;
+        const files = e => [...(e.dataTransfer?.types || [])].includes('Files');
+        card.addEventListener('dragenter', e => { if (!files(e)) return; e.preventDefault(); depth++; card.classList.add('log-drop-over'); });
+        card.addEventListener('dragover', e => { if (!files(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        card.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; card.classList.remove('log-drop-over'); } });
+        card.addEventListener('drop', e => {
+            if (!files(e)) return;
+            e.preventDefault(); depth = 0; card.classList.remove('log-drop-over');
+            if (e.dataTransfer.files.length !== 1) { $('[data-replace-status]', card).textContent = '差し替える画像を1枚だけドロップしてください。'; return; }
+            replaceImage(card, e.dataTransfer.files[0]);
+        });
+    });
+    // Outside the cards a dropped file must not open in the browser and leave the page.
+    if ($('[data-media-card]')) ['dragover', 'drop'].forEach(type => document.addEventListener(type, e => { if (!e.defaultPrevented && [...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); }));
 
     if (!form) return;
     const panel = $('#log-compose');
