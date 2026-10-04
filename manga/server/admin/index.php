@@ -80,6 +80,8 @@ if ($method === 'POST') {
     }
     // Guests: everything except leaving is refused, whatever the form says
     if (nm_is_guest() && ($_POST['do'] ?? '') !== 'logout') nm_guest_refuse();
+    // Any change (posts, images, works, settings, restore) can show on the cached LOG pages.
+    nm_lscache_purge();
     nm_handle_post($cfg);
     exit;
 }
@@ -109,8 +111,11 @@ exit;
 
 function nm_admin_headers(): void
 {
-    header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
+    // LOG previews show embedded players; provider scripts stay off in the admin.
+    $frames = function_exists('nl_embed_frame_src') ? '; frame-src ' . nl_embed_frame_src() . "; media-src 'self' https:" : '';
+    header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'" . $frames);
     header('X-Frame-Options: DENY');
+    nm_lscache_header(false);
     header('X-Content-Type-Options: nosniff');
     // The login key is in the URL: never leak it through Referer
     header('Referrer-Policy: no-referrer');
@@ -556,6 +561,13 @@ function nm_handle_post(array $cfg): void
                 nm_log('admin_password_changed');
                 nm_flash('ok', '管理者パスワードを変更しました（他の端末はログアウトされます）');
             }
+            nm_redirect('p=settings&section=common');
+
+        case 'settings_lscache':
+            $cfg['lscache'] = !empty($_POST['lscache']);
+            nm_save_config($cfg);
+            nm_log('settings_lscache_changed', $cfg['lscache'] ? 'on' : 'off');
+            nm_flash('ok', $cfg['lscache'] ? 'LiteSpeed Cache を使う設定にしました' : 'LiteSpeed Cache を使わない設定にしました');
             nm_redirect('p=settings&section=common');
 
         case 'settings_login_days':
@@ -1120,6 +1132,13 @@ function nm_view_settings(array $cfg): void
         . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
         . '<input type="hidden" name="do" value="regen_key"><button class="btn">ログイン URL を変更する</button></form></section>'
 
+        . '<section class="card"><h2>LiteSpeed Cache</h2>'
+        . '<p>' . (nm_lscache_server() ? 'このサーバーは LiteSpeed です。' . (nm_lscache_active() ? '公開LOGのページをサーバーでキャッシュしています。' : '今はキャッシュを使っていません。') : 'このサーバーは LiteSpeed ではないため、この機能は動きません。設定を変える必要はありません。') . '</p>'
+        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_lscache">'
+        . '<label class="check"><input type="checkbox" name="lscache" value="1"' . (($cfg['lscache'] ?? true) ? ' checked' : '') . (nm_lscache_server() ? '' : ' disabled') . '>LiteSpeed のサーバーでは、公開LOGのページをキャッシュして速く表示する</label>'
+        . '<p class="note">キャッシュするのは、ログインしていない人が見る公開LOGのページだけです。管理画面、ログイン中の表示、自分専用のMemo、画像、404はキャッシュしません。投稿・画像・漫画・設定を変えると、キャッシュをすぐに消します。カレンダーの「今日」に合わせ、キャッシュは1時間で作り直します。</p>'
+        . (nm_lscache_server() ? '<button class="btn">保存</button>' : '') . '</form></section>'
+
         . '<section class="card"><h2>ログインを保つ期間</h2>'
         . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_login_days">'
         . '<label class="check"><input type="radio" name="login_days" value="30"' . (nm_login_days() === 30 ? ' checked' : '') . '>30 日（おすすめ）</label>'
@@ -1310,7 +1329,7 @@ function nm_admin_image(string $id, string $file, bool $full): never
     if (!$w) nm_not_found();
     $path = nm_page_path($w, $file, !$full) ?? nm_page_path($w, $file);
     if ($path === null) nm_not_found();
-    header('Content-Type: ' . (str_ends_with($path, '.webp') ? 'image/webp' : 'image/jpeg'));
+    header('Content-Type: ' . nm_image_mime($path));
     header('Cache-Control: private, max-age=3600');
     header('Content-Length: ' . filesize($path));
     readfile($path);

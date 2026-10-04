@@ -314,7 +314,7 @@ function nm_serve_image(array $work, string $file, string $token, bool $thumb): 
     $path = nm_page_path($work, $file, $thumb);
     if ($path === null) nm_not_found();
 
-    $type = str_ends_with($path, '.webp') ? 'image/webp' : 'image/jpeg';
+    $type = nm_image_mime($path);
     $etag = '"' . substr(sha1($file . '|' . filesize($path) . '|' . filemtime($path)), 0, 20) . '"';
 
     header('Content-Type: ' . $type);

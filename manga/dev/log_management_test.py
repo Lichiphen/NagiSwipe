@@ -64,7 +64,7 @@ def main():
             if response.status!=200: raise RuntimeError(response.text)
             return json.loads(response.text)['media']
         design={'do':'log_settings','title':'清掃監査','description':'保存と削除の確認','name':'監査者','theme':'light-blue'}
-        check('既定のフッターを表示','<footer class="log-site-footer">Powered by NagiManga / NagiSwipe</footer>' in public.get('/').text)
+        check('既定のフッターを表示','<footer class="log-site-footer">Powered by NagiLog＆NagiManga</footer>' in public.get('/').text)
         footer(' 私の記録 © 2026 ')
         check('フッターの前後空白を除いて日本語を保存','<footer class="log-site-footer">私の記録 © 2026</footer>' in public.get('/').text and state(site)['settings']['footer_text']=='私の記録 © 2026')
         footer('表示を隠す',False); check('フッター非表示でも入力を保管','<footer' not in public.get('/').text and state(site)['settings']['footer_text']=='表示を隠す')

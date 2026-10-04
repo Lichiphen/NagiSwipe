@@ -66,7 +66,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
             if ($stat['size'] > 60 * 1024 * 1024 || ($total += $stat['size']) > 1024 * 1024 * 1024) throw new UnexpectedValueException('バックアップが大きすぎます');
             if ($name === 'backup.json') continue;
             if (preg_match('~\Aposts/([0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\.json\z~', $name, $m)) $postEntries[$m[1]] = $i;
-            elseif (preg_match('~\Amedia/([a-f0-9]{16})/(media\.json|(?:t_)?p[0-9]{4}_[a-f0-9]{8}\.(?:jpg|webp))\z~', $name, $m)) $mediaEntries[$m[1]][$m[2]] = $i;
+            elseif (preg_match('~\Amedia/([a-f0-9]{16})/(media\.json|(?:t_)?p[0-9]{4}_[a-f0-9]{8}\.(?:jpg|webp|gif))\z~', $name, $m)) $mediaEntries[$m[1]][$m[2]] = $i;
             else throw new UnexpectedValueException('LOG以外のファイルが入っています');
         }
         if (!isset($entries['backup.json'])) throw new UnexpectedValueException('LOGのバックアップではありません');
@@ -108,7 +108,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
             if ($bytes === null) throw new UnexpectedValueException('画像を読めませんでした');
             $input = $stage . '/image.tmp'; file_put_contents($input, $bytes);
             $dir = $stage . '/media/' . $id;
-            $image = nm_import_image($input, $dir, 1, 90, NM_RESTORE_MAX_ENTRY);
+            $image = nm_import_image($input, $dir, 1, 90, NM_RESTORE_MAX_ENTRY, true, true);
             @unlink($input);
             if (is_string($image)) throw new UnexpectedValueException($image);
             $media[$id] = array_merge($image, ['id' => $id, 'alt' => nl_restore_string($m, 'alt', 1500), 'created' => max(0, (int)($m['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($m['revision'] ?? 1))]);

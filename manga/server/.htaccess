@@ -2,6 +2,12 @@
 Options -Indexes
 DirectoryIndex index.php
 
+# LiteSpeed only: serve the public LOG pages PHP marked as cacheable (X-LiteSpeed-Cache-Control).
+# Other servers skip this block. The admin, the owner's pages and images are never cached.
+<IfModule LiteSpeed>
+    CacheLookup on
+</IfModule>
+
 # Use the animated 404 page for missing paths, at any installation depth.
 <IfModule mod_rewrite.c>
     RewriteEngine On

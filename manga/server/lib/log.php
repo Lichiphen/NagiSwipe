@@ -12,6 +12,8 @@ const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライ
 require_once __DIR__ . '/log-taxonomy.php';
 require_once __DIR__ . '/log-sidebar.php';
 require_once __DIR__ . '/log-links.php';
+require_once __DIR__ . '/log-embed.php';
+require_once __DIR__ . '/log-card.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -193,7 +195,7 @@ function nl_delete_posts(mixed $items): array
 }
 function nl_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'show_footer' => true, 'footer_text' => 'Powered by NagiManga / NagiSwipe', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     $s['show_login'] = $s['show_login'] === true;
     $s['show_footer'] = $s['show_footer'] === true;
@@ -306,7 +308,7 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         $id = $old ? $old['id'] : bin2hex(random_bytes(8));
         $dir = nl_media_dir($id);
         $cfg = nm_config();
-        $page = nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024);
+        $page = nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, true, true);
         if (is_string($page)) throw new UnexpectedValueException($page);
         $name = (string)($file['name'] ?? '画像');
         if (!mb_check_encoding($name, 'UTF-8')) $name = '画像';
@@ -353,7 +355,7 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
     if (!$m || (!$admin && !nl_media_public($id))) nm_not_found();
     $file = nl_media_dir($id) . '/' . ($thumb ? 't_' : '') . $m['f'];
     if (!is_file($file)) nm_not_found();
-    header('Content-Type: ' . (str_ends_with($m['f'], '.webp') ? 'image/webp' : 'image/jpeg'));
+    header('Content-Type: ' . nm_image_mime($m['f']));
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: ' . ($admin ? 'private, no-store' : 'public, max-age=0, must-revalidate'));
     header('Vary: Cookie');
@@ -364,6 +366,7 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
 function nl_excerpt(array $p): string
 {
     $text = preg_replace('/\[Image:[a-f0-9]{16}\]/', '', nl_post_parts($p)['body']);
+    $text = preg_replace_callback(nl_embed_regex(), static fn($m) => ($name = nl_embed_name($m[1])) !== '' ? '（' . $name . '）' : $m[1], (string)$text);
     $text = str_replace('**', '', (string)$text);
     $text = preg_replace('/\[Manga([^\]\r\n]+)\]/u', '$1', $text);
     return mb_substr(trim((string)preg_replace('/\s+/u', ' ', (string)$text)), 0, 140);
@@ -373,11 +376,14 @@ function nl_post_parts(array $p): array
 {
     $lines = preg_split('/\r?\n/', trim((string)$p['body']), 2);
     $line = $lines[0] ?? '';
-    $title = trim(str_replace('**', '', (string)preg_replace('/\[Image:[a-f0-9]{16}\]/', '', $line)));
+    // A first line that is only an embeddable URL (YouTube etc.) is shown in the body, not as the title.
+    $embed = nl_embed_name($line);
+    $title = $embed !== '' ? '' : trim(str_replace('**', '', (string)preg_replace('/\[Image:[a-f0-9]{16}\]/', '', $line)));
     $title = (string)preg_replace('/\[Manga([^\]\r\n]+)\]/u', '$1', $title);
     preg_match_all('/\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]/u', $line, $media);
-    $body = implode("\n", $media[0]);
+    $body = $embed !== '' ? trim($line) : implode("\n", $media[0]);
     if (($lines[1] ?? '') !== '') $body .= ($body !== '' ? "\n" : '') . $lines[1];
+    if ($title === '' && $embed !== '') $title = $embed . 'の記録';
     return ['title' => $title !== '' ? $title : '画像の記録', 'body' => $body];
 }
 function nl_post_title(array $p, int $limit = 80): string
@@ -406,9 +412,15 @@ function nl_render_text(string $text, bool $admin = false): string
 }
 function nl_render_body(array $p, bool $admin = false): string
 {
-    $tokens = preg_split('/(\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]|\*\*[^\r\n]+?\*\*)/u', nl_post_parts($p)['body'], -1, PREG_SPLIT_DELIM_CAPTURE);
+    $tokens = preg_split('/(\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]|' . NL_EMBED_PATTERN . '|\*\*[^\r\n]+?\*\*)/iu', nl_post_parts($p)['body'], -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
+    $dark = str_starts_with(nl_settings()['theme'], 'dark');
     foreach ($tokens ?: [] as $token) {
+        // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
+        if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
+            $out .= nl_embed_html(trim($token), $dark) ?? nl_card_html(trim($token), $admin) ?? nl_render_text($token, $admin);
+            continue;
+        }
         if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m)) {
             $im = nl_load_media($m[1]);
             if ($im && ($admin || nl_media_public($m[1]))) $out .= '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" loading="lazy"></a></figure>';

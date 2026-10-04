@@ -110,7 +110,20 @@
     }));
     $('[data-bold]', form).addEventListener('click', () => {
         const [start, end] = selection;
-        const text = body.value.slice(start, end) || '太字にする文字';
+        const picked = body.value.slice(start, end);
+        // Triple-click also selects the line break: keep surrounding spaces/line breaks outside the markers,
+        // and mark each line separately because bold works within one line.
+        if (picked.trim() !== '') {
+            const wrapped = picked.split('\n').map(line => {
+                const [, lead, text, tail] = line.match(/^(\s*)(.*?)(\s*)$/s);
+                return text === '' ? line : lead + '**' + text + '**' + tail;
+            }).join('\n');
+            insert(wrapped);
+            const lead = picked.length - picked.trimStart().length, trail = picked.length - picked.trimEnd().length;
+            body.focus(); body.setSelectionRange(start + lead, start + wrapped.length - trail); rememberSelection();
+            return;
+        }
+        const text = '太字にする文字';
         insert('**' + text + '**');
         body.focus(); body.setSelectionRange(start + 2, start + 2 + text.length); rememberSelection();
     });
@@ -268,6 +281,7 @@
             }));
             preview.hidden = false;
             window.NagiSwipe?.init();
+            window.NagiLogEmbeds?.load(preview);
         } catch (e) { say(e.message, true); }
     });
     form.addEventListener('submit', async e => {

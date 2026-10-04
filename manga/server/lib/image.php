@@ -6,7 +6,9 @@
  *
  * Every uploaded file is decoded and re-encoded by GD. Whatever was hidden in
  * the original (PHP code, HTML, polyglot payloads, EXIF location data) does not
- * survive: only the pixels are written out again.
+ * survive: only the pixels are written out again. Animated GIFs for the LOG are
+ * the one exception: GD cannot write animation, so they are rebuilt from their
+ * drawing blocks only (see nm_gif_rebuild).
  */
 declare(strict_types=1);
 
@@ -54,7 +56,7 @@ function nm_memory_available(): int
  *
  * @return array{f:string,w:int,h:int}|string  page info, or an error message
  */
-function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true): array|string
+function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true, bool $animated = false): array|string
 {
     $sup = nm_image_support();
     if (!$sup['gd'] || !$sup['finfo']) return 'サーバーの PHP に GD / fileinfo がありません';
@@ -79,6 +81,12 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
 
     // 3) Refuse before decoding if it cannot fit in memory (~5 bytes/px + margin)
     if ($w * $h * 5 * 1.8 > nm_memory_available()) return 'サーバーのメモリが足りません（画像を小さくしてください）';
+
+    // LOG posts keep GIF animation: the file is rebuilt block by block instead of re-encoded
+    if ($animated && $info[2] === IMAGETYPE_GIF) {
+        $gif = nm_import_animated_gif($tmp, $pagesDir, $seq);
+        if ($gif !== null) return $gif;
+    }
 
     // 4) Decode
     $src = match ($info[2]) {
@@ -123,6 +131,98 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
     } finally {
         imagedestroy($src);
     }
+}
+
+const NM_GIF_MAX_FRAMES = 3000;
+const NM_GIF_MAX_TOTAL_PIXELS = 1_500_000_000; // frames x canvas: what a browser must decode
+
+/**
+ * Rebuild an animated GIF from its own blocks. GD cannot write animation, so
+ * instead of re-encoding we keep only what draws the frames (screen, colour
+ * tables, frame control, image data, loop count) and drop comments, plain
+ * text, other application data and anything after the trailer.
+ *
+ * @return array{bytes:string,w:int,h:int,frames:int}|null  null if not a well-formed GIF
+ */
+function nm_gif_rebuild(string $in): ?array
+{
+    $len = strlen($in);
+    if ($len < 14 || !in_array(substr($in, 0, 6), ['GIF87a', 'GIF89a'], true)) return null;
+    $w = ord($in[6]) | ord($in[7]) << 8;
+    $h = ord($in[8]) | ord($in[9]) << 8;
+    if ($w < 1 || $h < 1 || $w > NM_MAX_SIDE || $h > NM_MAX_SIDE) return null;
+    $packed = ord($in[10]);
+    $pos = 13 + (($packed & 0x80) ? 3 * (2 << ($packed & 7)) : 0);
+    if ($pos > $len) return null;
+    $out = 'GIF89a' . substr($in, 6, $pos - 6);
+    // Sub-blocks: <size><bytes>... ending with a zero size
+    $blocks = static function (int $p) use ($in, $len): ?int {
+        while (true) {
+            if ($p >= $len) return null;
+            $n = ord($in[$p]);
+            $p += 1 + $n;
+            if ($n === 0) return $p;
+        }
+    };
+    $frames = 0;
+    while (true) {
+        if ($pos >= $len) return null;
+        $b = $in[$pos];
+        if ($b === "\x3B") break;
+        if ($b === "\x21") {
+            if ($pos + 2 >= $len) return null;
+            $label = ord($in[$pos + 1]);
+            $end = $blocks($pos + 2);
+            if ($end === null) return null;
+            $keep = $label === 0xF9 && ord($in[$pos + 2]) === 4 && $end === $pos + 8;
+            if ($label === 0xFF && ord($in[$pos + 2]) === 11) $keep = in_array(substr($in, $pos + 3, 11), ['NETSCAPE2.0', 'ANIMEXTS1.0'], true) && $end - $pos <= 20;
+            if ($keep) $out .= substr($in, $pos, $end - $pos);
+            $pos = $end;
+        } elseif ($b === "\x2C") {
+            if ($pos + 10 >= $len) return null;
+            $fw = ord($in[$pos + 5]) | ord($in[$pos + 6]) << 8;
+            $fh = ord($in[$pos + 7]) | ord($in[$pos + 8]) << 8;
+            if ($fw < 1 || $fh < 1 || $fw > NM_MAX_SIDE || $fh > NM_MAX_SIDE) return null;
+            $fp = ord($in[$pos + 9]);
+            $data = $pos + 10 + (($fp & 0x80) ? 3 * (2 << ($fp & 7)) : 0);
+            if ($data >= $len) return null;
+            $code = ord($in[$data]);
+            if ($code < 2 || $code > 11) return null;
+            $end = $blocks($data + 1);
+            if ($end === null) return null;
+            $out .= substr($in, $pos, $end - $pos);
+            $pos = $end;
+            if (++$frames > NM_GIF_MAX_FRAMES) return null;
+        } else return null;
+    }
+    if ($frames < 1 || $frames * $w * $h > NM_GIF_MAX_TOTAL_PIXELS) return null;
+    return ['bytes' => $out . "\x3B", 'w' => $w, 'h' => $h, 'frames' => $frames];
+}
+
+/** Save an animated GIF (rebuilt) and use the same file as its thumbnail so posts animate too. */
+function nm_import_animated_gif(string $tmp, string $pagesDir, int $seq): array|string|null
+{
+    $gif = nm_gif_rebuild((string)file_get_contents($tmp));
+    if (!$gif || $gif['frames'] < 2) return null;
+    // GD must still be able to read what we wrote
+    $probe = $tmp . '.' . bin2hex(random_bytes(4)) . '.gif';
+    file_put_contents($probe, $gif['bytes']);
+    $ok = @imagecreatefromgif($probe);
+    @unlink($probe);
+    if (!$ok) return '画像を読み込めませんでした';
+    imagedestroy($ok);
+    nm_ensure_dir($pagesDir);
+    $file = sprintf('p%04d_%s.gif', $seq % 10000, bin2hex(random_bytes(4)));
+    foreach (["$pagesDir/$file", "$pagesDir/t_$file"] as $path) {
+        $part = $path . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (file_put_contents($part, $gif['bytes']) !== strlen($gif['bytes']) || !@rename($part, $path)) {
+            @unlink($part);
+            nm_delete_page_files($pagesDir, $file);
+            return '画像を保存できませんでした';
+        }
+        @chmod($path, 0644);
+    }
+    return ['f' => $file, 'w' => $gif['w'], 'h' => $gif['h']];
 }
 
 function nm_prepare_canvas(GdImage $im, string $ext): void

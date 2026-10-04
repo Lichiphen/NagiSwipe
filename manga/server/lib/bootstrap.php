@@ -33,7 +33,7 @@ define('NM_DATA', (static function (): string {
 })());
 
 const NM_ID_PATTERN = '/\A[A-Za-z0-9]{12}\z/';
-const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg)\z/';
+const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif)\z/';
 require_once __DIR__ . '/image-guard.php';
 
 /** Content-based cache keys, including the reader's automatically loaded CSS. */
@@ -67,6 +67,7 @@ function nm_not_found(): never
         header('X-Content-Type-Options: nosniff');
         header('X-Robots-Tag: noindex, nofollow');
         header('Vary: Accept, Cookie');
+        nm_lscache_header(false);
         if ($html) header("Content-Security-Policy: default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'");
     }
     if (($_SERVER['REQUEST_METHOD'] ?? '') === 'HEAD') exit;
@@ -270,6 +271,50 @@ function nm_rmdir_recursive(string $dir): void
 // ---------------------------------------------------------------------------
 // Config (data/config.php, a PHP file so it is never served as text)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// LiteSpeed Cache: public LOG pages are cached by the web server itself.
+// On any other server nothing is sent, so the site behaves exactly as before.
+// ---------------------------------------------------------------------------
+const NM_LSCACHE_TAG = 'nagilog';
+const NM_LSCACHE_TTL = 3600;       // the calendar marks "today", so pages are rebuilt within the hour
+
+/** True when this request is served by LiteSpeed (with its cache module) and the owner left the switch on. */
+function nm_lscache_server(): bool
+{
+    // Development tests only; environment variables cannot be set from the web.
+    if (getenv('NAGIMANGA_LSCACHE_FORCE') === '1') return true;
+    return !empty($_SERVER['X-LSCACHE']) || stripos((string)($_SERVER['SERVER_SOFTWARE'] ?? ''), 'litespeed') !== false;
+}
+function nm_lscache_active(): bool
+{
+    return nm_lscache_server() && (bool)((nm_config() ?? [])['lscache'] ?? true);
+}
+/** Mark this response: cache it for visitors (public pages only) or never. */
+function nm_lscache_header(bool $public): void
+{
+    if (headers_sent() || !nm_lscache_active()) return;
+    // Anyone holding the login cookie is looked up separately, so a cached visitor page is never shown to the owner.
+    header('X-LiteSpeed-Vary: cookie=nm_admin');
+    if ($public) {
+        header('X-LiteSpeed-Cache-Control: public,max-age=' . NM_LSCACHE_TTL);
+        header('X-LiteSpeed-Tag: ' . NM_LSCACHE_TAG);
+    } else {
+        header('X-LiteSpeed-Cache-Control: no-cache');
+        header_remove('X-LiteSpeed-Tag');
+    }
+}
+/** Drop every cached LOG page (after posts, images, settings or works change). */
+function nm_lscache_purge(): void
+{
+    if (!headers_sent() && nm_lscache_active()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
+}
+
+/** Content-Type for a stored page or LOG image, by its extension. */
+function nm_image_mime(string $file): string
+{
+    return match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) { 'webp' => 'image/webp', 'gif' => 'image/gif', default => 'image/jpeg' };
+}
 
 function nm_config(bool $reload = false): ?array
 {

@@ -58,11 +58,15 @@ function nl_handle_post(string $do): never
     try {
         switch ($do) {
             case 'log_save':
-                $p = nl_save_post(nl_input_post());
+                $input = nl_input_post();
+                // Blog cards are fetched here, outside the save lock, so a slow site never blocks saving.
+                if (is_string($input['body'] ?? null) && strlen($input['body']) <= 100000) nl_cards_prepare($input['body']);
+                $p = nl_save_post($input);
                 nm_json(['ok' => true, 'id' => $p['id'], 'redirect' => 'index.php?p=log&saved=' . rawurlencode($p['id'])]);
             case 'log_preview':
                 $p = nl_input_post();
                 nl_validate_body($p['body']);
+                nl_cards_prepare($p['body']);
                 $p['manga'] = nl_manga_refs($p['body'], $p['manga']);
                 nm_json(['html' => '<h2>' . h(nl_post_title($p, 0)) . '</h2>' . nl_render_body($p, true)]);
             case 'log_upload':
@@ -202,7 +206,7 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<label class="sr-only" for="log-body">投稿本文</label><textarea id="log-body" name="body" rows="6" maxlength="100000" placeholder="今日のこと、描いた絵、ふと思ったこと。" required>' . h($p['body'] ?? '') . '</textarea>'
         . '<div class="log-toolbar"><button type="button" class="btn" data-bold><strong>B</strong> 太字</button><button type="button" class="btn" data-upload>画像を追加</button><button type="button" class="btn" data-picker="media">画像を選ぶ</button><button type="button" class="btn" data-picker="manga">漫画を選ぶ</button><button type="button" class="btn" data-preview>プレビュー</button></div>'
         . '<input type="file" data-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" multiple hidden>'
-        . '<p class="note">画像はここへドロップ、または貼り付けできます。タグは好きな位置へ移せます。</p>'
+        . '<p class="note">画像はここへドロップ、または貼り付けできます。タグは好きな位置へ移せます。<br>URLだけを1行に貼ると、YouTubeやXなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。</p>'
         . '<div class="log-recent-tags"><span class="note">最近使ったハッシュタグ</span><div class="log-chip-list">' . ($recent ?: '<span class="note">本文に #らくがき のように書くと、ここに並びます。</span>') . '</div></div>'
         . '<details class="log-category-picker"><summary>カテゴリを選ぶ・作る</summary><div class="log-chip-list">' . ($categories ?: '<p class="note">新しいカテゴリから作れます。</p>') . '</div><label>新しいカテゴリ<input name="new_categories" maxlength="800" placeholder="例：日記、制作メモ"></label><p class="note">複数作るときは「、」で区切ります。</p></details>'
         . '<div class="log-attachments" data-attachments></div><div class="log-preview" data-preview-body hidden></div>'

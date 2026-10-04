@@ -26,7 +26,10 @@ $s = nl_settings();
 header('Vary: Cookie');
 if (!$s['public'] && !$owner) nm_not_found();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+// LiteSpeed caches only what a visitor without the login cookie sees on a public LOG; images stay with PHP (BOT guard).
+nm_lscache_header(!$owner && $s['public'] && !isset($_COOKIE['nm_admin']) && !isset($_GET['media']) && !isset($_GET['card']));
 if (!in_array($method, ['GET', 'HEAD'], true)) nm_not_found();
+if (isset($_GET['card'])) nl_serve_card(nm_str($_GET, 'card', 20));
 if (isset($_GET['media'])) nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), $owner);
 $id = nm_str($_GET, 'id', 24);
 $single = isset($_GET['id']);
@@ -68,7 +71,8 @@ $breadcrumb = $single ? json_encode(['@context' => 'https://schema.org', '@type'
 ]], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : '';
 $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $breadcrumb, true)) . "'" : '';
 // The existing viewers set styles dynamically and use data/blob placeholders.
-header("Content-Security-Policy: default-src 'self'; script-src 'self'" . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:" . nl_sidebar_image_origins() . "; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+// Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js.
+header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:" . nl_sidebar_image_origins() . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 function nl_public_asset(string $file): string { return h($file . '?v=' . nm_asset_version(__DIR__ . '/' . $file)); }
 ?><!DOCTYPE html>
 <html lang="ja" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -84,6 +88,7 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
+<script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site"><header class="log-site-header"><a href="./"><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
