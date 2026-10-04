@@ -335,7 +335,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("保存時に一覧情報を作り直す", index_file.is_file())
     for i in range(21):
         post(payload(body=f'一覧のページ送り {i}'))
-    check("公開一覧を10件ずつ表示", public.get('/').text.count('<article class="log-post">') == 10 and '前の投稿' in public.get('/').text and public.get('/?page=2').status == 200)
+    check("公開一覧を10件ずつ表示", public.get('/').text.count('<article class="log-post">') == 10 and '過去の投稿' in public.get('/').text and public.get('/?page=2').status == 200)
     newest = [json.loads(post(payload(body=f'最新の記録{i}。\n2行目は本文です。', title='手動タイトルは使わない')).text)['id'] for i in range(4)]
     page = public.get('/').text
     check("最初の1行を投稿タイトルにする", '<h2><a href="./?id=' + newest[-1] + '">最新の記録3。</a></h2>' in page and '手動タイトルは使わない' not in page)
@@ -346,6 +346,27 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     daily = public.get('/?date=' + today).text
     check("カレンダーの日を選んで投稿を絞れる", today + 'の記録' in daily and 'aria-current="date"' in daily and newest[-1] in daily)
     check("日付のページ送りも絞り込みを維持", '?date=' + today + '&amp;page=2' in daily)
+    second = public.get('/?page=2').text
+    check("番号つきページャーで今のページと件数を示す", 'aria-current="page"><span class="sr-only">ページ</span>2</span>' in second and 'rel="prev" href="./"' in second and 'rel="next" href="./?page=3"' in second and '件中</span><b>11〜20件目</b>' in second and 'class="log-pager-jump"' not in second)
+    check("最後より先のページは404", public.get('/?page=999').status == 404 and public.get('/?date=2025-01-02&page=3').status == 200)
+    single = public.get('/?id=' + newest[1]).text
+    check("記事ページに前後の投稿とすべての投稿", 'class="log-post-nav"' in single and 'rel="prev" href="./?id=' + newest[2] + '"' in single and 'rel="next" href="./?id=' + newest[0] + '"' in single and 'class="log-all-chip" href="./"' in single)
+    check("サイドバーのすべての投稿に件数", re.search(r'class="log-all-link" href="\./">.*?<span class="log-all-count">[0-9]+</span>', public.get('/').text) is not None)
+    check("絞り込み一覧の見出しにすべての投稿へのボタン", 'class="log-archive-head"' in daily and 'class="log-all-chip" href="./"' in daily)
+    def pager_settings(**extra):
+        return post({'do': 'log_preferences', 'visibility': 'public', 'posts_per_page': '10', **extra})
+    pager_settings(pager_form='1', pager='more', post_nav='1')
+    more = public.get('/').text
+    check("もっと見る形式は普通のリンクとJSで動く", 'data-pager-more' in more and 'href="./?page=2"' in more and re.search(r'viewer/log-pager\.js\?v=[0-9a-f]{12}', more) and '件中' not in more and public.get('/viewer/log-pager.js').status == 200)
+    check("記事ページではもっと見るのJSを読まない", 'log-pager.js' not in public.get('/?id=' + newest[1]).text)
+    pager_settings(pager_form='1', pager='endless', pager_status='1', post_nav='1')
+    check("不明なページ送り形式は保存しない", 'data-pager-more' in public.get('/').text)
+    pager_settings(show_login='1')
+    check("ページ送りの欄がない古いフォームは設定を保つ", 'data-pager-more' in public.get('/').text)
+    pager_settings(pager_form='1', pager='simple', pager_status='1')
+    simple = public.get('/?page=2').text
+    check("新しい・過去だけの形式と前後リンクの非表示", 'log-pager is-simple' in simple and 'log-pager-num' not in simple and 'class="log-post-nav"' not in public.get('/?id=' + newest[1]).text)
+    pager_settings(pager_form='1', pager='numbers', pager_status='1', post_nav='1')
     monthly = public.get('/?month=' + today[:7]).text
     check("カレンダーを月で送れる", today[:7] + 'の記録' in monthly and '前の月' in monthly and '次の月' in monthly)
     check("記録がない日も表示できる", 'この日の記録はありません' in public.get('/?date=2025-01-02').text)

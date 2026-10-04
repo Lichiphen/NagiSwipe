@@ -134,6 +134,14 @@ function nl_handle_post(string $do): never
                     // Older forms still post this; the sidebar's login row owns it now.
                     if (array_key_exists('show_login', $_POST)) $s['show_login'] = nm_str($_POST, 'show_login', 1) === '1';
                     $s['posts_per_page'] = (int)$count;
+                    // Forms without the paging fieldset (older pages) leave these as they were.
+                    if (isset($_POST['pager_form'])) {
+                        $pager = nm_str($_POST, 'pager', 10);
+                        if (!isset(NL_PAGERS[$pager])) throw new UnexpectedValueException('ページ送りの形式を選んでください');
+                        $s['pager'] = $pager;
+                        $s['pager_status'] = nm_str($_POST, 'pager_status', 1) === '1';
+                        $s['post_nav'] = nm_str($_POST, 'post_nav', 1) === '1';
+                    }
                     $s['updated'] = time();
                     nl_write_record(nl_root() . '/settings.php', $s);
                 });
@@ -294,10 +302,27 @@ function nl_backup_panel(): string
 function nl_preferences_panel(): string
 {
     $s = nl_settings();
-    return '<section class="card"><h2>公開範囲・表示件数</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_preferences">'
+    return '<section class="card"><h2>公開範囲・表示件数・ページ送り</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_preferences">'
         . '<fieldset class="log-visibility"><legend>LOGをどう使いますか？</legend><label class="check"><input type="radio" name="visibility" value="public"' . ($s['public'] ? ' checked' : '') . '>全体公開のLOG</label><p class="note">保存済みの記事と投稿画像も、ログインしていない人が読めるようになります。下書きは公開しません。</p><label class="check"><input type="radio" name="visibility" value="private"' . (!$s['public'] ? ' checked' : '') . '>自分専用のMemo</label><p class="note">記事とLOGの画像は、管理者としてログインしたときだけ読めます。NagiMANGAの作品の公開範囲は、作品ごとに設定してください。</p></fieldset>'
         . '<label>1ページの投稿数（1〜100件）<input type="number" name="posts_per_page" min="1" max="100" required value="' . $s['posts_per_page'] . '"></label><p class="note">トップ・日付アーカイブ・カテゴリ・タグの一覧に使います。標準は10件です。管理画面の一覧は、一覧の上部で別に変えられます。</p>'
+        . nl_pager_fieldset($s)
         . '<button class="btn primary">公開範囲と表示を保存</button></form></section>';
+}
+function nl_pager_fieldset(array $s): string
+{
+    $notes = [
+        'numbers' => '「新しい投稿」「過去の投稿」と、1・2・3…のページ番号を出します。何ページ目かが分かり、戻りたい場所へ飛べます。8ページ以上ある場合は、ページ番号を入力して移動できます。おすすめです。',
+        'simple' => '「新しい投稿」「過去の投稿」の2つだけです。投稿が少ないLOGや、すっきり見せたいときに向いています。',
+        'more' => 'ボタンを押すと、同じページの下に続きを足します。スマホで続けて読みやすい形です。勝手に読み込む「無限スクロール」にはしないので、フッターやサイドメニューにも届きます。',
+    ];
+    $radios = '';
+    foreach (NL_PAGERS as $key => $label) {
+        $radios .= '<label class="check"><input type="radio" name="pager" value="' . $key . '"' . ($s['pager'] === $key ? ' checked' : '') . '>' . h($label) . ($key === 'numbers' ? '（標準）' : '') . '</label><p class="note">' . $notes[$key] . '</p>';
+    }
+    return '<fieldset class="log-visibility"><legend>一覧のページ送り</legend><input type="hidden" name="pager_form" value="1">' . $radios
+        . '<label class="check"><input type="checkbox" name="pager_status" value="1"' . ($s['pager_status'] ? ' checked' : '') . '>「120件中 11〜20件目」のように、全体の件数と今の位置を出す</label>'
+        . '<label class="check"><input type="checkbox" name="post_nav" value="1"' . ($s['post_nav'] ? ' checked' : '') . '>記事のページの下に、前後の投稿と「すべての投稿」を出す</label>'
+        . '<p class="note">どの形式でも、ページ送りは普通のリンクです。検索エンジンも2ページ目以降をたどれ、ブラウザの「戻る」で元のページに戻れます。</p></fieldset>';
 }
 function nl_footer_panel(): string
 {

@@ -81,7 +81,7 @@ def main():
         check('デザインと公開範囲の保存はフッターを保持',state(site)['settings']['show_footer'] is False and state(site)['settings']['footer_text']=='保存するフッター')
         footer('非公開のフッター'); post({'do':'log_preferences','visibility':'private','show_login':'1','posts_per_page':'10'})
         check('Memoのフッターを未ログインへ漏らさない',public.get('/').status==404 and '非公開のフッター' not in public.get('/').text)
-        post({'do':'log_preferences','visibility':'public','show_login':'1','posts_per_page':'10'}); footer('引っ越し先の表記')
+        post({'do':'log_preferences','visibility':'public','show_login':'1','posts_per_page':'10','pager_form':'1','pager':'simple','pager_status':'1'}); footer('引っ越し先の表記')
 
         php(site,"$t=nl_taxonomy();$t['categories']['123456789012']='数字カテゴリ';nl_write_record(nl_root().'/taxonomy.php',$t);")
         pid,payload=save('分類テスト\n#タグA #123 #タグC',new_categories='分類A,分類B',**{'categories[0]':'123456789012'})
@@ -135,12 +135,13 @@ def main():
         check('追加復元は既存タグ順序とフッターを保つ',merged['taxonomy']['hashtag_order']==['既存タグ']+expected_tags and merged['settings']['footer_text']=='復元先だけの表記' and merged['settings']['show_footer'] is False)
         post({'do':'log_restore','overwrite':'1'},files={'backup':('sorted.zip',backup,'application/zip')},client=other,token=ot)
         os_=state(other_site); check('別秘密鍵への上書き復元でバックアップ順を先に戻す',os_['settings']['footer_text']=='引っ越し先の表記' and list(os_['taxonomy']['categories'])==list(state(site)['taxonomy']['categories'])+local_cats and os_['taxonomy']['hashtag_order']==expected_tags)
+        check('上書き復元でページ送りの設定を戻す',os_['settings']['pager']=='simple' and os_['settings']['pager_status'] is True and os_['settings']['post_nav'] is False)
         check('上書き復元も復元先だけにある記事と分類を消さない',local_id in posts_of(os_) and posts_of(os_)[local_id]['body']==local_payload['body'] and all(x in os_['taxonomy']['categories'] for x in local_cats))
         other.post('/admin/index.php',{'csrf':ot,'do':'log_footer_settings','footer_text':'旧形式復元先','show_footer':'0'})
         legacy=zip_edit(backup,lambda m:[m['settings'].pop(x,None) for x in ('footer_text','show_footer')]+[m['taxonomy'].pop('hashtag_order',None)])
         post({'do':'log_restore','overwrite':'1'},files={'backup':('legacy.zip',legacy,'application/zip')},client=other,token=ot)
         check('旧形式ZIPは復元先のフッターとタグ順序を保つ',state(other_site)['settings']['footer_text']=='旧形式復元先' and state(other_site)['settings']['show_footer'] is False and state(other_site)['taxonomy']['hashtag_order']==expected_tags)
-        malformed=[lambda m:m['settings'].update({'show_footer':'false'}),lambda m:m['settings'].update({'footer_text':'行\n改行'}),lambda m:m['taxonomy'].update({'hashtag_order':['重複','重複']}),lambda m:m['taxonomy'].update({'hashtag_order':[123]})]
+        malformed=[lambda m:m['settings'].update({'show_footer':'false'}),lambda m:m['settings'].update({'footer_text':'行\n改行'}),lambda m:m['taxonomy'].update({'hashtag_order':['重複','重複']}),lambda m:m['taxonomy'].update({'hashtag_order':[123]}),lambda m:m['settings'].update({'pager':'endless'}),lambda m:m['settings'].update({'post_nav':'no'})]
         for idx,edit in enumerate(malformed):
             before=hash_log(other_site); post({'do':'log_restore','overwrite':'1'},files={'backup':('bad.zip',zip_edit(backup,edit),'application/zip')},client=other,token=ot)
             check('フッター・並び順の壊れた復元は原状維持: '+str(idx),hash_log(other_site)==before)

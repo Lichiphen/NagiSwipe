@@ -44,6 +44,8 @@ $all = $single ? [$post] : array_values(array_filter($summaries, static function
 }));
 $page = max(1, min(100000, (int)nm_str($_GET, 'page', 6)));
 $perPage = $s['posts_per_page'];
+// A page past the end (old bookmark, typed URL) is not an empty list.
+if (!$single && $all && ($page - 1) * $perPage >= count($all)) nm_not_found();
 $posts = $single ? [$post] : array_values(array_filter(array_map(static fn($s) => nl_load_post($s['id']), array_slice($all, ($page - 1) * $perPage, $perPage)), static fn($p) => $p && $p['status'] === 'published'));
 $base = nl_base_url();
 $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 'page=' . $page : '');
@@ -89,17 +91,18 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
+<?php if (!$single && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site"><header class="log-site-header"><a href="./"><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
 <button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
 <?php if ($single): ?><nav aria-label="Breadcrumb" class="log-breadcrumb"><ol><li><a href="./"><?= h($s['title']) ?></a></li><li><?= h($title) ?></li></ol></nav><?php else: ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>
-<?php if (!$single && $filter['label'] !== ''): ?><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><?php endif; ?>
+<?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= count($all) ?>件</span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span>すべての投稿</span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?php foreach ($posts as $p): ?><article class="log-post"><div class="log-post-meta"><?= nl_icon_html($s) ?><strong><?= h($s['name']) ?></strong><a href="./?id=<?= h($p['id']) ?>"><time datetime="<?= h(nl_date($p['created'], 'c')) ?>" title="<?= h(nl_date($p['created'])) ?>"><?= h(nl_date($p['created'], 'Y/m/d')) ?></time></a><?php if ($owner): ?><a class="log-edit-link" href="admin/index.php?p=log_edit&id=<?= h($p['id']) ?>"><?= nl_ui_icon() ?><span>編集</span></a><?php endif; ?></div>
 <?php if ($single): ?><h1><?= h(nl_post_title($p, 0)) ?></h1><?php else: ?><h2><a href="./?id=<?= h($p['id']) ?>"><?= h(nl_post_title($p, 0)) ?></a></h2><?php endif; ?>
 <?= nl_render_body($p) ?><?= nl_category_links($p) ?></article><?php endforeach; ?>
 <?php if (!$posts): ?><p class="log-empty"><?= $filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。') ?></p><?php endif; ?>
-<?php if (!$single): ?><nav class="log-pagination" aria-label="投稿一覧のページ"><?php if ($page > 1): ?><a href="./?<?= h(($filter['query'] !== '' ? $filter['query'] . '&' : '') . 'page=' . ($page - 1)) ?>">新しい投稿</a><?php endif; ?><?php if ($page * $perPage < count($all)): ?><a href="./?<?= h(($filter['query'] !== '' ? $filter['query'] . '&' : '') . 'page=' . ($page + 1)) ?>">前の投稿</a><?php endif; ?></nav><?php endif; ?>
+<?= $single ? ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : nl_pager($s, $filter['query'], $page, count($all)) ?>
 </main><?= nl_sidebar($summaries, $filter, $s, $owner) ?></div><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>

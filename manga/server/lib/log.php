@@ -193,15 +193,20 @@ function nl_delete_posts(mixed $items): array
         return ['posts' => count($selected), 'media' => $images, 'clean' => $clean];
     });
 }
+/** Public list paging: numbered pages, newer/older only, or a "show more" button (no infinite scroll). */
+const NL_PAGERS = ['numbers' => '番号つき', 'simple' => '新しい・過去だけ', 'more' => 'もっと見る'];
 function nl_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
     $s['show_login'] = $s['show_login'] === true;
     $s['show_footer'] = $s['show_footer'] === true;
     $s['posts_per_page'] = max(1, min(100, (int)$s['posts_per_page']));
+    if (!is_string($s['pager']) || !isset(NL_PAGERS[$s['pager']])) $s['pager'] = 'numbers';
+    $s['pager_status'] = $s['pager_status'] !== false;
+    $s['post_nav'] = $s['post_nav'] !== false;
     if (!isset(NL_THEMES[$s['theme']])) $s['theme'] = 'light-blue';
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';
     if ($s['og_image'] !== '' && !nl_valid_media($s['og_image'])) $s['og_image'] = '';

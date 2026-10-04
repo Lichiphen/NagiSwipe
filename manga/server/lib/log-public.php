@@ -28,6 +28,91 @@ function nl_archive_filter(array $src): array
     }
     return $base;
 }
+function nl_page_url(string $query, int $page): string
+{
+    $q = $query . ($page > 1 ? ($query !== '' ? '&' : '') . 'page=' . $page : '');
+    return './' . ($q !== '' ? '?' . $q : '');
+}
+function nl_pager_arrow(bool $older): string
+{
+    return '<span class="log-pager-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' . ($older ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6') . '"/></svg></span>';
+}
+/** Page numbers to show: first, last, the current page and its neighbours; a gap hiding one page shows that page instead. */
+function nl_pager_numbers(int $page, int $pages): array
+{
+    $keep = [1, $pages, $page - 1, $page, $page + 1];
+    if ($page <= 3) array_push($keep, 2, 3, 4);
+    if ($page >= $pages - 2) array_push($keep, $pages - 1, $pages - 2, $pages - 3);
+    $keep = array_values(array_unique(array_filter($keep, static fn($n) => $n >= 1 && $n <= $pages)));
+    sort($keep);
+    $out = [];
+    foreach ($keep as $n) {
+        $prev = $out ? end($out) : 0;
+        if ($prev && $n - $prev === 2) $out[] = $prev + 1;
+        elseif ($prev && $n - $prev > 2) $out[] = null;
+        $out[] = $n;
+    }
+    return $out;
+}
+/** The list pager. Every control is a plain link; log-pager.js only enhances "もっと見る". */
+function nl_pager(array $s, string $query, int $page, int $total): string
+{
+    $per = $s['posts_per_page'];
+    $pages = max(1, (int)ceil($total / $per));
+    if ($pages < 2) return '';
+    $mode = $s['pager'];
+    $start = ($page - 1) * $per + 1; $end = min($total, $page * $per);
+    $status = $s['pager_status'] ? '<p class="log-pager-status" aria-live="polite"><span class="log-pager-total">' . $total . '件中</span><b>' . $start . '〜' . $end . '件目</b>' . ($mode !== 'more' ? '<span class="log-pager-of">' . $page . ' / ' . $pages . 'ページ</span>' : '') . '</p>' : '';
+    $newer = $page > 1
+        ? '<a class="log-pager-step is-newer" rel="prev" href="' . h(nl_page_url($query, $page - 1)) . '">' . nl_pager_arrow(false) . '<span>新しい投稿</span></a>'
+        : '<span class="log-pager-step is-newer" aria-disabled="true">' . nl_pager_arrow(false) . '<span>新しい投稿</span></span>';
+    $older = $page < $pages
+        ? '<a class="log-pager-step is-older" rel="next" href="' . h(nl_page_url($query, $page + 1)) . '"><span>過去の投稿</span>' . nl_pager_arrow(true) . '</a>'
+        : '<span class="log-pager-step is-older" aria-disabled="true"><span>過去の投稿</span>' . nl_pager_arrow(true) . '</span>';
+    $data = ' data-mode="' . $mode . '" data-start="' . $start . '" data-end="' . $end . '" data-total="' . $total . '"';
+    if ($mode === 'more') {
+        $next = min($per, $total - $end);
+        $body = ($page < $pages
+                ? '<a class="log-pager-more" rel="next" href="' . h(nl_page_url($query, $page + 1)) . '" data-pager-more><span>もっと見る</span><small>過去の投稿を' . $next . '件</small></a>'
+                : '<p class="log-pager-end">ここまでで全部です</p>')
+            . ($page > 1 ? '<a class="log-pager-back" href="' . h(nl_page_url($query, 1)) . '">' . nl_pager_arrow(false) . '<span>最新の投稿から見る</span></a>' : '');
+        return '<nav class="log-pager is-more" aria-label="投稿一覧のページ"' . $data . '>' . $status . $body . '</nav>';
+    }
+    $numbers = '';
+    if ($mode === 'numbers') {
+        foreach (nl_pager_numbers($page, $pages) as $n) {
+            $numbers .= $n === null ? '<li class="log-pager-gap" aria-hidden="true"><span></span><span></span><span></span></li>'
+                : ($n === $page ? '<li><span class="log-pager-num" aria-current="page"><span class="sr-only">ページ</span>' . $n . '</span></li>'
+                    : '<li><a class="log-pager-num" href="' . h(nl_page_url($query, $n)) . '"><span class="sr-only">ページ</span>' . $n . '</a></li>');
+        }
+        $numbers = '<ol class="log-pager-pages">' . $numbers . '</ol>';
+    }
+    $jump = '';
+    if ($mode === 'numbers' && $pages >= 8) {
+        parse_str($query, $hidden);
+        $fields = '';
+        foreach ($hidden as $k => $v) if (is_string($v)) $fields .= '<input type="hidden" name="' . h((string)$k) . '" value="' . h($v) . '">';
+        $jump = '<form class="log-pager-jump" method="get" action="./">' . $fields . '<label><span>ページを指定</span><input type="number" name="page" min="1" max="' . $pages . '" value="' . $page . '" inputmode="numeric" required></label><span aria-hidden="true">/ ' . $pages . '</span><button type="submit">移動</button></form>';
+    }
+    return '<nav class="log-pager is-' . $mode . '" aria-label="投稿一覧のページ"' . $data . '>' . $status . '<div class="log-pager-row">' . $newer . $numbers . $older . '</div>' . $jump . '</nav>';
+}
+/** Newer / older neighbours of a published post, with a way back to the whole list. */
+function nl_post_nav(array $summaries, array $post): string
+{
+    $ids = array_column($summaries, 'id');
+    $i = array_search($post['id'], $ids, true);
+    if ($i === false) return '';
+    $link = static function (?array $p, bool $older): string {
+        if (!$p) return '<span class="log-post-nav-link is-empty" aria-hidden="true"></span>';
+        return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="./?id=' . h($p['id']) . '"><span class="log-post-nav-kicker">' . ($older ? '<span>過去の投稿</span>' . nl_pager_arrow(true) : nl_pager_arrow(false) . '<span>新しい投稿</span>') . '</span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : '画像の記録') . '</span><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>';
+    };
+    return '<nav class="log-post-nav" aria-label="前後の投稿">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
+        . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
+}
+function nl_all_icon(): string
+{
+    return '<svg class="log-all-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
+}
 function nl_icon_html(array $s, string $prefix = '', string $class = 'log-avatar'): string
 {
     $m = nl_load_media($s['icon']);
@@ -104,7 +189,7 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
         'categories' => nl_taxonomy_sidebar($summaries, 'categories'),
         'hashtags' => nl_taxonomy_sidebar($summaries, 'hashtags'),
         'updated' => '<section class="log-widget"><h2>最終更新日</h2>' . ($last > 0 ? '<time datetime="' . h(nl_date($last, 'c')) . '">' . h(nl_date($last)) . '</time>' : '<p>まだ更新はありません。</p>') . '</section>',
-        'all' => '<a href="./">すべての投稿</a>',
+        'all' => '<a class="log-all-link" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a>',
     ];
     $html = '';
     foreach ($sidebar['items'] as $item) {

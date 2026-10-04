@@ -79,12 +79,14 @@ function nl_backup_restore(string $file, bool $overwrite): array
         }
         $settings = (array)($mark['settings'] ?? []);
         $preferences = [];
-        foreach (['public', 'show_login', 'show_footer'] as $field) {
+        foreach (['public', 'show_login', 'show_footer', 'pager_status', 'post_nav'] as $field) {
             if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException('LOGの公開設定が壊れています');
             $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
         }
         if (array_key_exists('posts_per_page', $settings) && (!is_int($settings['posts_per_page']) || $settings['posts_per_page'] < 1 || $settings['posts_per_page'] > 100)) throw new UnexpectedValueException('LOGの表示件数が壊れています');
         $preferences['posts_per_page'] = $settings['posts_per_page'] ?? nl_settings()['posts_per_page'];
+        if (array_key_exists('pager', $settings) && (!is_string($settings['pager']) || !isset(NL_PAGERS[$settings['pager']]))) throw new UnexpectedValueException('LOGのページ送りの設定が壊れています');
+        $preferences['pager'] = $settings['pager'] ?? nl_settings()['pager'];
         $preferences['footer_text'] = nl_restore_string($settings + ['footer_text' => nl_settings()['footer_text']], 'footer_text', 800);
         if (mb_strlen($preferences['footer_text']) > 200 || preg_match('/[\x00-\x1F\x7F]/', $preferences['footer_text'])) throw new UnexpectedValueException('フッターの文字データが壊れています');
         $settings = ['title' => nl_restore_string($settings, 'title', 600), 'description' => nl_restore_string($settings, 'description', 1500), 'name' => nl_restore_string($settings, 'name', 600),
