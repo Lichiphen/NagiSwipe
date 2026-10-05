@@ -3,8 +3,10 @@
 declare(strict_types=1);
 if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
-/** One reader (IP address) can add this many likes to one post per day (Japan time). */
+/** One reader (the same line and the same device) can add this many likes to one post per day (Japan time). */
 const NL_LIKE_DAILY = 100;
+/** The whole line (IP address) together, whatever devices it reports: device names are easy to fake. */
+const NL_LIKE_LINE_DAILY = 500;
 const NL_LIKE_MAX = 99999999;
 
 function nl_likes_file(): string { return nl_root() . '/likes.php'; }
@@ -26,14 +28,18 @@ function nl_likes_write(array $counts): void
     nl_write_record(nl_likes_file(), ['schema' => 1, 'posts' => $counts]);
 }
 /**
- * The reader, without storing the address: an HMAC of the IP and post. IPv6 readers count per /64,
+ * Keys for today's counts, without storing the address or the device: HMACs with the secret key.
+ * "reader" is the line plus the device (User-Agent); "line" is the IP alone. IPv6 counts per /64,
  * since one home line gets a whole range of addresses.
  */
-function nl_like_reader(string $postId): string
+function nl_like_keys(string $postId): array
 {
     $ip = nm_client_ip();
     if (str_contains($ip, ':') && ($bin = @inet_pton($ip)) !== false) $ip = bin2hex(substr($bin, 0, 8)) . '::/64';
-    return substr(hash_hmac('sha256', 'log-like|' . $ip . '|' . $postId, (string)(nm_config()['secret'] ?? '')), 0, 20);
+    $ua = substr(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 400);
+    $secret = (string)(nm_config()['secret'] ?? '');
+    return [substr(hash_hmac('sha256', 'log-like|' . $ip . '|' . $ua . '|' . $postId, $secret), 0, 20),
+        'l' . substr(hash_hmac('sha256', 'log-like-line|' . $ip . '|' . $postId, $secret), 0, 19)];
 }
 function nl_like_today(): array
 {
@@ -41,12 +47,18 @@ function nl_like_today(): array
     $day = nl_date(time(), 'Y-m-d');
     return ($r['day'] ?? '') === $day && is_array($r['used'] ?? null) ? $r : ['day' => $day, 'used' => []];
 }
+/** What this reader may still add to one post today: their own allowance, cut by what is left for their line. */
+function nl_like_room(array $used, string $id): int
+{
+    [$reader, $line] = nl_like_keys($id);
+    return max(0, min(NL_LIKE_DAILY - (int)($used[$reader] ?? 0), NL_LIKE_LINE_DAILY - (int)($used[$line] ?? 0)));
+}
 /** Likes this reader may still add to each post today. */
 function nl_like_left(array $ids): array
 {
     $used = nl_like_today()['used'];
     $out = [];
-    foreach ($ids as $id) $out[$id] = max(0, NL_LIKE_DAILY - (int)($used[nl_like_reader($id)] ?? 0));
+    foreach ($ids as $id) $out[$id] = nl_like_room($used, $id);
     return $out;
 }
 /** Adds up to $n likes (cut to what is left today). Returns [count, left]. */
@@ -54,17 +66,16 @@ function nl_like_add(string $id, int $n): array
 {
     return nm_with_lock('log-likes', static function () use ($id, $n) {
         $today = nl_like_today();
-        $key = nl_like_reader($id);
-        $used = (int)($today['used'][$key] ?? 0);
-        $add = max(0, min($n, NL_LIKE_DAILY - $used));
+        $room = nl_like_room($today['used'], $id);
+        $add = max(0, min($n, $room));
         $counts = nl_likes_read();
         if ($add > 0) {
             $counts[$id] = min(NL_LIKE_MAX, ($counts[$id] ?? 0) + $add);
-            $today['used'][$key] = $used + $add;
+            foreach (nl_like_keys($id) as $key) $today['used'][$key] = (int)($today['used'][$key] ?? 0) + $add;
             nl_likes_write($counts);
             nl_write_record(nl_likes_day_file(), $today);
         }
-        return [$counts[$id] ?? 0, NL_LIKE_DAILY - $used - $add];
+        return [$counts[$id] ?? 0, $room - $add];
     });
 }
 /** The owner's edit screen: set a count (0 removes it). */

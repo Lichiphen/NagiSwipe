@@ -413,7 +413,7 @@ function nl_display_panel(): string
             'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。トップの1ページ目だけ、最新の記事を大きく出します。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
         . '<p class="note">どちらにするかで、検索エンジンへの指定も変わります（下の「検索エンジンとサイトマップ」）。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>いいねボタン</legend><label class="check"><input type="checkbox" name="likes" value="1"' . ($s['likes'] ? ' checked' : '') . '>記事の下の「Share」の左に、いいねボタンを出す</label>'
-        . '<p class="note">タップで1つ、長押しすると10ずつ増えます。同じ人（IPアドレス）が1つの記事に押せるのは、1日' . NL_LIKE_DAILY . 'までです。数は記事の編集画面で確認・変更・削除できます。押されてもページのキャッシュは消さないため、表示の速さは変わりません。</p></fieldset>'
+        . '<p class="note">タップで1つ、長押しすると10ずつ増えます。同じ回線・同じ端末（IPアドレスとブラウザーの端末情報）から1つの記事に押せるのは、1日' . NL_LIKE_DAILY . 'までです。端末情報は書き換えられるため、同じ回線全体でも1日' . NL_LIKE_LINE_DAILY . 'までにしています。数は記事の編集画面で確認・変更・削除できます。押されてもページのキャッシュは消さないため、表示の速さは変わりません。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>関連記事</legend><label class="check"><input type="checkbox" name="related" value="1"' . ($s['related'] ? ' checked' : '') . '>記事の下に、関連記事を' . NL_RELATED_SHOWN . '件出す</label>'
         . '<label>関連とみなす分類<select name="related_by">' . $by . '</select></label>'
         . nl_radio_list('related_order', NL_RELATED_ORDER, $s['related_order'], [
