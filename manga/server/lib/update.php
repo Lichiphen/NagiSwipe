@@ -27,10 +27,10 @@ const NM_UPDATE_MAX_TOTAL = 30 * 1024 * 1024;
 const NM_UPDATE_KEEP_BACKUPS = 3;
 const NM_UPDATE_REQUIRED = ['index.php', 'read.php', 'log.php', 'lib/bootstrap.php', 'admin/index.php', 'viewer/NagiManga.js',
     '404.php', 'viewer/404.css', 'lib/image-guard.php',
-    'lib/log.php', 'lib/log-taxonomy.php', 'lib/log-sidebar.php', 'lib/log-admin.php', 'lib/log-public.php', 'lib/log-backup.php', 'admin/login.php', 'admin/log-editor.js', 'admin/log-settings.js', 'admin/log-manage.js', 'viewer/log.css', 'viewer/log-menu.js', 'viewer/log-mail.js', 'viewer/log-pager.js', 'viewer/log-og.png',
+    'lib/log.php', 'lib/log-taxonomy.php', 'lib/log-sidebar.php', 'lib/log-admin.php', 'lib/log-public.php', 'lib/log-backup.php', 'admin/login.php', 'admin/log-editor.js', 'admin/log-settings.js', 'admin/log-manage.js', 'viewer/log.css', 'viewer/log-menu.js', 'viewer/log-mail.js', 'viewer/log-share.js', 'viewer/log-pager.js', 'viewer/log-og.png',
     'viewer/NagiSwipe-main.js', 'viewer/NagiSwipe-main.css', 'lib/log-links.php', 'lib/log-embed.php', 'lib/log-card.php', 'viewer/log-embed.js',
     'viewer/link-icons/conversation.svg', 'viewer/link-icons/pictures.svg', 'viewer/link-icons/sky-network.svg',
-    'viewer/link-icons/code-branch.svg', 'viewer/link-icons/film.svg', 'viewer/link-icons/mail.svg', 'viewer/link-icons/link.svg', 'viewer/link-icons/LICENSE.txt'];
+    'viewer/link-icons/code-branch.svg', 'viewer/link-icons/film.svg', 'viewer/link-icons/mail.svg', 'viewer/link-icons/link.svg', 'viewer/link-icons/bookmark-save.svg', 'viewer/link-icons/chat-bubbles.svg', 'viewer/link-icons/share.svg', 'viewer/link-icons/copy.svg', 'viewer/link-icons/check.svg', 'viewer/link-icons/LICENSE.txt'];
 const NM_UPDATE_EXT = ['php', 'js', 'css', 'html', 'txt', 'json', 'svg', 'png', 'jpg', 'webp', 'ico', 'woff2'];
 
 /**

@@ -12,6 +12,11 @@ code-branch.svg    Source-code brackets and branching nodes (GitHub)
 film.svg           Film perforations and successive frames (YouTube)
 link.svg           Two connected chain segments (any website)
 mail.svg           A sealed envelope with folded edges (e-mail, mailto: links)
+bookmark-save.svg  A ribbon bookmark with a plus (Hatena Bookmark, share dialog)
+chat-bubbles.svg   Two speech bubbles talking to each other (LINE, share dialog)
+share.svg          An arrow leaving an open tray (post share button)
+copy.svg           Two stacked sheets (copy button)
+check.svg          A single check mark (copied state)
 
 All icons use viewBox="0 0 24 24", no fill, currentColor, stroke-width="1.75",
 rounded line caps and joins. Artwork occupies a comparable central area with
@@ -20,7 +25,8 @@ The PHP renderer inlines these trusted files to follow the site's theme color.
 User-supplied HTML still cannot insert SVG.
 
 The drawings do not use the X symbol, a camera glyph, a butterfly, a cat mascot,
-or a play triangle inside a rounded video-logo badge. Do not replace them with
+a play triangle inside a rounded video-logo badge, a lettered
+speech-bubble badge or a letter mark. Do not replace them with
 official service logos when redistributing this template as original artwork.
 
 When using an icon alone, provide an accessible label in the surrounding UI.

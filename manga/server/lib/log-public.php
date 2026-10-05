@@ -116,6 +116,43 @@ function nl_post_nav(array $summaries, array $post): string
     return '<nav class="log-post-nav" aria-label="前後の投稿">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
         . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
 }
+/** Our own share UI icons from viewer/link-icons (original artwork, no service logos). */
+function nl_share_icon(string $name, string $extra = ''): string
+{
+    static $cache = [];
+    if (!isset($cache[$name])) {
+        $svg = (string)file_get_contents(__DIR__ . '/../viewer/link-icons/' . $name . '.svg');
+        $cache[$name] = (string)preg_replace('/\A.*?(<svg )/s', '$1', $svg);
+    }
+    return str_replace('<svg ', '<svg class="log-share-icon' . ($extra !== '' ? ' ' . $extra : '') . '" aria-hidden="true" focusable="false" ', $cache[$name]);
+}
+/**
+ * Share and Copy under a post, both with "title\nURL". viewer/log-share.js sends Share to the phone's share sheet,
+ * or to the dialog from nl_share_dialog() on a PC; without script the Share link opens X.
+ */
+function nl_share_row(array $p): string
+{
+    $title = nl_post_title($p, 120);
+    $text = ($title !== '' ? $title : '画像の記録') . "\n" . nl_base_url() . '/?id=' . rawurlencode($p['id']);
+    return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">'
+        . '<a class="log-share-btn log-share-open" href="https://x.com/intent/tweet?text=' . rawurlencode($text) . '" target="_blank" rel="noopener noreferrer" aria-haspopup="dialog">' . nl_share_icon('share') . '<span>Share</span></a>'
+        . '<button class="log-share-btn log-share-copy" type="button" aria-label="タイトルとURLをコピー">' . nl_share_icon('copy', 'log-share-icon-copy') . nl_share_icon('check', 'log-share-icon-done') . '<span class="log-share-label" aria-live="polite">Copy</span></button></div>';
+}
+/** One dialog per page for PCs: X, はてなブックマーク, LINE, Instagram. The script fills in the post's text. */
+function nl_share_dialog(): string
+{
+    $services = [
+        'x' => ['conversation', 'X'],
+        'hatena' => ['bookmark-save', 'はてな|ブックマーク'],
+        'line' => ['chat-bubbles', 'LINE'],
+        'instagram' => ['pictures', 'Instagram'],
+    ];
+    $items = '';
+    foreach ($services as $key => [$icon, $label]) $items .= '<button class="log-share-service" type="button" data-share-service="' . $key . '">' . nl_share_icon($icon) . '<span>' . str_replace('|', '<wbr>', h($label)) . '</span></button>';
+    return '<dialog class="log-share-dialog" aria-labelledby="log-share-title"><div class="log-share-dialog-body"><h2 id="log-share-title">シェア</h2>'
+        . '<p class="log-share-preview"></p><div class="log-share-services">' . $items . '</div>'
+        . '<p class="log-share-status" role="status"></p><button class="log-share-close" type="button">閉じる</button></div></dialog>';
+}
 function nl_search_form(string $q): string
 {
     return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">LOGを検索</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="ことば・#タグで探す" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="検索する"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
