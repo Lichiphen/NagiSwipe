@@ -22,6 +22,22 @@ nm_load_plugins();
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
 // The image-popup script most sites pair with NagiManga (for the Tegalog setting line)
 const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.3.0/NagiSwipe-main.js';
+/** Blocks of the settings screen: their heading (for messages) and tab. */
+const NM_SETTINGS_SECTIONS = [
+    'log_preferences' => ['公開範囲・表示件数・ページ送り', 'log'],
+    'log_display' => ['一覧の見せ方・記事の下', 'log'],
+    'log_design' => ['LOGのデザイン・アイコン', 'log'],
+    'log_seo' => ['検索エンジンとサイトマップ', 'log'],
+    'log_sidebar' => ['サイドバー・メニュー', 'log'],
+    'log_footer' => ['サイト下部の表記', 'log'],
+    'lscache' => ['LiteSpeed Cache', 'common'],
+    'login_days' => ['ログインを保つ期間', 'common'],
+    'log_guard' => ['画像収集BOTへの対策', 'common'],
+    'access' => ['管理画面を開ける場所（IP 制限）', 'common'],
+    'general' => ['設置先と画像アップロード', 'common'],
+    'page' => ['NagiMANGAの作品ページ', 'manga'],
+    'advanced' => ['上級者向けの設定', 'manga'],
+];
 
 nm_admin_headers();
 
@@ -571,96 +587,48 @@ function nm_handle_post(array $cfg): void
             }
             nm_redirect('p=settings&section=common');
 
+        // One block at a time (older pages and scripts); the settings screen sends settings_save_all.
         case 'settings_lscache':
-            $cfg['lscache'] = !empty($_POST['lscache']);
+            $cfg = nm_settings_one('lscache', $cfg);
             nm_save_config($cfg);
-            nm_log('settings_lscache_changed', $cfg['lscache'] ? 'on' : 'off');
+            nm_settings_logged($cfg, ['lscache']);
             nm_flash('ok', $cfg['lscache'] ? 'LiteSpeed Cache を使う設定にしました' : 'LiteSpeed Cache を使わない設定にしました');
             nm_redirect('p=settings&section=common');
 
         case 'settings_login_days':
-            $days = (int)nm_str($_POST, 'login_days', 3);
-            if (!in_array($days, NM_LOGIN_DAYS, true)) {
-                nm_flash('err', 'ログインを保つ期間を選んでください');
-                nm_redirect('p=settings&section=common');
-            }
-            $cfg['login_days'] = $days;
+            $cfg = nm_settings_one('login_days', $cfg);
             nm_save_config($cfg);
             nm_session_keep();
-            nm_log('settings_login_days_changed', (string)$days);
-            nm_flash('ok', 'ログインを保つ期間を ' . $days . ' 日にしました');
+            nm_settings_logged($cfg, ['login_days']);
+            nm_flash('ok', 'ログインを保つ期間を ' . $cfg['login_days'] . ' 日にしました');
             nm_redirect('p=settings&section=common');
 
         case 'settings_access':
-            $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
-            foreach ($ips as $r) {
-                if (!nm_valid_ip_rule($r)) {
-                    nm_flash('err', 'IP アドレスの書き方が正しくありません: ' . $r);
-                    nm_redirect('p=settings&section=common');
-                }
-            }
-            // Never lock yourself out with one click
-            $me = nm_client_ip();
-            if ($ips && !array_filter($ips, static fn($r) => nm_ip_match($me, $r))) {
-                nm_flash('err', '今の IP アドレス（' . $me . '）が含まれていないため保存しませんでした');
-                nm_redirect('p=settings&section=common');
-            }
-            $origins = [];
-            foreach (nm_lines(nm_str($_POST, 'allowed_origins', 5000)) as $o) {
-                $o = rtrim($o, '/');
-                if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) {
-                    nm_flash('err', 'サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
-                    nm_redirect('p=settings&section=common');
-                }
-                $origins[] = strtolower($o);
-            }
-            $cfg['allowed_ips'] = $ips;
-            $cfg['allowed_origins'] = array_values(array_unique($origins));
+            $cfg = nm_settings_one('access', $cfg);
             nm_save_config($cfg);
-            nm_log('settings_access_changed', implode(',', $ips));
+            nm_settings_logged($cfg, ['access']);
             nm_flash('ok', 'アクセス設定を保存しました');
             nm_redirect('p=settings&section=common');
 
         case 'settings_general':
-            $base = rtrim(trim(nm_str($_POST, 'base_url', 500)), '/');
-            if ($base !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $base)) {
-                nm_flash('err', '公開URLの書き方が正しくありません');
-                nm_redirect('p=settings&section=common');
-            }
-            $cfg['base_url'] = $base;
-            $cfg['image_quality'] = max(60, min(100, (int)($_POST['image_quality'] ?? 90)));
-            $cfg['max_upload_mb'] = max(1, min(200, (int)($_POST['max_upload_mb'] ?? 30)));
-            nm_save_config($cfg);
+            nm_save_config(nm_settings_one('general', $cfg));
             nm_flash('ok', '保存しました');
             nm_redirect('p=settings&section=common');
 
         case 'settings_page':
-            $back = trim(nm_str($_POST, 'page_back', 500));
-            if ($back !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $back)) {
-                nm_flash('err', '戻る先の URL の書き方が正しくありません（例: https://example.com/）');
-                nm_redirect('p=settings&section=manga');
-            }
-            $cfg['page_back'] = $back;
-            nm_save_config($cfg);
+            nm_save_config(nm_settings_one('page', $cfg));
             nm_flash('ok', '個別ページの設定を保存しました');
             nm_redirect('p=settings&section=manga');
 
         case 'settings_advanced':
-            $allow = [];
-            foreach (nm_lines(nm_str($_POST, 'hotlink_allow', 5000)) as $o) {
-                $o = rtrim($o, '/');
-                if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) {
-                    nm_flash('err', 'サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
-                    nm_redirect('p=settings&section=manga');
-                }
-                $allow[] = strtolower($o);
-            }
-            $cfg['hotlink'] = !empty($_POST['hotlink']);
-            $cfg['hotlink_allow'] = array_values(array_unique($allow));
+            $cfg = nm_settings_one('advanced', $cfg);
             nm_save_config($cfg);
-            nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $allow));
+            nm_settings_logged($cfg, ['advanced']);
             nm_flash('ok', $cfg['hotlink'] ? '直リンク防止をオンにしました' : '直リンク防止をオフにしました');
             nm_redirect('p=settings&section=manga');
+
+        case 'settings_save_all':
+            nm_settings_save_all($cfg);
 
         case 'regen_key':
             $cfg['login_key'] = nm_random_id(24);
@@ -670,6 +638,159 @@ function nm_handle_post(array $cfg): void
             nm_redirect('p=settings&section=common');
     }
     nm_not_found();
+}
+
+// ===========================================================================
+// Settings: one form, one save button
+// ===========================================================================
+
+/*
+ * Blocks kept in config.php. Each reads its fields from $_POST, checks them and returns the
+ * changed config without saving it, so one save can check every block before writing any.
+ */
+function nm_settings_lscache(array $cfg): array
+{
+    $cfg['lscache'] = !empty($_POST['lscache']);
+    return $cfg;
+}
+
+function nm_settings_login_days(array $cfg): array
+{
+    $days = (int)nm_str($_POST, 'login_days', 3);
+    if (!in_array($days, NM_LOGIN_DAYS, true)) throw new UnexpectedValueException('ログインを保つ期間を選んでください');
+    $cfg['login_days'] = $days;
+    return $cfg;
+}
+
+function nm_settings_access(array $cfg): array
+{
+    $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
+    foreach ($ips as $r) {
+        if (!nm_valid_ip_rule($r)) throw new UnexpectedValueException('IP アドレスの書き方が正しくありません: ' . $r);
+    }
+    // Never lock yourself out with one click
+    $me = nm_client_ip();
+    if ($ips && !array_filter($ips, static fn($r) => nm_ip_match($me, $r))) throw new UnexpectedValueException('今の IP アドレス（' . $me . '）が含まれていないため保存しませんでした');
+    $origins = [];
+    foreach (nm_lines(nm_str($_POST, 'allowed_origins', 5000)) as $o) {
+        $o = rtrim($o, '/');
+        if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) throw new UnexpectedValueException('サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
+        $origins[] = strtolower($o);
+    }
+    $cfg['allowed_ips'] = $ips;
+    $cfg['allowed_origins'] = array_values(array_unique($origins));
+    return $cfg;
+}
+
+function nm_settings_general(array $cfg): array
+{
+    $base = rtrim(trim(nm_str($_POST, 'base_url', 500)), '/');
+    if ($base !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $base)) throw new UnexpectedValueException('公開URLの書き方が正しくありません');
+    $cfg['base_url'] = $base;
+    $cfg['image_quality'] = max(60, min(100, (int)(nm_str($_POST, 'image_quality', 4) ?: 90)));
+    $cfg['max_upload_mb'] = max(1, min(200, (int)(nm_str($_POST, 'max_upload_mb', 4) ?: 30)));
+    return $cfg;
+}
+
+function nm_settings_page(array $cfg): array
+{
+    $back = trim(nm_str($_POST, 'page_back', 500));
+    if ($back !== '' && !preg_match('~\Ahttps?://[^\s"\'<>]+\z~i', $back)) throw new UnexpectedValueException('戻る先の URL の書き方が正しくありません（例: https://example.com/）');
+    $cfg['page_back'] = $back;
+    return $cfg;
+}
+
+function nm_settings_advanced(array $cfg): array
+{
+    $allow = [];
+    foreach (nm_lines(nm_str($_POST, 'hotlink_allow', 5000)) as $o) {
+        $o = rtrim($o, '/');
+        if (!preg_match('~\Ahttps?://[a-z0-9.\-]+(:[0-9]{1,5})?\z~i', $o)) throw new UnexpectedValueException('サイトの書き方が正しくありません（例: https://example.com）: ' . $o);
+        $allow[] = strtolower($o);
+    }
+    $cfg['hotlink'] = !empty($_POST['hotlink']);
+    $cfg['hotlink_allow'] = array_values(array_unique($allow));
+    return $cfg;
+}
+
+/** One config block for the single-block actions: a mistake goes back to its tab. */
+function nm_settings_one(string $key, array $cfg): array
+{
+    try {
+        return ('nm_settings_' . $key)($cfg);
+    } catch (UnexpectedValueException $e) {
+        nm_flash('err', $e->getMessage());
+        nm_redirect('p=settings&section=' . NM_SETTINGS_SECTIONS[$key][1]);
+    }
+}
+
+/** Security log lines for the blocks that change who can reach what. */
+function nm_settings_logged(array $cfg, array $sections): void
+{
+    if (in_array('lscache', $sections, true)) nm_log('settings_lscache_changed', $cfg['lscache'] ? 'on' : 'off');
+    if (in_array('login_days', $sections, true)) nm_log('settings_login_days_changed', (string)$cfg['login_days']);
+    if (in_array('access', $sections, true)) nm_log('settings_access_changed', implode(',', $cfg['allowed_ips']));
+    if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $cfg['hotlink_allow']));
+}
+
+/**
+ * The settings screen's save button: every changed block is checked first, and nothing is
+ * written unless all of them pass. The page sends only the changed blocks (sections[]);
+ * without JavaScript every block's marker is sent.
+ */
+function nm_settings_save_all(array $cfg): never
+{
+    $json = str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+    $raw = $_POST['sections'] ?? [];
+    $asked = is_array($raw) ? array_filter($raw, 'is_string') : [];
+    $sections = array_values(array_filter(array_keys(NM_SETTINGS_SECTIONS), static fn($k) => in_array($k, $asked, true)));
+    $tab = nm_str($_POST, 'tab', 20);
+    $at = '';
+    try {
+        // 1. Check every block; nothing is written yet.
+        $next = $cfg;
+        foreach (['lscache', 'login_days', 'access', 'general', 'page', 'advanced'] as $key) {
+            if (!in_array($key, $sections, true)) continue;
+            // Without LiteSpeed the switch is disabled and absent; keep the stored value.
+            if ($key === 'lscache' && !nm_lscache_server()) continue;
+            $at = $key;
+            $next = ('nm_settings_' . $key)($next);
+        }
+        if (in_array('log_guard', $sections, true)) { $at = 'log_guard'; $next = nl_guard_input($next); }
+        $changes = [];
+        foreach (['log_preferences' => 'nl_preferences_input', 'log_display' => 'nl_display_input', 'log_seo' => 'nl_seo_input', 'log_footer' => 'nl_footer_input'] as $key => $fn) {
+            if (in_array($key, $sections, true)) { $at = $key; $changes[] = $fn(); }
+        }
+        $design = null;
+        if (in_array('log_design', $sections, true)) { $at = 'log_design'; $design = nl_design_input(); }
+        $sidebar = null;
+        if (in_array('log_sidebar', $sections, true)) { $at = 'log_sidebar'; $sidebar = nl_sidebar_input(); }
+        // 2. Pictures: an image that cannot be read stops here, before any setting changes.
+        if ($design !== null) {
+            $at = 'log_design';
+            $uploads = nl_design_uploads();
+            $changes[] = static fn(array $s) => nl_design_apply($s, $design, $uploads);
+        }
+        // 3. Write.
+        $at = '';
+        if ($next !== $cfg) nm_save_config($next);
+        if ($changes) nl_settings_update($changes);
+        if ($sidebar !== null) { $at = 'log_sidebar'; nl_sidebar_save($sidebar[0], $sidebar[1]); }
+    } catch (Throwable $e) {
+        $message = $e instanceof UnexpectedValueException ? $e->getMessage() : '保存できませんでした。空き容量や書き込み権限を確認してください';
+        nm_log('settings_error', $at . ' ' . $e->getMessage());
+        $label = NM_SETTINGS_SECTIONS[$at][0] ?? '';
+        $message = ($label !== '' ? '「' . $label . '」: ' : '') . $message . '。ほかの設定も保存していません';
+        if ($json) nm_json(['ok' => false, 'error' => $message, 'section' => $at], 422);
+        nm_flash('err', $message);
+        nm_redirect('p=settings&section=' . (NM_SETTINGS_SECTIONS[$at][1] ?? (in_array($tab, ['manga', 'log', 'common'], true) ? $tab : 'log')));
+    }
+    if (in_array('login_days', $sections, true)) nm_session_keep();
+    nm_settings_logged($next, $sections);
+    $labels = array_map(static fn($k) => NM_SETTINGS_SECTIONS[$k][0], $sections);
+    nm_flash('ok', $sections ? '設定を保存しました（' . implode('、', $labels) . '）' : '変更はありませんでした');
+    if ($json) nm_json(['ok' => true]);
+    nm_redirect('p=settings&section=' . (in_array($tab, ['manga', 'log', 'common'], true) ? $tab : 'log'));
 }
 
 /** Guest entrance (the plugin decides whether a key is needed). */
@@ -1127,76 +1248,85 @@ function nm_view_settings(array $cfg): void
         $log = h(implode("\n", array_reverse($lines)));
     }
     $hidden = nm_csrf_field();
+    $block = 'nl_settings_block';
 
     $section = nm_str($_GET, 'section', 20);
     if (!in_array($section, ['manga', 'log', 'common'], true)) $section = 'log';
-    $tabs = '<h1>設定</h1><p class="note">使いたい機能を選んで、必要な項目だけ設定できます。各ブロックの保存ボタンで反映します。</p><nav class="workspace-tabs" data-settings-tabs aria-label="設定の種類">';
+    $tabs = '<h1>設定</h1><p class="note">使いたい機能を選んで、必要な項目だけ設定できます。どのタブで変えた設定も、画面の下の「設定を保存」でまとめて保存します。</p><nav class="workspace-tabs" data-settings-tabs aria-label="設定の種類">';
     foreach (['manga' => 'NagiMANGA', 'log' => 'LOG', 'common' => '共通・安全'] as $key => $label) $tabs .= '<a href="index.php?p=settings&amp;section=' . $key . '" data-settings-tab="' . $key . '"' . ($key === $section ? ' aria-current="page"' : '') . '>' . $label . '</a>';
     $tabs .= '</nav>';
     $panel = static fn($key) => '<div id="settings-' . $key . '" data-settings-panel="' . $key . '"' . ($key === $section ? '' : ' hidden') . '>';
-    nm_layout('設定', $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="設定の目次" hidden></nav><div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
+    // One form for every tab. The password and the login URL change at once with their own buttons,
+    // so their forms sit after it and their fields join them with form="…".
+    nm_layout('設定', $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="設定の目次" hidden></nav>'
+        . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
         . '<section class="card"><h2>ログイン URL</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
-        . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
-        . '<input type="hidden" name="do" value="regen_key"><button class="btn">ログイン URL を変更する</button></form></section>'
+        . '<p><button class="btn" form="settings-regen-key">ログイン URL を変更する</button></p><p class="note">押すとすぐに変わります（「設定を保存」とは別です）。</p></section>'
 
         . '<section class="card"><h2>LiteSpeed Cache</h2>'
         . '<p>' . (nm_lscache_server() ? 'このサーバーは LiteSpeed です。' . (nm_lscache_active() ? '公開LOGのページをサーバーでキャッシュしています。' : '今はキャッシュを使っていません。') : 'このサーバーは LiteSpeed ではないため、この機能は動きません。設定を変える必要はありません。') . '</p>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_lscache">'
+        . (nm_lscache_server() ? $block('lscache') : '<div class="form">')
         . '<label class="check"><input type="checkbox" name="lscache" value="1"' . (($cfg['lscache'] ?? true) ? ' checked' : '') . (nm_lscache_server() ? '' : ' disabled') . '>LiteSpeed のサーバーでは、公開LOGのページをキャッシュして速く表示する</label>'
         . '<p class="note">キャッシュするのは、ログインしていない人が見る公開LOGのページだけです。管理画面、ログイン中の表示、自分専用のMemo、画像、404はキャッシュしません。投稿・画像・漫画・設定を変えると、キャッシュをすぐに消します。カレンダーの「今日」に合わせ、キャッシュは1時間で作り直します。</p>'
-        . (nm_lscache_server() ? '<button class="btn">保存</button>' : '') . '</form></section>'
+        . '</div></section>'
 
         . '<section class="card"><h2>ログインを保つ期間</h2>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_login_days">'
+        . $block('login_days')
         . '<label class="check"><input type="radio" name="login_days" value="30"' . (nm_login_days() === 30 ? ' checked' : '') . '>30 日（おすすめ）</label>'
         . '<label class="check"><input type="radio" name="login_days" value="365"' . (nm_login_days() === 365 ? ' checked' : '') . '>1 年（365 日）</label>'
         . '<p class="note">最後にログインした日から数えます。期間中はブラウザを閉じてもログインしたままです。共用のパソコンでは使わず、使い終わったらログアウトしてください。パスワードを変えると、ほかの端末はログアウトされます。</p>'
-        . '<button class="btn">保存</button></form></section>'
+        . '</div></section>'
 
         . nl_guard_panel()
 
         . '<section class="card"><h2>管理画面を開ける場所（IP 制限）</h2>'
         . '<p>今の IP アドレス: <code>' . h(nm_client_ip()) . '</code></p>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_access">'
+        . $block('access')
         . '<label>許可する IP アドレス（1 行に 1 つ。192.168.0.0/24 のような範囲も可。空欄なら制限なし）<textarea name="allowed_ips" rows="3">' . h(implode("\n", $cfg['allowed_ips'] ?? [])) . '</textarea></label>'
         . '<p class="note">家庭の回線は IP アドレスが変わることがあります。締め出された場合は、FTP で <code>data/config.php</code> の <code>allowed_ips</code> を空にしてください。</p>'
         . '<label>別のサイトに埋め込む場合、そのサイトのアドレス（1 行に 1 つ。例: https://blog.example.com）<textarea name="allowed_origins" rows="3">' . h(implode("\n", $cfg['allowed_origins'] ?? [])) . '</textarea></label>'
-        . '<button class="btn">保存</button></form></section>'
+        . '</div></section>'
 
         . '<section class="card"><h2>管理者パスワード</h2>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_pw">'
-        . '<label>今のパスワード<input type="password" name="current" autocomplete="current-password" required></label>'
-        . '<label>新しいパスワード（10 文字以上）<input type="password" name="password" autocomplete="new-password" required minlength="10"></label>'
-        . '<label>もう一度<input type="password" name="password2" autocomplete="new-password" required minlength="10"></label>'
-        . '<button class="btn">変更</button></form></section>'
+        . '<div class="form">'
+        . '<label>今のパスワード<input type="password" name="current" form="settings-password" autocomplete="current-password" required></label>'
+        . '<label>新しいパスワード（10 文字以上）<input type="password" name="password" form="settings-password" autocomplete="new-password" required minlength="10"></label>'
+        . '<label>もう一度<input type="password" name="password2" form="settings-password" autocomplete="new-password" required minlength="10"></label>'
+        . '<p class="note">パスワードは、このボタンですぐに変わります（「設定を保存」とは別です）。</p>'
+        . '<p><button class="btn" form="settings-password">パスワードを変更</button></p></div></section>'
 
         . '<section class="card"><h2>設置先と画像アップロード</h2>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_general">'
+        . $block('general')
         . '<label>公開URL（共有リンク・OGPに使います。設置先を入力し、末尾にlog.phpは付けません。空欄ならアクセス時のアドレスから作ります）<input name="base_url" value="' . h((string)($cfg['base_url'] ?? '')) . '" placeholder="' . h(nm_detect_base_url()) . '"></label>'
         . '<label>画像の画質（60〜100）<input type="number" name="image_quality" min="60" max="100" value="' . (int)($cfg['image_quality'] ?? 90) . '"></label>'
         . '<label>1 枚あたりの上限（MB）<input type="number" name="max_upload_mb" min="1" max="200" value="' . (int)($cfg['max_upload_mb'] ?? 30) . '"></label>'
         . '<p class="note">サーバー側の上限: upload_max_filesize ' . h((string)ini_get('upload_max_filesize')) . ' / memory_limit ' . h((string)ini_get('memory_limit')) . '</p>'
-        . '<button class="btn">保存</button></form></section>'
+        . '</div></section>'
 
         . '<section class="card"><details><summary>セキュリティログを見る</summary>' . ($log !== '' ? '<pre class="log">' . $log . '</pre>' : '<p class="note">記録はまだありません。</p>') . '</details></section></div>' . $panel('manga')
         . '<section class="card"><h2>NagiMANGAの作品ページ</h2>'
         . '<p>作品ごとの共有リンク（<code>read.php?nagimanga=…</code>）を開くと、その作品を読むページが開きます。note・アメブロ・Instagram・X などに貼ると、表紙付きのカードで表示されます（パスワード付きの作品は表紙を出しません）。</p>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_page">'
+        . $block('page')
         . '<label>「戻る」ボタンの行き先（空欄なら自動：来たページに戻ります。わからないときは空欄のままで大丈夫です）<input name="page_back" value="' . h((string)($cfg['page_back'] ?? '')) . '" placeholder="例: https://example.com/"></label>'
-        . '<button class="btn">保存</button></form></section>'
+        . '</div></section>'
 
         . '<section class="card"><details class="more"><summary>上級者向けの設定</summary>'
         . '<h3>直リンク防止</h3>'
         . '<p>オンにすると、漫画の画像は「このサイト」「別のサイトに埋め込む場合に登録したサイト」「下に書いたサイト」のページからしか読めなくなります。画像の URL を直接開いたり、ほかのサイトに貼られたりしたときは表示しません（サーバーの通信量の節約になります）。</p>'
         . '<p class="note">共有リンクで開く個別ページ、リンクのカード用の表紙は、オンでもそのまま使えます。サイト単位（例: https://note.com）で書いてください。ブラウザは、ほかのサイトからの読み込みでは URL の途中（/ユーザー名/ など）を送らないため、途中までの一致では判定できません。</p>'
-        . '<form method="post" action="index.php" class="form">' . $hidden . '<input type="hidden" name="do" value="settings_advanced">'
+        . $block('advanced')
         . '<label class="check"><input type="checkbox" name="hotlink" value="1"' . (!empty($cfg['hotlink']) ? ' checked' : '') . '> 直リンク防止を使う</label>'
         . '<label>ほかに読み込みを許可するサイト（1 行に 1 つ）<textarea name="hotlink_allow" rows="3">' . h(implode("\n", $cfg['hotlink_allow'] ?? [])) . '</textarea></label>'
-        . '<button class="btn">保存</button></form>'
+        . '</div>'
         . '</details></section>'
 
-        . '</div></div></div>');
+        . '</div></div>'
+        . '<div class="settings-savebar" data-settings-savebar><p class="settings-savebar-status" data-settings-status role="status" aria-live="polite">すべてのタブの設定を、このボタンでまとめて保存します。</p><button class="btn primary settings-save" data-settings-save>設定を保存</button></div>'
+        . '</form></div>'
+        . '<form id="settings-password" method="post" action="index.php">' . $hidden . '<input type="hidden" name="do" value="settings_pw"></form>'
+        . '<form id="settings-regen-key" method="post" action="index.php" class="js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden . '<input type="hidden" name="do" value="regen_key"></form>');
 }
 
 /** After login: a notice when GitHub has a newer NagiManga (checked at most every 12 hours). */

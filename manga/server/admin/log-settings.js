@@ -21,16 +21,19 @@
     });
 })();
 
-/* Sidebar order and optional HTML blocks; changes are saved together. */
+/*
+ * Sidebar order and optional HTML blocks. The settings screen's one save button sends them:
+ * form.nlSidebarItems() builds the JSON, and a "settings:change" event reports moves that fire no input event.
+ */
 (() => {
     'use strict';
     const form = document.querySelector('[data-sidebar-manager]');
     if (!form) return;
     const group = form.querySelector('[data-sidebar-items]');
     const status = form.querySelector('[data-sidebar-status]');
-    let busy = false, dragging = null, before = null, pointer = null;
+    let dragging = null, before = null, pointer = null;
     const rows = () => Array.from(group.children);
-    const dirty = () => { form.dataset.dirty = '1'; status.textContent = '未保存の変更があります。「サイドバーを保存」で反映します。'; };
+    const dirty = () => { status.textContent = '未保存の変更があります。画面の下の「設定を保存」で反映します。'; form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
     const count = editor => { editor.closest('[data-sidebar-item]').querySelector('[data-sidebar-chip]').textContent = `${editor.querySelector('[data-link-items]').children.length}件のリンク`; };
     const preview = select => {
         const source = select.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelector(`[data-link-icon-source="${select.value}"] svg`);
@@ -38,12 +41,12 @@
     };
     const buttons = () => {
         rows().forEach((row, i, all) => {
-            row.querySelector('[data-sidebar-step="-1"]').disabled = busy || i === 0;
-            row.querySelector('[data-sidebar-step="1"]').disabled = busy || i === all.length - 1;
+            row.querySelector('[data-sidebar-step="-1"]').disabled = i === 0;
+            row.querySelector('[data-sidebar-step="1"]').disabled = i === all.length - 1;
         });
         form.querySelectorAll('[data-link-items]').forEach(list => Array.from(list.children).forEach((row, i, all) => {
-            row.querySelector('[data-link-step="-1"]').disabled = busy || i === 0;
-            row.querySelector('[data-link-step="1"]').disabled = busy || i === all.length - 1;
+            row.querySelector('[data-link-step="-1"]').disabled = i === 0;
+            row.querySelector('[data-link-step="1"]').disabled = i === all.length - 1;
         }));
     };
     const label = row => {
@@ -63,7 +66,7 @@
     const wire = row => {
         const handle = row.querySelector('.log-sort-handle');
         handle.addEventListener('pointerdown', event => {
-            if (event.button !== 0 || busy || dragging) return;
+            if (event.button !== 0 || dragging) return;
             event.preventDefault(); dragging = row; before = rows(); pointer = event.pointerId;
             row.classList.add('log-sort-dragging'); handle.setPointerCapture(pointer);
         });
@@ -113,7 +116,7 @@
         });
         yes.addEventListener('click', () => {
             loginSwitch.checked = false; dirty();
-            status.textContent = '「ログイン・管理ページ」を隠します。「サイドバーを保存」で反映します。';
+            status.textContent = '「ログイン・管理ページ」を隠します。画面の下の「設定を保存」で反映します。';
             dialog.close();
         });
         no.addEventListener('click', () => dialog.close('keep'));
@@ -134,7 +137,7 @@
     form.addEventListener('change', event => { if (event.target.matches('[data-link-icon]')) preview(event.target); });
     form.addEventListener('keydown', event => { if (event.key === 'Escape' && dragging) { event.preventDefault(); end(true); } });
     form.addEventListener('click', event => {
-        if (busy || dragging) return;
+        if (dragging) return;
         const linkAdd = event.target.closest('[data-link-add]');
         if (linkAdd) {
             const editor = linkAdd.closest('.log-links-editor');
@@ -178,44 +181,13 @@
             group.append(row); wire(row); dirty(); buttons(); row.querySelector('[data-sidebar-title]').focus();
         }
     });
-    form.addEventListener('submit', async event => {
-        event.preventDefault();
-        if (busy || dragging) return;
-        const items = rows().map(row => {
-            const item = {id: row.dataset.sidebarId, kind: row.dataset.sidebarKind, enabled: row.querySelector('[data-sidebar-enabled]').checked};
-            if (item.kind === 'html') Object.assign(item, {title: row.querySelector('[data-sidebar-title]').value, html: row.querySelector('[data-sidebar-html]').value, framed: row.querySelector('[data-sidebar-framed]').checked});
-            if (item.kind === 'links') Object.assign(item, {icon_frame: row.querySelector('[data-links-frame]').checked, message: row.querySelector('[data-links-message]').value});
-            if (item.kind === 'links') item.links = Array.from(row.querySelector('[data-link-items]').children).map(link => ({label: link.querySelector('[data-link-label]').value, url: link.querySelector('[data-link-url]').value, icon: link.querySelector('[data-link-icon]').value}));
-            return item;
-        });
-        const data = new FormData(form);
-        data.set('revision', form.dataset.revision); data.set('items', JSON.stringify(items));
-        busy = true; const controls = Array.from(form.querySelectorAll('input, textarea, select, button'));
-        controls.forEach(control => { control.disabled = true; }); status.textContent = 'サイドバーを保存しています…';
-        try {
-            const response = await fetch(form.action, {method: 'POST', body: data, credentials: 'same-origin'});
-            const result = await response.json();
-            if (!response.ok || !result.ok || !Number.isInteger(result.revision) || !Array.isArray(result.items)) throw new Error(result.error || '保存できませんでした。画面を開き直してください');
-            form.dataset.revision = String(result.revision);
-            result.items.forEach(item => {
-                if (item.kind === 'links') {
-                    const block = rows().find(row => row.dataset.sidebarId === item.id), list = block.querySelector('[data-link-items]');
-                    block.querySelector('[data-links-message]').value = item.message;
-                    item.links.forEach((link, i) => {
-                        list.children[i].querySelector('[data-link-label]').value = link.label;
-                        list.children[i].querySelector('[data-link-url]').value = link.url.replace(/^mailto:/, '');
-                        list.children[i].querySelector('[data-link-icon]').value = link.icon;
-                    });
-                }
-                if (item.kind !== 'html') return;
-                const row = rows().find(row => row.dataset.sidebarId === item.id);
-                row.querySelector('[data-sidebar-html]').value = item.html;
-                row.querySelector('[data-sidebar-title]').value = item.title; label(row);
-            });
-            delete form.dataset.dirty; status.textContent = 'サイドバーを保存しました。';
-        } catch (error) { status.textContent = error.message || '通信できませんでした。変更内容はこの画面に残しています。'; }
-        finally { busy = false; controls.forEach(control => { control.disabled = false; }); buttons(); }
-    });
+    form.nlSidebarItems = () => JSON.stringify(rows().map(row => {
+        const item = {id: row.dataset.sidebarId, kind: row.dataset.sidebarKind, enabled: row.querySelector('[data-sidebar-enabled]').checked};
+        if (item.kind === 'html') Object.assign(item, {title: row.querySelector('[data-sidebar-title]').value, html: row.querySelector('[data-sidebar-html]').value, framed: row.querySelector('[data-sidebar-framed]').checked});
+        if (item.kind === 'links') Object.assign(item, {icon_frame: row.querySelector('[data-links-frame]').checked, message: row.querySelector('[data-links-message]').value});
+        if (item.kind === 'links') item.links = Array.from(row.querySelector('[data-link-items]').children).map(link => ({label: link.querySelector('[data-link-label]').value, url: link.querySelector('[data-link-url]').value, icon: link.querySelector('[data-link-icon]').value}));
+        return item;
+    }));
     buttons();
 })();
 

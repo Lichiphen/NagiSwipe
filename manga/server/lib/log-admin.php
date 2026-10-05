@@ -125,67 +125,21 @@ function nl_handle_post(string $do): never
                 nm_flash('ok', '未使用の画像を削除しました');
                 nm_redirect('p=log_media');
             case 'log_settings':
-                $s = ['title' => mb_substr(trim(nm_str($_POST, 'title', 600)), 0, 100), 'description' => mb_substr(trim(nm_str($_POST, 'description', 1500)), 0, 300), 'name' => mb_substr(trim(nm_str($_POST, 'name', 300)), 0, 100)];
-                if ($s['title'] === '' || $s['name'] === '') throw new UnexpectedValueException('サイト名と名前を入力してください');
-                $s['theme'] = nm_str($_POST, 'theme', 30) ?: nl_settings()['theme'];
-                if (!isset(NL_THEMES[$s['theme']])) throw new UnexpectedValueException('デザインを6種類から選んでください');
-                $icon = null;
-                $file = $_FILES['icon'] ?? null;
-                if (is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) $icon = nl_upload_media($file)['id'];
-                $ogImage = null; $file = $_FILES['og_image'] ?? null;
-                if (is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) $ogImage = nl_upload_media($file)['id'];
-                nm_with_lock('personal-log', static function () use ($s, $icon, $ogImage) {
-                    $s['icon'] = $icon ?? (!empty($_POST['remove_icon']) ? '' : nl_settings()['icon']);
-                    $s['og_image'] = $ogImage ?? (!empty($_POST['remove_og_image']) ? '' : nl_settings()['og_image']);
-                    $s = array_replace(nl_settings(), $s, ['updated' => time()]);
-                    nl_write_record(nl_root() . '/settings.php', $s);
-                });
+                $design = nl_design_input();
+                $uploads = nl_design_uploads();
+                nl_settings_update([static fn(array $s) => nl_design_apply($s, $design, $uploads)]);
                 nm_flash('ok', 'LOGの設定を保存しました');
                 nm_redirect('p=settings&section=log');
             case 'log_preferences':
-                $visibility = nm_str($_POST, 'visibility', 20);
-                $count = nm_str($_POST, 'posts_per_page', 20);
-                if (!in_array($visibility, ['public', 'private'], true) || !preg_match('/\A[0-9]{1,3}\z/', $count) || (int)$count < 1 || (int)$count > 100) throw new UnexpectedValueException('公開範囲と表示件数を確認してください');
-                nm_with_lock('personal-log', static function () use ($visibility, $count) {
-                    $s = nl_settings();
-                    $s['public'] = $visibility === 'public';
-                    // Older forms still post this; the sidebar's login row owns it now.
-                    if (array_key_exists('show_login', $_POST)) $s['show_login'] = nm_str($_POST, 'show_login', 1) === '1';
-                    $s['posts_per_page'] = (int)$count;
-                    // Forms without the paging fieldset (older pages) leave these as they were.
-                    if (isset($_POST['pager_form'])) {
-                        $pager = nm_str($_POST, 'pager', 10);
-                        if (!isset(NL_PAGERS[$pager])) throw new UnexpectedValueException('ページ送りの形式を選んでください');
-                        $s['pager'] = $pager;
-                        $s['pager_status'] = nm_str($_POST, 'pager_status', 1) === '1';
-                        $s['post_nav'] = nm_str($_POST, 'post_nav', 1) === '1';
-                    }
-                    $s['updated'] = time();
-                    nl_write_record(nl_root() . '/settings.php', $s);
-                });
-                nm_flash('ok', $visibility === 'public' ? 'LOGを全体公開にしました' : 'LOGを自分専用のMemoにしました。画像もログイン時だけ読めます');
+                nl_settings_update([nl_preferences_input()]);
+                nm_flash('ok', nm_str($_POST, 'visibility', 20) === 'public' ? 'LOGを全体公開にしました' : 'LOGを自分専用のMemoにしました。画像もログイン時だけ読めます');
                 nm_redirect('p=settings&section=log');
             case 'log_display_settings':
-                $layout = nm_str($_POST, 'layout', 10); $by = nm_str($_POST, 'related_by', 10); $order = nm_str($_POST, 'related_order', 10);
-                if (!isset(NL_LAYOUTS[$layout], NL_RELATED_BY[$by], NL_RELATED_ORDER[$order])) throw new UnexpectedValueException('一覧の形と関連記事の設定を選んでください');
-                nm_with_lock('personal-log', static function () use ($layout, $by, $order) {
-                    $s = nl_settings();
-                    $s['layout'] = $layout; $s['related_by'] = $by; $s['related_order'] = $order;
-                    $s['likes'] = nm_str($_POST, 'likes', 1) === '1'; $s['related'] = nm_str($_POST, 'related', 1) === '1';
-                    if (isset($_POST['new_days'])) $s['new_days'] = max(0, min(NL_NEW_DAYS_MAX, (int)nm_str($_POST, 'new_days', 3)));
-                    if (isset($_POST['new_label'])) $s['new_label'] = nl_new_label(nm_str($_POST, 'new_label', 200));
-                    $s['updated'] = time();
-                    nl_write_record(nl_root() . '/settings.php', $s);
-                });
+                nl_settings_update([nl_display_input()]);
                 nm_flash('ok', '一覧と記事の下の表示を保存しました'); nm_redirect('p=settings&section=log#log-display');
             case 'log_seo_settings':
-                $engines = nm_str($_POST, 'search_engines', 10);
-                if (!in_array($engines, ['allow', 'block'], true)) throw new UnexpectedValueException('検索エンジンに載せるかを選んでください');
-                nm_with_lock('personal-log', static function () use ($engines) {
-                    $s = nl_settings(); $s['search_engines'] = $engines === 'allow'; $s['updated'] = time();
-                    nl_write_record(nl_root() . '/settings.php', $s);
-                });
-                nm_flash('ok', $engines === 'allow' ? '検索エンジンに載せる設定にしました' : 'すべてのページを検索エンジンに載せない設定にしました');
+                nl_settings_update([nl_seo_input()]);
+                nm_flash('ok', nm_str($_POST, 'search_engines', 10) === 'allow' ? '検索エンジンに載せる設定にしました' : 'すべてのページを検索エンジンに載せない設定にしました');
                 nm_redirect('p=settings&section=log#log-seo');
             case 'log_like_set':
                 $id = nm_str($_POST, 'post_id', 24); $count = nm_str($_POST, 'count', 12);
@@ -202,12 +156,7 @@ function nl_handle_post(string $do): never
                 nm_json(['ok' => true, 'revision' => $revision, 'items' => nl_sidebar_settings()['items']]);
             case 'log_backup': nl_backup_download();
             case 'log_footer_settings':
-                $text = $_POST['footer_text'] ?? '';
-                if (!is_string($text) || mb_strlen($text) > 200 || !mb_check_encoding($text, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $text)) throw new UnexpectedValueException('フッターは200文字以内の1行で入力してください');
-                nm_with_lock('personal-log', static function () use ($text) {
-                    $s = nl_settings(); $s['footer_text'] = trim($text); $s['show_footer'] = nm_str($_POST, 'show_footer', 1) === '1'; $s['updated'] = time();
-                    nl_write_record(nl_root() . '/settings.php', $s);
-                });
+                nl_settings_update([nl_footer_input()]);
                 nm_flash('ok', 'フッターを保存しました'); nm_redirect('p=settings&section=log#log-footer');
             case 'log_taxonomy_rename':
                 nl_taxonomy_rename(['kind' => nm_str($_POST, 'kind', 10), 'old' => nm_str($_POST, 'old', 250), 'name' => nm_str($_POST, 'name', 250), 'revision' => (int)nm_str($_POST, 'revision', 10)]);
@@ -218,15 +167,7 @@ function nl_handle_post(string $do): never
                 $revision = nl_taxonomy_reorder(nm_str($_POST, 'kind', 10), $order, nl_revision_input());
                 nm_json(['ok' => true, 'revision' => $revision]);
             case 'log_guard_settings':
-                $burst = (int)nm_str($_POST, 'burst', 4); $minute = (int)nm_str($_POST, 'minute', 4);
-                if ($burst < 10 || $burst > 1000 || $minute < 60 || $minute > 6000) throw new UnexpectedValueException('画像の上限を指定された範囲で入力してください');
-                $agents = preg_split('/\r?\n/', nm_str($_POST, 'agents', 4000), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-                $agents = array_values(array_unique(array_map('trim', $agents)));
-                if (count($agents) > 50) throw new UnexpectedValueException('ツール名は50個まで指定できます');
-                foreach ($agents as $name) if ($name === '' || strlen($name) > 100 || preg_match('/[\x00-\x1F\x7F]/', $name)) throw new UnexpectedValueException('収集ツール名を確認してください');
-                $cfg = nm_config();
-                $cfg['image_guard_enabled'] = !empty($_POST['enabled']); $cfg['image_guard_burst'] = $burst; $cfg['image_guard_minute'] = $minute; $cfg['image_guard_agents'] = $agents;
-                nm_save_config($cfg);
+                nm_save_config(nl_guard_input(nm_config()));
                 nm_flash('ok', '画像収集BOTへの対策を保存しました');
                 nm_redirect('p=settings&section=common#log-guard');
             case 'log_restore':
@@ -244,6 +185,120 @@ function nl_handle_post(string $do): never
         nm_flash('err', $message);
         nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
     }
+}
+/*
+ * LOG settings blocks. Each *_input() checks its fields from $_POST and returns the change
+ * without writing, so the settings screen can check every block before saving any of them.
+ */
+/** Apply changes to settings.php in one write, under the lock. */
+function nl_settings_update(array $changes): void
+{
+    nm_with_lock('personal-log', static function () use ($changes) {
+        $s = nl_settings();
+        foreach ($changes as $change) $s = $change($s);
+        $s['updated'] = time();
+        nl_write_record(nl_root() . '/settings.php', $s);
+    });
+}
+function nl_preferences_input(): Closure
+{
+    $visibility = nm_str($_POST, 'visibility', 20);
+    $count = nm_str($_POST, 'posts_per_page', 20);
+    if (!in_array($visibility, ['public', 'private'], true) || !preg_match('/\A[0-9]{1,3}\z/', $count) || (int)$count < 1 || (int)$count > 100) throw new UnexpectedValueException('公開範囲と表示件数を確認してください');
+    // Older forms still post this; the sidebar's login row owns it now.
+    $login = array_key_exists('show_login', $_POST) ? nm_str($_POST, 'show_login', 1) === '1' : null;
+    // Forms without the paging fieldset (older pages) leave these as they were.
+    $pager = null;
+    if (isset($_POST['pager_form'])) {
+        $pager = nm_str($_POST, 'pager', 10);
+        if (!isset(NL_PAGERS[$pager])) throw new UnexpectedValueException('ページ送りの形式を選んでください');
+    }
+    $status = nm_str($_POST, 'pager_status', 1) === '1'; $nav = nm_str($_POST, 'post_nav', 1) === '1';
+    return static function (array $s) use ($visibility, $count, $login, $pager, $status, $nav): array {
+        $s['public'] = $visibility === 'public';
+        if ($login !== null) $s['show_login'] = $login;
+        $s['posts_per_page'] = (int)$count;
+        if ($pager !== null) { $s['pager'] = $pager; $s['pager_status'] = $status; $s['post_nav'] = $nav; }
+        return $s;
+    };
+}
+function nl_display_input(): Closure
+{
+    $layout = nm_str($_POST, 'layout', 10); $by = nm_str($_POST, 'related_by', 10); $order = nm_str($_POST, 'related_order', 10);
+    if (!isset(NL_LAYOUTS[$layout], NL_RELATED_BY[$by], NL_RELATED_ORDER[$order])) throw new UnexpectedValueException('一覧の形と関連記事の設定を選んでください');
+    $likes = nm_str($_POST, 'likes', 1) === '1'; $related = nm_str($_POST, 'related', 1) === '1';
+    $days = isset($_POST['new_days']) ? max(0, min(NL_NEW_DAYS_MAX, (int)nm_str($_POST, 'new_days', 3))) : null;
+    $label = isset($_POST['new_label']) ? nl_new_label(nm_str($_POST, 'new_label', 200)) : null;
+    return static function (array $s) use ($layout, $by, $order, $likes, $related, $days, $label): array {
+        $s['layout'] = $layout; $s['related_by'] = $by; $s['related_order'] = $order;
+        $s['likes'] = $likes; $s['related'] = $related;
+        if ($days !== null) $s['new_days'] = $days;
+        if ($label !== null) $s['new_label'] = $label;
+        return $s;
+    };
+}
+function nl_seo_input(): Closure
+{
+    $engines = nm_str($_POST, 'search_engines', 10);
+    if (!in_array($engines, ['allow', 'block'], true)) throw new UnexpectedValueException('検索エンジンに載せるかを選んでください');
+    return static function (array $s) use ($engines): array { $s['search_engines'] = $engines === 'allow'; return $s; };
+}
+function nl_footer_input(): Closure
+{
+    $text = $_POST['footer_text'] ?? '';
+    if (!is_string($text) || mb_strlen($text) > 200 || !mb_check_encoding($text, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $text)) throw new UnexpectedValueException('フッターは200文字以内の1行で入力してください');
+    $show = nm_str($_POST, 'show_footer', 1) === '1';
+    return static function (array $s) use ($text, $show): array { $s['footer_text'] = trim($text); $s['show_footer'] = $show; return $s; };
+}
+/** Site name, profile and theme; the pictures are uploaded separately (nl_design_uploads) once everything checks out. */
+function nl_design_input(): array
+{
+    $s = ['title' => mb_substr(trim(nm_str($_POST, 'title', 600)), 0, 100), 'description' => mb_substr(trim(nm_str($_POST, 'description', 1500)), 0, 300), 'name' => mb_substr(trim(nm_str($_POST, 'name', 300)), 0, 100)];
+    if ($s['title'] === '' || $s['name'] === '') throw new UnexpectedValueException('サイト名と名前を入力してください');
+    $s['theme'] = nm_str($_POST, 'theme', 30) ?: nl_settings()['theme'];
+    if (!isset(NL_THEMES[$s['theme']])) throw new UnexpectedValueException('デザインを6種類から選んでください');
+    return $s + ['remove_icon' => !empty($_POST['remove_icon']), 'remove_og_image' => !empty($_POST['remove_og_image'])];
+}
+/** Upload outside the settings lock; the media library takes the same lock. */
+function nl_design_uploads(): array
+{
+    $ids = ['icon' => null, 'og_image' => null];
+    foreach ($ids as $name => $_) {
+        $file = $_FILES[$name] ?? null;
+        if (is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) $ids[$name] = nl_upload_media($file)['id'];
+    }
+    return $ids;
+}
+function nl_design_apply(array $s, array $design, array $uploads): array
+{
+    $s['icon'] = $uploads['icon'] ?? ($design['remove_icon'] ? '' : $s['icon']);
+    $s['og_image'] = $uploads['og_image'] ?? ($design['remove_og_image'] ? '' : $s['og_image']);
+    unset($design['remove_icon'], $design['remove_og_image']);
+    return array_replace($s, $design);
+}
+/** The sidebar from the settings screen: checked here, saved with nl_sidebar_save after the other blocks. */
+function nl_sidebar_input(): array
+{
+    $raw = $_POST['sidebar_items'] ?? '';
+    if (!is_string($raw) || strlen($raw) > 1024 * 1024 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException('サイドバー全体のHTMLを1MB以内にしてください');
+    $items = nl_json_list($raw);
+    nl_sidebar_validate($items);
+    $revision = nm_str($_POST, 'sidebar_revision', 20);
+    if (!preg_match('/\A[0-9]{1,10}\z/', $revision)) throw new UnexpectedValueException('更新情報を確認して、画面を開き直してください');
+    if (nl_sidebar_settings()['revision'] !== (int)$revision) throw new UnexpectedValueException('別の画面でサイドバーが更新されています。開き直してください');
+    return [$items, (int)$revision];
+}
+/** Image collector guard (kept in config.php). */
+function nl_guard_input(array $cfg): array
+{
+    $burst = (int)nm_str($_POST, 'burst', 4); $minute = (int)nm_str($_POST, 'minute', 4);
+    if ($burst < 10 || $burst > 1000 || $minute < 60 || $minute > 6000) throw new UnexpectedValueException('画像の上限を指定された範囲で入力してください');
+    $agents = preg_split('/\r?\n/', nm_str($_POST, 'agents', 4000), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $agents = array_values(array_unique(array_map('trim', $agents)));
+    if (count($agents) > 50) throw new UnexpectedValueException('ツール名は50個まで指定できます');
+    foreach ($agents as $name) if ($name === '' || strlen($name) > 100 || preg_match('/[\x00-\x1F\x7F]/', $name)) throw new UnexpectedValueException('収集ツール名を確認してください');
+    $cfg['image_guard_enabled'] = !empty($_POST['enabled']); $cfg['image_guard_burst'] = $burst; $cfg['image_guard_minute'] = $minute; $cfg['image_guard_agents'] = $agents;
+    return $cfg;
 }
 /** Line icons for the editor's tool row (24px grid, drawn with the current colour). */
 function nl_compose_icon(string $name): string
@@ -432,14 +487,22 @@ function nl_backup_panel(): string
         . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_backup"><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGをダウンロード</button></form><h3>LOGを復元</h3><form method="post" action="index.php" enctype="multipart/form-data" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_restore"><label>LOGのバックアップZIP<input type="file" name="backup" accept=".zip,application/zip" required></label><label class="check"><input type="checkbox" name="overwrite" value="1">同じ投稿・画像を上書きする（LOGの設定も戻します）</label><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGを復元する</button></form><p class="note">漫画を含む場合は、先に作品バックアップを復元してください。ZipArchiveがないサーバーでは、FTPでdata/logフォルダを保存できます。画像の保存先は秘密鍵に結び付くため、FTPで引っ越す場合はdata/config.phpも一緒に保管してください。</p></section>';
 }
 
+/**
+ * Opens one block of the settings screen's single form (closed with </div>); the button at the
+ * bottom saves every block. The marker names the block when the form is sent without JavaScript.
+ */
+function nl_settings_block(string $key, string $attrs = ''): string
+{
+    return '<div class="form" data-settings-section="' . $key . '"' . $attrs . '><input type="hidden" name="sections[]" value="' . $key . '">';
+}
 function nl_preferences_panel(): string
 {
     $s = nl_settings();
-    return '<section class="card"><h2>公開範囲・表示件数・ページ送り</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_preferences">'
+    return '<section class="card"><h2>公開範囲・表示件数・ページ送り</h2>' . nl_settings_block('log_preferences')
         . '<fieldset class="log-visibility"><legend>LOGをどう使いますか？</legend><label class="check"><input type="radio" name="visibility" value="public"' . ($s['public'] ? ' checked' : '') . '>全体公開のLOG</label><p class="note">保存済みの記事と投稿画像も、ログインしていない人が読めるようになります。下書きは公開しません。</p><label class="check"><input type="radio" name="visibility" value="private"' . (!$s['public'] ? ' checked' : '') . '>自分専用のMemo</label><p class="note">記事とLOGの画像は、管理者としてログインしたときだけ読めます。NagiMANGAの作品の公開範囲は、作品ごとに設定してください。</p></fieldset>'
         . '<label>1ページの投稿数（1〜100件）<input type="number" name="posts_per_page" min="1" max="100" required value="' . $s['posts_per_page'] . '"></label><p class="note">トップ・日付アーカイブ・カテゴリ・タグの一覧に使います。標準は10件です。一覧をタイルにする場合は2列で並べるので、偶数がおすすめです。管理画面の一覧は、一覧の上部で別に変えられます。</p>'
         . nl_pager_fieldset($s)
-        . '<button class="btn primary">公開範囲と表示を保存</button></form></section>';
+        . '</div></section>';
 }
 function nl_pager_fieldset(array $s): string
 {
@@ -460,7 +523,7 @@ function nl_pager_fieldset(array $s): string
 function nl_footer_panel(): string
 {
     $s = nl_settings();
-    return '<section class="card" id="log-footer"><h2>サイト下部の表記</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_footer_settings"><label class="check"><input type="checkbox" name="show_footer" value="1"' . ($s['show_footer'] ? ' checked' : '') . '>フッターを表示する</label><label>表示する文章<input name="footer_text" maxlength="200" value="' . h($s['footer_text']) . '" placeholder="例：自分の名前・サイトの案内"></label><p class="note">200文字までの1行で入力できます。HTMLは使いません。空欄の場合も表示しません。</p><button class="btn">フッターを保存</button></form></section>';
+    return '<section class="card" id="log-footer"><h2>サイト下部の表記</h2>' . nl_settings_block('log_footer') . '<label class="check"><input type="checkbox" name="show_footer" value="1"' . ($s['show_footer'] ? ' checked' : '') . '>フッターを表示する</label><label>表示する文章<input name="footer_text" maxlength="200" value="' . h($s['footer_text']) . '" placeholder="例：自分の名前・サイトの案内"></label><p class="note">200文字までの1行で入力できます。HTMLは使いません。空欄の場合も表示しません。</p></div></section>';
 }
 /** Choices as radio buttons with a note under each. */
 function nl_radio_list(string $name, array $choices, string $current, array $notes = []): string
@@ -474,7 +537,7 @@ function nl_display_panel(): string
     $s = nl_settings();
     $by = '';
     foreach (NL_RELATED_BY as $key => $label) $by .= '<option value="' . $key . '"' . ($s['related_by'] === $key ? ' selected' : '') . '>' . h($label) . '</option>';
-    return '<section class="card" id="log-display"><h2>一覧の見せ方・記事の下</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_display_settings">'
+    return '<section class="card" id="log-display"><h2>一覧の見せ方・記事の下</h2>' . nl_settings_block('log_display')
         . '<fieldset class="log-visibility"><legend>トップ・カテゴリ・タグの一覧</legend>' . nl_radio_list('layout', NL_LAYOUTS, $s['layout'], [
             'stream' => '今までの形です。記事を最初から最後まで並べ、一覧のページだけで読めます。',
             'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。タイルはPCでもスマホでも2列で並べるので、1ページの投稿数は偶数がおすすめです。奇数だと、各ページの最後の行が1つ空きます。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
@@ -490,7 +553,7 @@ function nl_display_panel(): string
             'random' => '同じ分類の記事から、開くたびに違う' . NL_RELATED_SHOWN . '件を選びます。関係の深い記事（同じカテゴリ、重なるタグが多い記事）ほど選ばれやすくなります。',
             'updated' => '同じ分類の記事のうち、最近更新した' . NL_RELATED_SHOWN . '件を並べます。'])
         . '<p class="note">同じ分類の記事がない記事には出しません。ランダムでもページはキャッシュしたまま、ブラウザーで選び直します。</p></fieldset>'
-        . '<button class="btn primary">一覧と記事の下の表示を保存</button></form></section>';
+        . '</div></section>';
 }
 /** What search engines see, for the current settings. */
 function nl_seo_panel(): string
@@ -507,13 +570,13 @@ function nl_seo_panel(): string
             : '<p class="log-copy-row"><input class="copy-src wide" readonly value="' . h(nl_sitemap_url()) . '" aria-label="サイトマップのURL"> <button type="button" class="btn js-copy">コピー</button></p>'
             . '<p class="note">' . ($grid ? 'トップ（優先度1.0）、個別の記事（0.7）、記事のあるカテゴリ（0.5）を、最終更新日つきで載せます。' : 'ミニブログでは個別の記事を検索に出さないため、トップ（優先度1.0）と、記事のあるカテゴリ（0.5）だけを載せます。')
             . 'Google Search ConsoleやBing Webmaster Toolsの「サイトマップ」にこのURLを登録してください。LOGをサブフォルダーに置いた場合、ドメイン直下のrobots.txtには自動で書き込めません。</p>');
-    return '<section class="card" id="log-seo"><h2>検索エンジンとサイトマップ</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_seo_settings">'
+    return '<section class="card" id="log-seo"><h2>検索エンジンとサイトマップ</h2>' . nl_settings_block('log_seo')
         . '<fieldset class="log-visibility"><legend>検索エンジンに載せますか？</legend>'
         . nl_radio_list('search_engines', ['allow' => '載せる（標準）', 'block' => 'すべてのページを載せない（noindex,nofollow）'], $s['search_engines'] ? 'allow' : 'block', [
             'allow' => '下の表のとおり、検索の入口になるページだけを載せます。',
             'block' => '二次創作のサイトや、公式と間違われたくない場合に。全ページと画像に「載せない・リンクをたどらない」と伝え、サイトマップも止めます。指定に従うのは、ルールを守る検索エンジンだけです。すでに載っているページは、検索エンジンが次に読みに来たときに消えます。'])
         . '</fieldset><table class="table log-seo-table"><caption>今の設定での指定（' . h(NL_LAYOUTS[$s['layout']]) . '）</caption><tbody>' . $table . '</tbody></table>'
-        . '<button class="btn primary">検索エンジンの設定を保存</button></form><h3>サイトマップ</h3>' . $sitemap . '</section>';
+        . '</div><h3>サイトマップ</h3>' . $sitemap . '</section>';
 }
 /** RSS URLs for the whole LOG, one category or one hashtag; the select fills the field and Copy copies it. */
 function nl_rss_panel(): string
@@ -544,15 +607,15 @@ function nl_settings_panel(): string
         }
         $choices .= '</div></fieldset>';
     }
-    return '<section class="card" id="log-settings"><h2>LOGのデザイン・アイコン</h2><form method="post" action="index.php" enctype="multipart/form-data" class="form" data-log-settings>' . nm_csrf_field()
-        . '<input type="hidden" name="do" value="log_settings"><label>サイト名<input name="title" maxlength="100" required value="' . h($s['title']) . '"></label><label>紹介文<textarea name="description" maxlength="300">' . h($s['description']) . '</textarea></label><label>名前<input name="name" maxlength="100" required value="' . h($s['name']) . '"></label>'
+    return '<section class="card" id="log-settings"><h2>LOGのデザイン・アイコン</h2>' . nl_settings_block('log_design', ' data-log-settings')
+        . '<label>サイト名<input name="title" maxlength="100" required value="' . h($s['title']) . '"></label><label>紹介文<textarea name="description" maxlength="300">' . h($s['description']) . '</textarea></label><label>名前<input name="name" maxlength="100" required value="' . h($s['name']) . '"></label>'
         . '<h3>デザイン</h3><p class="note">色を選ぶと、この画面で見比べられます。保存すると公開サイトにも反映されます。</p>' . $choices
         . '<h3>アイコン</h3><div class="log-icon-preview">' . nl_icon_html($s, '../', 'log-settings-avatar') . '</div><label>新しいアイコン<input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
         . '<p class="note">サイト名の横・投稿者表示・サイドバーのプロフィール・ログイン画面で使います。画像は丸く表示します。</p>'
         . ($s['icon'] !== '' ? '<label class="check"><input type="checkbox" name="remove_icon" value="1">今のアイコンを外す</label>' : '')
         . '<h3>共通のOGP画像</h3><p class="note">リンクを共有したときに表示される紹介画像です。投稿に画像がないときと、トップ・分類一覧で使います。横1200×縦630pxの画像が目安です。</p><div class="log-og-preview">' . ($og ? '<img src="' . h('../' . nl_media_url($og, true)) . '" alt="共通の紹介画像">' : '') . '</div><label>OGP画像<input type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
         . ($og ? '<label class="check"><input type="checkbox" name="remove_og_image" value="1">共通のOGP画像を外す</label>' : '')
-        . '<button class="btn primary">LOGの設定を保存</button></form></section>';
+        . '</div></section>';
 }
 
 function nl_taxonomy_panel(): string
@@ -574,7 +637,7 @@ function nl_guard_panel(): string
 {
     $cfg = nm_config();
     return '<section class="card" id="log-guard"><h2>画像収集BOTへの対策</h2><p>画像収集ツールと分かるアクセスや、同じIPからの大量取得を404で拒否します。文章を読むAIは一律に除外しません。ブラウザを装った低速な収集は、見分けられない場合があります。</p>'
-        . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_guard_settings"><label class="check"><input type="checkbox" name="enabled" value="1"' . (($cfg['image_guard_enabled'] ?? true) ? ' checked' : '') . '>画像収集BOTへの対策を使う</label>'
+        . nl_settings_block('log_guard') . '<label class="check"><input type="checkbox" name="enabled" value="1"' . (($cfg['image_guard_enabled'] ?? true) ? ' checked' : '') . '>画像収集BOTへの対策を使う</label>'
         . '<label>10秒あたりの画像取得数（10〜1000）<input type="number" name="burst" min="10" max="1000" required value="' . (int)($cfg['image_guard_burst'] ?? 120) . '"></label><label>1分あたりの画像取得数（60〜6000）<input type="number" name="minute" min="60" max="6000" required value="' . (int)($cfg['image_guard_minute'] ?? 300) . '"></label>'
-        . '<label>拒否する画像収集ツール名（1行に1つ）<textarea name="agents" rows="6" maxlength="4000">' . h(implode("\n", $cfg['image_guard_agents'] ?? NM_IMAGE_COLLECTORS)) . '</textarea></label><p class="note">ツールが送るUser-Agentに、この文字が含まれると画像を渡しません。上限を超えたIPは5分間、画像を取得できなくなります。同じ回線の読者が多い場合は、上限を増やしてください。</p><button class="btn">BOT対策を保存</button></form></section>';
+        . '<label>拒否する画像収集ツール名（1行に1つ）<textarea name="agents" rows="6" maxlength="4000">' . h(implode("\n", $cfg['image_guard_agents'] ?? NM_IMAGE_COLLECTORS)) . '</textarea></label><p class="note">ツールが送るUser-Agentに、この文字が含まれると画像を渡しません。上限を超えたIPは5分間、画像を取得できなくなります。同じ回線の読者が多い場合は、上限を増やしてください。</p></div></section>';
 }

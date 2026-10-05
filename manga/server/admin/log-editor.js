@@ -306,7 +306,7 @@
     });
     mobile.addEventListener('change', () => accessibility(panel.classList.contains('active')));
     document.addEventListener('keydown', e => {
-        if (e.defaultPrevented || picker.open || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
+        if (e.defaultPrevented || picker.open || saved?.open || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
         if (e.key === 'Escape' && !menu.hidden) { closeMenu(true); return; }
         if (e.key === 'Escape' && !panel.dataset.edit) setPanel(false);
         if (e.key === 'Tab' && modalPanel()) {
@@ -440,10 +440,35 @@
         try {
             const result = await request(data);
             try { sessionStorage.removeItem(storageKey); } catch { /* storage may be disabled */ }
-            dirty = false; location.href = publicEditor && !result.id.startsWith('d') ? new URL('../?id=' + encodeURIComponent(result.id), endpoint).href : adminUrl(result.redirect);
+            dirty = false;
+            // Editing an existing post in the admin: ask where to go instead of always returning to the list.
+            if (panel.dataset.edit && !publicEditor) { savedDialog(result, data.get('status') === 'published'); return; }
+            location.href = publicEditor && !result.id.startsWith('d') ? new URL('../?id=' + encodeURIComponent(result.id), endpoint).href : adminUrl(result.redirect);
         } catch (err) {
             saving = false; say(err.message, true);
             $$('button[type="submit"],button[name="status"]', form).forEach(b => { b.disabled = false; });
         }
     });
+    // After an edit is saved: view the post, go back to the list, or keep editing (reloaded for the new revision).
+    let saved = null;
+    function savedDialog(result, published) {
+        const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text) n.textContent = text; return n; };
+        const link = (text, href, className) => { const a = el('a', className, text); a.href = href; return a; };
+        saved = el('dialog', 'log-saved-dialog');
+        saved.setAttribute('aria-labelledby', 'log-saved-title');
+        const heading = el('h2', '', published ? '保存しました。記事を見ますか？' : '下書きを保存しました'); heading.id = 'log-saved-title';
+        const lead = el('p', '', published ? '公開ページで、編集した記事を確認できます。' : '下書きは公開ページに出ないため、続けて編集するか一覧に戻ってください。');
+        const editUrl = adminUrl('index.php?p=log_edit&id=' + encodeURIComponent(result.id));
+        const view = published ? link('記事を見る', new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
+        const actions = el('div', 'log-saved-dialog-actions');
+        actions.append(link('続けて編集する', editUrl, 'btn'), link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
+        if (view) actions.append(view);
+        saved.append(heading, lead, actions);
+        // Escape closes the dialog; the form holds the old revision, so reopen the editor.
+        saved.addEventListener('cancel', e => { e.preventDefault(); location.replace(editUrl); });
+        document.body.append(saved);
+        say(published ? '保存しました。' : '下書きを保存しました。');
+        saved.showModal();
+        (view || actions.lastElementChild).focus();
+    }
 })();

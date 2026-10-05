@@ -5,6 +5,7 @@ import json
 import re
 import secrets
 import shutil
+import urllib.parse
 import zipfile
 from pathlib import Path
 
@@ -150,6 +151,32 @@ def run(c, csrf, port):
     settings_page = c.get("/admin/index.php?p=settings&section=log")
     check("設定にRSSのURL作成とコピー", 'data-rss-builder' in settings_page.text and 'feed=rss&amp;category=' + cat in settings_page.text and 'js-copy' in settings_page.text)
     check("設定に目次の枠", 'data-settings-toc' in settings_page.text)
+
+    # The settings screen: one form and one save button for every tab; nothing is saved unless every changed block passes.
+    form = settings_page.text.split('data-settings-form')[1].split('</form>')[0] if 'data-settings-form' in settings_page.text else ''
+    check("設定は1つのフォームで、保存ボタンは1つ", settings_page.text.count('data-settings-form') == 1 and re.findall(r'<button(?![^>]*type="button")(?![^>]*form=")[^>]*>', form) == ['<button class="btn primary settings-save" data-settings-save>']
+          and all(f'name="sections[]" value="{k}"' in form for k in ("log_preferences", "log_display", "log_design", "log_seo", "log_footer", "log_guard", "access", "general", "page", "advanced"))
+          and 'フッターを保存' not in settings_page.text and 'サイドバーを保存' not in settings_page.text)
+    check("パスワードとログインURLの変更は別のフォーム", 'id="settings-password"' in settings_page.text and 'form="settings-password"' in form and 'id="settings-regen-key"' in settings_page.text and 'name="current"' not in settings_page.text.split('id="settings-password"')[1])
+
+    def save_all(fields, as_json=True):
+        body = urllib.parse.urlencode([("csrf", csrf), ("do", "settings_save_all")] + fields).encode()
+        headers = {"Content-Type": "application/x-www-form-urlencoded", **({"Accept": "application/json"} if as_json else {})}
+        return c.post("/admin/index.php", body, headers=headers)
+
+    stored = lambda: (Path(c.data_dir) / "log/settings.php").read_text(encoding="utf-8") + (Path(c.data_dir) / "config.php").read_text(encoding="utf-8")
+    before = stored()
+    footer = [("sections[]", "log_footer"), ("footer_text", "まとめて保存した表記"), ("show_footer", "1")]
+    general = [("sections[]", "general"), ("base_url", ""), ("image_quality", "88"), ("max_upload_mb", "30")]
+    r = save_all(footer + general + [("sections[]", "access"), ("allowed_ips", "not-an-ip"), ("allowed_origins", "")])
+    check("1つでも誤りがあれば、ほかのブロックも保存しない", r.status == 422 and json.loads(r.text)["section"] == "access" and "管理画面を開ける場所" in json.loads(r.text)["error"] and stored() == before)
+    r = save_all(footer + [("sections[]", "log_sidebar"), ("sidebar_items", "[]"), ("sidebar_revision", "0")])
+    check("サイドバーの誤りでも、ほかのブロックを保存しない", r.status == 422 and json.loads(r.text)["section"] == "log_sidebar" and stored() == before)
+    r = save_all(footer + general + [("sections[]", "log_seo"), ("search_engines", "allow")])
+    check("変えたブロックをまとめて保存できる", r.status == 200 and json.loads(r.text)["ok"] and "まとめて保存した表記" in public.get("/").text and "'image_quality' => 88" in stored())
+    r = save_all([("tab", "common"), ("sections[]", "log_footer"), ("footer_text", "JavaScriptなしの送信"), ("show_footer", "1")], as_json=False)
+    check("JavaScriptなしでも保存して、開いていたタブに戻る", r.status == 303 and r.getheader("Location").endswith("p=settings&section=common") and "JavaScriptなしの送信" in public.get("/").text)
+    check("保存したブロックを知らせる", "設定を保存しました（サイト下部の表記）" in c.get("/admin/index.php?p=settings&section=common").text)
 
     # Search engines turned away
     settings("log_seo_settings", search_engines="block")

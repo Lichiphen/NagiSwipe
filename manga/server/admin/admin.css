@@ -196,9 +196,31 @@ details.more[open] > summary { margin-bottom: 12px; }
 .settings-toc a[aria-current] { background:color-mix(in srgb,var(--accent) 14%,var(--card)); color:var(--accent); font-weight:700; }
 .settings-body .card { scroll-margin-top:16px; }
 .settings-body .card:focus { outline:none; }
-@media(min-width:1280px) {
-    .settings-body > [data-settings-panel] { columns:2; column-gap:16px; }
-    .settings-body > [data-settings-panel] > .card { display:inline-block; width:100%; break-inside:avoid; }
+/* Two columns at most (the table of contents and one column of blocks); wider screens keep the blocks readable. */
+.settings-form { min-width:0; max-width:880px; }
+/* Blocks changed since the last save: a line on the left, and a dot in the table of contents. */
+.settings-body .card.is-changed { box-shadow:inset 4px 0 0 var(--accent); }
+.settings-toc a.is-changed::after,.settings-toc-dialog ol a.is-changed::after { content:""; display:inline-block; width:7px; height:7px; margin-left:6px; border-radius:50%; background:var(--accent); vertical-align:middle; }
+/* The one save button: stays at the bottom of the screen while the settings scroll. */
+.settings-savebar { position:sticky; bottom:12px; z-index:50; display:flex; align-items:center; gap:12px; margin-top:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:color-mix(in srgb,var(--card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 8px 28px #00000024; }
+.settings-savebar-status { flex:1; min-width:0; margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
+.settings-form.has-changes .settings-savebar { border-color:var(--accent); }
+.settings-form.has-changes .settings-savebar-status { color:var(--text); }
+.settings-form .settings-savebar-status.is-error { color:#c0392b; font-weight:600; }
+@media (prefers-color-scheme: dark) { .settings-form .settings-savebar-status.is-error { color:#ff8a7a; } }
+.settings-save { flex-shrink:0; min-height:44px; padding:10px 22px; font-weight:700; }
+/* Asked before leaving with unsaved changes. */
+.settings-leave-dialog { width:min(480px,calc(100% - 32px)); padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--text); box-shadow:0 20px 60px #0000004d; }
+.settings-leave-dialog::backdrop { background:#0e161f80; }
+.settings-leave-dialog h2 { margin:0 0 8px; font-size:18px; }
+.settings-leave-dialog p { margin:0 0 6px; line-height:1.6; }
+.settings-leave-dialog ul { margin:0 0 14px; padding-left:1.3em; line-height:1.7; }
+.settings-leave-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+@media(max-width:600px) {
+    .settings-savebar { flex-wrap:wrap; bottom:calc(8px + env(safe-area-inset-bottom)); }
+    .settings-save { width:100%; }
+    .settings-leave-actions { flex-direction:column-reverse; align-items:stretch; }
+    .settings-leave-actions .btn { min-height:44px; }
 }
 .settings-toc-fab,.settings-toc-dialog { display:none; }
 @media(max-width:900px) {
@@ -215,7 +237,10 @@ details.more[open] > summary { margin-bottom: 12px; }
     .settings-toc-dialog ol a { padding:11px 12px; font-size:15px; }.settings-toc-dialog ol li + li { border-top:1px solid var(--line); }
     .settings-toc-dialog .settings-toc-group.is-active .settings-toc-tab { color:var(--accent); }
     .main:has(> [data-settings-layout]) { padding-bottom:84px; }
+    /* The save bar takes the bottom edge; the table of contents button floats above it. */
+    body:has(.settings-savebar) .settings-toc-fab { bottom:calc(96px + env(safe-area-inset-bottom)); }
 }
+@media(max-width:600px) { body:has(.settings-savebar) .settings-toc-fab { bottom:calc(132px + env(safe-area-inset-bottom)); } }
 @keyframes settings-toc-float { from { opacity:0; transform:translateY(16px) scale(.9); } }
 @keyframes settings-toc-up { from { opacity:0; transform:translateY(24px); } }
 @media(prefers-reduced-motion:reduce) { .settings-toc-fab,.settings-toc-dialog[open] { animation:none; } }

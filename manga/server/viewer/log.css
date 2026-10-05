@@ -314,8 +314,10 @@ body.log-composing { overflow:hidden; }
 .log-mail-close { justify-self:center; min-height:40px; padding:6px 18px; border:0; background:none; color:var(--log-muted); font:inherit; font-size:13px; cursor:pointer; }
 @media(max-width:420px) { .log-mail-actions { grid-template-columns:1fr; } }
 .log-sidebar-block { min-width:0; }.log-custom-block { margin:16px 0; overflow-wrap:anywhere; }.log-custom-block h2 { font-size:15px; margin:0 0 14px; }.log-custom-block img { display:block; max-width:100%; height:auto; }.log-custom-block p:first-child { margin-top:0; }.log-custom-block p:last-child { margin-bottom:0; }
-.log-login-confirm { width:min(560px,calc(100% - 32px)); padding:24px; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); box-shadow:0 20px 60px #0000004d; }.log-login-confirm::backdrop { background:#10192d80; }
-.log-login-confirm h2 { margin:0 0 10px; font-size:18px; }.log-login-confirm > p { margin:0 0 12px; line-height:1.7; }
+.log-login-confirm,.log-saved-dialog { width:min(560px,calc(100% - 32px)); padding:24px; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); box-shadow:0 20px 60px #0000004d; }.log-login-confirm::backdrop,.log-saved-dialog::backdrop { background:#10192d80; }
+.log-login-confirm h2,.log-saved-dialog h2 { margin:0 0 10px; font-size:18px; }.log-login-confirm > p,.log-saved-dialog > p { margin:0 0 12px; line-height:1.7; }
+.log-saved-dialog-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin-top:8px; }
+@media (max-width:600px) { .log-saved-dialog-actions { flex-direction:column-reverse; align-items:stretch; }.log-saved-dialog-actions .btn { justify-content:center; text-align:center; } }
 .log-login-confirm-url { width:100%; margin:0 0 10px; font:14px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
 .log-login-confirm-tools,.log-login-confirm-actions { display:flex; flex-wrap:wrap; gap:8px; }.log-login-confirm-tools { margin:0 0 6px; }.log-login-confirm-actions { justify-content:flex-end; margin-top:8px; }
 .log-cat-list { list-style:none; margin:0 -6px; padding:0; display:grid; gap:2px; }

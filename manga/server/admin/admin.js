@@ -127,6 +127,135 @@
                 groups.forEach(g => g.items.forEach(({card}) => io.observe(card)));
             }
         }
+
+        // --- One save button for every tab; a question before leaving with unsaved changes ---
+        // After the deferred scripts, so the sidebar editor (log-settings.js) is ready.
+        const settingsForm = $('[data-settings-form]');
+        if (settingsForm) document.addEventListener('DOMContentLoaded', () => settingsSave(settingsForm));
+        function settingsSave(form) {
+            const sections = $$('[data-settings-section]', form);
+            const status = $('[data-settings-status]', form);
+            const button = $('[data-settings-save]', form);
+            const idle = status.textContent;
+            const name = section => $(':scope > h2, :scope > details > summary', section.closest('.card'))?.textContent.trim() || '';
+            // A block's current values; the sidebar has no named fields and gives its JSON.
+            const snap = section => section.nlSidebarItems ? section.nlSidebarItems()
+                : JSON.stringify($$('input, select, textarea', section).filter(c => c.name && c.form === form && c.type !== 'hidden')
+                    .map(c => c.type === 'checkbox' || c.type === 'radio' ? c.checked : c.type === 'file' ? Array.from(c.files, f => f.name + ':' + f.size).join('|') : c.value));
+            const saved = new Map(sections.map(s => [s, snap(s)]));
+            let changed = [], busy = false, leaving = false, armed = false, reloadTo = '';
+            const say = (text, error = false) => { if (status.textContent !== text) status.textContent = text; status.classList.toggle('is-error', error); };
+            // The back gesture (or button) first returns to this extra entry, so the page can ask before leaving.
+            const arm = () => { history.pushState({settingsGuard: true}, '', location.href); armed = true; };
+            const update = () => {
+                changed = sections.filter(s => snap(s) !== saved.get(s));
+                sections.forEach(s => s.closest('.card').classList.toggle('is-changed', changed.includes(s)));
+                $$('[data-toc-target]').forEach(a => a.classList.toggle('is-changed', changed.some(s => s.closest('.card').id === a.dataset.tocTarget)));
+                form.classList.toggle('has-changes', changed.length > 0);
+                if (!busy) say(changed.length ? '保存していない変更：' + changed.map(name).join('、') : idle);
+                if (changed.length && !armed) arm();
+            };
+            ['input', 'change', 'settings:change'].forEach(type => form.addEventListener(type, update));
+            // Show a block on any tab: select its tab and open the <details> around it.
+            const reveal = el => {
+                const panel = el.closest('[data-settings-panel]');
+                const tab = panel && tabs.find(t => t.dataset.settingsTab === panel.dataset.settingsPanel);
+                if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+                for (let d = el.closest('details'); d; d = d.parentElement.closest('details')) d.open = true;
+            };
+            // true: saved, false: not saved (the message says why), null: nothing to save.
+            async function save() {
+                if (busy) return false;
+                update();
+                if (!changed.length) { say('変更はありません。'); return null; }
+                const invalid = changed.flatMap(s => $$('input, select, textarea', s)).find(c => c.form === form && !c.disabled && !c.checkValidity());
+                if (invalid) {
+                    reveal(invalid); invalid.reportValidity();
+                    say('「' + name(invalid.closest('[data-settings-section]')) + '」の入力を確認してください。どの設定もまだ保存していません。', true);
+                    return false;
+                }
+                const data = new FormData(form);
+                data.delete('sections[]');
+                changed.forEach(s => data.append('sections[]', s.dataset.settingsSection));
+                const sidebar = changed.find(s => s.nlSidebarItems);
+                if (sidebar) { data.set('sidebar_items', sidebar.nlSidebarItems()); data.set('sidebar_revision', sidebar.dataset.revision); }
+                busy = true; form.inert = true; button.disabled = true; say('保存しています…');
+                try {
+                    const response = await fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                    let result;
+                    try { result = await response.json(); }
+                    catch { throw new Error('保存できませんでした。ログインが切れた可能性があります。入力した内容はこの画面に残っています。'); }
+                    if (!response.ok || !result.ok) {
+                        const section = sections.find(s => s.dataset.settingsSection === result.section);
+                        if (section) { reveal(section); section.closest('.card').scrollIntoView({ block: 'start' }); }
+                        throw new Error((result.error || '保存できませんでした') + '。入力した内容はこの画面に残っています。');
+                    }
+                    sections.forEach(s => saved.set(s, snap(s))); changed = [];
+                    return true;
+                } catch (e) {
+                    say(e.message || '通信できませんでした。入力した内容はこの画面に残っています。', true);
+                    return false;
+                } finally { busy = false; form.inert = false; button.disabled = false; }
+            }
+            // Saved: reload so every block shows what the server kept (and the message), without a leftover history entry.
+            const reload = () => {
+                leaving = true; say('保存しました。画面を読み込み直しています…');
+                // The extra entry still has the tab chosen after it was made; open that tab again.
+                if (armed) { reloadTo = location.href; history.back(); } else location.reload();
+            };
+            form.addEventListener('submit', async e => { e.preventDefault(); if (await save()) reload(); });
+
+            const dialog = document.createElement('dialog');
+            dialog.className = 'settings-leave-dialog'; dialog.setAttribute('aria-labelledby', 'settings-leave-title');
+            dialog.innerHTML = '<h2 id="settings-leave-title">保存していない変更があります</h2><p>このまま移動すると、次の設定の変更が消えます。</p><ul data-leave-list></ul>'
+                + '<div class="settings-leave-actions"><button type="button" class="btn" data-leave="stay">編集に戻る</button><button type="button" class="btn danger" data-leave="discard">保存せずに移動</button><button type="button" class="btn primary" data-leave="save">保存して移動</button></div>';
+            document.body.append(dialog);
+            let pending = null;
+            const ask = (go, stay = () => {}) => {
+                $('[data-leave-list]', dialog).replaceChildren(...changed.map(s => { const li = document.createElement('li'); li.textContent = name(s); return li; }));
+                pending = { go, stay };
+                dialog.showModal(); $('[data-leave="stay"]', dialog).focus();
+            };
+            dialog.addEventListener('click', async e => {
+                const choice = e.target.closest('[data-leave]')?.dataset.leave;
+                if (!choice || !pending) return;
+                const { go, stay } = pending;
+                let ok = choice === 'discard';
+                if (choice === 'save') {
+                    $$('button', dialog).forEach(b => { b.disabled = true; });
+                    ok = await save() !== false;
+                    $$('button', dialog).forEach(b => { b.disabled = false; });
+                }
+                pending = null; dialog.close();
+                if (!ok) { stay(); return; }
+                leaving = true; go();
+            });
+            dialog.addEventListener('cancel', e => { e.preventDefault(); $('[data-leave="stay"]', dialog).click(); });
+
+            // Links to other pages, other forms (logout, password), closing or reloading the tab, and going back.
+            document.addEventListener('click', e => {
+                if (e.defaultPrevented || !changed.length || leaving || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                const a = e.target.closest('a[href]');
+                if (!a || a.target === '_blank' || a.hasAttribute('download') || a.getAttribute('href').startsWith('#')) return;
+                e.preventDefault();
+                ask(() => { location.href = a.href; });
+            });
+            document.addEventListener('submit', e => {
+                const other = e.target;
+                if (other === form || e.defaultPrevented || !changed.length || leaving) return;
+                e.preventDefault();
+                ask(() => other.submit());
+            });
+            window.addEventListener('beforeunload', e => { if (changed.length && !leaving) { e.preventDefault(); e.returnValue = ''; } });
+            window.addEventListener('popstate', () => {
+                if (!armed) return;
+                armed = false;
+                if (reloadTo) { history.replaceState(null, '', reloadTo); location.reload(); return; }
+                if (leaving) return;
+                if (changed.length) ask(() => history.back(), arm);
+                else history.back();
+            });
+        }
     }
     $$('.nav-more').forEach(menu => {
         document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
