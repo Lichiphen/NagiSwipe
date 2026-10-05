@@ -187,6 +187,8 @@ def run(site,other_site,c,csrf,other,ot):
     check('記事のカテゴリは「カテゴリ」＋フォルダのアイコン＋名前',re.search(r'<nav class="log-categories" aria-label="カテゴリ"><span class="log-categories-label">カテゴリ</span><a href="\./\?category=[a-f0-9]{12}"><svg class="log-cat-icon"[^>]*>.*?</svg><span>見た目分類</span></a>',post_page) is not None)
     multi=save('二つの分類\n本文',new_categories='一つ目、二つ目')
     mp=pub.get('/?id='+multi).text
+    check('文字だけの記事は画像ビューアと漫画リーダーを読まず、ログイン中は今まで通り読む','NagiSwipe-main.js' not in mp and 'NagiManga.js' not in mp and 'NagiSwipe-main.js' in c.get('/?id='+multi).text)
+    check('投稿欄はトップだけ開き、ほかのページは右下のボタンから開く','<div class="log-compose-slot" data-compose-slot>' in c.get('/').text and '<div class="log-compose-slot log-compose-collapsed" data-compose-slot>' in c.get('/?id='+multi).text and 'log-compose-collapsed' in c.get('/?q=%E6%9C%AC%E6%96%87').text)
     check('カテゴリが複数なら「,」で区切る',re.search(r'<span>一つ目</span></a><span class="log-cat-sep" aria-hidden="true">,</span><a href="\./\?category=[a-f0-9]{12}"><svg',mp) is not None)
     anon=h.Client(args.port)
     r=anon.get('/admin/index.php?p=log')

@@ -200,7 +200,8 @@
     }
     function scrollFab() { if (!scrollTicking) { scrollTicking = true; requestAnimationFrame(checkFab); } }
     if (publicEditor) { window.addEventListener('scroll', scrollFab, { passive: true }); window.addEventListener('resize', scrollFab, { passive: true }); }
-    checkFab();
+    // Without the open editor (pages other than the top, the admin list) the button floats in shortly after load.
+    if (collapsed) setTimeout(checkFab, 220); else checkFab();
     if (panel.dataset.edit || dirty) setPanel(true);
     window.addEventListener('beforeunload', e => { if ((dirty || uploading) && !saving) { e.preventDefault(); e.returnValue = ''; } });
 

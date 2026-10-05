@@ -67,7 +67,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("本文が空なら拒否", post(payload(body=" ")).status == 422)
     check("本文の容量超過を拒否", post(payload(body="a" * 100001)).status == 422)
     check("空のLOGを表示", public.get("/").status == 200)
-    check("NagiSwipeを標準で読み込む", "viewer/NagiSwipe-main.js" in public.get("/").text)
+    check("画像のないページではNagiSwipeを読まない", "viewer/NagiSwipe-main.js" not in public.get("/").text and "viewer/NagiSwipe-main.js" in c.get("/").text)
     check("開発サーバーでNagiSwipeを配信", public.get("/viewer/NagiSwipe-main.js").status == 200)
     check("標準デザインはライトブルー", 'data-log-theme="light-blue"' in public.get('/').text)
     login = helper.Client(c.port)
@@ -426,6 +426,9 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     def asset_key(path, html):
         return re.search(re.escape(path) + r'\?v=([a-z0-9.]+)', html).group(1)
     before = public.get('/').text
+    # The manga reader loads only where a manga is shown; the owner's page always has it.
+    manga_before = c.get('/').text
+    check("漫画のないページでは漫画リーダーを読まない", 'viewer/NagiManga.js' not in before and 'viewer/NagiManga.js' in manga_before)
     for path in ('viewer/log.css', 'viewer/log-menu.js', 'viewer/log-mail.js'):
         original = (site / path).read_bytes()
         (site / path).write_bytes(original + b'\n/* cache-key fixture */\n')
@@ -435,7 +438,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     manga_css = site / 'viewer/NagiManga.css'
     original = manga_css.read_bytes()
     manga_css.write_bytes(original + b'\n/* reader CSS fixture */\n')
-    check("漫画CSSだけの変更でもJSとCSSのキャッシュキーが変わる", asset_key('viewer/NagiManga.js', before) != asset_key('viewer/NagiManga.js', public.get('/').text))
+    check("漫画CSSだけの変更でもJSとCSSのキャッシュキーが変わる", asset_key('viewer/NagiManga.js', manga_before) != asset_key('viewer/NagiManga.js', c.get('/').text))
     manga_css.write_bytes(original)
     check("変更がなければキャッシュキーを維持", asset_key('viewer/log.css', before) == asset_key('viewer/log.css', public.get('/').text))
     for i in range(10):
@@ -450,7 +453,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("存在しないパスでもブラックホール404", public.get('/missing-page', headers={'Accept': 'text/html'}).status == 404 and 'nm-blackhole' in public.get('/missing-page', headers={'Accept': 'text/html'}).text)
     check("404はJavaScriptなしで動きを減らす設定に対応", 'prefers-reduced-motion' in public.get('/viewer/404.css').text and '<script' not in hole.text)
     post({'do': 'log_guard_settings', 'enabled': '1', 'burst': '10', 'minute': '60', 'agents': 'ImageScraper'})
-    guard_code = "define('NAGIMANGA',true); require '" + (site / 'lib/bootstrap.php').as_posix() + "'; $file=NM_DATA.'/ratelimit/image-'.hash_hmac('sha256','127.0.0.1',nm_config()['secret']).'.php'; $s=['short'=>intdiv(time(),10),'minute'=>intdiv(time(),60),'burst'=>10,'count'=>60,'until'=>0]; nm_write_atomic($file,'<?php if(!defined(\"NAGIMANGA\")){http_response_code(404);exit;} return '.var_export($s,true).';');"
+    guard_code = "define('NAGIMANGA',true); require '" + (site / 'lib/bootstrap.php').as_posix() + "'; $cfg=nm_config(); file_put_contents(nm_image_guard_file('127.0.0.1',$cfg), nm_image_guard_line(['short'=>intdiv(time(),10),'minute'=>intdiv(time(),60),'burst'=>10,'count'=>60,'until'=>0]));"
     subprocess.run(args[:args.index('-r')] + ['-r', guard_code], env=env, check=True)
     check("画像の大量取得を404で止める", public.get(og_url).status == 404)
     check("大量取得の拒否は漫画画像にも共用", public.get('/read.php?a=o&id=' + manga['id']).status == 404 and public.get('/').status == 200)

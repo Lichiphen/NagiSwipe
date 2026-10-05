@@ -6,7 +6,7 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 const NL_HASHTAG_PATTERN = '/(?<![A-Za-z0-9_\/#])#([\p{L}\p{M}\p{N}_]{1,60})(?![\p{L}\p{M}\p{N}_])/u';
 function nl_taxonomy(): array
 {
-    return array_replace(['categories' => [], 'hashtag_order' => [], 'revision' => 0, 'updated' => 0], nl_read_record(nl_root() . '/taxonomy.php') ?? []);
+    return nl_memo('taxonomy', static fn() => array_replace(['categories' => [], 'hashtag_order' => [], 'revision' => 0, 'updated' => 0], nl_read_record(nl_root() . '/taxonomy.php') ?? []));
 }
 /** URLs, image tokens and manga labels are never parsed as hashtags. */
 function nl_hashtag_segments(string $body): array
@@ -28,10 +28,10 @@ function nl_recent_hashtags(bool $public = false, int $limit = 8): array
     usort($posts, static fn($a, $b) => ($b['updated'] <=> $a['updated']) ?: strnatcmp($b['id'], $a['id']));
     $out = [];
     foreach ($posts as $p) foreach ($p['hashtags'] ?? [] as $name) {
-        if (!in_array($name, $out, true)) $out[] = $name;
-        if (count($out) >= $limit) return $out;
+        $out[(string)$name] = true;
+        if (count($out) >= $limit) break 2;
     }
-    return $out;
+    return array_map('strval', array_keys($out));
 }
 function nl_category_name(string $name): string
 {
@@ -41,9 +41,12 @@ function nl_category_name(string $name): string
 }
 function nl_ordered_hashtags(bool $public = false): array
 {
-    $recent = nl_recent_hashtags($public, PHP_INT_MAX);
-    $ordered = array_values(array_filter(nl_taxonomy()['hashtag_order'], static fn($name) => is_string($name) && in_array($name, $recent, true)));
-    return array_values(array_unique(array_merge($ordered, $recent)));
+    return nl_memo('hashtags:' . (int)$public, static function () use ($public): array {
+        $recent = nl_recent_hashtags($public, PHP_INT_MAX);
+        $known = array_flip($recent);
+        $ordered = array_values(array_filter(nl_taxonomy()['hashtag_order'], static fn($name) => is_string($name) && isset($known[$name])));
+        return array_values(array_unique(array_merge($ordered, $recent)));
+    });
 }
 function nl_taxonomy_reorder(string $kind, mixed $order, int $revision): int
 {

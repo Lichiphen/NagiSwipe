@@ -14,9 +14,11 @@ function nl_sidebar_defaults(): array
 }
 function nl_sidebar_settings(): array
 {
-    $s = nl_read_record(nl_root() . '/sidebar.php') ?? nl_sidebar_defaults();
-    $s['items'] = nl_sidebar_with_builtins(nl_sidebar_with_links($s['items']));
-    return $s;
+    return nl_memo('sidebar', static function (): array {
+        $s = nl_read_record(nl_root() . '/sidebar.php') ?? nl_sidebar_defaults();
+        $s['items'] = nl_sidebar_with_builtins(nl_sidebar_with_links($s['items']));
+        return $s;
+    });
 }
 /** Sidebars saved before a standard block existed get it (search: right after the profile, shown). */
 function nl_sidebar_with_builtins(array $items, ?array $only = null): array
@@ -45,9 +47,18 @@ function nl_sidebar_url(string $url, bool $image = false): string
     return $url;
 }
 /** Rebuild from an allowlist instead of returning parser-controlled HTML. */
+/** Sanitized once per request: the sidebar, its image list and the CSP all read the same HTML. */
 function nl_sidebar_html(string $html): string
 {
     if ($html === '') return '';
+    static $done = [];
+    $key = hash('sha256', $html);
+    if (isset($done[$key])) return $done[$key];
+    if (count($done) > 64) $done = [];
+    return $done[$key] = nl_sidebar_clean($html);
+}
+function nl_sidebar_clean(string $html): string
+{
     if (!class_exists('DOMDocument')) throw new UnexpectedValueException('HTML枠を使うには、PHPのDOM拡張が必要です');
     $doc = new DOMDocument();
     $before = libxml_use_internal_errors(true);

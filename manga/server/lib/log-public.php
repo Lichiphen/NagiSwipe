@@ -34,6 +34,18 @@ function nl_archive_filter(array $src): array
     }
     return $base;
 }
+/** True when the HTML links to an image NagiSwipe would open (same test as its isImageUrl: the path or the whole URL ends with an image extension). */
+function nl_has_image_links(string $html): bool
+{
+    if (str_contains($html, 'class="imagelink"')) return true;
+    preg_match_all('/\bhref="([^"]+)"/', $html, $m);
+    foreach ($m[1] as $href) {
+        $url = html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+        if (preg_match('/\.(?:jpe?g|png|webp|gif|bmp|avif|svg)\z/i', $path) || preg_match('/\.(?:jpe?g|png|webp|gif|bmp|avif|svg)\z/i', $url)) return true;
+    }
+    return false;
+}
 function nl_page_url(string $query, int $page): string
 {
     $q = $query . ($page > 1 ? ($query !== '' ? '&' : '') . 'page=' . $page : '');

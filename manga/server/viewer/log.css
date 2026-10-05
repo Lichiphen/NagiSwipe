@@ -169,6 +169,11 @@ html[data-log-theme="light-paper"] .log-site-header > a { font-family:"Yu Mincho
     visibility:hidden; opacity:0; transform:translateX(calc(100% + 40px)); pointer-events:none; transition:transform .5s cubic-bezier(.18,1.2,.4,1) .08s, opacity .25s ease .08s, visibility 0s linear .58s; }
 .log-compose-slot .log-fab-admin.log-fab-visible { visibility:visible; opacity:1; transform:none; pointer-events:auto; transition-delay:.08s, .08s, 0s; }
 .log-site .log-compose-slot .log-fab-admin:hover { border-color:var(--log-accent); color:var(--log-accent); text-decoration:none; }.log-fab-admin:focus-visible,.log-fab:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
+/* Pages without the open editor: both buttons float in softly right after load instead of rising from below. */
+.log-compose-collapsed .log-fab,.log-compose-collapsed .log-fab-admin { transform:translateY(14px) scale(.97); transition:transform .7s cubic-bezier(.22,1,.36,1), opacity .55s ease, visibility 0s linear .7s; }
+.log-compose-collapsed .log-fab-admin { transition-delay:.1s, .1s, .8s; }
+.log-compose-collapsed .log-fab.log-fab-visible,.log-compose-collapsed .log-fab-admin.log-fab-visible { transform:none; transition-delay:0s; }
+.log-compose-collapsed .log-fab-admin.log-fab-visible { transition-delay:.1s, .1s, 0s; }
 .log-fab-admin .log-ui-icon { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 @media(prefers-reduced-motion:reduce) { .log-compose-slot .log-fab,.log-compose-slot .log-fab-admin { transition:none; } }
 .log-compose-slot .log-compose.active { position:fixed; inset:0; z-index:100; width:100%; height:var(--log-viewport-height,100dvh); margin:0; padding:24px max(16px,calc((100vw - 760px)/2)); border:0; border-radius:0; overflow-y:auto; overscroll-behavior:contain; visibility:visible; transform:none; }

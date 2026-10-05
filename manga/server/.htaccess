@@ -11,6 +11,9 @@ DirectoryIndex index.php
 # Use the animated 404 page for missing paths, at any installation depth.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Scripts, styles and pictures requested with ?v=<content hash> never change under that URL.
+    RewriteCond %{QUERY_STRING} (^|&)v=[0-9a-f.]+(&|$)
+    RewriteRule \.(js|css|svg|png)$ - [E=NM_VERSIONED:1]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ 404.php [L]
@@ -29,14 +32,19 @@ DirectoryIndex index.php
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
-    # Pages, the viewer and the admin assets: always revalidate (cheap 304s).
-    # Share tags load the viewer with ?v=<content hash>; page images come from
-    # read.php with their own cache headers.
+    # Pages, the viewer and the admin assets: always revalidate (cheap 304s), unless
+    # requested with ?v=<content hash> (below). Page images come from read.php / the LOG
+    # with their own cache headers.
     <FilesMatch "\.(html|js|css)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
     # The bundled LOG share image is always requested with ?v=<content hash>.
     <FilesMatch "^log-og\.png$">
         Header set Cache-Control "max-age=31536000, immutable"
+    </FilesMatch>
+    # Any script, style or picture loaded with ?v=<content hash> (see the rewrite rule above): keep it for a year.
+    # A changed file gets a new hash, so browsers skip the revalidation request on every page.
+    <FilesMatch "\.(js|css|svg|png)$">
+        Header set Cache-Control "max-age=31536000, immutable" env=NM_VERSIONED
     </FilesMatch>
 </IfModule>

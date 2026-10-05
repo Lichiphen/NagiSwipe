@@ -36,7 +36,11 @@ const NM_ID_PATTERN = '/\A[A-Za-z0-9]{12}\z/';
 const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif)\z/';
 require_once __DIR__ . '/image-guard.php';
 
-/** Content-based cache keys, including the reader's automatically loaded CSS. */
+/**
+ * Content-based cache keys, including the reader's automatically loaded CSS.
+ * The hashes are kept in data/asset-versions.php and reused while each file's size and change time stay the same,
+ * so pages do not read and hash every script and stylesheet on each view.
+ */
 function nm_asset_version(string $file): string
 {
     if (!is_file($file) && in_array(basename($file), ['NagiSwipe-main.js', 'NagiSwipe-main.css'], true)) {
@@ -44,10 +48,36 @@ function nm_asset_version(string $file): string
         $file = dirname(NM_ROOT, 2) . '/' . basename($file);
     }
     if (!is_file($file)) return NM_VERSION;
+    $files = [$file];
+    if (basename($file) === 'NagiManga.js' && is_file(dirname($file) . '/NagiManga.css')) $files[] = dirname($file) . '/NagiManga.css';
+    $stamp = '';
+    foreach ($files as $f) $stamp .= (int)@filemtime($f) . ':' . (int)@filesize($f) . ';';
+    static $known = null, $dirty = false;
+    $store = NM_DATA . '/asset-versions.php';
+    if ($known === null) {
+        $known = [];
+        try { $data = is_file($store) ? require $store : null; } catch (Throwable) { $data = null; }
+        if (is_array($data)) $known = $data;
+        // Saved once, after the page is built, when any key changed.
+        register_shutdown_function(static function () use (&$known, &$dirty, $store) {
+            if (!$dirty || !is_dir(NM_DATA)) return;
+            try {
+                nm_write_atomic($store, "<?php
+if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
+return " . var_export($known, true) . ";
+");
+                if (function_exists('opcache_invalidate')) @opcache_invalidate($store, true);
+            } catch (Throwable) {}
+        });
+    }
+    $entry = $known[$file] ?? null;
+    if (is_array($entry) && ($entry['s'] ?? '') === $stamp && is_string($entry['v'] ?? null)) return $entry['v'];
     $hash = hash_init('sha256');
-    hash_update_file($hash, $file);
-    if (basename($file) === 'NagiManga.js' && is_file(dirname($file) . '/NagiManga.css')) hash_update_file($hash, dirname($file) . '/NagiManga.css');
-    return substr(hash_final($hash), 0, 12);
+    foreach ($files as $f) hash_update_file($hash, $f);
+    $version = substr(hash_final($hash), 0, 12);
+    $known[$file] = ['s' => $stamp, 'v' => $version];
+    $dirty = true;
+    return $version;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,9 +229,21 @@ function nm_ensure_dir(string $dir): void
     }
 }
 
+/**
+ * Bumped on every data write, so values reused within one request (settings, post summaries) are read again
+ * after the request itself saved something.
+ */
+function nm_data_generation(bool $bump = false): int
+{
+    static $generation = 0;
+    if ($bump) $generation++;
+    return $generation;
+}
+
 /** Write via a temp file + rename so readers never see half a file. */
 function nm_write_atomic(string $path, string $content): void
 {
+    nm_data_generation(true);
     nm_ensure_dir(dirname($path));
     $tmp = $path . '.' . bin2hex(random_bytes(6)) . '.tmp';
     if (file_put_contents($tmp, $content, LOCK_EX) === false) {
@@ -307,11 +349,14 @@ function nm_lscache_code_changed(): bool
     return $changed;
 }
 
-/** Mark this response: cache it for visitors (public pages only) or never. */
-function nm_lscache_header(bool $public): void
+/**
+ * Mark this response: cache it for visitors (public pages only) or never.
+ * $page: false for images and other files, which skip the program-change check (only pages are cached).
+ */
+function nm_lscache_header(bool $public, bool $page = true): void
 {
     if (headers_sent() || !nm_lscache_active()) return;
-    if (nm_lscache_code_changed()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
+    if ($page && nm_lscache_code_changed()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
     // Anyone holding the login cookie is looked up separately, so a cached visitor page is never shown to the owner.
     header('X-LiteSpeed-Vary: cookie=nm_admin');
     if ($public) {

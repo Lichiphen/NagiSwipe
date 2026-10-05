@@ -18,6 +18,14 @@ require_once __DIR__ . '/log-card.php';
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
 function nl_root(): string { return NM_DATA . '/log'; }
+/** Reuse a value within one request until the request writes data (see nm_data_generation). */
+function nl_memo(string $key, callable $fn): mixed
+{
+    static $memo = [];
+    $generation = nm_data_generation();
+    if (!isset($memo[$key]) || $memo[$key][0] !== $generation) $memo[$key] = [$generation, $fn()];
+    return $memo[$key][1];
+}
 /** Browser cache for public LOG images (seconds). */
 const NL_MEDIA_MAX_AGE = 86400;
 function nl_post_file(string $id): string
@@ -64,6 +72,10 @@ function nl_post_summary(array $p): array
 }
 /** A small derived index; original post files remain the source of truth. */
 function nl_post_summaries(bool $public = true): array
+{
+    return nl_memo('summaries:' . (int)$public, static fn() => nl_read_summaries($public));
+}
+function nl_read_summaries(bool $public): array
 {
     $posts = [];
     $index = nl_read_record(nl_root() . '/index.php');
@@ -206,6 +218,10 @@ function nl_delete_posts(mixed $items): array
 const NL_PAGERS = ['numbers' => '番号つき', 'simple' => '新しい・過去だけ', 'more' => 'もっと見る'];
 function nl_settings(): array
 {
+    return nl_memo('settings', 'nl_read_settings');
+}
+function nl_read_settings(): array
+{
     $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
@@ -223,7 +239,11 @@ function nl_settings(): array
 }
 function nl_date(int $time, string $format = 'Y/m/d H:i'): string
 {
-    return (new DateTimeImmutable('@' . $time))->setTimezone(new DateTimeZone('Asia/Tokyo'))->format($format);
+    // Japan has kept UTC+9 without summer time since 1951, so plain dates need no time zone object.
+    if ($time > -568080000 && !preg_match('/[eIOPpTZcrU]/', $format)) return gmdate($format, $time + 32400);
+    static $tz = null;
+    $tz ??= new DateTimeZone('Asia/Tokyo');
+    return (new DateTimeImmutable('@' . $time))->setTimezone($tz)->format($format);
 }
 function nl_new_id(int $time): string
 {
@@ -345,12 +365,12 @@ function nl_media_public(string $id): bool
     $s = nl_settings();
     if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER)) return false;
     if ($s['icon'] === $id || $s['og_image'] === $id) return true;
-    if (in_array($id, nl_sidebar_media_ids(true), true)) return true;
-    static $refs = null;
-    if ($refs === null) {
+    if (in_array($id, nl_memo('sidebar-media', static fn() => nl_sidebar_media_ids(true)), true)) return true;
+    $refs = nl_memo('media-refs', static function (): array {
         $refs = [];
         foreach (nl_post_summaries() as $p) foreach ($p['media'] ?? [] as $mid) $refs[$mid][] = $p['id'];
-    }
+        return $refs;
+    });
     // Never trust cached visibility alone after unpublishing/deletion.
     foreach ($refs[$id] ?? [] as $pid) {
         $p = nl_load_post($pid);
@@ -550,6 +570,8 @@ function nl_render_body(array $p, bool $admin = false): string
     $tokens = preg_split('/(\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]|' . NL_EMBED_PATTERN . '|\*\*[^\r\n]+?\*\*)/iu', nl_post_parts($p)['body'], -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
     $dark = str_starts_with(nl_settings()['theme'], 'dark');
+    // The first picture of a public page is usually what the reader sees first: fetch it at once.
+    static $firstImage = true;
     foreach ($tokens ?: [] as $token) {
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
@@ -558,8 +580,11 @@ function nl_render_body(array $p, bool $admin = false): string
         }
         if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m)) {
             $im = nl_load_media($m[1]);
-            if ($im && ($admin || nl_media_public($m[1]))) $out .= '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" loading="lazy"></a></figure>';
-            else $out .= '<span class="note">画像が見つかりません</span>';
+            if ($im && ($admin || nl_media_public($m[1]))) {
+                $load = !$admin && $firstImage ? 'fetchpriority="high"' : 'loading="lazy"';
+                if (!$admin) $firstImage = false;
+                $out .= '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" ' . $load . '></a></figure>';
+            } else $out .= '<span class="note">画像が見つかりません</span>';
         } elseif (isset($p['manga'][$token])) {
             $w = nm_load_work($p['manga'][$token]);
             if (!$w || empty($w['pages'])) { $out .= '<span class="note">漫画が見つかりません</span>'; continue; }

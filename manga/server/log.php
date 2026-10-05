@@ -27,7 +27,8 @@ header('Vary: Cookie');
 if (!$s['public'] && !$owner) nm_not_found();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 // LiteSpeed caches only what a visitor without the login cookie sees on a public LOG; images stay with PHP (BOT guard).
-nm_lscache_header(!$owner && $s['public'] && !isset($_COOKIE['nm_admin']) && !isset($_GET['media']) && !isset($_GET['card']));
+$file = isset($_GET['media']) || isset($_GET['card']);
+nm_lscache_header(!$owner && $s['public'] && !isset($_COOKIE['nm_admin']) && !$file, !$file);
 if (!in_array($method, ['GET', 'HEAD'], true)) nm_not_found();
 if (isset($_GET['card'])) nl_serve_card(nm_str($_GET, 'card', 20));
 if (isset($_GET['media'])) nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), $owner);
@@ -78,6 +79,21 @@ $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $bre
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js.
 header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:" . nl_sidebar_image_origins() . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 function nl_public_asset(string $file): string { return h($file . '?v=' . nm_asset_version(__DIR__ . '/' . $file)); }
+// The top page keeps the open editor; other pages open it from the floating button.
+$index = !$single && $filter['query'] === '' && $page === 1;
+$postsHtml = '';
+foreach ($posts as $p) {
+    $postsHtml .= '<article class="log-post"><div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
+        . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>' : '') . "</div>\n"
+        . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="./?id=' . h($p['id']) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
+        . nl_render_body($p) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
+}
+$sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);
+// The image viewer and the manga reader load only where something uses them. The owner keeps both (editor previews),
+// and so does a "show more" list with pages still to come, which may bring images or manga in later.
+$more = !$single && $s['pager'] === 'more' && $page * $perPage < count($all);
+$swipe = $owner || $more || nl_has_image_links($postsHtml . $sidebarHtml);
+$manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 ?><!DOCTYPE html>
 <html lang="ja" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($single ? $title . '｜' . $s['title'] : $title) ?></title>
@@ -87,9 +103,9 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
 <link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>">
-<link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
-<script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script>
-<script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script>
+<?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
+<script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
+<?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
 <?php if ($s['public'] && $posts): ?><script src="<?= nl_public_asset('viewer/log-share.js') ?>" defer></script><?php endif; ?>
@@ -102,10 +118,8 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
 <?php if ($single): ?><nav aria-label="Breadcrumb" class="log-breadcrumb"><ol><li><a href="./"><?= h($s['title']) ?></a></li><li><?= h($title) ?></li></ol></nav><?php else: ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>
 <?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= count($all) ?>件</span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span>すべての投稿</span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
-<?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
-<?php foreach ($posts as $p): ?><article class="log-post"><div class="log-post-meta"><?= nl_icon_html($s) ?><strong><?= h($s['name']) ?></strong><a href="./?id=<?= h($p['id']) ?>"><time datetime="<?= h(nl_date($p['created'], 'c')) ?>" title="<?= h(nl_date($p['created'])) ?>"><?= h(nl_date($p['created'], 'Y/m/d')) ?></time></a><?php if ($owner): ?><a class="log-edit-link" href="admin/index.php?p=log_edit&id=<?= h($p['id']) ?>"><?= nl_ui_icon() ?><span>編集</span></a><?php endif; ?></div>
-<?php if ($single): ?><h1><?= h(nl_post_title($p, 0)) ?></h1><?php else: ?><h2><a href="./?id=<?= h($p['id']) ?>"><?= h(nl_post_title($p, 0)) ?></a></h2><?php endif; ?>
-<?= nl_render_body($p) ?><?= nl_category_links($p) ?><?= $s['public'] ? nl_share_row($p) : '' ?></article><?php endforeach; ?>
+<?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
+<?= $postsHtml ?>
 <?php if (!$posts): ?><p class="log-empty"><?= $filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。')) ?></p><?php endif; ?>
 <?= $single ? ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : nl_pager($s, $filter['query'], $page, count($all)) ?>
-</main><?= nl_sidebar($summaries, $filter, $s, $owner) ?></div><?= $s['public'] && $posts ? nl_share_dialog() : '' ?><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>
+</main><?= $sidebarHtml ?></div><?= $s['public'] && $posts ? nl_share_dialog() : '' ?><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>
