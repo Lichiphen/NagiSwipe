@@ -9,6 +9,9 @@
     --text: #222;
     --muted: #666;
     --line: #ddd;
+    /* Borders of fields: 3:1 against the page and the cards (WCAG 1.4.11). */
+    --field: #898989;
+    --like-ink: #b8204f;
     --accent: #2f6f8f;
     --accent-text: #fff;
     --danger: #b3261e;
@@ -23,6 +26,8 @@
         --text: #e8e8e6;
         --muted: #a0a4a8;
         --line: #3a3e42;
+        --field: #6e7173;
+        --like-ink: #ff8fb1;
         --accent: #6fb3d2;
         --accent-text: #0d1a20;
         --danger: #f28b82;
@@ -81,8 +86,9 @@ h2 { font-size: 1.1rem; margin: 18px 0 10px; }
 .form label.check, label.check { display: flex; gap: 8px; align-items: flex-start; }
 input, select, textarea {
     font: inherit; color: inherit; background: var(--bg);
-    border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%;
+    border: 1px solid var(--field); border-radius: 6px; padding: 7px 9px; width: 100%;
 }
+::placeholder { color: var(--muted); opacity: 1; }
 input[type="checkbox"], input[type="radio"] { width: auto; margin-top: .35em; }
 textarea { resize: vertical; }
 .wide { max-width: 100%; }
@@ -250,8 +256,8 @@ details.more[open] > summary { margin-bottom: 12px; }
 .log-seo-table { width:100%; border-collapse:collapse; margin:12px 0 16px; font-size:13px; }
 .log-seo-table caption { text-align:left; color:var(--muted); font-size:12px; padding-bottom:6px; }
 .log-seo-table th,.log-seo-table td { padding:8px 10px; border-top:1px solid var(--line); text-align:left; vertical-align:top; }.log-seo-table th { font-weight:600; }.log-seo-table td { white-space:nowrap; }
-.log-like-panel h2 { display:flex; align-items:center; gap:8px; }.log-like-panel h2 b { color:#d63d6e; font-variant-numeric:tabular-nums; }
-.log-like-panel-heart { width:22px; height:22px; fill:#d63d6e; }
+.log-like-panel h2 { display:flex; align-items:center; gap:8px; }.log-like-panel h2 b { color:var(--like-ink); font-variant-numeric:tabular-nums; }
+.log-like-panel-heart { width:22px; height:22px; fill:var(--like-ink); }
 .log-like-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 16px; }.log-like-form label { max-width:220px; }.log-like-actions { display:flex; flex-wrap:wrap; gap:8px; }
-.log-list-likes { display:inline-flex; align-items:center; gap:3px; color:#d63d6e; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }.log-list-likes svg { width:13px; height:13px; fill:currentColor; }
+.log-list-likes { display:inline-flex; align-items:center; gap:3px; color:var(--like-ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }.log-list-likes svg { width:13px; height:13px; fill:currentColor; }
 .log-list-likes { flex-shrink:0; }
