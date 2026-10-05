@@ -997,7 +997,10 @@
             // 重要: 計算が終わるまで非表示
             fullImg.style.opacity = '0';
 
-            fullImg.onload = () => {
+            // 届いた高画質版は、デコードを終えてから、開閉などのアニメーションが終わったあとで DOM に入れる。
+            // 大きな画像（数千 px 四方）をアニメーション中に描画へ回すと、デコードと転送が間に合わず
+            // 1コマおきに絵が消える（画面が黒くなる）ため、震えて見える
+            const loaded = () => {
                 wrapperEl._nsLoading = false;
                 wrapperEl._nsLoaded = true;
                 item.naturalWidth = fullImg.naturalWidth;
@@ -1011,6 +1014,7 @@
                     // 画像サイズは即座に変わるので、transform も即座に合わせる。
                     // トランジションが残っていると一瞬拡大して縮む「揺れ」になる
                     wrapperEl.style.transition = 'none';
+                    if (!fullImg.isConnected) wrapperEl.appendChild(fullImg);
                     this._setSlideSize(wrapperEl, fullImg.naturalWidth, fullImg.naturalHeight);
                     wrapperEl._nsValuesCalculated = true; // 計算済みフラグ
 
@@ -1037,7 +1041,7 @@
                 else reveal();
             };
 
-            fullImg.onerror = () => {
+            const failed = () => {
                 wrapperEl._nsLoading = false;
                 wrapperEl._nsFailed = true;
                 fullImg.remove();
@@ -1045,7 +1049,13 @@
             };
 
             fullImg.src = item.src;
-            wrapperEl.appendChild(fullImg);
+            if (typeof fullImg.decode === 'function') {
+                // decode() can refuse a very large picture that still displays: then show it as loaded
+                fullImg.decode().then(loaded, () => (fullImg.complete && fullImg.naturalWidth ? loaded() : failed()));
+            } else {
+                fullImg.onload = loaded;
+                fullImg.onerror = failed;
+            }
         }
 
         /**
