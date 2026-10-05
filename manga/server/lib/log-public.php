@@ -110,7 +110,8 @@ function nl_post_nav(array $summaries, array $post): string
     if ($i === false) return '';
     $link = static function (?array $p, bool $older): string {
         if (!$p) return '<span class="log-post-nav-link is-empty" aria-hidden="true"></span>';
-        return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="./?id=' . h($p['id']) . '"><span class="log-post-nav-kicker">' . ($older ? '<span>過去の投稿</span>' . nl_pager_arrow(true) : nl_pager_arrow(false) . '<span>新しい投稿</span>') . '</span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : '画像の記録') . '</span><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>';
+        $tab = '<span class="log-post-nav-tab" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' . ($older ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6') . '"/></svg></span>';
+        return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="./?id=' . h($p['id']) . '">' . $tab . '<span class="log-post-nav-body"><span class="log-post-nav-kicker">' . ($older ? '過去の投稿' : '新しい投稿') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : '画像の記録') . '</span></span></a>';
     };
     return '<nav class="log-post-nav" aria-label="前後の投稿">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
         . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';

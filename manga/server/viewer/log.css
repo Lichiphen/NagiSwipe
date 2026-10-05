@@ -301,15 +301,20 @@ a.log-pager-step.is-older:hover .log-pager-arrow { transform:translateX(3px); }a
 .log-all-chip { display:inline-flex; align-items:center; gap:7px; padding:5px 6px 5px 12px; border:1px solid color-mix(in srgb,var(--log-accent) 40%,var(--log-line)); border-radius:999px; background:var(--log-card); color:var(--log-accent); font-size:13px; font-weight:700; text-decoration:none; white-space:nowrap; transition:transform .2s cubic-bezier(.3,1.6,.5,1), border-color .15s ease; }.log-all-chip:hover { transform:translateY(-2px); border-color:var(--log-accent); }
 .log-archive-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:0 0 20px; }.log-archive-head .log-archive-title { margin:0; padding:0; }.log-archive-count { color:var(--log-muted); font-size:13px; }.log-archive-head .log-all-chip { margin-left:auto; }
 
-/* Single post: newer / older neighbours. */
+/* Single post: newer / older neighbours. A solid accent tab on the outer edge carries the arrow; the title sits beside it. */
 .log-post-nav { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:8px 0 36px; }
-.log-post-nav-link { display:grid; gap:6px; align-content:start; min-width:0; padding:14px 16px; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); text-decoration:none; transition:transform .2s cubic-bezier(.3,1.6,.5,1), border-color .15s ease; }
+.log-post-nav-link { display:flex; align-items:stretch; min-width:0; min-height:84px; overflow:hidden; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); box-shadow:var(--log-shadow); color:var(--log-text); text-decoration:none; transition:transform .2s cubic-bezier(.3,1.6,.5,1), border-color .15s ease; }
 .log-site .log-post-nav-link { color:var(--log-text); }
-.log-post-nav-link.is-older { text-align:right; }.log-post-nav-link.is-empty { visibility:hidden; }
+.log-post-nav-link.is-older { flex-direction:row-reverse; }.log-post-nav-link.is-empty { visibility:hidden; }
+.log-post-nav-tab { display:grid; place-items:center; flex:none; width:36px; background:var(--log-accent); color:var(--log-on-accent); transition:width .2s cubic-bezier(.3,1.6,.5,1); }
+.log-post-nav-tab svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s cubic-bezier(.3,1.6,.5,1); }
+.log-post-nav-body { display:grid; flex:1; align-content:center; gap:4px; min-width:0; padding:12px 16px; }.is-older .log-post-nav-body { text-align:right; }
+.log-post-nav-kicker { display:flex; align-items:center; gap:8px; color:var(--log-accent); font-size:12px; font-weight:700; line-height:1.4; }
+.is-older .log-post-nav-kicker { justify-content:flex-end; }.log-post-nav-kicker time { color:var(--log-muted); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
+.log-post-nav-title { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:700; line-height:1.55; overflow-wrap:anywhere; }
 a.log-post-nav-link:hover { transform:translateY(-2px); border-color:var(--log-accent); }
-.log-post-nav-kicker { display:flex; align-items:center; gap:6px; color:var(--log-accent); font-size:12px; font-weight:700; }.is-older .log-post-nav-kicker { justify-content:flex-end; }.log-post-nav-kicker .log-pager-arrow { width:22px; height:22px; }.log-post-nav-kicker .log-pager-arrow svg { width:15px; height:15px; }
-.log-post-nav-title { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:700; line-height:1.5; overflow-wrap:anywhere; }
-.log-post-nav time { color:var(--log-muted); font-size:11px; }
+a.log-post-nav-link:hover .log-post-nav-tab { width:42px; }
+a.log-post-nav-link.is-newer:hover .log-post-nav-tab svg { transform:translateX(-3px); }a.log-post-nav-link.is-older:hover .log-post-nav-tab svg { transform:translateX(3px); }
 .log-post-nav .log-all-chip { grid-column:1 / -1; justify-self:center; margin-top:4px; }
 @media(max-width:900px) { .log-pager,.log-post-nav,.log-archive-head { padding:0 16px; } }
 @media(max-width:600px) {
@@ -318,9 +323,9 @@ a.log-post-nav-link:hover { transform:translateY(-2px); border-color:var(--log-a
     .log-pager-step { justify-content:center; width:100%; }.log-pager.is-numbers .is-newer,.log-pager.is-numbers .is-older { justify-self:stretch; }
     .log-pager.is-simple .log-pager-row > * { flex:1; }
     .log-pager-pages { gap:4px; }.log-pager-num { min-width:38px; height:38px; padding:0 6px; }
-    .log-post-nav { grid-template-columns:1fr; gap:10px; }.log-post-nav-link.is-older { text-align:left; }.is-older .log-post-nav-kicker { justify-content:flex-end; flex-direction:row-reverse; }.log-post-nav-link.is-empty { display:none; }
+    .log-post-nav { gap:8px; }.log-post-nav-link { min-height:76px; }.log-post-nav-tab { width:28px; }a.log-post-nav-link:hover .log-post-nav-tab { width:32px; }.log-post-nav-tab svg { width:17px; height:17px; }.log-post-nav-body { gap:3px; padding:10px 10px 10px 12px; }.is-older .log-post-nav-body { padding:10px 12px 10px 10px; }.log-post-nav-kicker { flex-wrap:wrap; gap:0 6px; font-size:11px; }.log-post-nav-kicker time { font-size:10px; }.log-post-nav-title { -webkit-line-clamp:3; font-size:14px; line-height:1.5; }.is-older .log-post-nav-body { text-align:left; }.is-older .log-post-nav-kicker { justify-content:flex-start; }
 }
-@media(prefers-reduced-motion:reduce) { .log-pager *,.log-post-nav-link,.log-all-chip,.log-pager-added { transition:none!important; animation:none!important; } }
+@media(prefers-reduced-motion:reduce) { .log-pager *,.log-post-nav-link,.log-post-nav-tab,.log-post-nav-tab svg,.log-all-chip,.log-pager-added { transition:none!important; animation:none!important; } }
 
 /* Search: sidebar box on the public LOG, and the admin list search. */
 .log-search { position:relative; display:flex; align-items:center; margin:16px 0; }
@@ -373,3 +378,5 @@ a.log-list-where { background:color-mix(in srgb,var(--log-accent) 12%,var(--log-
     .log-site-header { padding:32px 16px 20px; }
     .log-site-header > a.log-title-long { font-size:clamp(15px, calc((100vw - 16px - 76px - 62px) / var(--log-title-em, 9)), 1.7rem); }
 }
+/* iOS zooms into any field under 16px; touch screens always get at least 16px text in fields (sizes stay fixed). */
+@media(pointer:coarse) { .log-site input:not([type=checkbox]):not([type=radio]):not([type=range]),.log-site select,.log-site textarea,html[data-log-theme] input:not([type=checkbox]):not([type=radio]):not([type=range]),html[data-log-theme] select,html[data-log-theme] textarea { font-size:max(16px,1em)!important; } }
