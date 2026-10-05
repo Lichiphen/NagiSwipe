@@ -1,10 +1,44 @@
-# NagiManga（NagiSwipe の漫画ビューアー）
+# NagiManga（漫画ビューアー）
+
+NagiSeries（[NagiSwipe](../README.md#nagiswipe)・NagiManga・[NagiLog](README-LOG.md)）の漫画ビューアーです。
 
 ブログやサイトに **タグを 1 つ貼るだけ** で、クリックしたときに漫画ビューアーが開きます。作品の管理は、データベースのいらない小さな管理画面（PHP）で行います。
 
-作業ブランチ `feature/personal-log-cms` では、文章・画像・漫画を投稿できる個人用LOGを追加しています。
+作業ブランチ `feature/personal-log-cms` では、文章・画像・漫画を投稿できる個人用LOG「NagiLog」を追加しています。
 スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。
-使い方、メリット・デメリット、設置と検証結果は [個人用LOGのREADME](README-LOG.md) にまとめています。
+使い方、メリット・デメリット、設置と検証結果は [NagiLog の README](README-LOG.md) にまとめています。
+
+<!-- TOC -->
+## 目次
+
+- [デモ](#デモ)
+- [できること](#できること)
+- [2 つの使い方](#2-つの使い方)
+- [管理画面（PHP）を使う](#管理画面phpを使う)
+  - [1. 設置](#1-設置)
+  - [2. セットアップ（30 分以内に）](#2-セットアップ30-分以内に)
+  - [3. 設置したら確認すること](#3-設置したら確認すること)
+  - [4. 作品を作って共有する](#4-作品を作って共有する)
+  - [てがろぐに載せる](#てがろぐに載せる)
+- [機能の説明](#機能の説明)
+  - [EPUB から作る](#epub-から作る)
+  - [小容量版（スマホ用）](#小容量版スマホ用)
+  - [パスワード（限定公開）](#パスワード限定公開)
+  - [バックアップ](#バックアップ)
+  - [更新（v0.2.0 以降）](#更新v020-以降)
+  - [設置用コード](#設置用コード)
+  - [個別ページ（共有リンク・v0.3.0 以降）](#個別ページ共有リンクv030-以降)
+  - [直リンク防止（上級者向け・v0.3.0 以降）](#直リンク防止上級者向けv030-以降)
+  - [プラグイン（ゲストモード）](#プラグインゲストモード)
+  - [困ったとき](#困ったとき)
+  - [data フォルダを守る](#data-フォルダを守る)
+  - [管理画面の IP 制限をさらに固くする（任意）](#管理画面の-ip-制限をさらに固くする任意)
+- [PHP なし（FTP だけ）で使う](#php-なしftp-だけで使う)
+- [セキュリティの考え方](#セキュリティの考え方)
+  - [攻撃テスト](#攻撃テスト)
+- [開発](#開発)
+- [ライセンス](#ライセンス)
+<!-- /TOC -->
 
 ## デモ
 
@@ -14,10 +48,10 @@
 - パスワード付きの見本（パスワードは `demo`）、CLIP STUDIO PAINT の EPUB から取り込んだ作品もあります
 - 「ゲストとして管理画面を見る」から、作者が使う管理画面を閲覧のみで見られます（変更はできません）
 
-**個人用LOGのデモ: https://notebook.lichiphen.com/nagimanga/**
+**NagiLog のデモ: https://notebook.lichiphen.com/nagimanga/**
 
 - 作者が実際に使っているLOGです。投稿、スマホのメニュー、メールのダイアログ、404（ブラックホールの中）を見られます
-- 画面のスクリーンショットと説明は [個人用LOGのREADME](README-LOG.md#画面) にあります
+- 画面のスクリーンショットと説明は [NagiLog の README](README-LOG.md#画面) にあります
 
 **使うかどうか迷っている方、長く使い続けたい方へ:** メリット・デメリット、使っている技術、データの取り出し方を [docs/overview.md](docs/overview.md) にまとめています（開発者でない方向け）。
 
@@ -62,7 +96,7 @@
 ```
 nagimanga/
 ├── read.php          読者向けの窓口（読み取り専用）
-├── index.php         個人用LOGの公開入口（URLにファイル名は不要）
+├── index.php         NagiLog の公開入口（URLにファイル名は不要）
 ├── log.php           LOG本体・以前のURLから新URLへの転送
 ├── .htaccess
 ├── admin/            管理画面
@@ -317,7 +351,7 @@ python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html
 python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る
 ```
 
-README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換えてコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md`）。
+README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md` のあと `python site/build.py`）。
 
 リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 

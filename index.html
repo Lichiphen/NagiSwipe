@@ -1,149 +1,150 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NagiSwipe Demo</title>
-    <!-- 
-      NagiSwipe Integration Example 
-      Just load these two files.
-    -->
-    <script>
-        /**
-         * 外部ファイルの最終更新日時を取得してキャッシュバスターとして付与し、
-         * タグを動的に生成してロードするスクリプト
-         */
-        (function() {
-            function loadAsset(url, type) {
-                const xhr = new XMLHttpRequest();
-                // 同期リクエストでHEADのみ取得（メタデータ確認のため）
-                xhr.open('HEAD', url, false);
-                try {
-                    xhr.send();
-                    const lastMod = xhr.getResponseHeader('Last-Modified');
-                    // メタデータ（日時）をパスに変換、取得できなければ現在時刻
-                    const version = lastMod ? encodeURIComponent(lastMod) : Date.now();
-                    const finalUrl = `${url}?v=${version}`;
-
-                    if (type === 'css') {
-                        const link = document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.href = finalUrl;
-                        document.head.appendChild(link);
-                    } else if (type === 'js') {
-                        const script = document.createElement('script');
-                        script.src = finalUrl;
-                        // ライブラリなので早期に読み込ませる
-                        document.head.appendChild(script);
-                    }
-                } catch (e) {
-                    console.error('Failed to fetch metadata for ' + url, e);
-                    // 失敗した場合は通常の読み込みを試行
-                    if (type === 'css') document.write(`<link rel="stylesheet" href="${url}">`);
-                    else document.write(`<script src="${url}"><\/script>`);
-                }
-            }
-
-            // CSSとJSをメタデータ付きでロード
-            loadAsset('NagiSwipe-main.css', 'css');
-            loadAsset('NagiSwipe-main.js', 'js');
-        })();
-    </script>
-    
-    <style>
-        /* [DEMO PAGE CSS] */
-        *, *::before, *::after { box-sizing: border-box; }
-        body {
-            margin: 0; padding: 0; background-color: #000; color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            overflow-x: hidden; -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
-        }
-        .gallery-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px;
-            opacity: 0; will-change: opacity; transition: opacity 0.4s ease-out; padding-bottom: 50px;
-        }
-        @media (min-width: 600px) {
-            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; padding: 40px; }
-        }
-        .gallery-link {
-            display: block; width: 100%; height: 100%; text-decoration: none; color: inherit; position: relative;
-        }
-        .grid-item {
-            position: relative; background: #1a1a1a; aspect-ratio: 1 / 1; overflow: hidden;
-            cursor: zoom-in; opacity: 0; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-        .grid-item.loaded { opacity: 1; transform: scale(1); }
-        .grid-item img {
-            width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; will-change: transform;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiSeries — 画像・漫画・LOG のツール集</title>
+<meta name="description" content="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。">
+<link rel="canonical" href="https://nagiswipe.pages.dev/">
+<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NagiSeries">
+<meta property="og:title" content="NagiSeries — 画像・漫画・LOG のツール集">
+<meta property="og:description" content="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。">
+<meta property="og:url" content="https://nagiswipe.pages.dev/">
+<meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagiswipe-ogp.png?v=b4c2b1f265">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="site/favicon.svg?v=96c65b80dd" type="image/svg+xml">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=be7805759d">
+<link rel="stylesheet" href="site/site.css?v=ec433c2c1d">
+<script src="NagiSwipe-main.js?v=dcdc1fff19" defer></script>
+<script src="site/site.js?v=c5210cda67" data-index="site/search.json?v=21cc902973" defer></script>
 </head>
-<body>
+<body class="page-top">
+<a class="skip" href="#main">本文へ移動</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>目次</span></button>
+</header>
+<div class="layout">
+<aside class="sidebar" aria-label="サイドバー">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.html" aria-current="page"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a><ol class="nav-toc"><li><a href="#3-つのツール" data-id="3-つのツール">3 つのツール</a></li><li><a href="#どれを使えばいい" data-id="どれを使えばいい">どれを使えばいい？</a></li><li><a href="#3-つの関係" data-id="3-つの関係">3 つの関係</a></li><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#入手する" data-id="入手する">入手する</a></li><li><a href="#権利免責事項掲載画像について" data-id="権利免責事項掲載画像について">権利・免責事項：掲載画像について</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</aside>
+<main id="main" class="main">
+<article class="doc">
 
-    <!-- Gallery Grid -->
-    <div class="gallery-grid" id="grid"></div>
+<h1 class="doc-title">NagiSeries</h1>
+<div class="lead"><p>NagiSeries は、個人サイトのための小さな道具のシリーズです。画像を大きく見せる <strong>NagiSwipe</strong>、漫画を読んでもらう <strong>NagiManga</strong>、文章・画像・漫画を投稿できる <strong>NagiLog</strong> の 3 つがあります。どれもデータベースや外部サービスを使わず、自分のサイトに置くだけで動きます。</p>
+<div class="hero-links">
+<a class="btn btn-primary" href="nagiswipe.html#導入方法">NagiSwipe を使う</a>
+<a class="btn" href="nagimanga.html#管理画面phpを使う">NagiManga・NagiLog を設置する</a>
+<a class="btn ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a>
+</div></div>
+<nav class="toc-inline" aria-labelledby="toc-title-top"><p class="toc-title" id="toc-title-top">このページの目次</p><ol class="toc-list"><li><a href="#3-つのツール" data-id="3-つのツール">3 つのツール</a></li><li><a href="#どれを使えばいい" data-id="どれを使えばいい">どれを使えばいい？</a></li><li><a href="#3-つの関係" data-id="3-つの関係">3 つの関係</a></li><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#入手する" data-id="入手する">入手する</a></li><li><a href="#権利免責事項掲載画像について" data-id="権利免責事項掲載画像について">権利・免責事項：掲載画像について</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></nav>
+<div class="doc-body">
+<h2 id="3-つのツール">3 つのツール<a class="anchor" href="#3-つのツール" aria-label="この見出しへのリンク">#</a></h2>
 
-    <!-- Core Library is now loaded dynamically in head -->
-    
-    <!-- Demo Script -->
-    <script>
-        /** [DEMO CONTENT GENERATION] */
-        const container = document.getElementById('grid');
-        const fragment = document.createDocumentFragment();
+<div class="cards">
+<section class="card">
+<a class="card-img" href="nagiswipe.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagiswipe-ogp.svg?v=3118cf3638" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiSwipe</h3>
+<p class="card-kind">画像ポップアップ・ギャラリー</p>
+<ul>
+<li>JS と CSS を読み込むだけで、ページの画像リンクを自動でギャラリーにします</li>
+<li>スワイプ、ピンチズーム、ダブルタップ、キャプション</li>
+<li>てがろぐは管理画面の設定だけで使えます</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagiswipe.html">ドキュメント</a><a class="btn" href="demo.html">デモ</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagimanga.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagimanga-ogp.svg?v=01d339b330" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiManga</h3>
+<p class="card-kind">漫画ビューアーと管理画面</p>
+<ul>
+<li>タグを 1 つ貼るだけで、クリックすると漫画ビューアーが開きます</li>
+<li>右から左・見開き・縦読み（ページ漫画／ウェブトゥーン）</li>
+<li>EPUB からの取り込み、パスワード付きの限定公開、ZIP でのバックアップ</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagimanga.html">ドキュメント</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">デモ</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagilog.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagilog-ogp.svg?v=d89b85e8eb" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiLog</h3>
+<p class="card-kind">個人用LOG（データベース不要）</p>
+<ul>
+<li>文章・画像・漫画を、自分のサイトへスマホからでも投稿できます</li>
+<li>カテゴリ、ハッシュタグ、検索、6 種類のデザイン、RSS</li>
+<li>閲覧注意（センシティブ・R-18・R-18G）の設定</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagilog.html">ドキュメント</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/">デモ</a></div>
+</div>
+</section>
+</div>
 
-        // Manual items (local images)
-        // ?v= is a content hash (cache busting); alt is shown as the caption
-        const manualItems = [
-            { src: 'img/Kyururun.png?v=ace886fd', thumb: 'img/Kyururun.png?v=ace886fd', alt: 'きゅるるん（猫のイラスト）' },
-            { src: 'img/Fu-n.png?v=1041db46', thumb: 'img/Fu-n.png?v=1041db46', alt: 'ふーん（猫のイラスト）' },
-            { src: 'img/Shimeshime.png?v=023fcd6a', thumb: 'img/Shimeshime.png?v=023fcd6a', alt: 'しめしめ（猫のイラスト）' },
-            {
-                src: 'img/chirashi-mini.jpg?v=ad52edca', thumb: 'img/chirashi-mini.jpg?v=ad52edca',
-                alt: 'チラシ用イラスト（モノクロ）。翼に囲まれて手を取り合う二人。\n長いキャプションは折り返され、画面の 3 割を超える分はスクロールできます。'
-            }
-        ];
+<h2 id="どれを使えばいい">どれを使えばいい？<a class="anchor" href="#どれを使えばいい" aria-label="この見出しへのリンク">#</a></h2>
 
-        // Combine with generated items
-        const allItems = [...manualItems];
-        for (let i = 0; i < 30; i++) {
-            const seed = i + 3000;
-            let w = 800, h = 800;
-            const r = Math.random();
-            if (r < 0.3) { w = 600; h = 900; }
-            else if (r < 0.6) { w = 900; h = 600; }
-            
-            const src = `https://picsum.photos/seed/${seed}/${w}/${h}`;
-            const fullSrc = `https://picsum.photos/seed/${seed}/${w * 2}/${h * 2}.jpg`;
-            // Every third photo has no alt -> no caption is shown
-            const alt = (i % 3 === 2) ? '' : `サンプル写真 #${i + 1}（Lorem Picsum / ${w}×${h}）`;
-            allItems.push({ src: fullSrc, thumb: src, alt });
-        }
+<div class="table-wrap"><table><thead><tr><th>やりたいこと</th><th>使うもの</th><th>必要なもの</th></tr></thead><tbody>
+<tr><td>ブログやてがろぐの画像を、スマホでも気持ちよく拡大して見せたい</td><td><a href="nagiswipe.html">NagiSwipe</a></td><td>JS と CSS の 2 ファイル（jsDelivr から読み込めます）</td></tr>
+<tr><td>自分のサイトで漫画を読んでもらいたい</td><td><a href="nagimanga.html">NagiManga</a></td><td>PHP 8.1 以上のサーバー。管理画面を使わず、FTP だけで置くこともできます</td></tr>
+<tr><td>文章・絵・漫画を、自分のサイトに気軽に投稿したい</td><td><a href="nagilog.html">NagiLog</a></td><td>NagiManga と同じ設置（追加の準備はいりません）</td></tr>
+<tr><td>NagiManga を使い続けて大丈夫か知りたい</td><td><a href="guide.html">手引き</a></td><td>開発者でない方向けに、メリット・デメリットとデータの取り出し方をまとめています</td></tr>
+</tbody></table></div>
 
-        allItems.forEach(item => {
-            const el = document.createElement('div');
-            el.className = 'grid-item';
+<h2 id="3-つの関係">3 つの関係<a class="anchor" href="#3-つの関係" aria-label="この見出しへのリンク">#</a></h2>
 
-            const link = document.createElement('a');
-            link.className = 'gallery-link';
-            link.href = item.src;
+<ol class="flow">
+<li><strong>NagiSwipe</strong> は単独で使えるライブラリです。NagiManga と NagiLog の中でも、画像の拡大に使っています（配布 ZIP に同梱しています）。</li>
+<li><strong>NagiManga</strong> を設置すると、作品を管理する画面と、読者向けのビューアーが使えます。</li>
+<li><strong>NagiLog</strong> は NagiManga に含まれています。同じ <code>nagimanga</code> フォルダ、同じログインで、LOG の公開サイトも動きます。</li>
+</ol>
 
-            const img = document.createElement('img');
-            img.src = item.thumb;
-            img.alt = item.alt || '';
-            
-            link.appendChild(img);
-            el.appendChild(link);
-            fragment.appendChild(el);
-        });
+<h2 id="デモ">デモ<a class="anchor" href="#デモ" aria-label="この見出しへのリンク">#</a></h2>
 
-        container.appendChild(fragment);
+<ul>
+<li>NagiSwipe: <a href="demo.html">画像ギャラリーのデモ</a>（このサイトの中にあります）</li>
+<li>NagiManga: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">https://notebook.lichiphen.com/nagimanga/demo.html</a>（いろいろな読み方、パスワード付きの見本、ゲストとして管理画面を見る）</li>
+<li>NagiLog: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/">https://notebook.lichiphen.com/nagimanga/</a>（作者が実際に使っている LOG）</li>
+</ul>
 
-        requestAnimationFrame(() => {
-            container.style.opacity = 1;
-            Array.from(container.children).forEach((el, i) => {
-                setTimeout(() => el.classList.add('loaded'), i * 30);
-            });
-        });
-    </script>
+<h2 id="入手する">入手する<a class="anchor" href="#入手する" aria-label="この見出しへのリンク">#</a></h2>
+
+<ul>
+<li><strong>NagiSwipe</strong>: jsDelivr の URL を貼るだけです。<a href="nagiswipe.html#導入方法">導入方法</a>に、いつも最新版の URL を載せています。</li>
+<li><strong>NagiManga・NagiLog</strong>: <a class="ext" href="https://github.com/Lichiphen/NagiSwipe/releases">リリースページ</a>の <code>nagimanga-vX.Y.Z.zip</code> をダウンロードして、サーバーにアップロードします。手順は<a href="nagimanga.html#管理画面phpを使う">管理画面（PHP）を使う</a>にあります。</li>
+<li><strong>ソースコード</strong>: <a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a> / <a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a>（同じ内容です）</li>
+</ul>
+<h2 id="権利免責事項掲載画像について">権利・免責事項：掲載画像について<a class="anchor" href="#権利免責事項掲載画像について" aria-label="この見出しへのリンク">#</a></h2>
+<p>本プロジェクトのデモ（<code>demo.html</code>等）で使用されている画像について：</p>
+<ul><li><p><strong>猫のイラスト（Kyururun.png, Fu-n.png, Shimeshime.png）</strong></p>
+<ul><li>これらは <strong>Lichiphen（作者）本人が制作したデジタルアート</strong> です。</li><li>著作権は作者に帰属しますが、本ライブラリのデモ用として同梱されています。</li></ul></li></ul>
+<ul><li><p><strong>その他の写真画像（Picsum経由等）</strong></p>
+<ul><li>これらは <a href="https://picsum.photos/" class="ext">Lorem Picsum</a> 等の外部サービスから取得しているサンプルです。</li><li><strong>これらの写真画像の著作権は Lichiphen には帰属しません。</strong></li><li>写真素材については本ソフトウェア（NagiSwipe）の MIT LICENSE の対象外です。各画像のライセンスについては提供元（Unsplash等）の規定に従ってください。</li></ul></li></ul>
+<ul><li><strong>NagiManga のデモに掲載している漫画作品（「送り日」「ガーベラ」など）</strong>
+<ul><li>Lichiphen（作者）本人の作品です。このリポジトリには含まれておらず、MIT LICENSE の対象外です。著作権は作者に帰属します。</li><li>デモの見本マンガ・見本ウェブトゥーンの絵は、デモ用に自動で描いたものです。</li></ul></li></ul>
+<h2 id="ライセンス">ライセンス<a class="anchor" href="#ライセンス" aria-label="この見出しへのリンク">#</a></h2>
+<p><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/LICENSE" class="ext">MIT License</a> (c) 2026 Lichiphen</p>
+</div>
+</article>
+<nav class="pager" aria-label="ページ送り"><span></span><a class="pager-next" href="nagiswipe.html"><span>次へ</span>NagiSwipe</a></nav>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/site/top.html">このページの元の文書（GitHub）</a></p></footer>
+</main>
+</div>
+<dialog class="menu" id="menu" aria-label="目次">
+<div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+<div class="menu-body">
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.html" aria-current="page"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a><ol class="nav-toc"><li><a href="#3-つのツール" data-id="3-つのツール">3 つのツール</a></li><li><a href="#どれを使えばいい" data-id="どれを使えばいい">どれを使えばいい？</a></li><li><a href="#3-つの関係" data-id="3-つの関係">3 つの関係</a></li><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#入手する" data-id="入手する">入手する</a></li><li><a href="#権利免責事項掲載画像について" data-id="権利免責事項掲載画像について">権利・免責事項：掲載画像について</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</div>
+</dialog>
 </body>
 </html>

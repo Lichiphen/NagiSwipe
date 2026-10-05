@@ -1,0 +1,11 @@
+# The documentation site (https://nagiswipe.pages.dev/) is generated from the READMEs.
+# Keep it out of "Source code (zip / tar.gz)" on GitHub / GitLab releases (git archive).
+/site/ export-ignore
+/index.html export-ignore
+/nagiswipe.html export-ignore
+/nagimanga.html export-ignore
+/nagilog.html export-ignore
+/guide.html export-ignore
+/sitemap.xml export-ignore
+/_headers export-ignore
+/.gitlab-ci.yml export-ignore

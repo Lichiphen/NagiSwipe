@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiManga（漫画ビューアー） | NagiSeries</title>
+<meta name="description" content="タグを 1 つ貼るだけで開く漫画ビューアー NagiManga の設置・管理画面・機能の説明。">
+<link rel="canonical" href="https://nagiswipe.pages.dev/nagimanga.html">
+<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NagiSeries">
+<meta property="og:title" content="NagiManga（漫画ビューアー） | NagiSeries">
+<meta property="og:description" content="タグを 1 つ貼るだけで開く漫画ビューアー NagiManga の設置・管理画面・機能の説明。">
+<meta property="og:url" content="https://nagiswipe.pages.dev/nagimanga.html">
+<meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagimanga-ogp.png?v=9cf836eea0">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="site/favicon.svg?v=96c65b80dd" type="image/svg+xml">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=be7805759d">
+<link rel="stylesheet" href="site/site.css?v=ec433c2c1d">
+<script src="NagiSwipe-main.js?v=dcdc1fff19" defer></script>
+<script src="site/site.js?v=c5210cda67" data-index="site/search.json?v=21cc902973" defer></script>
+</head>
+<body class="page-nagimanga">
+<a class="skip" href="#main">本文へ移動</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>目次</span></button>
+</header>
+<div class="layout">
+<aside class="sidebar" aria-label="サイドバー">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item is-current"><a class="nav-link" href="nagimanga.html" aria-current="page"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a><ol class="nav-toc"><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#できること" data-id="できること">できること</a></li><li><a href="#2-つの使い方" data-id="2-つの使い方">2 つの使い方</a></li><li><a href="#管理画面phpを使う" data-id="管理画面phpを使う">管理画面（PHP）を使う</a><ol><li><a href="#1-設置" data-id="1-設置">1. 設置</a></li><li><a href="#2-セットアップ30-分以内に" data-id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）</a></li><li><a href="#3-設置したら確認すること" data-id="3-設置したら確認すること">3. 設置したら確認すること</a></li><li><a href="#4-作品を作って共有する" data-id="4-作品を作って共有する">4. 作品を作って共有する</a></li><li><a href="#てがろぐに載せる" data-id="てがろぐに載せる">てがろぐに載せる</a></li></ol></li><li><a href="#機能の説明" data-id="機能の説明">機能の説明</a><ol><li><a href="#epub-から作る" data-id="epub-から作る">EPUB から作る</a></li><li><a href="#小容量版スマホ用" data-id="小容量版スマホ用">小容量版（スマホ用）</a></li><li><a href="#パスワード限定公開" data-id="パスワード限定公開">パスワード（限定公開）</a></li><li><a href="#バックアップ" data-id="バックアップ">バックアップ</a></li><li><a href="#更新v020-以降" data-id="更新v020-以降">更新（v0.2.0 以降）</a></li><li><a href="#設置用コード" data-id="設置用コード">設置用コード</a></li><li><a href="#個別ページ共有リンクv030-以降" data-id="個別ページ共有リンクv030-以降">個別ページ（共有リンク・v0.3.0 以降）</a></li><li><a href="#直リンク防止上級者向けv030-以降" data-id="直リンク防止上級者向けv030-以降">直リンク防止（上級者向け・v0.3.0 以降）</a></li><li><a href="#プラグインゲストモード" data-id="プラグインゲストモード">プラグイン（ゲストモード）</a></li><li><a href="#困ったとき" data-id="困ったとき">困ったとき</a></li><li><a href="#data-フォルダを守る" data-id="data-フォルダを守る">data フォルダを守る</a></li><li><a href="#管理画面の-ip-制限をさらに固くする任意" data-id="管理画面の-ip-制限をさらに固くする任意">管理画面の IP 制限をさらに固くする（任意）</a></li></ol></li><li><a href="#php-なしftp-だけで使う" data-id="php-なしftp-だけで使う">PHP なし（FTP だけ）で使う</a></li><li><a href="#セキュリティの考え方" data-id="セキュリティの考え方">セキュリティの考え方</a><ol><li><a href="#攻撃テスト" data-id="攻撃テスト">攻撃テスト</a></li></ol></li><li><a href="#開発" data-id="開発">開発</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</aside>
+<main id="main" class="main">
+<article class="doc">
+<p class="crumbs"><a href="index.html">NagiSeries</a><span aria-hidden="true">/</span>NagiManga</p>
+<h1 class="doc-title">NagiManga（漫画ビューアー）</h1>
+<div class="lead"><p>NagiSeries（<a href="nagiswipe.html">NagiSwipe</a>・NagiManga・<a href="nagilog.html">NagiLog</a>）の漫画ビューアーです。</p>
+<p>ブログやサイトに <strong>タグを 1 つ貼るだけ</strong> で、クリックしたときに漫画ビューアーが開きます。作品の管理は、データベースのいらない小さな管理画面（PHP）で行います。</p>
+<p>作業ブランチ <code>feature/personal-log-cms</code> では、文章・画像・漫画を投稿できる個人用LOG「NagiLog」を追加しています。スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。使い方、メリット・デメリット、設置と検証結果は <a href="nagilog.html">NagiLog の README</a> にまとめています。</p></div>
+<nav class="toc-inline" aria-labelledby="toc-title-nagimanga"><p class="toc-title" id="toc-title-nagimanga">このページの目次</p><ol class="toc-list"><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#できること" data-id="できること">できること</a></li><li><a href="#2-つの使い方" data-id="2-つの使い方">2 つの使い方</a></li><li><a href="#管理画面phpを使う" data-id="管理画面phpを使う">管理画面（PHP）を使う</a><ol><li><a href="#1-設置" data-id="1-設置">1. 設置</a></li><li><a href="#2-セットアップ30-分以内に" data-id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）</a></li><li><a href="#3-設置したら確認すること" data-id="3-設置したら確認すること">3. 設置したら確認すること</a></li><li><a href="#4-作品を作って共有する" data-id="4-作品を作って共有する">4. 作品を作って共有する</a></li><li><a href="#てがろぐに載せる" data-id="てがろぐに載せる">てがろぐに載せる</a></li></ol></li><li><a href="#機能の説明" data-id="機能の説明">機能の説明</a><ol><li><a href="#epub-から作る" data-id="epub-から作る">EPUB から作る</a></li><li><a href="#小容量版スマホ用" data-id="小容量版スマホ用">小容量版（スマホ用）</a></li><li><a href="#パスワード限定公開" data-id="パスワード限定公開">パスワード（限定公開）</a></li><li><a href="#バックアップ" data-id="バックアップ">バックアップ</a></li><li><a href="#更新v020-以降" data-id="更新v020-以降">更新（v0.2.0 以降）</a></li><li><a href="#設置用コード" data-id="設置用コード">設置用コード</a></li><li><a href="#個別ページ共有リンクv030-以降" data-id="個別ページ共有リンクv030-以降">個別ページ（共有リンク・v0.3.0 以降）</a></li><li><a href="#直リンク防止上級者向けv030-以降" data-id="直リンク防止上級者向けv030-以降">直リンク防止（上級者向け・v0.3.0 以降）</a></li><li><a href="#プラグインゲストモード" data-id="プラグインゲストモード">プラグイン（ゲストモード）</a></li><li><a href="#困ったとき" data-id="困ったとき">困ったとき</a></li><li><a href="#data-フォルダを守る" data-id="data-フォルダを守る">data フォルダを守る</a></li><li><a href="#管理画面の-ip-制限をさらに固くする任意" data-id="管理画面の-ip-制限をさらに固くする任意">管理画面の IP 制限をさらに固くする（任意）</a></li></ol></li><li><a href="#php-なしftp-だけで使う" data-id="php-なしftp-だけで使う">PHP なし（FTP だけ）で使う</a></li><li><a href="#セキュリティの考え方" data-id="セキュリティの考え方">セキュリティの考え方</a><ol><li><a href="#攻撃テスト" data-id="攻撃テスト">攻撃テスト</a></li></ol></li><li><a href="#開発" data-id="開発">開発</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></nav>
+<div class="doc-body">
+<h2 id="デモ">デモ<a class="anchor" href="#デモ" aria-label="この見出しへのリンク">#</a></h2>
+<p><strong><a href="https://notebook.lichiphen.com/nagimanga/demo.html" class="ext">https://notebook.lichiphen.com/nagimanga/demo.html</a></strong></p>
+<ul><li>いろいろな読み方（右から左・見開き／左から右／縦読みのページ漫画・ウェブトゥーン）を試せます</li><li>パスワード付きの見本（パスワードは <code>demo</code>）、CLIP STUDIO PAINT の EPUB から取り込んだ作品もあります</li><li>「ゲストとして管理画面を見る」から、作者が使う管理画面を閲覧のみで見られます（変更はできません）</li></ul>
+<p><strong>NagiLog のデモ: <a href="https://notebook.lichiphen.com/nagimanga/" class="ext">https://notebook.lichiphen.com/nagimanga/</a></strong></p>
+<ul><li>作者が実際に使っているLOGです。投稿、スマホのメニュー、メールのダイアログ、404（ブラックホールの中）を見られます</li><li>画面のスクリーンショットと説明は <a href="nagilog.html#画面">NagiLog の README</a> にあります</li></ul>
+<p><strong>使うかどうか迷っている方、長く使い続けたい方へ:</strong> メリット・デメリット、使っている技術、データの取り出し方を <a href="guide.html">docs/overview.md</a> にまとめています（開発者でない方向け）。</p>
+<h2 id="できること">できること<a class="anchor" href="#できること" aria-label="この見出しへのリンク">#</a></h2>
+<p><strong>読む人（ビューアー）</strong></p>
+<ul><li>右から左（漫画）／左から右／縦読み（1 ページずつ画面に収める「ページ漫画」と、横幅いっぱいの「ウェブトゥーン」）</li><li>横長の画面では見開き表示（表紙だけ単独にする／しない）。横長の 1 枚絵は自動で単独ページ</li><li>ページ送り: スワイプ、画面の端のタップ、下のバーの ◀ ▶ ボタン、キーボード、マウスホイール（縦読みはマウスでつかんでスクロールもできます）</li><li>拡大: ピンチ、ダブルタップ、パソコンでは上のバーの「− 100% ＋」ボタン、<code>+</code> <code>-</code> <code>0</code> キー、Ctrl＋ホイール（マウスを画面の上端か下端に近づけるとバーが出ます）</li><li>しおり（次に開いたときは続きから）、ブラウザの「戻る」で閉じる</li><li>スマホでは小さい画像（小容量版）、パソコンや拡大したときは大きい画像（通常版）を自動で読み分け</li></ul>
+<p><strong>作る人（管理画面）</strong></p>
+<ul><li>画像のドラッグ＆ドロップ、並べ替え、共有タグの発行（URL は設置したドメインから自動で作られます）</li><li>CLIP STUDIO PAINT などの <strong>漫画 EPUB からそのまま作品を作る</strong></li><li>パスワード付きの限定公開（読む人はクリックしたときにパスワードを入力）</li><li>バックアップと復元（ZIP 1 つ）</li><li>ゲスト（閲覧のみ）で管理画面を見せるプラグイン（デモ向け）</li></ul>
+<p>データベースも外部のライブラリも使っていません（PHP と JavaScript の標準機能だけ）。</p>
+<h2 id="2-つの使い方">2 つの使い方<a class="anchor" href="#2-つの使い方" aria-label="この見出しへのリンク">#</a></h2>
+<div class="table-wrap"><table><thead><tr><th></th><th>管理画面（PHP）を使う</th><th>PHP なし（FTP だけ）</th></tr></thead><tbody><tr><td>向いている人</td><td>作品を管理画面で扱いたい人（FTP を使うのは最初の設置だけ）</td><td>フォルダと URL が分かる人</td></tr><tr><td>画像の追加</td><td>管理画面でドラッグ＆ドロップ、または EPUB から</td><td>FTP で置く</td></tr><tr><td>パスワード付き公開</td><td>できる</td><td>できない（画像の URL を知っていれば誰でも見られます）</td></tr><tr><td>必要なもの</td><td>PHP 8.1 以上（GD・fileinfo・mbstring・ZipArchive）、<code>.htaccess</code> が効くサーバー（Apache 系）推奨</td><td>静的なファイルを置けるサーバーなら何でも</td></tr></tbody></table></div>
+<hr>
+<h2 id="管理画面phpを使う">管理画面（PHP）を使う<a class="anchor" href="#管理画面phpを使う" aria-label="この見出しへのリンク">#</a></h2>
+<h3 id="1-設置">1. 設置<a class="anchor" href="#1-設置" aria-label="この見出しへのリンク">#</a></h3>
+<p><a href="https://github.com/Lichiphen/NagiSwipe/releases" class="ext">リリースページ</a> の <code>nagimanga-*.zip</code>（または、このリポジトリの <code>manga/server</code> フォルダの中身）を、サーバーの好きな場所に <code>nagimanga</code> などの名前でアップロードします。</p>
+<pre><code>nagimanga/
+├── read.php          読者向けの窓口（読み取り専用）
+├── index.php         NagiLog の公開入口（URLにファイル名は不要）
+├── log.php           LOG本体・以前のURLから新URLへの転送
+├── .htaccess
+├── admin/            管理画面
+├── viewer/           ビューアー（NagiManga.js / NagiManga.css）
+├── plugins/          プラグインを置く場所（最初は空）
+├── lib/              プログラム本体（外からは見えません）
+└── data/             作品の画像と設定（外からは見えません）</code></pre>
+<ul><li><strong><code>.htaccess</code> を忘れずに送ってください。</strong> FTP ソフトによっては、<code>.</code> で始まるファイルが隠れていて送られないことがあります（「隠しファイルを表示」をオンにすると見えます）。<code>nagimanga/</code>・<code>admin/</code>・<code>lib/</code>・<code>data/</code>・<code>plugins/</code> の 5 か所にあります。</li><li><code>data</code> フォルダは書き込みできるようにしてください（多くのサーバーでは 755 のままで大丈夫です）。</li></ul>
+<h3 id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）<a class="anchor" href="#2-セットアップ30-分以内に" aria-label="この見出しへのリンク">#</a></h3>
+<p>ブラウザで <code>https://あなたのサイト/nagimanga/admin/</code> を開き、管理者パスワード（10 文字以上）を決めます。</p>
+<ul><li>この画面は、<strong>最初に開いてから 30 分だけ</strong> 表示されます（他人に先にセットアップされないようにするため）。過ぎてしまったら、FTP で <code>data/install.lock</code> を削除してから開き直してください。</li><li>「今の IP アドレスからだけ管理画面を開けるようにする」は、できるだけオンにしてください。</li></ul>
+<p>完了すると <strong>ログイン用の URL</strong> が表示されます。<strong>必ずブックマークしてください。</strong> 管理画面を直接開こうとすると「Not Found」になります。このLOG開発版では、公開サイトの「ログイン」からもパスワード付きの入口へ進めます。IP制限と試行回数の制限は、この入口でも適用します。</p>
+<h3 id="3-設置したら確認すること">3. 設置したら確認すること<a class="anchor" href="#3-設置したら確認すること" aria-label="この見出しへのリンク">#</a></h3>
+<ul><li>ブックマークした URL でログインし、作品一覧に <strong>「data フォルダがインターネットから見える状態です」という警告が出ていない</strong> こと（出ていたら <code>.htaccess</code> が届いていないか、効いていません。下の「data フォルダを守る」を見てください）</li><li><code>https://あなたのサイト/nagimanga/data/</code> を開くと、中身ではなく「Forbidden」などのエラーになること</li><li><code>https://あなたのサイト/nagimanga/admin/</code> をそのまま開くと「Not Found」になること（セットアップが済んでいる証拠です）</li></ul>
+<h3 id="4-作品を作って共有する">4. 作品を作って共有する<a class="anchor" href="#4-作品を作って共有する" aria-label="この見出しへのリンク">#</a></h3>
+<ol><li>管理画面で作品を作り、ページ画像をまとめてドラッグ＆ドロップします（ファイル名の順 001, 002, … に並びます）。EPUB がある場合は「EPUB から作る」を使います。</li><li>作品ページの「共有用のタグ」で読み方・見開きを選び、「コピー」してブログの HTML に貼ります。</li></ol>
+<pre><code class="language-html">&lt;a href=&quot;#&quot; data-nagimanga=&quot;Ab3dE5gH7jK9&quot; data-endpoint=&quot;https://example.com/nagimanga/read.php&quot;
+   data-direction=&quot;rtl&quot; data-view=&quot;auto&quot; data-cover=&quot;1&quot;&gt;第1話を読む&lt;/a&gt;
+&lt;script src=&quot;https://example.com/nagimanga/viewer/NagiManga.js?v=...&quot; defer&gt;&lt;/script&gt;</code></pre>
+<div class="table-wrap"><table><thead><tr><th>属性</th><th>値</th></tr></thead><tbody><tr><td><code>data-direction</code></td><td><code>rtl</code>（右から左）/ <code>ltr</code>（左から右）/ <code>vertical</code>（縦読み）</td></tr><tr><td><code>data-view</code></td><td><code>auto</code>（横長の画面なら見開き）/ <code>single</code>（常に 1 ページ）</td></tr><tr><td><code>data-cover</code></td><td><code>1</code>（1 ページ目は単独＝奇数ページ始まり）/ <code>0</code>（1 ページ目から見開き）</td></tr><tr><td><code>data-vertical</code></td><td>縦読みのとき: 省略（ページ漫画: 1 ページが画面の縦に収まる）/ <code>webtoon</code>（横幅いっぱい、最大 900px）</td></tr></tbody></table></div>
+<ul><li><code>&lt;script&gt;</code> の行は 1 ページに 1 回で十分です。リンクはいくつ並べても構いません。</li><li>タグの URL は、管理画面を開いているアドレスから自動で作られます。別の URL にしたいときだけ「設定 → 設置 URL」に入力してください。</li><li><strong>別のサイト（ドメイン）に埋め込むとき</strong> は、「設定 → 別のサイトに埋め込む場合」にそのサイトのアドレス（例: <code>https://blog.example.com</code>）を登録してください。</li></ul>
+<h3 id="てがろぐに載せる">てがろぐに載せる<a class="anchor" href="#てがろぐに載せる" aria-label="この見出しへのリンク">#</a></h3>
+<p>てがろぐの投稿には、ブログ用の HTML タグは使えません。代わりに、作品ページのいちばん上にある <strong>「共有リンク」</strong> を使います。</p>
+<ol><li><p>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開き、「<strong>他のスクリプトを使う：URLを指定</strong>」を選びます。</p></li><li><p>「JavaScriptのURL」欄に、NagiManga の URL を書いて保存します。管理画面の <strong>「設置用コード」</strong> に、この欄にそのまま貼れる 1 行（NagiSwipe と NagiManga の両方、キャッシュバスター付き）があります。画像の拡大表示に NagiSwipe を使っている場合は、NagiSwipe の URL の <strong>うしろに半角スペースを 1 つ入れて</strong> 続けて書きます（1 行のまま続けます）。</p>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js</code></pre>
+<p>※ URL の <code>@</code> の後ろ（<code>@93db749</code> など）は、ファイルのバージョンを表す値です。NagiSwipe が更新されると、README の値も新しくなります。新しい版を使いたいときは、ここの URL を貼り直してください（貼り直すまでは、今の版のまま表示が変わりません）。 NagiManga を更新したときも、「設置用コード」の新しい 1 行に貼り替えてください。</p></li></ol>
+<ol start="3"><li><p><strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p></li><li><p>NagiManga の管理画面で作品を開き、「共有リンク」の「コピー」を押します。</p></li><li><p>てがろぐに、リンクの文字（下の例では「第1話を読む」）を付けて投稿します。</p>
+<pre><code>[第1話を読む]https://example.com/nagimanga/read.php?nagimanga=Ab3dE5gH7jK9&amp;dir=rtl</code></pre></li></ol>
+<p>投稿の「第1話を読む」を押すと、その場で漫画が開きます。読み方や見開きの選び方も、この URL の中に入っています。</p>
+<ul><li>この URL は、RSS リーダーなど、ほかの場所で開いても大丈夫です（作品を読むためのページが開きます）。</li><li>てがろぐと NagiManga のアドレスの始まり（<code>https://〜/</code> の部分）が違う場合は、「設定 → 別のサイトに埋め込む場合」に、てがろぐのアドレスを登録してください。</li><li>HTML を書けるブログなら、今までどおり「共有用のタグ」を使ってください。</li></ul>
+<hr>
+<h2 id="機能の説明">機能の説明<a class="anchor" href="#機能の説明" aria-label="この見出しへのリンク">#</a></h2>
+<h3 id="epub-から作る">EPUB から作る<a class="anchor" href="#epub-から作る" aria-label="この見出しへのリンク">#</a></h3>
+<p>CLIP STUDIO PAINT などで書き出した <strong>漫画の EPUB</strong>（固定レイアウト＝画像のページだけのもの）を、作品一覧の「EPUB から作る」で取り込めます。</p>
+<ul><li>ページの順番・読む向き（右から左／左から右）・タイトルは EPUB の設定をそのまま使います（タイトルは入力すれば置き換えられます）。</li><li>「小容量版 EPUB（任意）」も一緒に選ぶと、同じ順番で小容量版として割り当てます。あとから作品ページの「小容量版 EPUB から割り当てる」でも追加できます。</li><li>画像は通常のアップロードと同じく、中身を確かめてから描き直して保存します。見開きをそろえるための白紙ページもそのまま残ります。</li><li>DRM（コピー防止）付きの EPUB、文章だけの EPUB は読めません。</li><li>サーバーの「アップロード上限」（<code>upload_max_filesize</code> / <code>post_max_size</code>）より大きい EPUB は取り込めません。上限は管理画面に表示されます。</li></ul>
+<h3 id="小容量版スマホ用">小容量版（スマホ用）<a class="anchor" href="#小容量版スマホ用" aria-label="この見出しへのリンク">#</a></h3>
+<p>各ページに、小さく書き出した「小容量版」を付けられます。作品ページの「ページ」欄には、アップロードする場所が 2 つあります。</p>
+<ul><li><strong>通常版（パソコン・拡大用）</strong>: いつものページ画像</li><li><strong>小容量版（スマホ用・任意）</strong>: 同じページを小さくした画像。ファイル名の順に、1 ページ目から順番に割り当てます（001 → 1 ページ目）。枚数がページ数と違うときは確認が出ます</li></ul>
+<p>ビューアーは、表示する大きさと画面の細かさから「小容量版で足りる」ときは小容量版を読み、パソコンの大きな画面や拡大したときは通常版に切り替えます（裏で読み込んでから差し替えるので、一瞬白くなることはありません）。端末の「データセーバー」がオンなら小容量版を優先します。小容量版がないページは通常版だけで表示します。</p>
+<ul><li>小容量版があるページには、作品ページの一覧で「小」の印が付きます</li><li>「小容量版をすべて外す」で外せます（通常版は残ります）</li><li>パスワード付き作品では、小容量版も鍵がないと読めません</li><li>バックアップ・復元にも含まれます</li></ul>
+<h3 id="パスワード限定公開">パスワード（限定公開）<a class="anchor" href="#パスワード限定公開" aria-label="この見出しへのリンク">#</a></h3>
+<p>作品ページの「パスワード」で設定します。読む人はリンクをクリックしたときにパスワードを入力します。</p>
+<ul><li>パスワードは <strong>ビューアーを開くたびに</strong> 入力します（正しく入力すると、開いている間だけ有効な「閲覧用の鍵」が渡され、閉じると捨てられます。鍵そのものも 2 時間で無効になります）。</li><li>パスワードを変えると、それまでの鍵はすべて無効になります。</li><li>設定したパスワードは、作品ページの「現在のパスワード」で「表示」を押すと確認できます（サーバーの秘密鍵で暗号化して保存しています。別のサーバーへ復元した場合は表示できないので、設定し直してください）。</li><li>5 回間違えると、その作品は 15 分間入力できなくなります（総当たり対策）。</li></ul>
+<h3 id="バックアップ">バックアップ<a class="anchor" href="#バックアップ" aria-label="この見出しへのリンク">#</a></h3>
+<p>「バックアップ」から、すべての作品を 1 つの ZIP にまとめてダウンロードできます。定期的にダウンロードしてパソコンなどに保存しておいてください。</p>
+<ul><li>作品（ページ画像・小容量版・並び順・タイトル・読む向き・読者向けパスワード）が入ります。作品の ID も変わらないので、ブログに貼ったタグはそのまま使えます。</li><li>管理者パスワード・ログイン URL・IP 制限などの設定と、秘密の鍵は入りません（引っ越し先ではセットアップし直します）。</li><li>復元は同じ画面から ZIP をアップロードします。ZIP の中身はすべて検査してから戻します。</li><li>サーバーの PHP に ZipArchive がない場合は、FTP で <code>data/works</code> フォルダをまるごとコピーしてください。</li></ul>
+<h3 id="更新v020-以降">更新（v0.2.0 以降）<a class="anchor" href="#更新v020-以降" aria-label="この見出しへのリンク">#</a></h3>
+<p>新しいバージョンが出ると、ログインしたときに作品一覧の上にお知らせが出ます（メニューの「更新」にも「新」の印が付きます）。「更新」画面のボタンを押すと、その場で更新できます。</p>
+<ul><li>GitHub の公式リリースから <code>nagimanga-vX.Y.Z.zip</code> をダウンロードし、GitHub が公開している確認用の値（SHA-256）と一致したときだけ使います。中身も 1 つずつ検査します。</li><li>入れ替えるのはプログラムのファイルだけです。作品・設定（<code>data</code> フォルダ）、プラグイン、<code>lib/paths.php</code> はそのままです。</li><li>入れ替える前のファイルは <code>data/update/</code> に保管され（実行できない <code>.bak</code> として）、「元に戻す」で戻せます。直近 3 回分を残します。</li><li>確認は 12 時間に 1 回までです。「更新」画面で、ログイン時の確認をオフにしたり、今すぐ確認したりできます。</li><li>サーバーから GitHub に接続できない（PHP の curl も allow_url_fopen も使えない）、ZipArchive がない、プログラムのファイルに書き込めない場合は自動で更新できません。画面の「手動で更新する」の手順（<code>data</code> フォルダ以外を上書きアップロード）で更新してください。</li><li>v0.1.0 から v0.2.0 へは、手動で更新してください（v0.1.0 には更新機能がありません）。</li></ul>
+<h3 id="設置用コード">設置用コード<a class="anchor" href="#設置用コード" aria-label="この見出しへのリンク">#</a></h3>
+<p>メニューの「設置用コード」に、ビューアーを読み込むためのコードがまとまっています。</p>
+<ul><li>ビューアーの URL（末尾の <code>?v=…</code> が <strong>キャッシュバスター</strong>。NagiManga を更新すると値が変わり、読む人のブラウザに古いビューアーが残らないようにします）</li><li>てがろぐの「JavaScriptのURL」欄にそのまま貼れる 1 行（NagiSwipe と一緒）と、てがろぐ側の設定の手順</li><li>ブログ・HTML 用の <code>&lt;script&gt;</code> タグ</li></ul>
+<p><strong>NagiManga を更新したら、この画面を開き直して、新しい値を貼り直してください。</strong></p>
+<h3 id="個別ページ共有リンクv030-以降">個別ページ（共有リンク・v0.3.0 以降）<a class="anchor" href="#個別ページ共有リンクv030-以降" aria-label="この見出しへのリンク">#</a></h3>
+<p>作品ページのいちばん上の <strong>「共有リンク」</strong>（<code>read.php?nagimanga=…</code>）を開くと、その作品を読むためのページが開き、ビューアーが自動で開きます。</p>
+<ul><li>note・アメブロ・Instagram・X など、漫画を埋め込めない場所にはこのリンクを貼ります。貼ると <strong>表紙付きのカード</strong>（OGP）で表示されます。パスワード付きの作品は表紙を出さず、NagiManga の共通の画像になります。</li><li>ページには表紙・タイトル・「読む」ボタンと、<strong>「戻る」ボタン</strong> があります。行き先は「設定 → 個別ページ」で決められます（空欄なら自動：来たページに戻ります。Instagram などのアプリから来て戻る先がわからないときは、ボタンを出しません）。</li><li>作品ページの「非公開にする」で、作品ごとに個別ページを出さないようにできます。ブログやてがろぐに埋め込んだビューアーは今までどおり読めます。</li><li>作品の ID は推測できないランダムな文字列です。すでにある作品もそのまま使えます（作り直しは不要です）。</li></ul>
+<h3 id="直リンク防止上級者向けv030-以降">直リンク防止（上級者向け・v0.3.0 以降）<a class="anchor" href="#直リンク防止上級者向けv030-以降" aria-label="この見出しへのリンク">#</a></h3>
+<p>「設定 → 上級者向けの設定 → 直リンク防止」をオンにすると、漫画の画像は「このサイト」「別のサイトに埋め込む場合に登録したサイト」「許可リストに書いたサイト」のページからしか読めなくなります。ほかのサイトに画像を貼られてサーバーの通信量が増えるのを防ぎます。初期設定はオフです。</p>
+<ul><li><code>.htaccess</code> は書き換えません（判定は read.php の中で行うので、nginx のサーバーでも使えます）。</li><li>共有リンクの個別ページと、リンクのカード用の表紙は、オンでもそのまま使えます。</li><li>許可リストはサイト単位（例: <code>https://note.com</code>）で書きます。ブラウザは、ほかのサイトからの読み込みでは URL の途中（<code>/ユーザー名/</code> など）を送らないため、途中までの一致では判定できません。</li></ul>
+<h3 id="プラグインゲストモード">プラグイン（ゲストモード）<a class="anchor" href="#プラグインゲストモード" aria-label="この見出しへのリンク">#</a></h3>
+<p><code>nagimanga/plugins/</code> フォルダに PHP のプラグインを置くと、機能を足せます（置いたファイルだけが読み込まれます）。同梱のプラグインは次の 1 つです。</p>
+<p><strong><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/plugins/guest-mode.php" class="ext"><code>plugins/guest-mode.php</code></a>（ゲスト・閲覧のみ）</strong>: デモなどで、訪問者に管理画面の中を見せたいときに使います。このファイルを <code>nagimanga/plugins/</code> にコピーすると、<code>admin/index.php?guest</code> からゲストとして入れるようになります。</p>
+<ul><li>ゲストは作品・ページ・共有タグ・試し読みを見られますが、アップロード・並べ替え・削除・パスワード・小容量版・EPUB・バックアップ・設定の変更はすべて拒否されます。設定画面（ログイン URL・IP・ログ）と読者向けパスワードは表示されません。</li><li>この制限はプラグインではなく NagiManga 本体が行っています。プラグインが決めるのは「入口を開けるか」「合言葉」「案内の文」「終了後のリンク先」だけです。</li><li>あなた自身のログイン（秘密の URL ＋ パスワード ＋ IP 制限）は今までどおりです。</li><li>ファイルを消せば入口は閉じ、中にいたゲストも締め出されます。</li></ul>
+<h3 id="困ったとき">困ったとき<a class="anchor" href="#困ったとき" aria-label="この見出しへのリンク">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>症状</th><th>対処</th></tr></thead><tbody><tr><td>セットアップ画面が「Not Found」になった（30 分過ぎた）</td><td>FTP で <code>data/install.lock</code> を削除してから開き直す</td></tr><tr><td>ログイン URL を忘れた</td><td>FTP で <code>data/config.php</code> を開き、<code>login_key</code> の値を <code>admin/index.php?k=</code> の後ろに付けて開く</td></tr><tr><td>IP アドレスが変わって締め出された</td><td>FTP で <code>data/config.php</code> の <code>allowed_ips</code> を <code>array ( )</code> にする（<code>admin/.htaccess</code> で IP 制限を書いた場合はその行も）</td></tr><tr><td>ログインを何度も間違えた</td><td>15 分待つ（その間はログイン画面も「Not Found」になります）</td></tr><tr><td>管理画面に「data フォルダがインターネットから見える状態です」と出る</td><td>下の「data フォルダを守る」を参照</td></tr><tr><td>EPUB が取り込めない</td><td>DRM 付き・文章だけの EPUB ではないか、アップロード上限（管理画面に表示）を超えていないかを確認</td></tr></tbody></table></div>
+<h3 id="data-フォルダを守る">data フォルダを守る<a class="anchor" href="#data-フォルダを守る" aria-label="この見出しへのリンク">#</a></h3>
+<p><code>data</code> フォルダは <code>.htaccess</code> で外から見えないようにしています。<code>.htaccess</code> が効かないサーバー（nginx など）では、次のどちらかをしてください。</p>
+<ol><li><p><strong>おすすめ:</strong> <code>data</code> フォルダを公開フォルダの外（例: <code>/home/you/nagimanga-data</code>）へ移し、<code>lib/paths.php</code> を作って場所を書く</p>
+<pre><code class="language-php">&lt;?php return &#x27;/home/you/nagimanga-data&#x27;;</code></pre></li></ol>
+<ol start="2"><li>nginx なら <code>location ~ /nagimanga/(data|lib|plugins)/ { deny all; }</code> を設定する</li></ol>
+<p>保存フォルダの名前は秘密の鍵から作りますが、暗号化ではありません。<code>.htaccess</code> が効かず画像の実パスが判明した場合は、画像へ直接アクセスできてしまいます。保存先を公開フォルダの外へ移すか、サーバー側でアクセスを拒否してください。</p>
+<ul><li>設定ファイルは PHP なので、中身は表示されません。</li><li>作品フォルダの名前は秘密の鍵から作ってあり、公開 ID からは推測できません。</li><li>各フォルダには空の <code>index.html</code> を置いてあり、中身の一覧は表示されません。</li></ul>
+<p>LOGの内部記録は直接開くと404になるPHP形式です。静的な画像の保護には、上記の保存先・サーバー設定が必要です。</p>
+<h3 id="管理画面の-ip-制限をさらに固くする任意">管理画面の IP 制限をさらに固くする（任意）<a class="anchor" href="#管理画面の-ip-制限をさらに固くする任意" aria-label="この見出しへのリンク">#</a></h3>
+<p><code>admin/.htaccess</code> の IP 制限の行の <code>#</code> を外して、自分の IP アドレスを書きます。管理画面の設定の IP 制限と二重に守られます。</p>
+<hr>
+<h2 id="php-なしftp-だけで使う">PHP なし（FTP だけ）で使う<a class="anchor" href="#php-なしftp-だけで使う" aria-label="この見出しへのリンク">#</a></h2>
+<ol><li><code>server/viewer/NagiManga.js</code> と <code>NagiManga.css</code> を同じフォルダに置きます。</li><li><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/tools/manifest-maker.html" class="ext"><code>tools/manifest-maker.html</code></a> をブラウザで開き、ページ画像を選んで <code>manifest.json</code> を作ります（画像はどこにも送信されません）。</li><li><code>manifest.json</code> と画像をサーバーに置き、ページに次のタグを貼ります。</li></ol>
+<pre><code class="language-html">&lt;a href=&quot;#&quot; data-nagimanga-manifest=&quot;/manga/ep1/manifest.json&quot; data-direction=&quot;rtl&quot;&gt;第1話を読む&lt;/a&gt;
+&lt;script src=&quot;/manga/NagiManga.js&quot; defer&gt;&lt;/script&gt;</code></pre>
+<p><code>manifest.json</code> の中の画像の場所は、<code>manifest.json</code> の場所から見た相対パス（または完全な URL）です。</p>
+<pre><code class="language-json">{ &quot;title&quot;: &quot;第1話&quot;, &quot;direction&quot;: &quot;rtl&quot;, &quot;pages&quot;: [ { &quot;src&quot;: &quot;001.jpg&quot;, &quot;w&quot;: 1200, &quot;h&quot;: 1700 } ] }</code></pre>
+<hr>
+<h2 id="セキュリティの考え方">セキュリティの考え方<a class="anchor" href="#セキュリティの考え方" aria-label="この見出しへのリンク">#</a></h2>
+<ul><li><strong>公開側は読み取り専用。</strong> <code>read.php</code> ができるのは「作品のページ一覧」「パスワードの確認」「画像を返す」だけです。おかしな要求にはすべて同じ「Not Found」を返し、何があるかを教えません。</li><li><strong>管理画面は 5 重の鍵。</strong> IP 制限 → 秘密のログイン URL → パスワード（5 回失敗でロック。全体でも 1 時間 40 回まで）→ ブラウザに結び付いたセッション（最後のログインから 30 日、設定で 1 年まで）→ すべての操作に CSRF 対策。</li><li><strong>アップロードされた画像は必ず描き直す。</strong> ファイル名ではなく中身で画像かどうかを判定し、GD で読み込んで新しいファイルに書き出します。画像に仕込まれたプログラムや撮影場所などの情報は残りません。ファイル名もこちらで付け直します。SVG は受け付けません。EPUB やバックアップの ZIP も、中身を 1 つずつ検査してから使います。</li><li><strong>画像の保存フォルダではプログラムが動かない。</strong> <code>data</code> は外から見えず、保存するのは <code>.webp</code> / <code>.jpg</code> だけです。</li><li><strong>エラー内容を画面に出さない。</strong> サーバーのパスなどが漏れないようにしています。記録は <code>data/logs/security.log</code> に残り、管理画面の設定ページで見られます。</li></ul>
+<h3 id="攻撃テスト">攻撃テスト<a class="anchor" href="#攻撃テスト" aria-label="この見出しへのリンク">#</a></h3>
+<p><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/dev/attack_test.py" class="ext"><code>dev/attack_test.py</code></a> で、通常の動作確認と攻撃の再現をまとめて実行できます。Python 3 と PHP 8.1 以上（GD・fileinfo・zip・mbstring・sodium または openssl）があれば、追加のインストールは不要です。LOGの確認は <a href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/dev/log_test.py" class="ext"><code>dev/log_test.py</code></a> で実行できます。</p>
+<pre><code class="language-bash">python dev/attack_test.py</code></pre>
+<p>主な内容: 画像に偽装した PHP、<code>.htaccess</code> / SVG / HTML のアップロード、ピクセル数の爆弾、<code>../</code> によるフォルダの抜け出し、ZIP スリップと ZIP 爆弾、悪意のある EPUB（XXE・DRM・本の外を指すパス）、CSRF、XSS、閲覧用の鍵の偽造・改ざん・期限切れ・使い回し、総当たり（<code>X-Forwarded-For</code> の偽装を含む）、IP 制限の回避、おかしな Host ヘッダー、ゲストによる変更（19 種類）、<code>.htaccess</code> が効かないサーバーでの情報漏れ。結果は <code>dev/results/attack-report.md</code> に書き出されます。</p>
+<h2 id="開発">開発<a class="anchor" href="#開発" aria-label="この見出しへのリンク">#</a></h2>
+<pre><code class="language-bash">dev\serve.cmd              # http://127.0.0.1:5190 （データは dev/data）
+python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html を作る
+python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る</code></pre>
+<p>README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: <code>…/NagiSwipe@93db749/NagiSwipe-main.js</code>）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。<code>cp scripts/post-commit.sh .git/hooks/post-commit</code> でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、<a href="index.html">ドキュメントサイト</a> のページ（<code>python site/build.py</code>）も作り直してコミットします（手動なら <code>python scripts/cachebust.py README.md manga/README.md</code> のあと <code>python site/build.py</code>）。</p>
+<p>リリースするときは、<code>lib/bootstrap.php</code> の <code>NM_VERSION</code> と <code>viewer/NagiManga.js</code> の <code>VERSION</code> を同じ番号に上げてから <code>dev/build_release.py</code> で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの <code>nagimanga-vX.Y.Z.zip</code>（中身は <code>nagimanga/</code> フォルダ）を見て更新を知らせます。</p>
+<h2 id="ライセンス">ライセンス<a class="anchor" href="#ライセンス" aria-label="この見出しへのリンク">#</a></h2>
+<p><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/LICENSE" class="ext">MIT License</a> (c) 2026 Lichiphen</p>
+</div>
+</article>
+<nav class="pager" aria-label="ページ送り"><a class="pager-prev" href="nagiswipe.html"><span>前へ</span>NagiSwipe</a><a class="pager-next" href="nagilog.html"><span>次へ</span>NagiLog</a></nav>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/README.md">このページの元の文書（GitHub）</a></p></footer>
+</main>
+</div>
+<dialog class="menu" id="menu" aria-label="目次">
+<div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+<div class="menu-body">
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item is-current"><a class="nav-link" href="nagimanga.html" aria-current="page"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a><ol class="nav-toc"><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#できること" data-id="できること">できること</a></li><li><a href="#2-つの使い方" data-id="2-つの使い方">2 つの使い方</a></li><li><a href="#管理画面phpを使う" data-id="管理画面phpを使う">管理画面（PHP）を使う</a><ol><li><a href="#1-設置" data-id="1-設置">1. 設置</a></li><li><a href="#2-セットアップ30-分以内に" data-id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）</a></li><li><a href="#3-設置したら確認すること" data-id="3-設置したら確認すること">3. 設置したら確認すること</a></li><li><a href="#4-作品を作って共有する" data-id="4-作品を作って共有する">4. 作品を作って共有する</a></li><li><a href="#てがろぐに載せる" data-id="てがろぐに載せる">てがろぐに載せる</a></li></ol></li><li><a href="#機能の説明" data-id="機能の説明">機能の説明</a><ol><li><a href="#epub-から作る" data-id="epub-から作る">EPUB から作る</a></li><li><a href="#小容量版スマホ用" data-id="小容量版スマホ用">小容量版（スマホ用）</a></li><li><a href="#パスワード限定公開" data-id="パスワード限定公開">パスワード（限定公開）</a></li><li><a href="#バックアップ" data-id="バックアップ">バックアップ</a></li><li><a href="#更新v020-以降" data-id="更新v020-以降">更新（v0.2.0 以降）</a></li><li><a href="#設置用コード" data-id="設置用コード">設置用コード</a></li><li><a href="#個別ページ共有リンクv030-以降" data-id="個別ページ共有リンクv030-以降">個別ページ（共有リンク・v0.3.0 以降）</a></li><li><a href="#直リンク防止上級者向けv030-以降" data-id="直リンク防止上級者向けv030-以降">直リンク防止（上級者向け・v0.3.0 以降）</a></li><li><a href="#プラグインゲストモード" data-id="プラグインゲストモード">プラグイン（ゲストモード）</a></li><li><a href="#困ったとき" data-id="困ったとき">困ったとき</a></li><li><a href="#data-フォルダを守る" data-id="data-フォルダを守る">data フォルダを守る</a></li><li><a href="#管理画面の-ip-制限をさらに固くする任意" data-id="管理画面の-ip-制限をさらに固くする任意">管理画面の IP 制限をさらに固くする（任意）</a></li></ol></li><li><a href="#php-なしftp-だけで使う" data-id="php-なしftp-だけで使う">PHP なし（FTP だけ）で使う</a></li><li><a href="#セキュリティの考え方" data-id="セキュリティの考え方">セキュリティの考え方</a><ol><li><a href="#攻撃テスト" data-id="攻撃テスト">攻撃テスト</a></li></ol></li><li><a href="#開発" data-id="開発">開発</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</div>
+</dialog>
+</body>
+</html>

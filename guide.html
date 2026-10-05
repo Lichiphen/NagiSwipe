@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiManga の手引き（開発者ではない人のために） | NagiSeries</title>
+<meta name="description" content="NagiManga を使うかどうか決めたい人、長く使い続けたい人のための手引き。">
+<link rel="canonical" href="https://nagiswipe.pages.dev/guide.html">
+<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NagiSeries">
+<meta property="og:title" content="NagiManga の手引き（開発者ではない人のために） | NagiSeries">
+<meta property="og:description" content="NagiManga を使うかどうか決めたい人、長く使い続けたい人のための手引き。">
+<meta property="og:url" content="https://nagiswipe.pages.dev/guide.html">
+<meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagimanga-ogp.png?v=9cf836eea0">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="site/favicon.svg?v=96c65b80dd" type="image/svg+xml">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=be7805759d">
+<link rel="stylesheet" href="site/site.css?v=ec433c2c1d">
+<script src="NagiSwipe-main.js?v=dcdc1fff19" defer></script>
+<script src="site/site.js?v=c5210cda67" data-index="site/search.json?v=21cc902973" defer></script>
+</head>
+<body class="page-guide">
+<a class="skip" href="#main">本文へ移動</a>
+<header class="topbar">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>目次</span></button>
+</header>
+<div class="layout">
+<aside class="sidebar" aria-label="サイドバー">
+<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item is-current"><a class="nav-link" href="guide.html" aria-current="page"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a><ol class="nav-toc"><li><a href="#1-nagimanga-とは" data-id="1-nagimanga-とは">1. NagiManga とは</a></li><li><a href="#2-向いている人向いていない人" data-id="2-向いている人向いていない人">2. 向いている人・向いていない人</a></li><li><a href="#3-メリット" data-id="3-メリット">3. メリット</a></li><li><a href="#4-デメリットと注意点正直に" data-id="4-デメリットと注意点正直に">4. デメリットと注意点（正直に）</a></li><li><a href="#5-10-年使い続けるために" data-id="5-10-年使い続けるために">5. 10 年使い続けるために</a></li><li><a href="#6-使っている技術" data-id="6-使っている技術">6. 使っている技術</a><ol><li><a href="#読者が見る画面ビューアー" data-id="読者が見る画面ビューアー">読者が見る画面（ビューアー）</a></li><li><a href="#サーバー側管理画面と読者向けの窓口" data-id="サーバー側管理画面と読者向けの窓口">サーバー側（管理画面と、読者向けの窓口）</a></li><li><a href="#開発検査用サーバーには置かないもの" data-id="開発検査用サーバーには置かないもの">開発・検査用（サーバーには置かないもの）</a></li></ol></li><li><a href="#7-データの形nagimanga-が使えなくなったときのために" data-id="7-データの形nagimanga-が使えなくなったときのために">7. データの形（NagiManga が使えなくなったときのために）</a></li><li><a href="#8-ことばの説明" data-id="8-ことばの説明">8. ことばの説明</a></li></ol></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</aside>
+<main id="main" class="main">
+<article class="doc">
+<p class="crumbs"><a href="index.html">NagiSeries</a><span aria-hidden="true">/</span>手引き</p>
+<h1 class="doc-title">NagiManga の手引き（開発者ではない人のために）</h1>
+<div class="lead"><p>この文書は、NagiManga を使うかどうか決めたい人、すでに使っていて「これからも使い続けて大丈夫か」を知りたい人のためのものです。専門用語はできるだけ避け、使うときは説明を添えています。数年後、あるいは 10 年後に読み返しても判断の材料になるように、特定の年やサービスに頼らない書き方をしています。</p>
+<p>設置の手順は <a href="nagimanga.html">../README.md</a> にあります。</p>
+<hr></div>
+<nav class="toc-inline" aria-labelledby="toc-title-guide"><p class="toc-title" id="toc-title-guide">このページの目次</p><ol class="toc-list"><li><a href="#1-nagimanga-とは" data-id="1-nagimanga-とは">1. NagiManga とは</a></li><li><a href="#2-向いている人向いていない人" data-id="2-向いている人向いていない人">2. 向いている人・向いていない人</a></li><li><a href="#3-メリット" data-id="3-メリット">3. メリット</a></li><li><a href="#4-デメリットと注意点正直に" data-id="4-デメリットと注意点正直に">4. デメリットと注意点（正直に）</a></li><li><a href="#5-10-年使い続けるために" data-id="5-10-年使い続けるために">5. 10 年使い続けるために</a></li><li><a href="#6-使っている技術" data-id="6-使っている技術">6. 使っている技術</a><ol><li><a href="#読者が見る画面ビューアー" data-id="読者が見る画面ビューアー">読者が見る画面（ビューアー）</a></li><li><a href="#サーバー側管理画面と読者向けの窓口" data-id="サーバー側管理画面と読者向けの窓口">サーバー側（管理画面と、読者向けの窓口）</a></li><li><a href="#開発検査用サーバーには置かないもの" data-id="開発検査用サーバーには置かないもの">開発・検査用（サーバーには置かないもの）</a></li></ol></li><li><a href="#7-データの形nagimanga-が使えなくなったときのために" data-id="7-データの形nagimanga-が使えなくなったときのために">7. データの形（NagiManga が使えなくなったときのために）</a></li><li><a href="#8-ことばの説明" data-id="8-ことばの説明">8. ことばの説明</a></li></ol></nav>
+<div class="doc-body">
+<h2 id="1-nagimanga-とは">1. NagiManga とは<a class="anchor" href="#1-nagimanga-とは" aria-label="この見出しへのリンク">#</a></h2>
+<p>自分のウェブサイトやブログに、<strong>漫画を読むための画面（ビューアー）</strong> を付け足す道具です。</p>
+<ul><li>読者は、記事の中のリンクをクリックするだけで、画面いっぱいに漫画が開きます。アプリのインストールや会員登録はいりません。</li><li>作者は、管理画面に画像をドラッグ＆ドロップして、表示された「タグ」（短い HTML の文字列）をブログに貼るだけです。</li><li>パスワードを付けて、知っている人だけが読めるようにもできます。</li></ul>
+<h2 id="2-向いている人向いていない人">2. 向いている人・向いていない人<a class="anchor" href="#2-向いている人向いていない人" aria-label="この見出しへのリンク">#</a></h2>
+<p><strong>向いている人</strong></p>
+<ul><li>自分のサイトで、自分の漫画を自分の管理のもとに公開したい人</li><li>漫画投稿サービスの規約変更や閉鎖に左右されたくない人</li><li>広告や追跡のない、静かな読書環境を読者に提供したい人</li><li>支援者や仲間など、限られた人にだけ読んでもらいたい作品がある人</li></ul>
+<p><strong>向いていない人</strong></p>
+<ul><li>サーバーを借りる・ファイルを置く、といった作業をまったくしたくない人（投稿サービスのほうが楽です）</li><li>閲覧数の集計、コメント、「いいね」、販売・課金などが必要な人（NagiManga にはありません。理由は 4 章）</li><li>画像を絶対に保存させたくない人（ウェブで見せる以上、完全には防げません。4 章）</li></ul>
+<h2 id="3-メリット">3. メリット<a class="anchor" href="#3-メリット" aria-label="この見出しへのリンク">#</a></h2>
+<div class="table-wrap"><table><thead><tr><th>メリット</th><th>どういうことか</th></tr></thead><tbody><tr><td><strong>自分の場所に置ける</strong></td><td>作品は自分が借りたサーバーの中にあります。サービスが終わっても、規約が変わっても、作品が消えることはありません。</td></tr><tr><td><strong>EPUB からそのまま作れる</strong></td><td>CLIP STUDIO PAINT などで書き出した漫画の EPUB を選ぶだけで、ページの順番・読む向き・タイトルごと作品になります。画像を 1 枚ずつ書き出す必要はありません。</td></tr><tr><td><strong>スマホに優しい</strong></td><td>小さく書き出した「小容量版」を一緒に登録しておくと、スマホでは軽い画像、パソコンや拡大したときはきれいな画像を自動で読み分けます。通信量が半分ほどで済みます。</td></tr><tr><td><strong>読者の手間がない</strong></td><td>リンクを押すだけで開きます。スマホでもパソコンでも、指・マウス・キーボードで自然に読めます。</td></tr><tr><td><strong>漫画らしく読める</strong></td><td>右から左へのページ送り、見開き、表紙の単独表示に対応しています。縦読みは、1 ページずつ画面に収める「ページ漫画」と、横幅いっぱいの「ウェブトゥーン」を選べます。前回の続きから開きます。</td></tr><tr><td><strong>データベースがいらない</strong></td><td>データベースは、使い方を誤ると壊れたり、サーバー移転が難しくなったりするものです。NagiManga は画像と小さな文字ファイル（JSON）だけで動くので、フォルダをコピーするだけで移転やバックアップができます。</td></tr><tr><td><strong>中身が読める形で保存される</strong></td><td>作品の情報は、メモ帳でも開ける JSON というファイルに書かれています。NagiManga が使えなくなっても、画像と並び順は取り出せます（7 章）。</td></tr><tr><td><strong>外部の部品を使っていない</strong></td><td>他人が作ったライブラリ（部品）を一切使っていません。部品の作者が更新をやめたり、部品に欠陥が見つかったりしても、影響を受けません。</td></tr><tr><td><strong>守りを何重にもしている</strong></td><td>管理画面は、場所（IP アドレス）・秘密の URL・パスワードなど 5 段の鍵で守られ、どれか 1 つでも合わなければ「存在しない」ふりをします。アップロードされた画像は必ず描き直すので、画像に仕込まれた悪いプログラムは残りません。132 種類の動作確認と攻撃の再現テストで確かめています。</td></tr><tr><td><strong>デモを見せられる</strong></td><td>プラグインを 1 つ置くと、訪問者に管理画面を「見るだけ」で公開できます。変更や削除は本体の側でしっかり止めています。</td></tr><tr><td><strong>無料で、改造も自由</strong></td><td>MIT ライセンスです。商用でも個人でも使え、中身を読んで改造することもできます。</td></tr></tbody></table></div>
+<h2 id="4-デメリットと注意点正直に">4. デメリットと注意点（正直に）<a class="anchor" href="#4-デメリットと注意点正直に" aria-label="この見出しへのリンク">#</a></h2>
+<div class="table-wrap"><table><thead><tr><th>注意点</th><th>どういうことか・どうすればよいか</th></tr></thead><tbody><tr><td><strong>サーバーが必要</strong></td><td>PHP が動くレンタルサーバーなどが必要です（PHP なしの使い方もありますが、パスワード機能は使えません）。サーバー代はかかります。</td></tr><tr><td><strong>画像は描き直される</strong></td><td>安全のため、アップロードした画像はすべて WebP という形式で描き直して保存します。見た目の差はほとんどありませんが、元のファイルとまったく同じではありません。<strong>元の画像は必ず自分の手元にも残しておいてください。</strong> GIF アニメは 1 枚目だけになります。</td></tr><tr><td><strong>パスワードは「鍵」であって「金庫」ではない</strong></td><td>パスワードはビューアーを開くたびに聞かれます。それでも、パスワードを知っている人は、読んでいる画面を保存したりスクリーンショットを撮ったりできます。ウェブで見せる以上、これを完全に防ぐ方法はありません。「知らない人に見つからない・読まれない」ための仕組みだと考えてください。</td></tr><tr><td><strong>機能はわざと少ない</strong></td><td>閲覧数、コメント、販売などはありません。これらを入れるとデータベースや外部サービスが必要になり、壊れやすく、狙われやすくなるからです。必要なら別の道具と組み合わせてください。</td></tr><tr><td><strong>バックアップは自分で</strong></td><td>自動でどこかに保存してくれる仕組みはありません。管理画面の「バックアップ」から、ときどき ZIP をダウンロードしてください。</td></tr><tr><td><strong>サーバーの手入れは必要</strong></td><td>PHP には「サポート期限」があり、古い PHP を使い続けると危険です。レンタルサーバーの管理画面で、PHP を新しい版に上げてください（5 章）。</td></tr><tr><td><strong>家の回線の IP アドレスは変わることがある</strong></td><td>管理画面を「自分の IP アドレスからだけ」に制限していると、回線の都合で締め出されることがあります。直し方は README の「困ったとき」にあります。</td></tr><tr><td><strong>一人で作られている</strong></td><td>大きな会社の製品ではありません。問題が見つかっても、すぐに直るとは限りません。そのぶん、外部の部品に頼らず、中身を読めば分かる作りにしてあります。</td></tr></tbody></table></div>
+<h2 id="5-10-年使い続けるために">5. 10 年使い続けるために<a class="anchor" href="#5-10-年使い続けるために" aria-label="この見出しへのリンク">#</a></h2>
+<p>年に 1〜2 回、次のことを確認してください。</p>
+<ol><li><strong>バックアップを取る。</strong> 管理画面の「バックアップ → すべてをダウンロード」。手元の元画像と一緒に保管します。</li><li><strong>PHP の版を確認する。</strong> レンタルサーバーの管理画面で、PHP がサポート期間内の版になっているか確認します。NagiManga は PHP 8.1 以降を前提に作られています。PHP の大きな版上げのあとは、管理画面にログインし、作品が開けるか確かめてください。</li><li><strong>管理画面の記録を見る。</strong> 「設定 → セキュリティログ」に、見覚えのないログイン失敗が大量に並んでいないか見ます。多ければ、ログイン URL の変更（設定画面のボタン一つ）とパスワードの変更をします。</li><li><strong>サーバーを引っ越すとき。</strong> 新しいサーバーに NagiManga を置き直してセットアップし、バックアップ ZIP を「復元」します。作品の ID はそのまま引き継がれますが、ドメインや置き場所が変わった場合は共有タグの URL も変わるので、ブログに貼ったタグを貼り直してください（新しいサーバーの管理画面では、新しいアドレスのタグが自動で作られます）。</li></ol>
+<p>ブラウザは年々変わりますが、NagiManga が使っているのは、どのブラウザにも昔から備わっている標準の機能だけです（6 章）。特定の会社のサービスや、将来なくなりそうな仕組みには頼っていません。</p>
+<h2 id="6-使っている技術">6. 使っている技術<a class="anchor" href="#6-使っている技術" aria-label="この見出しへのリンク">#</a></h2>
+<p>「何を使っているか」「何のためか」「なぜ選んだか」を並べます。専門的な名前は、将来調べるときの手がかりとして残しています。</p>
+<h3 id="読者が見る画面ビューアー">読者が見る画面（ビューアー）<a class="anchor" href="#読者が見る画面ビューアー" aria-label="この見出しへのリンク">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>技術</th><th>何のため</th><th>選んだ理由</th></tr></thead><tbody><tr><td>HTML / CSS / JavaScript（標準機能のみ）</td><td>ビューアー全体</td><td>すべてのブラウザが理解する、ウェブの基本の言葉です。追加の部品（ライブラリ）は使っていません。</td></tr><tr><td>Pointer Events</td><td>指・マウス・ペンの操作をまとめて扱う</td><td>ブラウザの標準機能。タッチとマウスを同じ仕組みで扱えます。</td></tr><tr><td>fetch / JSON</td><td>作品のページ一覧を取りに行く</td><td>ブラウザの標準機能。</td></tr><tr><td>History API</td><td>ブラウザの「戻る」で閉じる</td><td>ブラウザの標準機能。</td></tr><tr><td>localStorage / sessionStorage</td><td>しおり（続きのページ）と、パスワードを入れたあとの閲覧用の鍵を覚える</td><td>ブラウザの標準機能。読者の端末の中だけに保存され、サーバーには送りません。</td></tr><tr><td>CSS の <code>env(safe-area-inset-*)</code></td><td>スマホの画面の切り欠きやホームバーを避ける</td><td>ブラウザの標準機能。</td></tr><tr><td>WebP 画像</td><td>ページ画像</td><td>画質のわりにファイルが小さく、主要なブラウザがすべて対応しています。</td></tr></tbody></table></div>
+<h3 id="サーバー側管理画面と読者向けの窓口">サーバー側（管理画面と、読者向けの窓口）<a class="anchor" href="#サーバー側管理画面と読者向けの窓口" aria-label="この見出しへのリンク">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>技術</th><th>何のため</th><th>選んだ理由</th></tr></thead><tbody><tr><td>PHP 8.1 以降</td><td>管理画面と <code>read.php</code></td><td>ほとんどのレンタルサーバーで最初から使えます。</td></tr><tr><td>GD（PHP に付属の画像処理）</td><td>画像の描き直し、縮小画像の作成</td><td>PHP に標準で付いてくる部品です。</td></tr><tr><td>fileinfo（PHP に付属）</td><td>ファイルの「中身」で画像かどうかを判定する</td><td>名前を偽った危険なファイルを見分けるため。</td></tr><tr><td>ZipArchive（PHP に付属）</td><td>バックアップと復元</td><td>ZIP はどのパソコンでも開ける、長く使われている形式です。</td></tr><tr><td>JSON ファイル</td><td>作品の情報（題名・並び順など）の保存</td><td>データベースを使わず、メモ帳でも読める形にするため。</td></tr><tr><td><code>password_hash</code>（PHP に付属）</td><td>パスワードの保存・照合</td><td>パスワードそのものではなく「元に戻せない形」に変えて保存します。</td></tr><tr><td>sodium または openssl（PHP に付属）</td><td>読者向けパスワードを管理画面で見られるようにする</td><td>平文では保存せず、サーバーの秘密の鍵で暗号化します。どちらもない場合は、見られないだけで他は動きます。</td></tr><tr><td>HMAC-SHA256</td><td>閲覧用の鍵、作品フォルダの名前づけ</td><td>秘密の鍵を知らない人には作れない・当てられない印を作る、広く使われている方法です。</td></tr><tr><td><code>.htaccess</code>（Apache）</td><td><code>data</code> などのフォルダを外から見えなくする</td><td>多くのレンタルサーバーで使えます。効かないサーバー向けの対策も README に書いてあります。</td></tr></tbody></table></div>
+<h3 id="開発検査用サーバーには置かないもの">開発・検査用（サーバーには置かないもの）<a class="anchor" href="#開発検査用サーバーには置かないもの" aria-label="この見出しへのリンク">#</a></h3>
+<div class="table-wrap"><table><thead><tr><th>技術</th><th>何のため</th></tr></thead><tbody><tr><td>Python 3（標準機能のみ）</td><td>132 種類の攻撃と動作をまとめて試すテスト（<code>dev/attack_test.py</code>）</td></tr><tr><td>PHP の開発用サーバー</td><td>手元のパソコンでの動作確認（<code>dev/serve.cmd</code>）</td></tr></tbody></table></div>
+<h2 id="7-データの形nagimanga-が使えなくなったときのために">7. データの形（NagiManga が使えなくなったときのために）<a class="anchor" href="#7-データの形nagimanga-が使えなくなったときのために" aria-label="この見出しへのリンク">#</a></h2>
+<p>NagiManga が将来動かなくなっても、作品は取り出せます。バックアップ ZIP、またはサーバーの <code>data/works</code> フォルダの中は次のようになっています。</p>
+<pre><code>works/
+└── （作品ごとのフォルダ）/
+    ├── work.json          作品の情報（メモ帳で開けます）
+    └── pages/
+        ├── p0001_xxxxxxxx.webp   ページ画像
+        ├── t_p0001_xxxxxxxx.webp 縮小画像（一覧用）
+        └── …</code></pre>
+<p><code>work.json</code> の中身の例です。</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;Ab3dE5gH7jK9&quot;,
+  &quot;title&quot;: &quot;第1話&quot;,
+  &quot;series&quot;: &quot;ねこの日々&quot;,
+  &quot;direction&quot;: &quot;rtl&quot;,
+  &quot;pages&quot;: [
+    { &quot;f&quot;: &quot;p0001_1a2b3c4d.webp&quot;, &quot;w&quot;: 1200, &quot;h&quot;: 1700, &quot;o&quot;: &quot;001.png&quot; },
+    { &quot;f&quot;: &quot;p0002_5e6f7a8b.webp&quot;, &quot;w&quot;: 1200, &quot;h&quot;: 1700, &quot;o&quot;: &quot;002.png&quot; }
+  ]
+}</code></pre>
+<ul><li><code>pages</code> に書かれた順が、ページの順番です。</li><li><code>f</code> が保存されている画像の名前、<code>o</code> がアップロードしたときの元の名前、<code>w</code> と <code>h</code> が幅と高さです。</li><li>小容量版があるページには <code>&quot;m&quot;: { &quot;f&quot;: &quot;…&quot;, &quot;w&quot;: 1200, &quot;h&quot;: 1683 }</code> が付きます（<code>f</code> が小容量版の画像の名前）。</li><li><code>direction</code> は読む向きです（<code>rtl</code> = 右から左、<code>ltr</code> = 左から右、<code>vertical</code> = 縦読み）。</li><li><code>.webp</code> の画像は、今のパソコンならたいていそのまま開けます。</li></ul>
+<h2 id="8-ことばの説明">8. ことばの説明<a class="anchor" href="#8-ことばの説明" aria-label="この見出しへのリンク">#</a></h2>
+<div class="table-wrap"><table><thead><tr><th>ことば</th><th>意味</th></tr></thead><tbody><tr><td>サーバー</td><td>ウェブサイトのファイルを置いておく、インターネットにつながったコンピューター。多くの人はレンタルサーバーを借ります。</td></tr><tr><td>FTP</td><td>パソコンからサーバーへファイルを送る方法。</td></tr><tr><td>PHP</td><td>サーバーの上で動くプログラムの言葉。</td></tr><tr><td>IP アドレス</td><td>インターネット上の住所のような番号。</td></tr><tr><td>タグ</td><td>ウェブページの部品を表す短い文字列。NagiManga では、ブログに貼るリンクのこと。</td></tr><tr><td>JSON</td><td>情報を書き留めるための、人にもコンピューターにも読める書き方。</td></tr><tr><td>WebP</td><td>画像ファイルの形式の一つ。</td></tr><tr><td>ライブラリ</td><td>他の人が作ったプログラムの部品。</td></tr><tr><td>ライセンス（MIT）</td><td>使い方の決まり。MIT は「著作権表示を残せば、自由に使ってよい」という、ゆるい決まりです。</td></tr></tbody></table></div>
+</div>
+</article>
+<nav class="pager" aria-label="ページ送り"><a class="pager-prev" href="nagilog.html"><span>前へ</span>NagiLog</a><span></span></nav>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/manga/docs/overview.md">このページの元の文書（GitHub）</a></p></footer>
+</main>
+</div>
+<dialog class="menu" id="menu" aria-label="目次">
+<div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+<div class="menu-body">
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
+<nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.html"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item is-current"><a class="nav-link" href="guide.html" aria-current="page"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a><ol class="nav-toc"><li><a href="#1-nagimanga-とは" data-id="1-nagimanga-とは">1. NagiManga とは</a></li><li><a href="#2-向いている人向いていない人" data-id="2-向いている人向いていない人">2. 向いている人・向いていない人</a></li><li><a href="#3-メリット" data-id="3-メリット">3. メリット</a></li><li><a href="#4-デメリットと注意点正直に" data-id="4-デメリットと注意点正直に">4. デメリットと注意点（正直に）</a></li><li><a href="#5-10-年使い続けるために" data-id="5-10-年使い続けるために">5. 10 年使い続けるために</a></li><li><a href="#6-使っている技術" data-id="6-使っている技術">6. 使っている技術</a><ol><li><a href="#読者が見る画面ビューアー" data-id="読者が見る画面ビューアー">読者が見る画面（ビューアー）</a></li><li><a href="#サーバー側管理画面と読者向けの窓口" data-id="サーバー側管理画面と読者向けの窓口">サーバー側（管理画面と、読者向けの窓口）</a></li><li><a href="#開発検査用サーバーには置かないもの" data-id="開発検査用サーバーには置かないもの">開発・検査用（サーバーには置かないもの）</a></li></ol></li><li><a href="#7-データの形nagimanga-が使えなくなったときのために" data-id="7-データの形nagimanga-が使えなくなったときのために">7. データの形（NagiManga が使えなくなったときのために）</a></li><li><a href="#8-ことばの説明" data-id="8-ことばの説明">8. ことばの説明</a></li></ol></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+</div>
+</dialog>
+</body>
+</html>

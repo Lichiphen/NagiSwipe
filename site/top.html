@@ -1,0 +1,85 @@
+<!-- lead -->
+<p>NagiSeries は、個人サイトのための小さな道具のシリーズです。画像を大きく見せる <strong>NagiSwipe</strong>、漫画を読んでもらう <strong>NagiManga</strong>、文章・画像・漫画を投稿できる <strong>NagiLog</strong> の 3 つがあります。どれもデータベースや外部サービスを使わず、自分のサイトに置くだけで動きます。</p>
+<div class="hero-links">
+<a class="btn btn-primary" href="nagiswipe.html#導入方法">NagiSwipe を使う</a>
+<a class="btn" href="nagimanga.html#管理画面phpを使う">NagiManga・NagiLog を設置する</a>
+<a class="btn ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a>
+</div>
+<!-- /lead -->
+
+<h2 id="3-つのツール">3 つのツール<a class="anchor" href="#3-つのツール" aria-label="この見出しへのリンク">#</a></h2>
+
+<div class="cards">
+<section class="card">
+<a class="card-img" href="nagiswipe.html" tabindex="-1" aria-hidden="true"><img src="{{asset:img/ogp/nagiswipe-ogp.svg}}" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiSwipe</h3>
+<p class="card-kind">画像ポップアップ・ギャラリー</p>
+<ul>
+<li>JS と CSS を読み込むだけで、ページの画像リンクを自動でギャラリーにします</li>
+<li>スワイプ、ピンチズーム、ダブルタップ、キャプション</li>
+<li>てがろぐは管理画面の設定だけで使えます</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagiswipe.html">ドキュメント</a><a class="btn" href="demo.html">デモ</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagimanga.html" tabindex="-1" aria-hidden="true"><img src="{{asset:img/ogp/nagimanga-ogp.svg}}" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiManga</h3>
+<p class="card-kind">漫画ビューアーと管理画面</p>
+<ul>
+<li>タグを 1 つ貼るだけで、クリックすると漫画ビューアーが開きます</li>
+<li>右から左・見開き・縦読み（ページ漫画／ウェブトゥーン）</li>
+<li>EPUB からの取り込み、パスワード付きの限定公開、ZIP でのバックアップ</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagimanga.html">ドキュメント</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">デモ</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagilog.html" tabindex="-1" aria-hidden="true"><img src="{{asset:img/ogp/nagilog-ogp.svg}}" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiLog</h3>
+<p class="card-kind">個人用LOG（データベース不要）</p>
+<ul>
+<li>文章・画像・漫画を、自分のサイトへスマホからでも投稿できます</li>
+<li>カテゴリ、ハッシュタグ、検索、6 種類のデザイン、RSS</li>
+<li>閲覧注意（センシティブ・R-18・R-18G）の設定</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagilog.html">ドキュメント</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/">デモ</a></div>
+</div>
+</section>
+</div>
+
+<h2 id="どれを使えばいい">どれを使えばいい？<a class="anchor" href="#どれを使えばいい" aria-label="この見出しへのリンク">#</a></h2>
+
+<div class="table-wrap"><table><thead><tr><th>やりたいこと</th><th>使うもの</th><th>必要なもの</th></tr></thead><tbody>
+<tr><td>ブログやてがろぐの画像を、スマホでも気持ちよく拡大して見せたい</td><td><a href="nagiswipe.html">NagiSwipe</a></td><td>JS と CSS の 2 ファイル（jsDelivr から読み込めます）</td></tr>
+<tr><td>自分のサイトで漫画を読んでもらいたい</td><td><a href="nagimanga.html">NagiManga</a></td><td>PHP 8.1 以上のサーバー。管理画面を使わず、FTP だけで置くこともできます</td></tr>
+<tr><td>文章・絵・漫画を、自分のサイトに気軽に投稿したい</td><td><a href="nagilog.html">NagiLog</a></td><td>NagiManga と同じ設置（追加の準備はいりません）</td></tr>
+<tr><td>NagiManga を使い続けて大丈夫か知りたい</td><td><a href="guide.html">手引き</a></td><td>開発者でない方向けに、メリット・デメリットとデータの取り出し方をまとめています</td></tr>
+</tbody></table></div>
+
+<h2 id="3-つの関係">3 つの関係<a class="anchor" href="#3-つの関係" aria-label="この見出しへのリンク">#</a></h2>
+
+<ol class="flow">
+<li><strong>NagiSwipe</strong> は単独で使えるライブラリです。NagiManga と NagiLog の中でも、画像の拡大に使っています（配布 ZIP に同梱しています）。</li>
+<li><strong>NagiManga</strong> を設置すると、作品を管理する画面と、読者向けのビューアーが使えます。</li>
+<li><strong>NagiLog</strong> は NagiManga に含まれています。同じ <code>nagimanga</code> フォルダ、同じログインで、LOG の公開サイトも動きます。</li>
+</ol>
+
+<h2 id="デモ">デモ<a class="anchor" href="#デモ" aria-label="この見出しへのリンク">#</a></h2>
+
+<ul>
+<li>NagiSwipe: <a href="demo.html">画像ギャラリーのデモ</a>（このサイトの中にあります）</li>
+<li>NagiManga: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">https://notebook.lichiphen.com/nagimanga/demo.html</a>（いろいろな読み方、パスワード付きの見本、ゲストとして管理画面を見る）</li>
+<li>NagiLog: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/">https://notebook.lichiphen.com/nagimanga/</a>（作者が実際に使っている LOG）</li>
+</ul>
+
+<h2 id="入手する">入手する<a class="anchor" href="#入手する" aria-label="この見出しへのリンク">#</a></h2>
+
+<ul>
+<li><strong>NagiSwipe</strong>: jsDelivr の URL を貼るだけです。<a href="nagiswipe.html#導入方法">導入方法</a>に、いつも最新版の URL を載せています。</li>
+<li><strong>NagiManga・NagiLog</strong>: <a class="ext" href="https://github.com/Lichiphen/NagiSwipe/releases">リリースページ</a>の <code>nagimanga-vX.Y.Z.zip</code> をダウンロードして、サーバーにアップロードします。手順は<a href="nagimanga.html#管理画面phpを使う">管理画面（PHP）を使う</a>にあります。</li>
+<li><strong>ソースコード</strong>: <a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a> / <a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a>（同じ内容です）</li>
+</ul>

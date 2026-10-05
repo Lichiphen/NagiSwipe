@@ -1,33 +1,39 @@
-# NagiSwipe
+# NagiSeries
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。
-モバイルファースト、タッチ操作の快適さを目指しています。漫画ビューアー **NagiManga** も同梱しています。
+個人サイトのための、小さな道具のシリーズです。どれもデータベースや外部サービスを使わず、自分のサイトに置くだけで動きます。
 
-[**Demo / Documentation (Cloudflare Pages)**](https://nagiswipe.pages.dev/)
+| | できること | 必要なもの | 説明 |
+|---|---|---|---|
+| **NagiSwipe** | JS と CSS を読み込むだけで動く、軽量な画像ポップアップギャラリー | JS と CSS の 2 ファイル（jsDelivr から読み込めます） | [このページの「NagiSwipe」](#nagiswipe) |
+| **NagiManga** | タグを 1 つ貼るだけで開く漫画ビューアーと、データベースのいらない管理画面 | PHP 8.1 以上（FTP だけで置くこともできます） | [manga/README.md](manga/README.md) |
+| **NagiLog** | 文章・画像・漫画を、自分のサイトへ投稿できる個人用LOG | NagiManga と同じ設置 | [manga/README-LOG.md](manga/README-LOG.md) |
 
-[**漫画ビューアー NagiManga のデモ**](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る）— 詳しくは [manga/README.md](manga/README.md)
+[**ドキュメントサイト（Cloudflare Pages）**](https://nagiswipe.pages.dev/) — 3 つの説明をまとめて、目次と検索つきで読めます。
 
-[**個人用LOG のデモ**](https://notebook.lichiphen.com/nagimanga/)（文章・画像・漫画を自分のサイトに投稿できる、データベース不要の LOG）— 詳しくは [manga/README-LOG.md](manga/README-LOG.md)
+デモ: [NagiSwipe](https://nagiswipe.pages.dev/demo.html) ／ [NagiManga](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る） ／ [NagiLog](https://notebook.lichiphen.com/nagimanga/)（作者が実際に使っている LOG）
 
 <!-- TOC -->
 ## 目次
 
-- [特徴](#特徴)
-- [導入方法](#導入方法)
-  - [CDN経由 (推奨)](#cdn経由-推奨)
-  - [使い方](#使い方)
-  - [キャプション（v1.1.0〜）](#キャプションv110)
-  - [オプション](#オプション)
-  - [画像サイズの指定（任意）](#画像サイズの指定任意)
-- [てがろぐで使う](#てがろぐで使う)
-- [漫画ビューアー（NagiManga）](#漫画ビューアーnagimanga)
+- [NagiSwipe](#nagiswipe)
+  - [特徴](#特徴)
+  - [導入方法](#導入方法)
+  - [てがろぐで使う](#てがろぐで使う)
+- [NagiManga](#nagimanga)
+- [NagiLog](#nagilog)
+- [ドキュメントサイト](#ドキュメントサイト)
 - [権利・免責事項：掲載画像について](#権利免責事項掲載画像について)
 - [ライセンス](#ライセンス)
 <!-- /TOC -->
 
-## 特徴
+## NagiSwipe
+
+JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。
+モバイルファースト、タッチ操作の快適さを目指しています。[デモ](https://nagiswipe.pages.dev/demo.html)で、スワイプやズームを試せます。
+
+### 特徴
 - **ドロップイン導入**: JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。
 - **モバイル最適化**: スワイプ、ピンチズーム、ダブルタップに対応。
 - **軽量・高速**: 依存ライブラリなし。
@@ -37,11 +43,11 @@ JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポ
 - **キャプション標準搭載**: 画像の `alt` などを画面下部に表示。
 - **安心設計**: ブラウザの「戻る」（マウスの戻るボタンやスワイプバックを含む）でビューアーだけを閉じる。自動DOM生成。
 
-## 導入方法
+### 導入方法
 
 HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
-### CDN経由 (推奨)
+#### CDN経由 (推奨)
 [jsDelivr](https://www.jsdelivr.com/) を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。
 
 ```html
@@ -54,10 +60,10 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ※ `@` の後ろ（`@93db749` など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。`@v1.3.0` のようにリリースの番号でも指定できます。常に最新の `main` ブランチを使いたい場合は `@main` にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。
 
-### 使い方
+#### 使い方
 ページ内の `<a href="image.jpg">` のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。
 
-### キャプション（v1.1.0〜）
+#### キャプション（v1.1.0〜）
 画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。
 
 1. リンクの `data-ns-caption`（空文字を指定するとキャプションなし）
@@ -73,7 +79,7 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 テキストとして表示するので、alt に HTML が含まれていても解釈されません。ズーム中は自動で隠れます。
 
-### オプション
+#### オプション
 ```js
 NagiSwipe.init({
     caption: true,        // 下部キャプションを表示（false で無効）
@@ -85,14 +91,14 @@ NagiSwipe.init({
 
 OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有効な場合は、拡大アニメーションの代わりにフェードになります。
 
-### 画像サイズの指定（任意）
+#### 画像サイズの指定（任意）
 指定しなくても動きますが、リンクに実画像の幅と高さを書いておくと、読み込み前から正しい大きさで表示できます。
 
 ```html
 <a href="photo.jpg" data-ns-width="3000" data-ns-height="2000"><img src="photo-thumb.jpg" alt="…"></a>
 ```
 
-## てがろぐで使う
+### てがろぐで使う
 
 [てがろぐ](https://www.nishishi.com/cgi/tegalog/) では、スキンのファイルを書き換えなくても、管理画面で設定するだけで NagiSwipe を使えます。
 
@@ -115,21 +121,41 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@93db749/NagiSwipe-main.js https:
 
 [NagiMemo](https://github.com/Lichiphen/NagiMemo)（てがろぐ用のスキン）でも同じ方法で使えます。
 
-## 漫画ビューアー（NagiManga）
-[`manga/`](manga/) に、漫画ビューアーとデータベース不要の簡易 CMS を同梱しています。
+## NagiManga
+
+ブログやサイトに **タグを 1 つ貼るだけ** で、クリックしたときに漫画ビューアーが開きます。作品の管理は、データベースのいらない小さな管理画面（PHP）で行います。ソースは [`manga/`](manga/) にあります。
 
 - 右から左・見開き・縦読み（ページ漫画／ウェブトゥーン）、しおり、拡大
 - 画像のドラッグ＆ドロップや、CLIP STUDIO PAINT などの漫画 EPUB から作品を作れます
 - スマホ用の小容量版と、パソコン・拡大用の通常版を自動で読み分けます
 - パスワード付きの限定公開、共有タグの発行、ZIP でのバックアップ
-- 文章・画像・漫画を投稿できる個人用 LOG（スマホ対応、6 種類のデザイン、ログインは 30 日〜1 年保持）
 
-![個人用LOGのトップ（パソコン）](manga/docs/images/log-pc.jpg)
+デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
 
-デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ LOG のデモ: https://notebook.lichiphen.com/nagimanga/ ／ LOG の説明: [manga/README-LOG.md](manga/README-LOG.md) ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
+## NagiLog
+
+文章・画像・漫画を自分のサイトへ投稿できる、データベース不要の個人用LOGです。NagiManga に含まれていて、同じ設置・同じログインで動きます。
+
+- スマホからの投稿、下書き、画像の差し替え、漫画カード
+- カテゴリ、ハッシュタグ、検索、関連記事、いいね、RSS・サイトマップ
+- 閲覧注意（センシティブ・R-18・R-18G）、ライト 3 種類・ダーク 3 種類のデザイン
+
+![NagiLogのトップ（パソコン）](manga/docs/images/log-pc.jpg)
+
+デモ: https://notebook.lichiphen.com/nagimanga/ ／ 説明: [manga/README-LOG.md](manga/README-LOG.md)
+
+## ドキュメントサイト
+
+https://nagiswipe.pages.dev/ は、この README・[manga/README.md](manga/README.md)・[manga/README-LOG.md](manga/README-LOG.md)・[manga/docs/overview.md](manga/docs/overview.md) から作っています。文章を直すときは README を編集し、次のコマンドでページを作り直してから、一緒にコミットしてください（Python 3 の標準ライブラリだけで動きます）。
+
+```bash
+python site/build.py
+```
+
+ページの元になるファイルは [`site/`](site/) にあります（トップページの文章は `site/top.html`、見た目は `site/site.css`）。サイトのファイルは、NagiManga の配布 ZIP や GitHub のソースコードの ZIP には含めません。
 
 ## 権利・免責事項：掲載画像について
-本プロジェクトのデモ（`index.html`等）で使用されている画像について：
+本プロジェクトのデモ（`demo.html`等）で使用されている画像について：
 
 - **猫のイラスト（Kyururun.png, Fu-n.png, Shimeshime.png）**
     - これらは **Lichiphen（作者）本人が制作したデジタルアート** です。

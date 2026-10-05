@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NagiSwipe Demo</title>
+    <link rel="icon" href="site/favicon.svg?v=96c65b80dd" type="image/svg+xml">
+    <!--
+      NagiSwipe Integration Example
+      Just load these two files. ?v= is a content hash (site/build.py updates it).
+    -->
+    <link rel="stylesheet" href="NagiSwipe-main.css?v=be7805759d">
+    <script src="NagiSwipe-main.js?v=dcdc1fff19" defer></script>
+    
+    <style>
+        /* [DEMO PAGE CSS] */
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0; background-color: #000; color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden; -webkit-tap-highlight-color: transparent; overscroll-behavior: none;
+        }
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px;
+            opacity: 0; will-change: opacity; transition: opacity 0.4s ease-out; padding-bottom: 50px;
+        }
+        @media (min-width: 600px) {
+            .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; padding: 40px; }
+        }
+        .gallery-link {
+            display: block; width: 100%; height: 100%; text-decoration: none; color: inherit; position: relative;
+        }
+        .grid-item {
+            position: relative; background: #1a1a1a; aspect-ratio: 1 / 1; overflow: hidden;
+            cursor: zoom-in; opacity: 0; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .grid-item.loaded { opacity: 1; transform: scale(1); }
+        .back {
+            position: fixed; left: 12px; bottom: 12px; z-index: 10; padding: 8px 14px; border-radius: 999px;
+            background: rgba(20, 30, 36, .86); color: #e6ecef; font-size: 14px; text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, .14); backdrop-filter: blur(6px);
+        }
+        .grid-item img {
+            width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; will-change: transform;
+        }
+    </style>
+</head>
+<body>
+
+    <a class="back" href="nagiswipe.html">← NagiSwipe のドキュメント</a>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" id="grid"></div>
+
+    <!-- Core Library is now loaded dynamically in head -->
+    
+    <!-- Demo Script -->
+    <script>
+        /** [DEMO CONTENT GENERATION] */
+        const container = document.getElementById('grid');
+        const fragment = document.createDocumentFragment();
+
+        // Manual items (local images)
+        // ?v= is a content hash (cache busting); alt is shown as the caption
+        const manualItems = [
+            { src: 'img/Kyururun.png?v=ace886fd', thumb: 'img/Kyururun.png?v=ace886fd', alt: 'きゅるるん（猫のイラスト）' },
+            { src: 'img/Fu-n.png?v=1041db46', thumb: 'img/Fu-n.png?v=1041db46', alt: 'ふーん（猫のイラスト）' },
+            { src: 'img/Shimeshime.png?v=023fcd6a', thumb: 'img/Shimeshime.png?v=023fcd6a', alt: 'しめしめ（猫のイラスト）' },
+            {
+                src: 'img/chirashi-mini.jpg?v=ad52edca', thumb: 'img/chirashi-mini.jpg?v=ad52edca',
+                alt: 'チラシ用イラスト（モノクロ）。翼に囲まれて手を取り合う二人。\n長いキャプションは折り返され、画面の 3 割を超える分はスクロールできます。'
+            }
+        ];
+
+        // Combine with generated items
+        const allItems = [...manualItems];
+        for (let i = 0; i < 30; i++) {
+            const seed = i + 3000;
+            let w = 800, h = 800;
+            const r = Math.random();
+            if (r < 0.3) { w = 600; h = 900; }
+            else if (r < 0.6) { w = 900; h = 600; }
+            
+            const src = `https://picsum.photos/seed/${seed}/${w}/${h}`;
+            const fullSrc = `https://picsum.photos/seed/${seed}/${w * 2}/${h * 2}.jpg`;
+            // Every third photo has no alt -> no caption is shown
+            const alt = (i % 3 === 2) ? '' : `サンプル写真 #${i + 1}（Lorem Picsum / ${w}×${h}）`;
+            allItems.push({ src: fullSrc, thumb: src, alt });
+        }
+
+        allItems.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'grid-item';
+
+            const link = document.createElement('a');
+            link.className = 'gallery-link';
+            link.href = item.src;
+
+            const img = document.createElement('img');
+            img.src = item.thumb;
+            img.alt = item.alt || '';
+            
+            link.appendChild(img);
+            el.appendChild(link);
+            fragment.appendChild(el);
+        });
+
+        container.appendChild(fragment);
+
+        requestAnimationFrame(() => {
+            container.style.opacity = 1;
+            Array.from(container.children).forEach((el, i) => {
+                setTimeout(() => el.classList.add('loaded'), i * 30);
+            });
+        });
+    </script>
+</body>
+</html>
