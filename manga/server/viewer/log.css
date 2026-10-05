@@ -242,7 +242,7 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
     .log-media-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }.log-media-card { padding:12px; }
     .log-feed { padding-bottom:60px; }
 }
-@media(max-width:480px) { .log-site-header { padding:32px 76px 20px 16px; }.log-post { padding:18px 16px; }.log-manga { gap:12px; }.log-manga img { width:76px; height:100px; }.log-toolbar { gap:6px; }.log-toolbar .btn { padding:7px 10px; }.log-media-grid { grid-template-columns:1fr; } }
+@media(max-width:480px) { .log-site-header { padding:32px 76px 20px 16px; }.log-post { padding:18px 16px; }.log-manga { gap:12px; }.log-manga img { width:76px; height:100px; }.log-toolbar { gap:6px; }.log-toolbar .btn { gap:4px; padding:7px 9px; }.log-toolbar .log-ui-icon { width:16px; height:16px; }.log-media-grid { grid-template-columns:1fr; } }
 @media(prefers-reduced-motion:reduce) { body.log-ready .log-compose { transition:none; } }
 
 /* Owner controls and compact management list. */
