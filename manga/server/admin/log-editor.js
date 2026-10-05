@@ -350,7 +350,9 @@
     if (publicEditor) { window.addEventListener('scroll', scrollFab, { passive: true }); window.addEventListener('resize', scrollFab, { passive: true }); }
     // Without the open editor (pages other than the top, the admin list) the button floats in shortly after load.
     if (collapsed) setTimeout(checkFab, 220); else checkFab();
-    if (panel.dataset.edit || dirty) setPanel(true);
+    // A draft brought back opens the editor only where it is part of the page (the top page);
+    // elsewhere the dot on the write button tells about it, so moving between posts never pops the panel up.
+    if (panel.dataset.edit || (dirty && !collapsed)) setPanel(true);
     window.addEventListener('beforeunload', e => { if (((dirty && touched) || uploading) && !saving) { e.preventDefault(); e.returnValue = ''; } });
 
     const uploadInput = $('[data-upload-input]', form);

@@ -66,7 +66,8 @@ def main():
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(SERVER.rglob("*")):
             rel = f.relative_to(SERVER).as_posix()
-            if not f.is_file() or rel == "lib/paths.php" or f.suffix in (".tmp", ".bak"):
+            # viewer/NagiSwipe-main.* may be local working copies of the root files; the root ones are bundled below
+            if not f.is_file() or rel in ("lib/paths.php", "viewer/NagiSwipe-main.js", "viewer/NagiSwipe-main.css") or f.suffix in (".tmp", ".bak"):
                 continue
             top = rel.split("/", 1)[0]
             if top in ("data", "plugins") and rel not in (f"{top}/.htaccess", f"{top}/index.html"):
