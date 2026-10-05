@@ -191,6 +191,21 @@ def run(c, csrf, port):
     mark = json.loads(zipfile.ZipFile(io.BytesIO(r.body)).read("backup.json"))
     check("バックアップにいいねと表示設定", mark["likes"].get(pid_a) == 7 and mark["settings"]["layout"] == "grid" and mark["settings"]["related_by"] == "tag")
 
+    # 画像一覧: search, filters, page size, and returning to the same search after saving
+    up = lambda name: json.loads(c.post("/admin/index.php", {"csrf": csrf, "do": "log_upload"}, files={"image": (name, helper.png(60, 40), "image/png")}).text)["media"]
+    used_img, spare_img = up("夕焼けの空.png"), up("予備の画像.png")
+    save("画像を使う記録\n" + used_img["tag"])
+    cards = lambda path: re.findall(r'data-media-card="([0-9a-f]+)"', c.get("/admin/index.php?p=log_media" + path).text)
+    check("画像一覧を説明で探せる", cards("&q=%E5%A4%95%E7%84%BC%E3%81%91") == [used_img["id"]])
+    check("画像一覧を使っている記事のタイトルで探せる", cards("&q=%E7%94%BB%E5%83%8F%E3%82%92%E4%BD%BF%E3%81%86") == [used_img["id"]])
+    check("画像一覧を未使用だけに絞れる", spare_img["id"] in cards("&use=unused") and used_img["id"] not in cards("&use=unused"))
+    page = c.get("/admin/index.php?p=log_media&per_page=1").text
+    check("画像一覧の表示件数を変えられ、ログイン中は覚える", len(re.findall(r'data-media-card=', page)) == 1 and len(cards("")) == 1 and 'index.php?p=log_media&amp;page=2' in page)
+    c.get("/admin/index.php?p=log_media&per_page=40")
+    check("画像一覧に使っている記事への編集リンク", 'class="log-media-used"' in c.get("/admin/index.php?p=log_media&q=%E5%A4%95%E7%84%BC%E3%81%91").text)
+    r = post({"do": "log_media_alt", "media": spare_img["id"], "revision": str(spare_img["revision"]), "alt": "予備の画像", "rating": "", "back": "q=%E4%BA%88%E5%82%99&use=unused&page=1&evil=1"})
+    check("画像の説明を保存すると、同じ検索に戻る", r.status == 303 and r.getheader("Location") == "index.php?p=log_media&q=%E4%BA%88%E5%82%99&use=unused")
+
     # Deleting a post removes its count
     rev = re.search(r'name="revision" value="(\d+)"', c.get("/admin/index.php?p=log_edit&id=" + pid_a).text).group(1)
     post({"do": "log_delete", "post_id": pid_a, "revision": rev})

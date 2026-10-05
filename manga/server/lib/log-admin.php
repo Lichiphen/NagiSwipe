@@ -109,7 +109,7 @@ function nl_handle_post(string $do): never
                     if ($rated) nl_rebuild_index();
                 });
                 nm_flash('ok', '画像の説明と閲覧注意を保存しました');
-                nm_redirect('p=log_media');
+                nm_redirect(nl_media_back());
             case 'log_media_delete':
                 nm_with_lock('personal-log', static function () {
                     $id = nm_str($_POST, 'media', 16);
@@ -123,7 +123,7 @@ function nl_handle_post(string $do): never
                     nm_rmdir_recursive(nl_media_dir($id));
                 });
                 nm_flash('ok', '未使用の画像を削除しました');
-                nm_redirect('p=log_media');
+                nm_redirect(nl_media_back());
             case 'log_settings':
                 $design = nl_design_input();
                 $uploads = nl_design_uploads();
@@ -194,7 +194,7 @@ function nl_handle_post(string $do): never
         nm_log('log_error', $e->getMessage());
         if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings'], true) || str_starts_with($do, 'log_restore_')) nm_json(['error' => $message], 422);
         nm_flash('err', $message);
-        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
+        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
     }
 }
 /*
@@ -463,27 +463,83 @@ function nl_like_panel(array $p): string
         . '<form method="post" action="index.php" class="form log-like-form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_like_set"><input type="hidden" name="post_id" value="' . h($p['id']) . '">'
         . '<label>いいねの数<input type="number" name="count" min="0" max="' . NL_LIKE_MAX . '" required value="' . $n . '" inputmode="numeric"></label><div class="log-like-actions"><button class="btn primary">数を保存</button><button class="btn danger" name="reset" value="1"' . ($n === 0 ? ' disabled' : '') . ' formnovalidate data-confirm-click="この記事のいいねを削除して0にしますか？">いいねを削除</button></div></form></section>';
 }
+/** The 画像一覧 filters from a query (GET, or the hidden "back" field after saving), checked; empty ones are left out. */
+function nl_media_filters(array $in): array
+{
+    $f = ['q' => trim((string)preg_replace('/[\s　]+/u', ' ', nm_str($in, 'q', 400))), 'use' => nm_str($in, 'use', 10), 'rating' => nm_str($in, 'rating', 10), 'page' => (string)max(1, min(100000, (int)nm_str($in, 'page', 6)))];
+    if (!in_array($f['use'], ['used', 'unused'], true)) $f['use'] = '';
+    if (!in_array($f['rating'], ['set', 'none'], true)) $f['rating'] = '';
+    if ($f['page'] === '1') $f['page'] = '';
+    return array_filter($f, static fn($v) => $v !== '');
+}
+/** Saving or deleting a picture returns to the same search and page. */
+function nl_media_back(): string
+{
+    parse_str(nm_str($_POST, 'back', 1000), $back);
+    $query = http_build_query(nl_media_filters($back), '', '&', PHP_QUERY_RFC3986);
+    return 'p=log_media' . ($query !== '' ? '&' . $query : '');
+}
 function nl_view_media(): void
 {
     $all = nl_list_media();
-    $usage = [];
-    foreach (nl_post_summaries(false) as $p) foreach ($p['media'] as $id) $usage[$id] = ($usage[$id] ?? 0) + 1;
+    // Where each picture is used: posts (with their titles), the icon, the shared OGP image, the sidebar.
+    $usedBy = [];
+    foreach (nl_post_summaries(false) as $p) foreach ($p['media'] as $id) $usedBy[$id][] = $p;
     $icon = nl_settings()['icon'];
-    if ($icon !== '') $usage[$icon] = ($usage[$icon] ?? 0) + 1;
     $ogImage = nl_settings()['og_image'];
-    if ($ogImage !== '') $usage[$ogImage] = ($usage[$ogImage] ?? 0) + 1;
     $sidebarImages = nl_sidebar_media_ids();
-    foreach ($sidebarImages as $id) $usage[$id] = ($usage[$id] ?? 0) + 1;
+    $places = static fn($id) => array_values(array_filter([$id === $icon ? 'アイコン' : '', $id === $ogImage ? '共通OGP' : '', in_array($id, $sidebarImages, true) ? 'サイドバー' : '']));
+    $filters = nl_media_filters($_GET);
+    $q = $filters['q'] ?? ''; $use = $filters['use'] ?? ''; $rating = $filters['rating'] ?? '';
+    $terms = nl_search_terms($q);
+    $searching = $terms || $use !== '' || $rating !== '';
+    // Words match the description (the file name until it is changed), the posts using it, where else it is used, and the date.
+    $found = array_values(array_filter($all, static function ($m) use ($terms, $use, $rating, $usedBy, $places) {
+        $count = count($usedBy[$m['id']] ?? []) + count($places($m['id']));
+        if (($use === 'used' && $count === 0) || ($use === 'unused' && $count > 0)) return false;
+        $rated = nl_rating($m['rating'] ?? '') !== '';
+        if (($rating === 'set' && !$rated) || ($rating === 'none' && $rated)) return false;
+        if (!$terms) return true;
+        $text = nl_search_norm(implode("\n", array_merge([$m['alt'], $m['id'], nl_date($m['created'])], array_column($usedBy[$m['id']] ?? [], 'title'), $places($m['id']))));
+        foreach ($terms as $t) if (!str_contains($text, $t)) return false;
+        return true;
+    }));
+    $size = nm_str($_GET, 'per_page', 20);
+    if (preg_match('/\A[0-9]{1,3}\z/', $size) && (int)$size >= 1 && (int)$size <= 100) $_SESSION['nl_admin_media_per_page'] = (int)$size;
+    $perPage = max(1, min(100, (int)($_SESSION['nl_admin_media_per_page'] ?? 40)));
     $page = nl_page_number();
+    $back = '<input type="hidden" name="back" value="' . h(http_build_query($filters, '', '&', PHP_QUERY_RFC3986)) . '">';
     $cards = '';
-    foreach (array_slice($all, ($page - 1) * 40, 40) as $m) {
-        $locations = array_filter([$m['id'] === $icon ? 'アイコン' : '', $m['id'] === $ogImage ? '共通OGP' : '', in_array($m['id'], $sidebarImages, true) ? 'サイドバー' : '']);
-        $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '">' . nl_veil_badge(nl_rating($m['rating'] ?? ''), 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a><p class="note">' . h(nl_date($m['created'])) . '・' . ($usage[$m['id']] ?? 0) . '件で使用' . ($locations ? '（' . implode('・', $locations) . '）' : '') . '</p>'
-            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>画像の説明<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? '')) . '<button class="btn small">説明と閲覧注意を保存</button></form>'
+    foreach (array_slice($found, ($page - 1) * $perPage, $perPage) as $m) {
+        $posts = $usedBy[$m['id']] ?? [];
+        $locations = $places($m['id']);
+        $count = count($posts) + count($locations);
+        $list = '';
+        foreach (array_slice($posts, 0, 3) as $p) $list .= '<li><a href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_search_mark(mb_strimwidth((string)$p['title'], 0, 60, '…', 'UTF-8'), $terms) . '</a>' . ($p['status'] === 'draft' ? ' <small class="badge">下書き</small>' : '') . '</li>';
+        if (count($posts) > 3) $list .= '<li class="note">ほか' . (count($posts) - 3) . '件</li>';
+        $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '">' . nl_veil_badge(nl_rating($m['rating'] ?? ''), 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a><p class="note">' . h(nl_date($m['created'])) . '・' . ($count ? $count . '件で使用' : '未使用') . ($locations ? '（' . nl_search_mark(implode('・', $locations), $terms) . '）' : '') . '</p>'
+            . ($list !== '' ? '<ul class="log-media-used" aria-label="この画像を使っている記事">' . $list . '</ul>' : '')
+            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>画像の説明<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? '')) . '<button class="btn small">説明と閲覧注意を保存</button></form>'
             . '<label class="btn log-replace-label">画像を差し替える<input type="file" class="log-replace" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" hidden></label><p class="note log-drop-hint">この枠に画像をドロップしても差し替えられます。</p><p class="note" role="status" data-replace-status></p>'
-            . '<form method="post" action="index.php" class="js-confirm" data-confirm="この未使用画像を削除しますか？">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_media_delete"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><button class="btn small danger"' . (isset($usage[$m['id']]) ? ' disabled' : '') . '>未使用画像を削除</button></form></article>';
+            . '<form method="post" action="index.php" class="js-confirm" data-confirm="この未使用画像を削除しますか？">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_delete"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><button class="btn small danger"' . ($count ? ' disabled' : '') . '>未使用画像を削除</button></form></article>';
     }
-    nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">LOGへ戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p><div class="log-media-grid">' . ($cards ?: '<p>投稿画面から画像を追加すると、ここに並びます。</p>') . '</div><nav class="log-pagination">' . ($page > 1 ? '<a class="btn" href="index.php?p=log_media&page=' . ($page - 1) . '">新しい画像</a>' : '') . ($page * 40 < count($all) ? '<a class="btn" href="index.php?p=log_media&page=' . ($page + 1) . '">前の画像</a>' : '') . '</nav>');
+    $option = static fn($value, $current, $label) => '<option value="' . $value . '"' . ($value === $current ? ' selected' : '') . '>' . $label . '</option>';
+    $search = '<form class="log-admin-search log-media-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log_media">'
+        . '<label class="log-admin-search-box"><span class="sr-only">画像を検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="画像の説明・使っている記事・日付で探す" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
+        . '<label class="log-admin-search-status"><span class="sr-only">使っているか</span><select name="use">' . $option('', $use, '使用：すべて') . $option('used', $use, '使用中') . $option('unused', $use, '未使用') . '</select></label>'
+        . '<label class="log-admin-search-status"><span class="sr-only">閲覧注意</span><select name="rating">' . $option('', $rating, '閲覧注意：すべて') . $option('set', $rating, '閲覧注意あり') . $option('none', $rating, '閲覧注意なし') . '</select></label>'
+        . '<button class="btn primary">探す</button></form>'
+        . ($searching ? '<p class="log-admin-search-result" role="status"><span>' . ($q !== '' ? '「' . h($q) . '」で' : '') . ['' => '', 'used' => '使用中の', 'unused' => '未使用の'][$use] . ['' => '', 'set' => '閲覧注意ありの', 'none' => '閲覧注意なしの'][$rating] . '画像<b>' . count($found) . '枚</b></span><a class="btn" href="index.php?p=log_media">検索をやめる</a></p>' : '');
+    $pagerQuery = 'index.php?' . http_build_query(['p' => 'log_media'] + array_diff_key($filters, ['page' => 1]), '', '&', PHP_QUERY_RFC3986) . '&page=';
+    $keep = '';
+    foreach (array_diff_key($filters, ['page' => 1]) as $key => $value) $keep .= '<input type="hidden" name="' . $key . '" value="' . h($value) . '">';
+    $empty = $all ? '見つかりませんでした。言葉を短くするか、絞り込みを「すべて」にしてみてください。' : '投稿画面から画像を追加すると、ここに並びます。';
+    nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">LOGへ戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p>'
+        . $search
+        . '<div class="log-list-controls"><span>' . ($searching ? '' : count($all) . '枚の画像') . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log_media">' . $keep
+        . '<label>1ページの表示件数<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">表示</button></form></div></div>'
+        . '<div class="log-media-grid">' . ($cards ?: '<p>' . $empty . '</p>') . '</div>'
+        . '<nav class="log-pagination" aria-label="画像一覧のページ">' . ($page > 1 ? '<a class="btn" href="' . h($pagerQuery . ($page - 1)) . '">新しい画像</a>' : '') . ($page * $perPage < count($found) ? '<a class="btn" href="' . h($pagerQuery . ($page + 1)) . '">前の画像</a>' : '') . '</nav>');
 }
 /** The rating of one image, as a short select (画像一覧). */
 function nl_rating_select(string $current): string
