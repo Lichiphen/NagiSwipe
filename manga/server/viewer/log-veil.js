@@ -28,10 +28,10 @@
         apply();
     }
 
-    // After the first veil of a kind opens: offer to stop asking in this browser (R-18 asks in its dialog instead).
+    // After the first veil of a kind opens: offer to stop asking in this browser (unless the age dialog just asked it).
     function offer(details) {
         const level = details.dataset.veil;
-        if (level === 'r18' || prefs[level] || session['offered-' + level]) return;
+        if (prefs[level] || session['offered-' + level]) return;
         session['offered-' + level] = true; write(sessionStorage, KEY, session);
         const bar = document.createElement('p'); bar.className = 'log-veil-offer'; bar.setAttribute('role', 'status');
         const text = document.createElement('span'); text.textContent = 'このブラウザでは、次から' + LABEL[level] + 'を確認せずに表示しますか？';
@@ -50,13 +50,14 @@
         if (d.dataset.opener === 'reader') { delete d.dataset.opener; offer(d); }
     }, true);
 
-    // R-18: ask the age once per tab (or never again, if the reader chose so) before opening.
+    // R-18 and R-18G are both for adults: ask the age once per tab (or never again for that kind, if the reader chose so) before opening.
+    const ADULT = { r18: '性的な表現を含みます。', r18g: '強い流血・暴力・グロテスクな表現を含みます。' };
     let ageDialog = null, pending = null;
     function askAge(details) {
         pending = details;
         if (!ageDialog) {
             ageDialog = document.createElement('dialog'); ageDialog.className = 'log-age-dialog'; ageDialog.setAttribute('aria-labelledby', 'log-age-title');
-            ageDialog.innerHTML = '<form method="dialog"><h2 id="log-age-title">R-18の内容です</h2><p>18歳未満の方は閲覧できません。<br>18歳以上ですか？</p>'
+            ageDialog.innerHTML = '<form method="dialog"><h2 id="log-age-title"></h2><p><span data-age-about></span><br>18歳未満の方は閲覧できません。<br>18歳以上ですか？</p>'
                 + '<label><input type="checkbox" data-age-remember>このブラウザでは次から確認しない</label>'
                 + '<div class="log-age-actions"><button value="yes" class="is-yes">18歳以上なので表示する</button><button value="no">表示しない</button></div></form>';
             document.body.append(ageDialog);
@@ -64,10 +65,13 @@
                 const d = pending; pending = null;
                 if (ageDialog.returnValue !== 'yes' || !d) { d?.querySelector('summary')?.focus(); return; }
                 session.age = true; write(sessionStorage, KEY, session);
-                if (ageDialog.querySelector('[data-age-remember]').checked) remember('r18', true);
+                if (ageDialog.querySelector('[data-age-remember]').checked) remember(d.dataset.veil, true);
                 d.open = true;
             });
         }
+        const level = details.dataset.veil;
+        ageDialog.querySelector('h2').textContent = LABEL[level] + 'の内容です';
+        ageDialog.querySelector('[data-age-about]').textContent = ADULT[level];
         ageDialog.returnValue = '';
         ageDialog.querySelector('[data-age-remember]').checked = false;
         ageDialog.showModal();
@@ -78,7 +82,7 @@
         if (!summary) return;
         const d = summary.parentElement;
         if (d.open) return;
-        if (d.dataset.veil === 'r18' && !prefs.r18 && !session.age) { e.preventDefault(); askAge(d); return; }
+        if (ADULT[d.dataset.veil] && !prefs[d.dataset.veil] && !session.age) { e.preventDefault(); askAge(d); return; }
         d.dataset.opener = 'reader';
     });
 

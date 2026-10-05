@@ -91,6 +91,7 @@ def run(c, csrf, port):
     edit = c.get("/admin/index.php?p=log_edit&id=" + sid).text
     check("編集画面で記事の区分を選択済み", 'name="rating" value="sensitive" checked' in edit and 'value="肌の露出があります"' in edit)
     check("編集画面に本文の画像の区分を渡す", '&quot;rating&quot;:&quot;sensitive&quot;' in edit)
+    check("注意書きの定型文を出す", 'data-warning-preset="流血表現があります"' in edit and 'data-warning-preset="グロテスクな表現があります"' in edit)
     preview = json.loads(post({**payload("プレビュー\n" + b["tag"], rating="", media_ratings=json.dumps({b["id"]: "r18"})), "do": "log_preview"}).text)["html"]
     check("プレビューは保存前の画像の区分でメモを出す", 'log-veil-admin" data-veil="r18"' in preview and 'log-figure-badge' in preview)
 

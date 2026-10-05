@@ -235,6 +235,11 @@
         changed();
     }));
     warning.addEventListener('input', changed);
+    // A preset fills the note and leaves the caret at its end, ready to edit.
+    $$('[data-warning-preset]', form).forEach(b => b.addEventListener('click', () => {
+        warning.value = b.dataset.warningPreset; changed();
+        warning.focus(); warning.setSelectionRange(warning.value.length, warning.value.length);
+    }));
     changed();
     body.addEventListener('input', changed); title.addEventListener('input', changed);
     categoryFields.forEach(input => input.addEventListener('change', changed));

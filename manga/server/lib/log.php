@@ -246,7 +246,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -262,6 +262,8 @@ function nl_read_settings(): array
     $s['related'] = $s['related'] !== false;
     if (!is_string($s['related_by']) || !isset(NL_RELATED_BY[$s['related_by']])) $s['related_by'] = 'both';
     if (!is_string($s['related_order']) || !isset(NL_RELATED_ORDER[$s['related_order']])) $s['related_order'] = 'random';
+    $s['new_days'] = is_int($s['new_days']) ? max(0, min(NL_NEW_DAYS_MAX, $s['new_days'])) : 7;
+    $s['new_label'] = is_string($s['new_label']) ? nl_new_label($s['new_label']) : 'NEW';
     // false: every page asks search engines not to index or follow it (fan works, unofficial sites).
     $s['search_engines'] = $s['search_engines'] !== false;
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';

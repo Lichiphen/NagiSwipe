@@ -172,6 +172,8 @@ function nl_handle_post(string $do): never
                     $s = nl_settings();
                     $s['layout'] = $layout; $s['related_by'] = $by; $s['related_order'] = $order;
                     $s['likes'] = nm_str($_POST, 'likes', 1) === '1'; $s['related'] = nm_str($_POST, 'related', 1) === '1';
+                    if (isset($_POST['new_days'])) $s['new_days'] = max(0, min(NL_NEW_DAYS_MAX, (int)nm_str($_POST, 'new_days', 3)));
+                    if (isset($_POST['new_label'])) $s['new_label'] = nl_new_label(nm_str($_POST, 'new_label', 200));
                     $s['updated'] = time();
                     nl_write_record(nl_root() . '/settings.php', $s);
                 });
@@ -301,6 +303,7 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<div class="log-compose-panel" id="log-panel-categories" data-panel-body="categories" hidden><p class="log-panel-title">カテゴリ</p><div class="log-chip-list">' . ($categories ?: '<p class="note">下の欄から作れます。</p>') . '</div><label class="log-panel-field">新しいカテゴリ<input name="new_categories" maxlength="800" placeholder="例：日記、制作メモ（「、」で区切って複数）"></label></div>'
         . '<div class="log-compose-panel" id="log-panel-rating" data-panel-body="rating" hidden><fieldset class="log-rating"><legend class="log-panel-title">閲覧注意</legend><div class="log-rating-choices">' . $ratings . '</div></fieldset>'
         . '<label class="log-panel-field">注意書き（任意）<input name="warning" maxlength="' . NL_WARNING_MAX . '" value="' . h(nl_warning_text($p['warning'] ?? '')) . '" placeholder="例：流血表現があります"></label>'
+        . '<div class="log-chip-list log-warning-presets" role="group" aria-label="注意書きの定型文">' . implode('', array_map(fn($t) => '<button type="button" class="log-tag-chip" data-warning-preset="' . h($t) . '">' . h($t) . '</button>', NL_WARNING_PRESETS)) . '</div>'
         . '<label class="log-panel-check"><input type="checkbox" data-rate-all checked>選んだとき、本文の画像にも同じ注意を付ける</label><p class="note">画像ごとの注意は、サムネイルの左下のボタンで変えられます。</p></div>'
         . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」にできます。</li><li>画像はここへドロップ、または貼り付けでも追加できます。本文の画像タグを動かすと、表示する位置も変わります。</li><li>URLだけを1行に貼ると、YouTubeやXなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。</li><li>閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。</li></ul></div>'
         . '<div class="log-preview" data-preview-body hidden></div>'
@@ -474,8 +477,11 @@ function nl_display_panel(): string
     return '<section class="card" id="log-display"><h2>一覧の見せ方・記事の下</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_display_settings">'
         . '<fieldset class="log-visibility"><legend>トップ・カテゴリ・タグの一覧</legend>' . nl_radio_list('layout', NL_LAYOUTS, $s['layout'], [
             'stream' => '今までの形です。記事を最初から最後まで並べ、一覧のページだけで読めます。',
-            'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。トップの1ページ目だけ、最新の記事を大きく出します。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
+            'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。タイルはすべて同じ大きさなので、1ページの件数がいくつでも行がそろいます。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
         . '<p class="note">どちらにするかで、検索エンジンへの指定も変わります（下の「検索エンジンとサイトマップ」）。</p></fieldset>'
+        . '<fieldset class="log-visibility"><legend>新着の印</legend><label>印を付ける期間（投稿から何日）<input type="number" name="new_days" min="0" max="' . NL_NEW_DAYS_MAX . '" value="' . $s['new_days'] . '" inputmode="numeric"></label>'
+        . '<label>印の文字<input name="new_label" maxlength="' . NL_NEW_LABEL_MAX . '" value="' . h($s['new_label']) . '" placeholder="NEW"></label>'
+        . '<p class="note">期間内の記事に、タイルではサムネイルの左上、ミニブログでは記事の枠の左上に印を付けます。0日にすると付けません。文字は「新」「New!」のように' . NL_NEW_LABEL_MAX . '文字まで変えられます。空にすると「NEW」です。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>いいねボタン</legend><label class="check"><input type="checkbox" name="likes" value="1"' . ($s['likes'] ? ' checked' : '') . '>記事の下の「Share」の左に、いいねボタンを出す</label>'
         . '<p class="note">タップで1つ、長押しすると10ずつ増えます。同じ回線・同じ端末（IPアドレスとブラウザーの端末情報）から1つの記事に押せるのは、1日' . NL_LIKE_DAILY . 'までです。端末情報は書き換えられるため、同じ回線全体でも1日' . NL_LIKE_LINE_DAILY . 'までにしています。数は記事の編集画面で確認・変更・削除できます。押されてもページのキャッシュは消さないため、表示の速さは変わりません。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>関連記事</legend><label class="check"><input type="checkbox" name="related" value="1"' . ($s['related'] ? ' checked' : '') . '>記事の下に、関連記事を' . NL_RELATED_SHOWN . '件出す</label>'

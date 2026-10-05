@@ -90,9 +90,9 @@ function nl_public_asset(string $file): string { return h($file . '?v=' . nm_ass
 // The top page keeps the open editor; other pages open it from the floating button.
 $index = !$single && $filter['query'] === '' && $page === 1;
 $postsHtml = '';
-if ($grid && !$single) $postsHtml = nl_tiles($posts, $index);
+if ($grid && !$single) $postsHtml = nl_tiles($posts, $s);
 else foreach ($posts as $p) {
-    $postsHtml .= '<article class="log-post"><div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
+    $postsHtml .= '<article class="log-post">' . ($single ? '' : nl_new_badge($p, $s, 'log-post-new')) . '<div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
         . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>' : '') . "</div>\n"
         . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="./?id=' . h($p['id']) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
         . nl_render_body($p) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
@@ -125,6 +125,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if ($s['public']): ?><link rel="alternate" type="application/rss+xml" title="<?= h($s['title']) ?>" href="<?= h(nl_feed_url()) ?>"><?php if (!$single && ($filter['category'] !== '' || $filter['tag'] !== '')): ?><link rel="alternate" type="application/rss+xml" title="<?= h($title) ?>" href="<?= h(nl_feed_url($filter['query'])) ?>"><?php endif; ?><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
 <?php if ($owner || $more || str_contains($postsHtml . $relatedHtml, 'data-veil=')): ?><script src="<?= nl_public_asset('viewer/log-veil.js') ?>" defer></script><?php endif; ?>
+<?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>

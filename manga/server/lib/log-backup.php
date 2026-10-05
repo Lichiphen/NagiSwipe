@@ -102,6 +102,10 @@ function nl_backup_restore(string $file, bool $overwrite): array
             if (array_key_exists($field, $settings) && (!is_string($settings[$field]) || !isset($choices[$settings[$field]]))) throw new UnexpectedValueException('LOGの表示設定が壊れています');
             $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
         }
+        if (array_key_exists('new_days', $settings) && (!is_int($settings['new_days']) || $settings['new_days'] < 0 || $settings['new_days'] > NL_NEW_DAYS_MAX)) throw new UnexpectedValueException('LOGの表示設定が壊れています');
+        if (array_key_exists('new_label', $settings) && (!is_string($settings['new_label']) || nl_new_label($settings['new_label']) !== $settings['new_label'])) throw new UnexpectedValueException('LOGの表示設定が壊れています');
+        $preferences['new_days'] = $settings['new_days'] ?? nl_settings()['new_days'];
+        $preferences['new_label'] = $settings['new_label'] ?? nl_settings()['new_label'];
         $likes = $mark['likes'] ?? [];
         if (!is_array($likes) || count($likes) > 100000) throw new UnexpectedValueException('いいねの数が壊れています');
         foreach ($likes as $id => $n) if (!nl_valid_post((string)$id) || !is_int($n) || $n < 0 || $n > NL_LIKE_MAX) throw new UnexpectedValueException('いいねの数が壊れています');

@@ -5,11 +5,13 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 /**
  * Ratings, weakest first. センシティブ blurs pictures and keeps the text; R-18 and R-18G fold the whole post.
- * R-18 also asks the reader's age once and keeps the post out of search engines.
+ * R-18 and R-18G ask the reader's age once; R-18 also keeps the post out of search engines.
  */
 const NL_RATINGS = ['' => 'なし', 'sensitive' => 'センシティブ', 'r18g' => 'R-18G', 'r18' => 'R-18'];
-const NL_RATING_NOTES = ['' => '注意なし', 'sensitive' => '肌の露出・軽い流血など。画像をぼかします', 'r18g' => '強い流血・暴力・グロテスク。記事を折りたたみます', 'r18' => '性的な表現。記事を折りたたみ、年齢を確認します'];
+const NL_RATING_NOTES = ['' => '注意なし', 'sensitive' => '肌の露出・軽い流血など。画像をぼかします', 'r18g' => '強い流血・暴力・グロテスク。記事を折りたたみ、年齢を確認します', 'r18' => '性的な表現。記事を折りたたみ、年齢を確認します'];
 const NL_WARNING_MAX = 40;
+/** Notes the compose box offers as a start; the owner can edit the text after choosing one. */
+const NL_WARNING_PRESETS = ['流血表現があります', '肌の露出があります', '性的な表現があります', '暴力表現があります', 'グロテスクな表現があります', 'ホラー表現があります', '死を扱う内容です', '虫が描かれています', '苦手な方はご注意ください'];
 
 function nl_rating(mixed $value): string
 {
