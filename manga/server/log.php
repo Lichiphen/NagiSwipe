@@ -76,10 +76,8 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Cache-Control: ' . ($owner ? 'private, no-store' : 'no-cache'));
 header('X-Robots-Tag: ' . $robots);
-$breadcrumb = $single ? json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => [
-    ['@type' => 'ListItem', 'position' => 1, 'name' => $s['title'], 'item' => $base . '/'],
-    ['@type' => 'ListItem', 'position' => 2, 'name' => $title, 'item' => $canonical],
-]], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : '';
+// One trail for the visible breadcrumb and the BreadcrumbList JSON-LD (allowed in the CSP by its hash).
+[$breadcrumbHtml, $breadcrumb] = nl_breadcrumb(nl_breadcrumb_trail($s, $filter, $page, $single ? $post : null), $canonical);
 $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $breadcrumb, true)) . "'" : '';
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js.
@@ -128,7 +126,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 </head><body class="log-site"><header class="log-site-header"><a href="./"<?= nl_title_fit($s['title']) ?>><?= nl_icon_html($s, '', 'log-site-avatar') ?><span><?= h($s['title']) ?></span></a><p><?= h($s['description']) ?></p></header>
 <button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
-<?php if ($single): ?><nav aria-label="Breadcrumb" class="log-breadcrumb"><ol><li><a href="./"><?= h($s['title']) ?></a></li><li><?= h($title) ?></li></ol></nav><?php else: ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>
+<?= $breadcrumbHtml ?><?php if (!$single): ?><h1 class="sr-only"><?= h($s['title']) ?></h1><?php endif; ?>
 <?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= count($all) ?>件</span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span>すべての投稿</span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?= $postsHtml ?>

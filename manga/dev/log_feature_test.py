@@ -47,6 +47,16 @@ def run(c, csrf, port):
     check("いいねボタンがShareの左にある", page.text.find('class="log-share-btn log-like"') != -1 and page.text.find('class="log-share-btn log-like"') < page.text.find('log-share-open'))
     check("関連記事は同じタグ・カテゴリの記事だけ", has(related(page.text), pid_b) and not has(related(page.text), pid_c))
     check("ミニブログでは個別記事はnoindex", page.getheader('X-Robots-Tag') == 'noindex,follow')
+    ld = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', page.text).group(1))
+    names = [i["name"] for i in ld["itemListElement"]]
+    check("記事のパンくず: サイト › カテゴリ › 記事（構造化データ）", ld["@type"] == "BreadcrumbList" and len(names) == 3 and names[1:] == ["日記", "最初の記録"] and ld["itemListElement"][2]["item"].endswith("/?id=" + pid_a))
+    crumbs = page.text.split('class="log-breadcrumb"')[1].split('</nav>')[0]
+    check("記事のパンくず: 家のSVG・区切りのSVG・今のページ", 'log-crumb-home' in crumbs and crumbs.count('log-crumb-sep') == 2 and 'aria-current="page"' in crumbs)
+    sha = re.search(r"script-src [^;]*'sha256-([^']+)'", page.getheader('Content-Security-Policy'))
+    check("構造化データはCSPのハッシュで許可", sha is not None)
+    check("トップの1ページ目にはパンくずなし", 'log-breadcrumb' not in public.get("/").text)
+    day = public.get("/?date=" + re.search(r'datetime="(\d{4}-\d{2}-\d{2})', page.text).group(1)).text
+    check("日付のパンくずは月を通る", '?month=' in day.split('class="log-breadcrumb"')[1].split('</nav>')[0])
     check("RSSの案内タグがある", 'type="application/rss+xml"' in page.text)
 
     # Likes

@@ -119,7 +119,21 @@ html[data-log-theme="light-paper"] .log-site-header > a { font-family:"Yu Mincho
 .log-picker { width:min(760px,calc(100% - 24px)); max-height:85dvh; color:var(--log-text); background:var(--log-card); border:1px solid var(--log-line); border-radius:16px; padding:24px; }.log-picker::backdrop { background:#10223880; }.log-picker label { display:grid; gap:4px; }
 .log-picker-grid,.log-media-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin:16px 0; }.log-picker-grid button { display:flex; flex-direction:column; gap:10px; padding:12px; border:1px solid var(--log-line); border-radius:12px; font:inherit; color:var(--log-text); background:var(--log-bg); cursor:pointer; text-align:left; overflow-wrap:anywhere; }.log-picker-grid button:hover { border-color:var(--log-accent); }.log-picker-grid img { width:100%; height:150px; object-fit:contain; border-radius:8px; }
 .log-media-card { padding:16px; min-width:0; position:relative; transition:outline-color .15s ease, background .15s ease; }.log-media-card.log-drop-over { outline:3px dashed var(--log-accent); outline-offset:-6px; background:color-mix(in srgb,var(--log-accent) 8%,var(--log-card)); }.log-drop-hint { margin:4px 0 0; font-size:12px; }.log-media-card > a { display:block; }.log-media-card > a img { width:100%; height:190px; object-fit:contain; border-radius:8px; }.log-media-card .note { font-size:12px; }.log-replace-label { margin-top:14px; cursor:pointer; }
-.log-breadcrumb { font-size:12px; color:var(--log-muted); margin-bottom:16px; }.log-breadcrumb ol { display:flex; flex-wrap:wrap; padding:0; margin:0; list-style:none; gap:8px; }.log-breadcrumb li + li::before { content:"/"; margin-right:8px; }
+/* Breadcrumb: one soft pill, house icon + site name › … › this page. Long names shorten with "…". */
+.log-breadcrumb { display:flex; margin:0 0 18px; font-size:12.5px; line-height:1.4; }
+.log-breadcrumb ol { display:flex; align-items:center; min-width:0; max-width:100%; margin:0; padding:4px; list-style:none; border:1px solid var(--log-line); border-radius:999px; background:color-mix(in srgb,var(--log-card) 82%,transparent); box-shadow:var(--log-shadow); }
+.log-breadcrumb li { display:flex; align-items:center; flex:none; min-width:0; }
+.log-breadcrumb li:not(:first-child):not(:last-child) { flex-shrink:1; }.log-breadcrumb li:last-child { flex:0 1 auto; }
+.log-crumb { display:inline-flex; align-items:center; gap:6px; min-width:0; padding:5px 11px; border-radius:999px; color:var(--log-muted); font-weight:600; text-decoration:none; transition:background-color .15s ease,color .15s ease; }
+.log-crumb > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.log-breadcrumb li:not(:first-child):not(:last-child) .log-crumb > span { max-width:12em; }
+.log-site a.log-crumb { color:var(--log-accent); }.log-site a.log-crumb:hover { background:color-mix(in srgb,var(--log-accent) 10%,transparent); text-decoration:none; }
+a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:1px; }
+.log-breadcrumb li:first-child .log-crumb { background:color-mix(in srgb,var(--log-accent) 10%,transparent); }
+.log-breadcrumb [aria-current] .log-crumb { color:var(--log-text); }
+.log-crumb-home { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.log-crumb-sep { width:14px; height:14px; flex:none; margin:0 1px; fill:none; stroke:var(--log-muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; opacity:.6; }
+@media(max-width:600px) { .log-breadcrumb { font-size:12px; }.log-crumb { padding:5px 9px; gap:5px; }.log-breadcrumb li:first-child .log-crumb > span { max-width:7.5em; }.log-breadcrumb li:not(:first-child):not(:last-child) .log-crumb > span { max-width:6.5em; } }
 @media(max-width:900px) {
     .log-site-grid { display:block; padding:0; }.log-site-header { padding-right:84px; }.log-site-main { padding:0; width:100%; }
     .log-site .log-post,.log-admin-main .log-post { border-radius:0; border-left:0; border-right:0; margin-bottom:12px; width:100%; box-shadow:none; }

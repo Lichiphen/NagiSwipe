@@ -46,6 +46,58 @@ function nl_has_image_links(string $html): bool
     }
     return false;
 }
+/**
+ * Breadcrumb steps for a page: [name, query (without "?"), or null for the page itself].
+ * The top page's first page has none; a post goes through its first category.
+ */
+function nl_breadcrumb_trail(array $s, array $filter, int $page, ?array $post = null): array
+{
+    $trail = [[$s['title'], '']];
+    if ($post) {
+        $cats = nl_taxonomy()['categories'];
+        foreach ($post['categories'] ?? [] as $id) if (isset($cats[$id])) { $trail[] = [$cats[$id], 'category=' . $id]; break; }
+        $trail[] = [nl_post_title($post), null];
+        return $trail;
+    }
+    if ($filter['category'] !== '') $trail[] = [nl_taxonomy()['categories'][$filter['category']], $filter['query']];
+    elseif ($filter['tag'] !== '') $trail[] = ['#' . $filter['tag'], $filter['query']];
+    elseif ($filter['search'] !== '') $trail[] = ['「' . $filter['search'] . '」の検索結果', $filter['query']];
+    elseif ($filter['date'] !== '') {
+        [$y, $m, $d] = array_map('intval', explode('-', $filter['date']));
+        $trail[] = [$y . '年' . $m . '月', 'month=' . $filter['month']];
+        $trail[] = [$m . '月' . $d . '日', $filter['query']];
+    } elseif ($filter['query'] !== '') {
+        [$y, $m] = array_map('intval', explode('-', $filter['month']));
+        $trail[] = [$y . '年' . $m . '月', $filter['query']];
+    }
+    if ($page > 1) $trail[] = [$page . 'ページ目', null];
+    if (count($trail) === 1) return [];
+    $last = count($trail) - 1;
+    $trail[$last][1] = null;
+    return $trail;
+}
+/**
+ * The visible breadcrumb (house icon + site name › … › this page) and the same steps as schema.org
+ * BreadcrumbList JSON-LD for search engines. Returns [html, json] ('' when there is no trail).
+ */
+function nl_breadcrumb(array $trail, string $canonical): array
+{
+    if (!$trail) return ['', ''];
+    $base = nl_base_url();
+    $home = '<svg class="log-crumb-home" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg>';
+    $sep = '<svg class="log-crumb-sep" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6"/></svg>';
+    $items = ''; $list = [];
+    foreach ($trail as $i => [$name, $query]) {
+        $current = $query === null;
+        $url = $current ? $canonical : $base . '/' . ($query !== '' ? '?' . $query : '');
+        $label = ($i === 0 ? $home : '') . '<span>' . h($name) . '</span>';
+        $items .= '<li' . ($current ? ' aria-current="page"' : '') . '>' . ($i > 0 ? $sep : '')
+            . ($current ? '<span class="log-crumb">' . $label . '</span>' : '<a class="log-crumb" href="./' . ($query !== '' ? '?' . h($query) : '') . '"' . ($i === 0 ? ' title="' . h($name) . 'のトップ"' : '') . '>' . $label . '</a>') . '</li>';
+        $list[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $name, 'item' => $url];
+    }
+    $json = json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    return ['<nav class="log-breadcrumb" aria-label="パンくずリスト"><ol>' . $items . '</ol></nav>', (string)$json];
+}
 function nl_page_url(string $query, int $page): string
 {
     $q = $query . ($page > 1 ? ($query !== '' ? '&' : '') . 'page=' . $page : '');
