@@ -581,7 +581,7 @@
             this._stopInertia();
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(wrap => {
                 if (!wrap) return;
-                if (wrap._nsW) this._setSlideSize(wrap, wrap._nsW, wrap._nsH);
+                if (wrap._nsW) this._setSlideSize(wrap, wrap._nsNatW, wrap._nsNatH);
                 wrap.style.transition = 'none';
             });
             this.state = { x: 0, y: 0, scale: 1 };
@@ -778,6 +778,7 @@
             wrap._nsValuesCalculated = false;
             wrap._nsW = 0;
             wrap._nsH = 0;
+            wrap._nsFull = false;
             wrap._nsLoading = false;
             wrap._nsLoaded = false;
             wrap._nsFailed = false;
@@ -812,7 +813,7 @@
                 ph.src = item.thumb;
                 wrap.appendChild(ph);
                 if (wrap._nsW) {
-                    this._setSlideSize(wrap, wrap._nsW, wrap._nsH);
+                    this._setSlideSize(wrap, wrap._nsNatW, wrap._nsNatH);
                 } else if (ph.complete && ph.naturalWidth) {
                     sizeFromThumb();
                 }
@@ -964,6 +965,17 @@
          */
         _setSlideSize(wrap, w, h) {
             if (!wrap || !w || !h) return;
+            // The image's own pixels: they decide how far it can zoom
+            wrap._nsNatW = w;
+            wrap._nsNatH = h;
+            // The slide is laid out at most this large, then scaled. A layer of several thousand px per side
+            // (times the device pixel ratio) is too much for the GPU: while opening, frames came out blank or
+            // jumped. Drawing still uses the full image, so zooming in stays sharp.
+            // Zoomed in, the slide takes its full size again (see _syncLayout): a scaled-up layer would look soft.
+            const limit = wrap._nsFull ? Infinity : Math.max(2048, 2 * Math.max(window.innerWidth, window.innerHeight));
+            const k = Math.min(1, limit / Math.max(w, h));
+            w = Math.round(w * k);
+            h = Math.round(h * k);
             wrap._nsW = w;
             wrap._nsH = h;
             wrap._nsBaseScale = SmartUtils.getFitScale(w, h);
@@ -1119,6 +1131,23 @@
             }
 
             this._updateZoomButtonDisplay();
+            this._syncLayout();
+        }
+
+        /**
+         * Zoomed in: lay the current slide out at the image's full size so it is drawn sharp.
+         * Back at fit: the smaller layout again, which the GPU can animate (opening, closing, swiping).
+         * The picture on screen does not move: the base scale changes with the layout.
+         */
+        _syncLayout() {
+            const wrap = this.slidePool.current;
+            if (!this.isOpen || this.isAnimating || !wrap || !wrap._nsNatW) return;
+            const full = this.state.scale > 1.01;
+            if (!!wrap._nsFull === full) return;
+            wrap._nsFull = full;
+            wrap.style.transition = 'none';
+            this._setSlideSize(wrap, wrap._nsNatW, wrap._nsNatH);
+            this.render();
         }
 
         _getWrapBaseScale(wrap) {
@@ -1151,9 +1180,10 @@
         _getMaxScaleForCurrent() {
             const wrap = this.slidePool.current;
             if (!wrap || !wrap._nsLoaded) return 1;
-            const baseScale = this._getWrapBaseScale(wrap);
-            if (!baseScale || baseScale <= 0) return 1;
-            return Math.min(Math.max(1, 1 / baseScale), 5);
+            // Up to the image's own pixels (at most 5x), whatever size the slide is laid out at
+            const fit = SmartUtils.getFitScale(wrap._nsNatW, wrap._nsNatH);
+            if (!fit || fit <= 0) return 1;
+            return Math.min(Math.max(1, 1 / fit), 5);
         }
 
         _isDesktopPointer() {
