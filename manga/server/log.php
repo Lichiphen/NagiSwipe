@@ -61,9 +61,11 @@ $base = nl_base_url();
 $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 'page=' . $page : '');
 $canonical = $base . '/' . ($single ? '?id=' . rawurlencode($id) : ($query !== '' ? '?' . $query : ''));
 $title = $single ? nl_post_title($post) : ($filter['label'] !== '' ? $filter['label'] . '｜' . $s['title'] : $s['title']);
-$desc = $single ? (nl_excerpt($post) ?: $s['description']) : $s['description'];
+$rating = $single ? nl_post_rating($post) : '';
+$desc = $single ? (nl_veil_description($post) ?: nl_excerpt($post) ?: $s['description']) : $s['description'];
 $ogImage = ($og = nl_load_media($s['og_image'])) ? $base . '/' . nl_media_url($og) : $base . '/viewer/log-og.png?v=' . nm_asset_version(__DIR__ . '/viewer/log-og.png');
-if ($single) {
+// A post with a content warning shares the common image, never its own pictures.
+if ($single && $rating === '') {
     // Article images take priority; text/manga-only posts use the shared image.
     preg_match_all('/\[Image:([a-f0-9]{16})\]/', $post['body'], $matches, PREG_SET_ORDER);
     foreach ($matches as $match) {
@@ -71,6 +73,8 @@ if ($single) {
     }
 }
 $robots = nl_robots($s, $single, $filter, $page, count($all));
+// R-18 posts stay out of search engines.
+if ($rating === 'r18' && $robots === 'index,follow') $robots = 'noindex,follow';
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
@@ -120,6 +124,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if (str_contains($relatedHtml, 'data-related-random')): ?><script src="<?= nl_public_asset('viewer/log-related.js') ?>" defer></script><?php endif; ?>
 <?php if ($s['public']): ?><link rel="alternate" type="application/rss+xml" title="<?= h($s['title']) ?>" href="<?= h(nl_feed_url()) ?>"><?php if (!$single && ($filter['category'] !== '' || $filter['tag'] !== '')): ?><link rel="alternate" type="application/rss+xml" title="<?= h($title) ?>" href="<?= h(nl_feed_url($filter['query'])) ?>"><?php endif; ?><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
+<?php if ($owner || $more || str_contains($postsHtml . $relatedHtml, 'data-veil=')): ?><script src="<?= nl_public_asset('viewer/log-veil.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>

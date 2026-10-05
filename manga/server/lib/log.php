@@ -6,7 +6,7 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 const NL_POST_PATTERN = '/\A(?:[0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\z/';
 const NL_MEDIA_PATTERN = '/\A[a-f0-9]{16}\z/';
 const NL_BODY_MAX = 100000;
-const NL_INDEX_SCHEMA = 6;
+const NL_INDEX_SCHEMA = 7;
 const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライトセージ', 'light-paper' => 'ライトペーパー',
     'dark-navy' => 'ダークネイビー', 'dark-charcoal' => 'ダークチャコール', 'dark-plum' => 'ダークプラム'];
 require_once __DIR__ . '/log-taxonomy.php';
@@ -17,6 +17,7 @@ require_once __DIR__ . '/log-card.php';
 require_once __DIR__ . '/log-grid.php';
 require_once __DIR__ . '/log-likes.php';
 require_once __DIR__ . '/log-feed.php';
+require_once __DIR__ . '/log-veil.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -71,7 +72,7 @@ function nl_load_media(string $id): ?array
 function nl_post_summary(array $p): array
 {
     return ['id' => $p['id'], 'created' => $p['created'], 'updated' => $p['updated'], 'title' => nl_post_title($p),
-        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body']), 'thumb' => nl_post_thumb_ref($p)];
+        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body']), 'thumb' => nl_post_thumb_ref($p), 'rating' => nl_post_rating($p)];
 }
 /** A small derived index; original post files remain the source of truth. */
 function nl_post_summaries(bool $public = true): array
@@ -333,20 +334,25 @@ function nl_save_post(array $input): array
         elseif (str_starts_with($id, 'd') && $status === 'published') $id = nl_new_id($now);
         $taxonomy = nl_taxonomy(); $oldTaxonomy = $taxonomy;
         $categories = nl_post_categories($input, $taxonomy);
+        [$rating, $warning] = nl_rating_input($input);
+        $mediaRatings = nl_media_ratings_input($input['media_ratings'] ?? [], $media);
         $p = ['id' => $id, 'title' => $title, 'body' => $body, 'manga' => $refs, 'media' => $media,
-            'categories' => $categories,
+            'categories' => $categories, 'rating' => $rating, 'warning' => $warning,
             'status' => $status, 'created' => $old && (!str_starts_with($old['id'], 'd') || $status === 'draft') ? $old['created'] : $now,
             'updated' => $now, 'revision' => (int)($old['revision'] ?? 0) + 1];
         $indexFile = nl_root() . '/index.php';
         $oldIndex = is_file($indexFile) ? file_get_contents($indexFile) : null;
         $taxFile = nl_root() . '/taxonomy.php';
         $oldTaxBytes = is_file($taxFile) ? file_get_contents($taxFile) : null;
+        $ratedMedia = [];
         try {
             if ($taxonomy !== $oldTaxonomy) { $taxonomy['revision']++; $taxonomy['updated'] = $now; nl_write_record($taxFile, $taxonomy); }
             nl_write_record(nl_post_file($id), $p);
+            $ratedMedia = nl_media_ratings_apply($mediaRatings);
             nl_update_index($p, $old && $old['id'] !== $id ? $old['id'] : '');
             nl_write_record($receiptFile, ['id' => $id, 'created' => $now]);
         } catch (Throwable $e) {
+            nl_media_ratings_apply($ratedMedia);
             if ($old && $old['id'] === $id) nl_write_record(nl_post_file($id), $old);
             else @unlink(nl_post_file($id));
             if (is_string($oldIndex)) nm_write_atomic($indexFile, $oldIndex); else @unlink($indexFile);
@@ -357,6 +363,8 @@ function nl_save_post(array $input): array
             throw $e;
         }
         if ($old && $old['id'] !== $id) @unlink(nl_post_file($old['id']));
+        // A changed image rating also changes the summaries of other posts showing the image.
+        if ($ratedMedia) { try { nl_rebuild_index(); } catch (Throwable) {} }
         // Retain receipts for one day; they only prevent duplicate form submissions.
         foreach (glob(nl_root() . '/receipts/*.php') ?: [] as $f) if (filemtime($f) < $now - 86400) @unlink($f);
         nm_log('log_saved', $id);
@@ -605,6 +613,10 @@ function nl_render_body(array $p, bool $admin = false): string
     $dark = str_starts_with(nl_settings()['theme'], 'dark');
     // The first picture of a public page is usually what the reader sees first: fetch it at once.
     static $firstImage = true;
+    // Readers see a folded post (R-18 / R-18G) or veiled pictures (センシティブ); the owner sees a note and badges.
+    $postRating = nl_rating($p['rating'] ?? '');
+    $warning = nl_warning_text($p['warning'] ?? '');
+    $fold = !$admin && nl_rating_folds(nl_post_rating($p)) ? nl_post_rating($p) : '';
     foreach ($tokens ?: [] as $token) {
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
@@ -614,7 +626,10 @@ function nl_render_body(array $p, bool $admin = false): string
         if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m)) {
             $im = nl_load_media($m[1]);
             if ($im && ($admin || nl_media_public($m[1]))) {
-                $load = !$admin && $firstImage ? 'fetchpriority="high"' : 'loading="lazy"';
+                $rating = nl_rating_max($postRating, nl_media_rating($p, $im));
+                if (!$admin && $fold === '' && $rating !== '') { $out .= nl_veil_figure($im, $rating, $warning, $admin); continue; }
+                if ($admin && $rating !== '') { $out .= '<figure class="log-figure is-rated">' . nl_veil_badge($rating, 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($im, false, true)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, true)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" loading="lazy"></a></figure>'; continue; }
+                $load = !$admin && $firstImage && $fold === '' ? 'fetchpriority="high"' : 'loading="lazy"';
                 if (!$admin) $firstImage = false;
                 $out .= '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" ' . $load . '></a></figure>';
             } else $out .= '<span class="note">画像が見つかりません</span>';
@@ -628,7 +643,8 @@ function nl_render_body(array $p, bool $admin = false): string
         } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>';
         else $out .= nl_render_text($token, $admin);
     }
-    return '<div class="log-body">' . $out . '</div>';
+    $out = '<div class="log-body">' . $out . '</div>';
+    return $admin ? nl_veil_admin_note($p) . $out : ($fold !== '' ? nl_veil_post($fold, $warning, $out) : $out);
 }
 function nl_base_url(): string
 {

@@ -66,7 +66,10 @@ function nl_tile(array $summary, bool $featured = false, string $loading = 'lazy
     $title = (string)($summary['title'] ?? '') !== '' ? (string)$summary['title'] : '画像の記録';
     $img = nl_thumb_img((string)($summary['thumb'] ?? ''), $featured, $loading);
     $thumb = $img ?? '<span class="log-tile-blank" aria-hidden="true">' . h(mb_substr(trim($title), 0, 1)) . '</span>';
-    return '<' . $tag . ' class="log-tile' . ($featured ? ' is-featured' : '') . '"' . $extra . '><a href="./?id=' . h($summary['id']) . '"><span class="log-tile-thumb">' . $thumb . ($featured ? '<span class="log-tile-badge">LATEST</span>' : '') . '</span>'
+    // A post with a content warning shows its picture blurred, with the rating; log-veil.js clears the blur for readers who chose so.
+    $rating = nl_rating($summary['rating'] ?? '');
+    $veil = $rating !== '' ? ' is-veiled" data-veil="' . h($rating) : '';
+    return '<' . $tag . ' class="log-tile' . ($featured ? ' is-featured' : '') . '"' . $extra . '><a href="./?id=' . h($summary['id']) . '"><span class="log-tile-thumb' . $veil . '">' . $thumb . ($featured ? '<span class="log-tile-badge">LATEST</span>' : '') . ($rating !== '' ? '<span class="log-tile-veil">' . nl_veil_icon() . h(nl_rating_label($rating)) . '</span>' : '') . '</span>'
         . '<span class="log-tile-body">' . nl_tile_date((int)$summary['created']) . '<span class="log-tile-title">' . h($title) . '</span></span></a></' . $tag . '>';
 }
 /** The tile list of a public page. The newest post on the top page opens larger. */

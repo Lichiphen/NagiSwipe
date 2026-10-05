@@ -25,6 +25,12 @@ function nl_admin_media_data(array $m): array
 }
 function nl_admin_catalog(bool $manga): never
 {
+    // Images typed or pasted into the editor as tags: their thumbnails and ratings, by id.
+    if (!$manga && isset($_GET['ids'])) {
+        $out = [];
+        foreach (array_slice(explode(',', nm_str($_GET, 'ids', 2000)), 0, 100) as $id) if ($m = nl_load_media($id)) $out[] = nl_admin_media_data($m);
+        nm_json(['items' => $out, 'more' => false]);
+    }
     $page = nl_page_number();
     $q = trim(nm_str($_GET, 'q', 200));
     $items = $manga ? nm_list_works() : nl_list_media();
@@ -51,7 +57,8 @@ function nl_input_post(): array
     $refs = json_decode($rawRefs, true);
     return ['id' => nm_str($_POST, 'post_id', 24), 'revision' => (int)nm_str($_POST, 'revision', 10),
         'nonce' => nm_str($_POST, 'nonce', 32), 'title' => nm_str($_POST, 'title', 1000), 'body' => $body,
-        'status' => nm_str($_POST, 'status', 20), 'manga' => is_array($refs) ? $refs : [], 'categories' => $_POST['categories'] ?? [], 'new_categories' => nm_str($_POST, 'new_categories', 4000)];
+        'status' => nm_str($_POST, 'status', 20), 'manga' => is_array($refs) ? $refs : [], 'categories' => $_POST['categories'] ?? [], 'new_categories' => nm_str($_POST, 'new_categories', 4000),
+        'rating' => nm_str($_POST, 'rating', 20), 'warning' => nm_str($_POST, 'warning', 400), 'media_ratings' => nm_str($_POST, 'media_ratings', 20000)];
 }
 function nl_handle_post(string $do): never
 {
@@ -68,6 +75,10 @@ function nl_handle_post(string $do): never
                 nl_validate_body($p['body']);
                 nl_cards_prepare($p['body']);
                 $p['manga'] = nl_manga_refs($p['body'], $p['manga']);
+                // Show the ratings chosen in the editor before they are saved.
+                [$p['rating'], $p['warning']] = nl_rating_input($p);
+                $p['media'] = nl_media_refs($p['body']);
+                $p['_media_ratings'] = nl_media_ratings_input($p['media_ratings'], $p['media']);
                 nm_json(['html' => '<h2>' . h(nl_post_title($p, 0)) . '</h2>' . nl_render_body($p, true)]);
             case 'log_upload':
                 $file = $_FILES['image'] ?? null;
@@ -86,12 +97,18 @@ function nl_handle_post(string $do): never
                     if (!$m) throw new UnexpectedValueException('画像が見つかりません');
                     if ($m['revision'] !== (int)nm_str($_POST, 'revision', 10)) throw new UnexpectedValueException('別の画面で更新されています。開き直してください');
                     $m['alt'] = mb_substr(trim(nm_str($_POST, 'alt', 1500)), 0, 300);
+                    $rating = nm_str($_POST, 'rating', 20);
+                    if ($rating !== '' && !isset(NL_RATINGS[$rating])) throw new UnexpectedValueException('閲覧注意を選び直してください');
+                    $rated = nl_rating($m['rating'] ?? '') !== $rating;
+                    $m['rating'] = $rating;
                     $m['revision']++;
                     $m['updated'] = time();
                     nl_write_record(nl_media_dir($m['id']) . '/media.php', $m);
                     nm_touch_content();
+                    // Lists and tiles read a post's rating from the summary index.
+                    if ($rated) nl_rebuild_index();
                 });
-                nm_flash('ok', '画像の説明を保存しました');
+                nm_flash('ok', '画像の説明と閲覧注意を保存しました');
                 nm_redirect('p=log_media');
             case 'log_media_delete':
                 nm_with_lock('personal-log', static function () {
@@ -226,6 +243,26 @@ function nl_handle_post(string $do): never
         nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
     }
 }
+/** Line icons for the editor's tool row (24px grid, drawn with the current colour). */
+function nl_compose_icon(string $name): string
+{
+    $paths = [
+        'upload' => '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m3.5 16 4.6-4.6a1.5 1.5 0 0 1 2.1 0L15 16"/><path d="M18 2.5v5M15.5 5h5"/>',
+        'media' => '<rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/><circle cx="11.5" cy="8" r="1.4"/><path d="m7 15 3.6-3.4a1.4 1.4 0 0 1 1.9 0L17 16"/>',
+        'manga' => '<path d="M4 5.5c2.8-1.2 5.5-1 8 .8 2.5-1.8 5.2-2 8-.8v13c-2.8-1.2-5.5-1-8 .8-2.5-1.8-5.2-2-8-.8Z"/><path d="M12 6.3v13"/>',
+        'bold' => '<path d="M7 4.5h5.8a3.6 3.6 0 0 1 0 7.2H7Zm0 7.2h6.6a3.9 3.9 0 0 1 0 7.8H7Z"/>',
+        'tags' => '<path d="M9.5 4 7.5 20M16.5 4l-2 16M4.5 9h15M3.5 15.5h15"/>',
+        'categories' => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+        'rating' => '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>',
+        'help' => '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.6M12 16.9v.1"/>',
+        'preview' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    ];
+    return '<svg class="log-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+}
+/**
+ * The editor: the text, the pictures in it, chips for what is set, and one row of tools.
+ * Hashtags, categories, the content warning and the help open one at a time under the row.
+ */
 function nl_editor(?array $p = null, bool $public = false): string
 {
     $edit = $p !== null;
@@ -234,20 +271,40 @@ function nl_editor(?array $p = null, bool $public = false): string
     foreach (nl_taxonomy()['categories'] as $id => $label) $categories .= '<label class="log-category-choice"><input type="checkbox" name="categories[]" value="' . h((string)$id) . '"' . (in_array((string)$id, $p['categories'] ?? [], true) ? ' checked' : '') . '><span>' . h($label) . '</span></label>';
     $recent = '';
     foreach (nl_recent_hashtags() as $name) $recent .= '<button type="button" class="log-tag-chip" data-hashtag="' . h($name) . '">#' . h($name) . '</button>';
+    // The pictures already in the post, so their thumbnails and ratings show before anything is added.
+    $media = [];
+    foreach ($p['media'] ?? [] as $mid) if ($m = nl_load_media((string)$mid)) $media[$m['id']] = ['thumb' => nl_media_url($m, true, true), 'alt' => $m['alt'], 'rating' => nl_rating($m['rating'] ?? '')];
+    $rating = nl_rating($p['rating'] ?? '');
+    $order = ['', 'sensitive', 'r18', 'r18g'];
+    $ratings = '';
+    foreach ($order as $value) $ratings .= '<label class="log-rating-choice" data-veil="' . h($value) . '"><input type="radio" name="rating" value="' . h($value) . '"' . ($value === $rating ? ' checked' : '') . '><span><b>' . h(NL_RATINGS[$value]) . '</b><small>' . h(NL_RATING_NOTES[$value]) . '</small></span></label>';
+    $menu = '';
+    foreach ($order as $value) $menu .= '<button type="button" role="menuitemradio" aria-checked="false" data-veil="' . h($value) . '" data-rate="' . h($value) . '">' . h(NL_RATINGS[$value]) . '</button>';
+    $tool = static fn(string $name, string $label, string $attrs) => '<button type="button" class="log-tool" ' . $attrs . ' aria-label="' . h($label) . '" title="' . h($label) . '">' . nl_compose_icon($name) . '</button>';
+    $panel = static fn(string $name, string $label) => $tool($name, $label, 'data-panel="' . $name . '" aria-expanded="false" aria-controls="log-panel-' . $name . '"');
     return '<section class="log-compose' . ($edit ? ' log-edit active' : '') . '" id="log-compose" aria-labelledby="log-compose-title"' . ($edit ? ' data-edit="1"' : '') . '>'
         . '<div class="log-compose-head"><h2 id="log-compose-title">' . ($edit ? '投稿を編集' : 'いま、何を残す？') . '</h2><button type="button" class="btn log-close">閉じる</button></div>'
         . '<form method="post" action="' . ($public ? 'admin/index.php' : 'index.php') . '" data-log-editor' . ($public ? ' data-public="1"' : '') . '>' . nl_csrf_field()
         . '<input type="hidden" name="do" value="log_save"><input type="hidden" name="post_id" value="' . h($p['id'] ?? '') . '">'
         . '<input type="hidden" name="revision" value="' . (int)($p['revision'] ?? 0) . '"><input type="hidden" name="nonce" value="' . $nonce . '">'
-        . '<input type="hidden" name="manga" value="' . h(json_encode($p['manga'] ?? (object)[], JSON_UNESCAPED_UNICODE)) . '">'
-        . '<label class="sr-only" for="log-body">投稿本文</label><textarea id="log-body" name="body" rows="6" maxlength="100000" placeholder="今日のこと、描いた絵、ふと思ったこと。" required>' . h($p['body'] ?? '') . '</textarea>'
-        . '<div class="log-toolbar"><button type="button" class="btn" data-bold><strong>B</strong> 太字</button><button type="button" class="btn" data-upload>画像を追加</button><button type="button" class="btn" data-picker="media">画像を選ぶ</button><button type="button" class="btn" data-picker="manga">漫画を選ぶ</button><button type="button" class="btn" data-preview>プレビュー</button></div>'
+        . '<input type="hidden" name="manga" value="' . h(json_encode($p['manga'] ?? (object)[], JSON_UNESCAPED_UNICODE)) . '"><input type="hidden" name="media_ratings" value="{}">'
+        . '<label class="sr-only" for="log-body">投稿本文</label><textarea id="log-body" name="body" rows="5" maxlength="100000" placeholder="1行目がタイトルになります。&#10;今日のこと、描いた絵、ふと思ったこと。" required>' . h($p['body'] ?? '') . '</textarea>'
+        . '<div class="log-attachments" data-attachments data-media="' . h(json_encode((object)$media, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '"></div>'
+        . '<div class="log-att-menu" data-att-menu role="menu" aria-label="この画像の閲覧注意" hidden><p class="log-att-menu-title" aria-hidden="true">この画像の閲覧注意</p>' . $menu . '</div>'
+        . '<div class="log-compose-chips" data-chips></div>'
+        . '<div class="log-compose-bar" role="toolbar" aria-label="投稿の道具"><div class="log-compose-tools">'
+        . $tool('upload', '画像を追加', 'data-upload') . $tool('media', '画像一覧から選ぶ', 'data-picker="media"') . $tool('manga', '漫画を選ぶ', 'data-picker="manga"') . $tool('bold', '太字', 'data-bold')
+        . '<span class="log-tool-sep" aria-hidden="true"></span>' . $panel('tags', 'ハッシュタグ') . $panel('categories', 'カテゴリ') . $panel('rating', '閲覧注意') . $panel('help', '使い方')
+        . '</div>' . $tool('preview', 'プレビュー', 'data-preview aria-pressed="false"') . '</div>'
         . '<input type="file" data-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" multiple hidden>'
-        . '<p class="note">画像はここへドロップ、または貼り付けできます。タグは好きな位置へ移せます。<br>URLだけを1行に貼ると、YouTubeやXなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。</p>'
-        . '<div class="log-recent-tags"><span class="note">最近使ったハッシュタグ</span><div class="log-chip-list">' . ($recent ?: '<span class="note">本文に #らくがき のように書くと、ここに並びます。</span>') . '</div></div>'
-        . '<details class="log-category-picker"><summary>カテゴリを選ぶ・作る</summary><div class="log-chip-list">' . ($categories ?: '<p class="note">新しいカテゴリから作れます。</p>') . '</div><label>新しいカテゴリ<input name="new_categories" maxlength="800" placeholder="例：日記、制作メモ"></label><p class="note">複数作るときは「、」で区切ります。</p></details>'
-        . '<div class="log-attachments" data-attachments></div><div class="log-preview" data-preview-body hidden></div>'
-        . '<input type="hidden" name="title" value=""><p class="note">1行目はタイトル、2行目以降は本文になります。</p>'
+        . '<div class="log-compose-panel" id="log-panel-tags" data-panel-body="tags" hidden><p class="log-panel-title">最近使ったハッシュタグ</p><div class="log-chip-list">' . ($recent ?: '<span class="note">本文に #らくがき のように書くと、ここに並びます。</span>') . '</div></div>'
+        . '<div class="log-compose-panel" id="log-panel-categories" data-panel-body="categories" hidden><p class="log-panel-title">カテゴリ</p><div class="log-chip-list">' . ($categories ?: '<p class="note">下の欄から作れます。</p>') . '</div><label class="log-panel-field">新しいカテゴリ<input name="new_categories" maxlength="800" placeholder="例：日記、制作メモ（「、」で区切って複数）"></label></div>'
+        . '<div class="log-compose-panel" id="log-panel-rating" data-panel-body="rating" hidden><fieldset class="log-rating"><legend class="log-panel-title">閲覧注意</legend><div class="log-rating-choices">' . $ratings . '</div></fieldset>'
+        . '<label class="log-panel-field">注意書き（任意）<input name="warning" maxlength="' . NL_WARNING_MAX . '" value="' . h(nl_warning_text($p['warning'] ?? '')) . '" placeholder="例：流血表現があります"></label>'
+        . '<label class="log-panel-check"><input type="checkbox" data-rate-all checked>選んだとき、本文の画像にも同じ注意を付ける</label><p class="note">画像ごとの注意は、サムネイルの左下のボタンで変えられます。</p></div>'
+        . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」にできます。</li><li>画像はここへドロップ、または貼り付けでも追加できます。本文の画像タグを動かすと、表示する位置も変わります。</li><li>URLだけを1行に貼ると、YouTubeやXなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。</li><li>閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。</li></ul></div>'
+        . '<div class="log-preview" data-preview-body hidden></div>'
+        . '<input type="hidden" name="title" value="">'
         . '<p class="log-status" role="status" aria-live="polite"></p><div class="log-submit"><span class="note" data-character-count></span><button class="btn" name="status" value="draft">下書き保存</button><button class="btn primary" name="status" value="published">' . (!nl_settings()['public'] ? 'メモを保存' : ($edit ? '公開して保存' : '投稿する')) . '</button></div></form></section>'
         . '<button type="button" class="log-fab" aria-controls="log-compose" aria-expanded="' . ($edit ? 'true' : 'false') . '">' . nl_ui_icon() . '<span>書く</span></button>'
         . ($public ? '<a class="log-fab-admin" href="admin/index.php?p=log">' . nl_ui_icon('wrench') . '<span>管理</span></a>' : '')
@@ -285,7 +342,7 @@ function nl_view_log(): void
         foreach ($p['media'] ?? [] as $mid) if ($m = nl_load_media($mid)) { $thumb = '<img src="' . h(nl_media_url($m, true, true)) . '" alt="" loading="lazy">'; break; }
         if ($thumb === '') foreach ($p['manga'] ?? [] as $wid) if (($w = nm_load_work($wid)) && !empty($w['pages'])) { $thumb = '<img src="' . h(nm_thumb_url($w)) . '" alt="" loading="lazy">'; break; }
         $cards .= '<li class="log-list-row"><span class="log-list-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></span>'
-            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($p['status'] === 'draft' ? '<small class="badge">下書き</small>' : '') . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="いいね' . $likes . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
+            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($p['status'] === 'draft' ? '<small class="badge">下書き</small>' : '') . nl_veil_badge(nl_rating($summary['rating'] ?? '')) . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="いいね' . $likes . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
             . ($searching ? nl_admin_search_where($p, $terms, $publicIds, $publicPer) : '')
             . '<span class="log-list-thumb">' . $thumb . '</span>' . ($p['status'] === 'published' ? '<a class="btn log-list-view" href="../?id=' . h($p['id']) . '">' . nl_ui_icon('view') . '<span>記事を見る</span></a>' : '<span class="log-list-view note">下書き</span>') . '<a class="btn log-list-edit" href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>'
             . '<form method="post" action="index.php" class="js-confirm log-list-delete" data-confirm="この記事を削除しますか？この記事だけで使う画像も削除します。">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">' . nl_ui_icon('delete') . '<span>削除</span></button></form><label class="log-bulk-choice" hidden><input type="checkbox" data-bulk-item value="' . h($p['id']) . '" data-revision="' . $p['revision'] . '" aria-label="' . h(nl_post_title($p)) . 'を削除対象に選ぶ"></label></li>';
@@ -352,12 +409,19 @@ function nl_view_media(): void
     $cards = '';
     foreach (array_slice($all, ($page - 1) * 40, 40) as $m) {
         $locations = array_filter([$m['id'] === $icon ? 'アイコン' : '', $m['id'] === $ogImage ? '共通OGP' : '', in_array($m['id'], $sidebarImages, true) ? 'サイドバー' : '']);
-        $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '"><a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a><p class="note">' . h(nl_date($m['created'])) . '・' . ($usage[$m['id']] ?? 0) . '件で使用' . ($locations ? '（' . implode('・', $locations) . '）' : '') . '</p>'
-            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>画像の説明<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label><button class="btn small">説明を保存</button></form>'
+        $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '">' . nl_veil_badge(nl_rating($m['rating'] ?? ''), 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a><p class="note">' . h(nl_date($m['created'])) . '・' . ($usage[$m['id']] ?? 0) . '件で使用' . ($locations ? '（' . implode('・', $locations) . '）' : '') . '</p>'
+            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>画像の説明<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? '')) . '<button class="btn small">説明と閲覧注意を保存</button></form>'
             . '<label class="btn log-replace-label">画像を差し替える<input type="file" class="log-replace" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" hidden></label><p class="note log-drop-hint">この枠に画像をドロップしても差し替えられます。</p><p class="note" role="status" data-replace-status></p>'
             . '<form method="post" action="index.php" class="js-confirm" data-confirm="この未使用画像を削除しますか？">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_media_delete"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><button class="btn small danger"' . (isset($usage[$m['id']]) ? ' disabled' : '') . '>未使用画像を削除</button></form></article>';
     }
     nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">LOGへ戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p><div class="log-media-grid">' . ($cards ?: '<p>投稿画面から画像を追加すると、ここに並びます。</p>') . '</div><nav class="log-pagination">' . ($page > 1 ? '<a class="btn" href="index.php?p=log_media&page=' . ($page - 1) . '">新しい画像</a>' : '') . ($page * 40 < count($all) ? '<a class="btn" href="index.php?p=log_media&page=' . ($page + 1) . '">前の画像</a>' : '') . '</nav>');
+}
+/** The rating of one image, as a short select (画像一覧). */
+function nl_rating_select(string $current): string
+{
+    $options = '';
+    foreach (NL_RATINGS as $value => $label) $options .= '<option value="' . h($value) . '"' . ($value === $current ? ' selected' : '') . '>' . h($label) . '</option>';
+    return '<label>閲覧注意<select name="rating">' . $options . '</select></label>';
 }
 function nl_backup_panel(): string
 {

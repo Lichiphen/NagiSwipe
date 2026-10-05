@@ -39,6 +39,13 @@ function nl_restore_string(array $data, string $key, int $max): string
     if (!is_string($value) || strlen($value) > $max || !mb_check_encoding($value, 'UTF-8') || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value)) throw new UnexpectedValueException('バックアップの文字データが壊れています');
     return $value;
 }
+/** A content warning from a backup; older backups have none. An unknown value stops the restore rather than dropping a warning. */
+function nl_restore_rating(array $data): string
+{
+    $rating = $data['rating'] ?? '';
+    if (!is_string($rating) || ($rating !== '' && !isset(NL_RATINGS[$rating]))) throw new UnexpectedValueException('閲覧注意の設定が壊れています');
+    return $rating;
+}
 function nl_restore_json(ZipArchive $zip, int $index, mixed &$native = null): array
 {
     $raw = nm_zip_read($zip, $index, 2 * 1024 * 1024);
@@ -124,7 +131,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
             $image = nm_import_image($input, $dir, 1, 90, NM_RESTORE_MAX_ENTRY, true, true);
             @unlink($input);
             if (is_string($image)) throw new UnexpectedValueException($image);
-            $media[$id] = array_merge($image, ['id' => $id, 'alt' => nl_restore_string($m, 'alt', 1500), 'created' => max(0, (int)($m['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($m['revision'] ?? 1))]);
+            $media[$id] = array_merge($image, ['id' => $id, 'alt' => nl_restore_string($m, 'alt', 1500), 'rating' => nl_restore_rating($m), 'created' => max(0, (int)($m['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($m['revision'] ?? 1))]);
         }
         foreach ($postEntries as $id => $i) {
             // Numeric timestamp keys are converted to integers by PHP arrays.
@@ -138,7 +145,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
             if (!is_array($categories) || count($categories) > 20) throw new UnexpectedValueException('投稿のカテゴリが壊れています');
             foreach ($categories as $cid) if ((!is_string($cid) && !is_int($cid)) || !preg_match('/\A[a-f0-9]{12}\z/', (string)$cid)) throw new UnexpectedValueException('投稿のカテゴリが壊れています');
             $categories = array_map('strval', $categories);
-            $posts[$id] = ['id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'status' => $p['status'], 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
+            $posts[$id] = ['id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'rating' => nl_restore_rating($p), 'warning' => nl_warning_text(nl_restore_string($p, 'warning', 400)), 'status' => $p['status'], 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
         }
         return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite) {
             // Validate all references before replacing any live file.

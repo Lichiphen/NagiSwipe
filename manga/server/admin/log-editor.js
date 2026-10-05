@@ -77,19 +77,31 @@
     const initialRevision = $('input[name="revision"]', form).value;
     const categoryFields = $$('input[name="categories[]"]', form);
     const newCategories = $('input[name="new_categories"]', form);
-    const current = () => ({ body: body.value, title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value });
+    const ratingFields = $$('input[name="rating"]', form);
+    const warning = $('input[name="warning"]', form);
+    const attachments = $('[data-attachments]', form);
+    // Pictures known to the editor: id -> { thumb, alt, rating }. Ratings changed here are sent with the post.
+    const mediaInfo = JSON.parse(attachments.dataset.media || '{}');
+    let mediaRatings = {};
+    const rating = () => ratingFields.find(i => i.checked)?.value || '';
+    const current = () => ({ body: body.value, title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value, rating: rating(), warning: warning.value, mediaRatings });
     const initial = JSON.stringify(current());
     const snapshot = () => JSON.stringify(current());
     function restore(saved) {
         body.value = saved.body; title.value = saved.title || ''; refs = saved.refs || {};
         if (Array.isArray(saved.categories)) categoryFields.forEach(i => { i.checked = saved.categories.includes(i.value); });
         newCategories.value = saved.newCategories || '';
+        if (typeof saved.rating === 'string') ratingFields.forEach(i => { i.checked = i.value === saved.rating; });
+        warning.value = saved.warning || '';
+        mediaRatings = saved.mediaRatings && typeof saved.mediaRatings === 'object' ? saved.mediaRatings : {};
     }
     function say(message, error = false) { status.textContent = message; status.classList.toggle('error', error); }
     function changed() {
         Object.keys(refs).forEach(tag => { if (!body.value.includes(tag)) delete refs[tag]; });
         refsField.value = JSON.stringify(refs);
-        $('[data-preview-body]', form).hidden = true;
+        $('input[name="media_ratings"]', form).value = JSON.stringify(mediaRatings);
+        renderAttachments(); renderChips();
+        $('[data-preview-body]', form).hidden = true; $('[data-preview]', form).setAttribute('aria-pressed', 'false');
         $('[data-character-count]', form).textContent = Array.from(body.value).length + '文字';
         dirty = snapshot() !== initial;
         try { sessionStorage.setItem(storageKey, JSON.stringify({ ...current(), revision: initialRevision })); } catch { /* storage may be disabled */ }
@@ -109,6 +121,120 @@
             });
         }
     } catch { /* storage may be disabled */ }
+    // Ratings, weakest first, as on the server (NL_RATINGS).
+    const RANK = ['', 'sensitive', 'r18g', 'r18'];
+    const LABEL = { '': 'なし', sensitive: 'センシティブ', r18: 'R-18', r18g: 'R-18G' };
+    const bodyMedia = () => [...new Set([...body.value.matchAll(/\[Image:([a-f0-9]{16})\]/g)].map(m => m[1]))];
+    const mediaRating = id => mediaRatings[id] ?? mediaInfo[id]?.rating ?? '';
+    const strongest = list => list.reduce((a, b) => RANK.indexOf(b) > RANK.indexOf(a) ? b : a, '');
+    const veilIcon = '<svg class="log-veil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/></svg>';
+    // The strip under the text: every picture tagged in the body, in order, each with its own rating button.
+    // Tags typed or pasted by hand: ask the server once for their thumbnails and ratings.
+    const asked = new Set();
+    async function lookup(ids) {
+        ids.forEach(id => asked.add(id));
+        try {
+            const response = await fetch(adminUrl('index.php?p=log_media_json&ids=' + ids.join(',')), { credentials: 'same-origin', cache: 'no-store' });
+            if (!response.ok) return;
+            (await response.json()).items.forEach(item => { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; });
+            renderAttachments(); renderChips();
+        } catch { /* the strip keeps its placeholders */ }
+    }
+    function renderAttachments() {
+        const ids = bodyMedia();
+        const unknown = ids.filter(id => !mediaInfo[id] && !asked.has(id));
+        if (unknown.length) lookup(unknown);
+        const key = ids.map(id => id + ':' + mediaRating(id) + ':' + (mediaInfo[id]?.thumb || '')).join(',');
+        if (attachments.dataset.key === key) return;
+        attachments.dataset.key = key;
+        attachments.replaceChildren(...ids.map(id => {
+            const info = mediaInfo[id] || {}, r = mediaRating(id);
+            const item = document.createElement('div'); item.className = 'log-att'; item.dataset.mediaId = id;
+            const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'log-att-thumb'; thumb.title = 'この画像のタグをもう一度入れる';
+            if (info.thumb) { const img = document.createElement('img'); img.src = adminUrl(info.thumb); img.alt = info.alt || '本文の画像'; thumb.append(img); }
+            else thumb.textContent = '画像';
+            thumb.addEventListener('click', () => insert('\n[Image:' + id + ']\n'));
+            const rate = document.createElement('button'); rate.type = 'button'; rate.className = 'log-att-rating'; rate.dataset.veil = r;
+            rate.setAttribute('aria-haspopup', 'menu'); rate.setAttribute('aria-expanded', 'false');
+            rate.setAttribute('aria-label', 'この画像の閲覧注意：' + LABEL[r]); rate.title = '閲覧注意：' + LABEL[r];
+            rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
+            rate.addEventListener('click', () => openMenu(rate, id));
+            item.append(thumb, rate);
+            return item;
+        }));
+        attachments.hidden = !ids.length;
+    }
+    const menu = $('[data-att-menu]', form);
+    let menuFor = null;
+    function closeMenu(focus = false) {
+        if (menu.hidden) return;
+        menu.hidden = true;
+        const opener = $('.log-att[data-media-id="' + menuFor + '"] .log-att-rating', attachments);
+        opener?.setAttribute('aria-expanded', 'false');
+        if (focus) opener?.focus();
+        menuFor = null;
+    }
+    function openMenu(button, id) {
+        if (menuFor === id) { closeMenu(); return; }
+        closeMenu(); menuFor = id;
+        $$('[data-rate]', menu).forEach(b => b.setAttribute('aria-checked', String(b.dataset.rate === mediaRating(id))));
+        const box = form.getBoundingClientRect(), at = button.getBoundingClientRect();
+        menu.hidden = false;
+        menu.style.left = Math.max(0, Math.min(at.left - box.left, box.width - menu.offsetWidth)) + 'px';
+        menu.style.top = (at.bottom - box.top + 6) + 'px';
+        button.setAttribute('aria-expanded', 'true');
+        $('[data-rate][aria-checked="true"]', menu)?.focus();
+    }
+    $$('[data-rate]', menu).forEach(b => b.addEventListener('click', () => {
+        const id = menuFor; closeMenu(true);
+        if (id) { mediaRatings[id] = b.dataset.rate; changed(); $('.log-att[data-media-id="' + id + '"] .log-att-rating', attachments)?.focus(); }
+    }));
+    menu.addEventListener('keydown', e => {
+        const items = $$('[data-rate]', menu), i = items.indexOf(document.activeElement);
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+    });
+    document.addEventListener('click', e => { if (!menu.hidden && !e.target.closest('[data-att-menu], .log-att-rating')) closeMenu(); });
+    // Chips under the pictures: what is set now; each opens the panel where it is changed.
+    function renderChips() {
+        const chips = $('[data-chips]', form), out = [];
+        const own = rating(), shown = strongest([own, ...bodyMedia().map(mediaRating)]);
+        if (shown) {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-rating'; b.dataset.open = 'rating'; b.dataset.veil = shown;
+            b.innerHTML = veilIcon; const text = document.createElement('span');
+            text.textContent = LABEL[shown] + (shown !== own ? '（画像）' : '') + (warning.value.trim() ? '・' + warning.value.trim() : '');
+            b.append(text); out.push(b);
+        }
+        const names = categoryFields.filter(i => i.checked).map(i => i.nextElementSibling.textContent).concat(newCategories.value.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean));
+        names.forEach(name => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-category'; b.dataset.open = 'categories';
+            b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+            const text = document.createElement('span'); text.textContent = name; b.append(text); out.push(b);
+        });
+        out.forEach(b => b.addEventListener('click', () => togglePanel(b.dataset.open, true)));
+        chips.replaceChildren(...out); chips.hidden = !out.length;
+        const tool = $('[data-panel="rating"]', form);
+        tool.dataset.veil = shown; tool.setAttribute('aria-label', '閲覧注意' + (shown ? '：' + LABEL[shown] : ''));
+        $('[data-panel="categories"]', form).classList.toggle('is-set', names.length > 0);
+    }
+    // One panel at a time under the tool row.
+    function togglePanel(name, open) {
+        $$('[data-panel]', form).forEach(button => {
+            const on = button.dataset.panel === name && (open ?? button.getAttribute('aria-expanded') !== 'true');
+            button.setAttribute('aria-expanded', String(on));
+            $('[data-panel-body="' + button.dataset.panel + '"]', form).hidden = !on;
+        });
+        const panelBody = $('[data-panel-body="' + name + '"]:not([hidden])', form);
+        if (panelBody && open) (panelBody.querySelector('input:checked, input, button') || panelBody).focus({ preventScroll: true });
+        panelBody?.scrollIntoView({ block: 'nearest' });
+    }
+    $$('[data-panel]', form).forEach(button => button.addEventListener('click', () => togglePanel(button.dataset.panel)));
+    ratingFields.forEach(input => input.addEventListener('change', () => {
+        // Choosing a rating for the post marks its pictures the same, unless the owner turned that off.
+        if ($('[data-rate-all]', form).checked) bodyMedia().forEach(id => { mediaRatings[id] = input.value; });
+        changed();
+    }));
+    warning.addEventListener('input', changed);
     changed();
     body.addEventListener('input', changed); title.addEventListener('input', changed);
     categoryFields.forEach(input => input.addEventListener('change', changed));
@@ -176,6 +302,7 @@
     mobile.addEventListener('change', () => accessibility(panel.classList.contains('active')));
     document.addEventListener('keydown', e => {
         if (e.defaultPrevented || picker.open || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
+        if (e.key === 'Escape' && !menu.hidden) { closeMenu(true); return; }
         if (e.key === 'Escape' && !panel.dataset.edit) setPanel(false);
         if (e.key === 'Tab' && modalPanel()) {
             const focusable = $$('button:not(:disabled),textarea,input:not([type="hidden"]),summary,a[href]', panel).filter(el => el.getClientRects().length);
@@ -219,8 +346,8 @@
                 try {
                     const data = new FormData(); data.set('do', 'log_upload'); data.set('image', file);
                     const { media } = await request(data);
+                    mediaInfo[media.id] = { thumb: media.thumb, alt: media.alt, rating: media.rating || '' };
                     insert('\n' + media.tag + '\n');
-                    addAttachment(media);
                 } catch (e) { errors.push(file.name + '：' + e.message); }
             }
             say(errors.length ? errors.join(' / ') : '画像を追加しました。タグを動かすと、表示する位置も変わります。', errors.length > 0);
@@ -228,12 +355,6 @@
         await uploadQueue;
     }
     let uploadQueue = Promise.resolve();
-    function addAttachment(media) {
-        const button = document.createElement('button'); button.type = 'button'; button.title = 'この画像のタグをもう一度入れる';
-        const img = document.createElement('img'); img.src = adminUrl(media.thumb); img.alt = media.alt || 'アップロードした画像';
-        button.append(img); button.addEventListener('click', () => insert('\n' + media.tag + '\n'));
-        $('[data-attachments]', form).append(button);
-    }
     uploadInput.addEventListener('change', () => { upload(uploadInput.files); uploadInput.value = ''; });
     document.addEventListener('dragover', e => {
         if (Array.from(e.dataTransfer?.types || []).includes('Files')) { e.preventDefault(); panel.classList.add('dragover'); }
@@ -271,7 +392,7 @@
                         let tag = item.tag;
                         if (refs[tag] && refs[tag] !== item.id) tag = tag.slice(0, -1) + ' #' + item.id + ']';
                         refs[tag] = item.id; insert('\n' + tag + '\n');
-                    } else { insert('\n' + item.tag + '\n'); addAttachment(item); }
+                    } else { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; insert('\n' + item.tag + '\n'); }
                     picker.close(); body.focus();
                 });
                 grid.append(button);
@@ -289,8 +410,8 @@
     search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => loadCatalog(true), 250); });
     more.addEventListener('click', () => { catalogPage++; loadCatalog(false); });
     $('[data-preview]', form).addEventListener('click', async () => {
-        const preview = $('[data-preview-body]', form);
-        if (!preview.hidden) { preview.hidden = true; return; }
+        const preview = $('[data-preview-body]', form), toggle = $('[data-preview]', form);
+        if (!preview.hidden) { preview.hidden = true; toggle.setAttribute('aria-pressed', 'false'); return; }
         try {
             const data = new FormData(form); data.set('do', 'log_preview');
             const result = await request(data);
@@ -299,7 +420,7 @@
             $$('[src],[href],[data-endpoint]', preview).forEach(el => ['src', 'href', 'data-endpoint'].forEach(attr => {
                 if (el.hasAttribute(attr)) el.setAttribute(attr, adminUrl(el.getAttribute(attr)));
             }));
-            preview.hidden = false;
+            preview.hidden = false; toggle.setAttribute('aria-pressed', 'true');
             window.NagiSwipe?.init();
             window.NagiLogEmbeds?.load(preview);
         } catch (e) { say(e.message, true); }

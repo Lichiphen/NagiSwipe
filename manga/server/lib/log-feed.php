@@ -55,7 +55,7 @@ function nl_serve_feed(array $s, array $summaries): never
         $link = $base . '/?id=' . rawurlencode($p['id']);
         $cats = '';
         foreach ($p['categories'] ?? [] as $id) if (isset($categories[$id])) $cats .= '<category>' . nl_xml($categories[$id]) . '</category>';
-        $desc = nl_excerpt($p);
+        $desc = nl_veil_description($p) ?: nl_excerpt($p);
         $items .= '<item><title>' . nl_xml(nl_post_title($p, 0)) . '</title><link>' . nl_xml($link) . '</link><guid isPermaLink="true">' . nl_xml($link) . '</guid>'
             . '<pubDate>' . nl_date((int)$p['created'], DATE_RSS) . '</pubDate>' . $cats . ($desc !== '' ? '<description>' . nl_xml($desc) . '</description>' : '') . "</item>\n";
     }
@@ -81,11 +81,12 @@ function nl_serve_sitemap(array $s, array $summaries): never
     }
     $grid = $s['layout'] === 'grid';
     header('X-Robots-Tag: noindex');
-    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries));
+    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries) . '|' . implode(',', array_column(array_filter($summaries, static fn($p) => ($p['rating'] ?? '') === 'r18'), 'id')));
     $url = static fn(string $loc, int $time, string $priority): string => '<url><loc>' . nl_xml($loc) . '</loc>' . ($time > 0 ? '<lastmod>' . nl_date($time, 'c') . '</lastmod>' : '') . '<priority>' . $priority . "</priority></url>\n";
     $out = $url($base . '/', $last, '1.0');
     foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($byCategory[$id])) $out .= $url($base . '/?category=' . rawurlencode((string)$id), $byCategory[$id], '0.5');
-    if ($grid) foreach ($summaries as $p) $out .= $url($base . '/?id=' . rawurlencode($p['id']), (int)$p['updated'], '0.7');
+    // R-18 posts answer noindex, so they are not listed.
+    if ($grid) foreach ($summaries as $p) if (($p['rating'] ?? '') !== 'r18') $out .= $url($base . '/?id=' . rawurlencode($p['id']), (int)$p['updated'], '0.7');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n" . $out . '</urlset>';
     exit;
 }

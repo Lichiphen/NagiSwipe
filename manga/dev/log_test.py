@@ -443,7 +443,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("変更がなければキャッシュキーを維持", asset_key('viewer/log.css', before) == asset_key('viewer/log.css', public.get('/').text))
     for i in range(10):
         post(payload(body=f'最近のタグ確認{i}。 #最近{i}'))
-    recent_html = re.search(r'<div class="log-recent-tags">(.*?)</div></div>', c.get('/admin/index.php?p=log').text, re.S).group(1)
+    recent_html = re.search(r'<div class="log-compose-panel" id="log-panel-tags"[^>]*>(.*?)</div></div>', c.get('/admin/index.php?p=log').text, re.S).group(1)
     check("直近で使ったハッシュタグを8件表示", recent_html.count('data-hashtag=') == 8 and 'data-hashtag="最近9"' in recent_html and 'data-hashtag="最近0"' not in recent_html)
     check("画像収集ツールの画像アクセスを404にする", public.get(og_url, headers={'User-Agent': 'ImageScraper/1.0'}).status == 404 and public.get('/read.php?a=o&id=' + manga['id'], headers={'User-Agent': 'HTTrack/3.0'}).status == 404)
     check("AIによる文章閲覧を一律に拒否しない", public.get('/', headers={'User-Agent': 'GPTBot'}).status == 200)
