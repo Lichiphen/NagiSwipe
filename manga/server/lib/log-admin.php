@@ -437,7 +437,7 @@ function nl_preferences_panel(): string
     $s = nl_settings();
     return '<section class="card"><h2>公開範囲・表示件数・ページ送り</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_preferences">'
         . '<fieldset class="log-visibility"><legend>LOGをどう使いますか？</legend><label class="check"><input type="radio" name="visibility" value="public"' . ($s['public'] ? ' checked' : '') . '>全体公開のLOG</label><p class="note">保存済みの記事と投稿画像も、ログインしていない人が読めるようになります。下書きは公開しません。</p><label class="check"><input type="radio" name="visibility" value="private"' . (!$s['public'] ? ' checked' : '') . '>自分専用のMemo</label><p class="note">記事とLOGの画像は、管理者としてログインしたときだけ読めます。NagiMANGAの作品の公開範囲は、作品ごとに設定してください。</p></fieldset>'
-        . '<label>1ページの投稿数（1〜100件）<input type="number" name="posts_per_page" min="1" max="100" required value="' . $s['posts_per_page'] . '"></label><p class="note">トップ・日付アーカイブ・カテゴリ・タグの一覧に使います。標準は10件です。管理画面の一覧は、一覧の上部で別に変えられます。</p>'
+        . '<label>1ページの投稿数（1〜100件）<input type="number" name="posts_per_page" min="1" max="100" required value="' . $s['posts_per_page'] . '"></label><p class="note">トップ・日付アーカイブ・カテゴリ・タグの一覧に使います。標準は10件です。一覧をタイルにする場合は2列で並べるので、偶数がおすすめです。管理画面の一覧は、一覧の上部で別に変えられます。</p>'
         . nl_pager_fieldset($s)
         . '<button class="btn primary">公開範囲と表示を保存</button></form></section>';
 }
@@ -477,7 +477,7 @@ function nl_display_panel(): string
     return '<section class="card" id="log-display"><h2>一覧の見せ方・記事の下</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_display_settings">'
         . '<fieldset class="log-visibility"><legend>トップ・カテゴリ・タグの一覧</legend>' . nl_radio_list('layout', NL_LAYOUTS, $s['layout'], [
             'stream' => '今までの形です。記事を最初から最後まで並べ、一覧のページだけで読めます。',
-            'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。タイルはすべて同じ大きさなので、1ページの件数がいくつでも行がそろいます。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
+            'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。タイルはPCでもスマホでも2列で並べるので、1ページの投稿数は偶数がおすすめです。奇数だと、各ページの最後の行が1つ空きます。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
         . '<p class="note">どちらにするかで、検索エンジンへの指定も変わります（下の「検索エンジンとサイトマップ」）。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>新着の印</legend><label>印を付ける期間（投稿から何日）<input type="number" name="new_days" min="0" max="' . NL_NEW_DAYS_MAX . '" value="' . $s['new_days'] . '" inputmode="numeric"></label>'
         . '<label>印の文字<input name="new_label" maxlength="' . NL_NEW_LABEL_MAX . '" value="' . h($s['new_label']) . '" placeholder="NEW"></label>'
