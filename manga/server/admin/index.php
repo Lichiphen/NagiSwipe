@@ -1134,7 +1134,7 @@ function nm_view_settings(array $cfg): void
     foreach (['manga' => 'NagiMANGA', 'log' => 'LOG', 'common' => '共通・安全'] as $key => $label) $tabs .= '<a href="index.php?p=settings&amp;section=' . $key . '" data-settings-tab="' . $key . '"' . ($key === $section ? ' aria-current="page"' : '') . '>' . $label . '</a>';
     $tabs .= '</nav>';
     $panel = static fn($key) => '<div id="settings-' . $key . '" data-settings-panel="' . $key . '"' . ($key === $section ? '' : ' hidden') . '>';
-    nm_layout('設定', $tabs . $panel('log') . nl_preferences_panel() . nl_settings_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
+    nm_layout('設定', $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="設定の目次" hidden></nav><div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
         . '<section class="card"><h2>ログイン URL</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
         . '<form method="post" action="index.php" class="inline js-confirm" data-confirm="ログイン URL を変更しますか？今のブックマークは使えなくなります。">' . $hidden
@@ -1196,7 +1196,7 @@ function nm_view_settings(array $cfg): void
         . '<button class="btn">保存</button></form>'
         . '</details></section>'
 
-        . '</div>');
+        . '</div></div></div>');
 }
 
 /** After login: a notice when GitHub has a newer NagiManga (checked at most every 12 hours). */

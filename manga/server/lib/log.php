@@ -6,7 +6,7 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 const NL_POST_PATTERN = '/\A(?:[0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\z/';
 const NL_MEDIA_PATTERN = '/\A[a-f0-9]{16}\z/';
 const NL_BODY_MAX = 100000;
-const NL_INDEX_SCHEMA = 5;
+const NL_INDEX_SCHEMA = 6;
 const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライトセージ', 'light-paper' => 'ライトペーパー',
     'dark-navy' => 'ダークネイビー', 'dark-charcoal' => 'ダークチャコール', 'dark-plum' => 'ダークプラム'];
 require_once __DIR__ . '/log-taxonomy.php';
@@ -14,6 +14,9 @@ require_once __DIR__ . '/log-sidebar.php';
 require_once __DIR__ . '/log-links.php';
 require_once __DIR__ . '/log-embed.php';
 require_once __DIR__ . '/log-card.php';
+require_once __DIR__ . '/log-grid.php';
+require_once __DIR__ . '/log-likes.php';
+require_once __DIR__ . '/log-feed.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -68,7 +71,7 @@ function nl_load_media(string $id): ?array
 function nl_post_summary(array $p): array
 {
     return ['id' => $p['id'], 'created' => $p['created'], 'updated' => $p['updated'], 'title' => nl_post_title($p),
-        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body'])];
+        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body']), 'thumb' => nl_post_thumb_ref($p)];
 }
 /** A small derived index; original post files remain the source of truth. */
 function nl_post_summaries(bool $public = true): array
@@ -82,15 +85,34 @@ function nl_read_summaries(bool $public): array
     if (($index['schema'] ?? 0) === NL_INDEX_SCHEMA && is_array($index['posts'] ?? null)) {
         $posts = array_values($index['posts']);
     } else {
-        // Read-only recovery when the derived index is removed (e.g. FTP edits).
+        // Recovery when the derived index is removed (e.g. FTP edits) or written by an older version.
         foreach (glob(nl_root() . '/posts/*/*.php') ?: [] as $file) {
             $p = nl_load_post(basename($file, '.php'));
             if ($p && isset($p['created'], $p['status'])) $posts[] = nl_post_summary($p);
         }
+        nl_index_upgrade($index, $posts);
     }
     $posts = array_values(array_filter($posts, static fn($p) => is_array($p) && nl_valid_post((string)($p['id'] ?? '')) && (!$public || ($p['status'] ?? '') === 'published')));
     usort($posts, static fn($a, $b) => ($b['created'] <=> $a['created']) ?: strnatcmp($b['id'], $a['id']));
     return $posts;
+}
+/**
+ * An index from an older version is rewritten once, so later pages read it again instead of every post.
+ * Only when nobody holds the LOG lock: a save in progress (or this request's own save) writes its own index.
+ */
+function nl_index_upgrade(?array $index, array $posts): void
+{
+    if ($index === null || !$posts) return;
+    $fh = @fopen(NM_DATA . '/locks/personal-log.lock', 'c');
+    if ($fh === false) return;
+    try {
+        if (!flock($fh, LOCK_EX | LOCK_NB)) return;
+        $summaries = [];
+        foreach ($posts as $p) $summaries[$p['id']] = $p;
+        nl_write_record(nl_root() . '/index.php', ['schema' => NL_INDEX_SCHEMA, 'posts' => $summaries]);
+        flock($fh, LOCK_UN);
+    } catch (Throwable) {
+    } finally { fclose($fh); }
 }
 function nl_list_posts(bool $public = true): array
 {
@@ -207,6 +229,7 @@ function nl_delete_posts(mixed $items): array
         }
         // The temporary transaction folder is removed, never retained as trash.
         nm_rmdir_recursive($stage);
+        try { nl_likes_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
         $clean = !is_dir($stage);
         foreach ($selected as $p) $clean = nl_prune_empty_dir(dirname(nl_post_file($p['id']))) && $clean;
         foreach (['posts', 'media', 'receipts'] as $dir) $clean = nl_prune_empty_dir(nl_root() . '/' . $dir) && $clean;
@@ -222,7 +245,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -233,6 +256,13 @@ function nl_read_settings(): array
     $s['pager_status'] = $s['pager_status'] !== false;
     $s['post_nav'] = $s['post_nav'] !== false;
     if (!isset(NL_THEMES[$s['theme']])) $s['theme'] = 'light-blue';
+    if (!is_string($s['layout']) || !isset(NL_LAYOUTS[$s['layout']])) $s['layout'] = 'stream';
+    $s['likes'] = $s['likes'] !== false;
+    $s['related'] = $s['related'] !== false;
+    if (!is_string($s['related_by']) || !isset(NL_RELATED_BY[$s['related_by']])) $s['related_by'] = 'both';
+    if (!is_string($s['related_order']) || !isset(NL_RELATED_ORDER[$s['related_order']])) $s['related_order'] = 'random';
+    // false: every page asks search engines not to index or follow it (fan works, unofficial sites).
+    $s['search_engines'] = $s['search_engines'] !== false;
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';
     if ($s['og_image'] !== '' && !nl_valid_media($s['og_image'])) $s['og_image'] = '';
     return $s;
@@ -417,13 +447,16 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') readfile($file);
     exit;
 }
-function nl_excerpt(array $p): string
+/**
+ * Description for search results, share cards and RSS: only the written sentences after the title line.
+ * Image and manga tags, URLs (embeds, blog cards, links), hashtags and bold marks are left out.
+ */
+function nl_excerpt(array $p, int $length = 120): string
 {
-    $text = preg_replace('/\[Image:[a-f0-9]{16}\]/', '', nl_post_parts($p)['body']);
-    $text = preg_replace_callback(nl_embed_regex(), static fn($m) => ($name = nl_embed_name($m[1])) !== '' ? '（' . $name . '）' : $m[1], (string)$text);
-    $text = str_replace('**', '', (string)$text);
-    $text = preg_replace('/\[Manga([^\]\r\n]+)\]/u', '$1', $text);
-    return mb_substr(trim((string)preg_replace('/\s+/u', ' ', (string)$text)), 0, 140);
+    $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u', '~https?://[^\s<>"\[\]]+~u'], '', nl_post_parts($p)['body']);
+    $text = str_replace('**', '', (string)preg_replace(NL_HASHTAG_PATTERN, '', $text));
+    $text = trim((string)preg_replace('/\s+/u', ' ', $text));
+    return mb_strlen($text) > $length ? rtrim(mb_substr($text, 0, $length - 1)) . '…' : $text;
 }
 /** The first input line is the title. Keep first-line media in the body. */
 function nl_post_parts(array $p): array

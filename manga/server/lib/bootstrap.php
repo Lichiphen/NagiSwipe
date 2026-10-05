@@ -381,7 +381,7 @@ function nm_lscache_soft_action(array $post): bool
 {
     $do = (string)($post['do'] ?? '');
     if ($do === 'log_save') return ($post['status'] ?? '') === 'published';
-    return in_array($do, ['log_preview', 'log_upload', 'log_media_alt', 'log_settings', 'log_sidebar_settings', 'log_footer_settings', 'log_taxonomy_order', 'log_taxonomy_rename', 'log_backup', 'backup', 'create', 'update', 'upload', 'upload_light', 'sort_name', 'order'], true);
+    return in_array($do, ['log_preview', 'log_upload', 'log_media_alt', 'log_settings', 'log_display_settings', 'log_like_set', 'log_sidebar_settings', 'log_footer_settings', 'log_taxonomy_order', 'log_taxonomy_rename', 'log_backup', 'backup', 'create', 'update', 'upload', 'upload_light', 'sort_name', 'order'], true);
 }
 
 /** Content-Type for a stored page or LOG image, by its extension. */

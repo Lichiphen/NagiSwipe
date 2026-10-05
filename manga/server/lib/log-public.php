@@ -139,14 +139,14 @@ function nl_share_icon(string $name, string $extra = ''): string
     return str_replace('<svg ', '<svg class="log-share-icon' . ($extra !== '' ? ' ' . $extra : '') . '" aria-hidden="true" focusable="false" ', $cache[$name]);
 }
 /**
- * Share and Copy under a post, both with "title\nURL". viewer/log-share.js sends Share to the phone's share sheet,
+ * Like (when turned on), Share and Copy under a post; Share and Copy both with "title\nURL". viewer/log-share.js sends Share to the phone's share sheet,
  * or to the dialog from nl_share_dialog() on a PC; without script the Share link opens X.
  */
 function nl_share_row(array $p): string
 {
     $title = nl_post_title($p, 120);
     $text = ($title !== '' ? $title : '画像の記録') . "\n" . nl_base_url() . '/?id=' . rawurlencode($p['id']);
-    return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">'
+    return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">' . (nl_settings()['likes'] ? nl_like_button($p) : '')
         . '<a class="log-share-btn log-share-open" href="https://x.com/intent/tweet?text=' . rawurlencode($text) . '" target="_blank" rel="noopener noreferrer" aria-haspopup="dialog">' . nl_share_icon('share') . '<span>Share</span></a>'
         . '<button class="log-share-btn log-share-copy" type="button" aria-label="タイトルとURLをコピー">' . nl_share_icon('copy', 'log-share-icon-copy') . nl_share_icon('check', 'log-share-icon-done') . '<span class="log-share-label" aria-live="polite">Copy</span></button></div>';
 }

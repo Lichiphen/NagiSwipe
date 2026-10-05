@@ -42,6 +42,91 @@
             });
         });
         select(tabs.find(t => t.hasAttribute('aria-current')) || tabs[0]);
+
+        // --- Table of contents: a column beside the settings on PCs, a floating button and a dialog on phones ---
+        const toc = $('[data-settings-toc]');
+        if (toc) {
+            const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+            const groups = tabs.map(tab => {
+                const key = tab.dataset.settingsTab, panel = $('#settings-' + key);
+                const items = panel ? $$(':scope > .card', panel).map((card, i) => {
+                    const head = $(':scope > h2', card) || $(':scope > details > summary', card);
+                    if (!head) return null;
+                    if (!card.id) card.id = 'settings-' + key + '-' + (i + 1);
+                    return {card, label: head.textContent.trim()};
+                }).filter(Boolean) : [];
+                return {tab, items};
+            });
+            const list = () => {
+                const root = document.createElement('div');
+                root.className = 'settings-toc-list';
+                groups.forEach(({tab, items}) => {
+                    const group = document.createElement('section');
+                    group.className = 'settings-toc-group'; group.dataset.tocTab = tab.dataset.settingsTab;
+                    const title = document.createElement('p');
+                    title.className = 'settings-toc-tab'; title.textContent = tab.textContent.trim();
+                    const ol = document.createElement('ol');
+                    items.forEach(({card, label}) => {
+                        const a = document.createElement('a');
+                        a.href = '#' + card.id; a.textContent = label; a.dataset.tocTarget = card.id;
+                        const li = document.createElement('li'); li.append(a); ol.append(li);
+                    });
+                    group.append(title, ol); root.append(group);
+                });
+                return root;
+            };
+            const sync = () => {
+                const active = tabs.find(t => t.getAttribute('aria-selected') === 'true')?.dataset.settingsTab;
+                $$('.settings-toc-group').forEach(g => g.classList.toggle('is-active', g.dataset.tocTab === active));
+            };
+            const go = id => {
+                const card = document.getElementById(id);
+                const group = groups.find(g => g.items.some(item => item.card === card));
+                if (!card || !group) return;
+                if (group.tab.getAttribute('aria-selected') !== 'true') select(group.tab);
+                sync();
+                history.replaceState(null, '', group.tab.href.split('#')[0] + '#' + id);
+                card.scrollIntoView({behavior: reduce.matches ? 'auto' : 'smooth', block: 'start'});
+                card.tabIndex = -1; card.focus({preventScroll: true});
+            };
+            toc.append(list()); toc.hidden = false;
+
+            // Phones: a button floating at the bottom right opens the same list in a dialog.
+            const fab = document.createElement('button');
+            fab.type = 'button'; fab.className = 'settings-toc-fab'; fab.setAttribute('aria-haspopup', 'dialog');
+            fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span>目次</span>';
+            const dialog = document.createElement('dialog');
+            dialog.className = 'settings-toc-dialog'; dialog.setAttribute('aria-labelledby', 'settings-toc-title');
+            dialog.innerHTML = '<div class="settings-toc-dialog-head"><h2 id="settings-toc-title">設定の目次</h2><button type="button" class="btn" data-toc-close>閉じる</button></div>';
+            dialog.append(list());
+            document.body.append(fab, dialog);
+            fab.addEventListener('click', () => { sync(); dialog.showModal(); });
+            dialog.addEventListener('click', e => {
+                if (e.target === dialog || e.target.closest('[data-toc-close]')) { dialog.close(); return; }
+                const link = e.target.closest('[data-toc-target]');
+                if (!link) return;
+                e.preventDefault(); dialog.close(); go(link.dataset.tocTarget);
+            });
+            toc.addEventListener('click', e => {
+                const link = e.target.closest('[data-toc-target]');
+                if (!link || e.ctrlKey || e.metaKey || e.shiftKey) return;
+                e.preventDefault(); go(link.dataset.tocTarget);
+            });
+            tabs.forEach(tab => tab.addEventListener('click', () => setTimeout(sync)));
+            sync();
+
+            // The side list marks the block being read.
+            if ('IntersectionObserver' in window) {
+                const inView = new Set();
+                const order = groups.flatMap(g => g.items.map(({card}) => card));
+                const io = new IntersectionObserver(entries => {
+                    entries.forEach(en => { if (en.isIntersecting) inView.add(en.target); else inView.delete(en.target); });
+                    const best = order.find(card => inView.has(card) && card.offsetParent)?.id ?? null;
+                    $$('[data-toc-target]', toc).forEach(a => { if (a.dataset.tocTarget === best) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+                }, {rootMargin: '0px 0px -55% 0px'});
+                groups.forEach(g => g.items.forEach(({card}) => io.observe(card)));
+            }
+        }
     }
     $$('.nav-more').forEach(menu => {
         document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
@@ -82,6 +167,12 @@
     $$('form.js-confirm').forEach(form => {
         form.addEventListener('submit', e => {
             if (!window.confirm(form.dataset.confirm || 'よろしいですか？')) e.preventDefault();
+        });
+    });
+    // One dangerous button in a form that also saves (e.g. "いいねを削除" beside "数を保存").
+    $$('[data-confirm-click]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            if (!window.confirm(btn.dataset.confirmClick)) e.preventDefault();
         });
     });
 

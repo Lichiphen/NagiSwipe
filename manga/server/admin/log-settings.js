@@ -218,3 +218,12 @@
     });
     buttons();
 })();
+
+/* RSS: the chosen range fills the URL field; the Copy button beside it copies it. */
+(() => {
+    'use strict';
+    const box = document.querySelector('[data-rss-builder]');
+    if (!box) return;
+    const select = box.querySelector('[data-rss-select]'), field = box.querySelector('[data-rss-url]');
+    select.addEventListener('change', () => { field.value = select.value; });
+})();

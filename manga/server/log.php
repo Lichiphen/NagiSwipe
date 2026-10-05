@@ -30,6 +30,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $file = isset($_GET['media']) || isset($_GET['card']);
 nm_lscache_header(!$owner && $s['public'] && !isset($_COOKIE['nm_admin']) && !$file, !$file);
 if (!in_array($method, ['GET', 'HEAD'], true)) nm_not_found();
+// Turned away from search engines: images say so too (image search).
+if (!$s['search_engines'] && $file) header('X-Robots-Tag: noindex, nofollow');
 if (isset($_GET['card'])) nl_serve_card(nm_str($_GET, 'card', 20));
 if (isset($_GET['media'])) nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), $owner);
 $id = nm_str($_GET, 'id', 24);
@@ -37,6 +39,9 @@ $single = isset($_GET['id']);
 $post = $single ? nl_load_post($id) : null;
 if ($single && (!$post || $post['status'] !== 'published')) nm_not_found();
 $summaries = nl_post_summaries();
+if (!$single && isset($_GET['feed'])) nl_serve_feed($s, $summaries);
+if (!$single && isset($_GET['sitemap'])) nl_serve_sitemap($s, $summaries);
+$grid = $s['layout'] === 'grid';
 $filter = nl_archive_filter($single ? ['month' => nl_date($post['created'], 'Y-m')] : $_GET);
 $all = $single ? [$post] : array_values(array_filter($summaries, static function ($p) use ($filter) {
     if ($filter['category'] !== '') return in_array($filter['category'], $p['categories'] ?? [], true);
@@ -49,7 +54,9 @@ $page = max(1, min(100000, (int)nm_str($_GET, 'page', 6)));
 $perPage = $s['posts_per_page'];
 // A page past the end (old bookmark, typed URL) is not an empty list.
 if (!$single && $all && ($page - 1) * $perPage >= count($all)) nm_not_found();
-$posts = $single ? [$post] : array_values(array_filter(array_map(static fn($s) => nl_load_post($s['id']), array_slice($all, ($page - 1) * $perPage, $perPage)), static fn($p) => $p && $p['status'] === 'published'));
+$pageSummaries = $single ? [] : array_slice($all, ($page - 1) * $perPage, $perPage);
+// Tiles need only the summary index; the mini blog reads each post on the page.
+$posts = $single ? [$post] : ($grid ? $pageSummaries : array_values(array_filter(array_map(static fn($s) => nl_load_post($s['id']), $pageSummaries), static fn($p) => $p && $p['status'] === 'published')));
 $base = nl_base_url();
 $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 'page=' . $page : '');
 $canonical = $base . '/' . ($single ? '?id=' . rawurlencode($id) : ($query !== '' ? '?' . $query : ''));
@@ -63,8 +70,7 @@ if ($single) {
         if ($m = nl_load_media($match[1])) { $ogImage = $base . '/' . nl_media_url($m); break; }
     }
 }
-$indexable = $s['public'] && !$single && $page === 1 && ($filter['query'] === '' || $filter['category'] !== '') && count($all) > 0;
-$robots = $indexable ? 'index,follow' : 'noindex,follow';
+$robots = nl_robots($s, $single, $filter, $page, count($all));
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
@@ -77,22 +83,25 @@ $breadcrumb = $single ? json_encode(['@context' => 'https://schema.org', '@type'
 $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $breadcrumb, true)) . "'" : '';
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js.
-header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:" . nl_sidebar_image_origins() . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 function nl_public_asset(string $file): string { return h($file . '?v=' . nm_asset_version(__DIR__ . '/' . $file)); }
 // The top page keeps the open editor; other pages open it from the floating button.
 $index = !$single && $filter['query'] === '' && $page === 1;
 $postsHtml = '';
-foreach ($posts as $p) {
+if ($grid && !$single) $postsHtml = nl_tiles($posts, $index);
+else foreach ($posts as $p) {
     $postsHtml .= '<article class="log-post"><div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
         . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>' : '') . "</div>\n"
         . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="./?id=' . h($p['id']) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
         . nl_render_body($p) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
 }
+$relatedHtml = $single && $s['public'] ? nl_related_html($summaries, $post, $s) : '';
 $sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);
 // The image viewer and the manga reader load only where something uses them. The owner keeps both (editor previews),
 // and so does a "show more" list with pages still to come, which may bring images or manga in later.
 $more = !$single && $s['pager'] === 'more' && $page * $perPage < count($all);
 $swipe = $owner || $more || nl_has_image_links($postsHtml . $sidebarHtml);
+$shareRows = $s['public'] && $posts && (!$grid || $single);
 $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 ?><!DOCTYPE html>
 <html lang="ja" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -108,7 +117,10 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
-<?php if ($s['public'] && $posts): ?><script src="<?= nl_public_asset('viewer/log-share.js') ?>" defer></script><?php endif; ?>
+<?php if ($shareRows): ?><script src="<?= nl_public_asset('viewer/log-share.js') ?>" defer></script><?php endif; ?>
+<?php if ($shareRows && $s['likes']): ?><script src="<?= nl_public_asset('viewer/log-like.js') ?>" defer></script><?php endif; ?>
+<?php if (str_contains($relatedHtml, 'data-related-random')): ?><script src="<?= nl_public_asset('viewer/log-related.js') ?>" defer></script><?php endif; ?>
+<?php if ($s['public']): ?><link rel="alternate" type="application/rss+xml" title="<?= h($s['title']) ?>" href="<?= h(nl_feed_url()) ?>"><?php if (!$single && ($filter['category'] !== '' || $filter['tag'] !== '')): ?><link rel="alternate" type="application/rss+xml" title="<?= h($title) ?>" href="<?= h(nl_feed_url($filter['query'])) ?>"><?php endif; ?><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
 <?php if (!$single && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
@@ -121,5 +133,5 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?= $postsHtml ?>
 <?php if (!$posts): ?><p class="log-empty"><?= $filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。')) ?></p><?php endif; ?>
-<?= $single ? ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : nl_pager($s, $filter['query'], $page, count($all)) ?>
-</main><?= $sidebarHtml ?></div><?= $s['public'] && $posts ? nl_share_dialog() : '' ?><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>
+<?= $single ? $relatedHtml . ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : nl_pager($s, $filter['query'], $page, count($all)) ?>
+</main><?= $sidebarHtml ?></div><?= $shareRows ? nl_share_dialog() : '' ?><?php if ($s['show_footer'] && $s['footer_text'] !== ''): ?><footer class="log-site-footer"><?= h($s['footer_text']) ?></footer><?php endif; ?></body></html>

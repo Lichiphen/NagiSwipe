@@ -148,6 +148,34 @@ function nl_handle_post(string $do): never
                 });
                 nm_flash('ok', $visibility === 'public' ? 'LOGを全体公開にしました' : 'LOGを自分専用のMemoにしました。画像もログイン時だけ読めます');
                 nm_redirect('p=settings&section=log');
+            case 'log_display_settings':
+                $layout = nm_str($_POST, 'layout', 10); $by = nm_str($_POST, 'related_by', 10); $order = nm_str($_POST, 'related_order', 10);
+                if (!isset(NL_LAYOUTS[$layout], NL_RELATED_BY[$by], NL_RELATED_ORDER[$order])) throw new UnexpectedValueException('一覧の形と関連記事の設定を選んでください');
+                nm_with_lock('personal-log', static function () use ($layout, $by, $order) {
+                    $s = nl_settings();
+                    $s['layout'] = $layout; $s['related_by'] = $by; $s['related_order'] = $order;
+                    $s['likes'] = nm_str($_POST, 'likes', 1) === '1'; $s['related'] = nm_str($_POST, 'related', 1) === '1';
+                    $s['updated'] = time();
+                    nl_write_record(nl_root() . '/settings.php', $s);
+                });
+                nm_flash('ok', '一覧と記事の下の表示を保存しました'); nm_redirect('p=settings&section=log#log-display');
+            case 'log_seo_settings':
+                $engines = nm_str($_POST, 'search_engines', 10);
+                if (!in_array($engines, ['allow', 'block'], true)) throw new UnexpectedValueException('検索エンジンに載せるかを選んでください');
+                nm_with_lock('personal-log', static function () use ($engines) {
+                    $s = nl_settings(); $s['search_engines'] = $engines === 'allow'; $s['updated'] = time();
+                    nl_write_record(nl_root() . '/settings.php', $s);
+                });
+                nm_flash('ok', $engines === 'allow' ? '検索エンジンに載せる設定にしました' : 'すべてのページを検索エンジンに載せない設定にしました');
+                nm_redirect('p=settings&section=log#log-seo');
+            case 'log_like_set':
+                $id = nm_str($_POST, 'post_id', 24); $count = nm_str($_POST, 'count', 12);
+                if (!nl_load_post($id)) throw new UnexpectedValueException('投稿が見つかりません');
+                if (!empty($_POST['reset'])) $count = '0';
+                if (!preg_match('/\A[0-9]{1,8}\z/', $count)) throw new UnexpectedValueException('いいねの数は0〜' . NL_LIKE_MAX . 'で入力してください');
+                nl_like_set($id, (int)$count);
+                nm_flash('ok', (int)$count > 0 ? 'いいねの数を' . (int)$count . 'にしました' : 'いいねを削除しました');
+                nm_redirect('p=log_edit&id=' . rawurlencode($id) . '#log-likes');
             case 'log_sidebar_settings':
                 $raw = $_POST['items'] ?? '';
                 if (!is_string($raw) || strlen($raw) > 1024 * 1024 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException('サイドバー全体のHTMLを1MB以内にしてください');
@@ -195,7 +223,7 @@ function nl_handle_post(string $do): never
         nm_log('log_error', $e->getMessage());
         if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings'], true)) nm_json(['error' => $message], 422);
         nm_flash('err', $message);
-        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings' => 'p=settings&section=log', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
+        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
     }
 }
 function nl_editor(?array $p = null, bool $public = false): string
@@ -257,7 +285,7 @@ function nl_view_log(): void
         foreach ($p['media'] ?? [] as $mid) if ($m = nl_load_media($mid)) { $thumb = '<img src="' . h(nl_media_url($m, true, true)) . '" alt="" loading="lazy">'; break; }
         if ($thumb === '') foreach ($p['manga'] ?? [] as $wid) if (($w = nm_load_work($wid)) && !empty($w['pages'])) { $thumb = '<img src="' . h(nm_thumb_url($w)) . '" alt="" loading="lazy">'; break; }
         $cards .= '<li class="log-list-row"><span class="log-list-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></span>'
-            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($p['status'] === 'draft' ? '<small class="badge">下書き</small>' : '') . '</a>'
+            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($p['status'] === 'draft' ? '<small class="badge">下書き</small>' : '') . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="いいね' . $likes . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
             . ($searching ? nl_admin_search_where($p, $terms, $publicIds, $publicPer) : '')
             . '<span class="log-list-thumb">' . $thumb . '</span>' . ($p['status'] === 'published' ? '<a class="btn log-list-view" href="../?id=' . h($p['id']) . '">' . nl_ui_icon('view') . '<span>記事を見る</span></a>' : '<span class="log-list-view note">下書き</span>') . '<a class="btn log-list-edit" href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>'
             . '<form method="post" action="index.php" class="js-confirm log-list-delete" data-confirm="この記事を削除しますか？この記事だけで使う画像も削除します。">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">' . nl_ui_icon('delete') . '<span>削除</span></button></form><label class="log-bulk-choice" hidden><input type="checkbox" data-bulk-item value="' . h($p['id']) . '" data-revision="' . $p['revision'] . '" aria-label="' . h(nl_post_title($p)) . 'を削除対象に選ぶ"></label></li>';
@@ -296,8 +324,18 @@ function nl_view_edit(string $id): void
 {
     $p = nl_load_post($id);
     if (!$p) nm_not_found();
-    nm_layout('投稿を編集', '<p class="crumb"><a href="index.php?p=log">LOGへ戻る</a></p>' . nl_editor($p)
+    nm_layout('投稿を編集', '<p class="crumb"><a href="index.php?p=log">LOGへ戻る</a></p>' . nl_editor($p) . nl_like_panel($p)
         . '<form method="post" action="index.php" class="js-confirm" data-confirm="この記事を削除しますか？この記事だけで使う画像も削除します。">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($id) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">投稿を削除</button></form>');
+}
+/** Likes of one post: see, change or delete the count. */
+function nl_like_panel(array $p): string
+{
+    $s = nl_settings();
+    $n = nl_like_count($p['id']);
+    $state = !$s['public'] ? '自分専用のMemoのため、ボタンは表示していません。' : (!$s['likes'] ? 'いいねボタンは「設定 › LOG › 一覧の見せ方・記事の下」でオフになっています。数は残しています。' : ($p['status'] !== 'published' ? '下書きのため、ボタンは表示していません。' : '公開ページの記事の下に表示しています。'));
+    return '<section class="card log-like-panel" id="log-likes"><h2><svg class="log-like-panel-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>いいね <b>' . number_format($n) . '</b></h2><p class="note">' . $state . '</p>'
+        . '<form method="post" action="index.php" class="form log-like-form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_like_set"><input type="hidden" name="post_id" value="' . h($p['id']) . '">'
+        . '<label>いいねの数<input type="number" name="count" min="0" max="' . NL_LIKE_MAX . '" required value="' . $n . '" inputmode="numeric"></label><div class="log-like-actions"><button class="btn primary">数を保存</button><button class="btn danger" name="reset" value="1"' . ($n === 0 ? ' disabled' : '') . ' formnovalidate data-confirm-click="この記事のいいねを削除して0にしますか？">いいねを削除</button></div></form></section>';
 }
 function nl_view_media(): void
 {
@@ -356,6 +394,73 @@ function nl_footer_panel(): string
 {
     $s = nl_settings();
     return '<section class="card" id="log-footer"><h2>サイト下部の表記</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_footer_settings"><label class="check"><input type="checkbox" name="show_footer" value="1"' . ($s['show_footer'] ? ' checked' : '') . '>フッターを表示する</label><label>表示する文章<input name="footer_text" maxlength="200" value="' . h($s['footer_text']) . '" placeholder="例：自分の名前・サイトの案内"></label><p class="note">200文字までの1行で入力できます。HTMLは使いません。空欄の場合も表示しません。</p><button class="btn">フッターを保存</button></form></section>';
+}
+/** Choices as radio buttons with a note under each. */
+function nl_radio_list(string $name, array $choices, string $current, array $notes = []): string
+{
+    $out = '';
+    foreach ($choices as $key => $label) $out .= '<label class="check"><input type="radio" name="' . $name . '" value="' . h($key) . '"' . ($key === $current ? ' checked' : '') . '>' . h($label) . '</label>' . (isset($notes[$key]) ? '<p class="note">' . $notes[$key] . '</p>' : '');
+    return $out;
+}
+function nl_display_panel(): string
+{
+    $s = nl_settings();
+    $by = '';
+    foreach (NL_RELATED_BY as $key => $label) $by .= '<option value="' . $key . '"' . ($s['related_by'] === $key ? ' selected' : '') . '>' . h($label) . '</option>';
+    return '<section class="card" id="log-display"><h2>一覧の見せ方・記事の下</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_display_settings">'
+        . '<fieldset class="log-visibility"><legend>トップ・カテゴリ・タグの一覧</legend>' . nl_radio_list('layout', NL_LAYOUTS, $s['layout'], [
+            'stream' => '今までの形です。記事を最初から最後まで並べ、一覧のページだけで読めます。',
+            'grid' => 'WordPressのブログのように、サムネイル・投稿日・タイトルのタイルを並べます。記事は個別のページで読みます。トップの1ページ目だけ、最新の記事を大きく出します。サムネイルは本文の最初の画像・漫画・YouTube・ブログカードの順に探します。'])
+        . '<p class="note">どちらにするかで、検索エンジンへの指定も変わります（下の「検索エンジンとサイトマップ」）。</p></fieldset>'
+        . '<fieldset class="log-visibility"><legend>いいねボタン</legend><label class="check"><input type="checkbox" name="likes" value="1"' . ($s['likes'] ? ' checked' : '') . '>記事の下の「Share」の左に、いいねボタンを出す</label>'
+        . '<p class="note">タップで1つ、長押しすると10ずつ増えます。同じ人（IPアドレス）が1つの記事に押せるのは、1日' . NL_LIKE_DAILY . 'までです。数は記事の編集画面で確認・変更・削除できます。押されてもページのキャッシュは消さないため、表示の速さは変わりません。</p></fieldset>'
+        . '<fieldset class="log-visibility"><legend>関連記事</legend><label class="check"><input type="checkbox" name="related" value="1"' . ($s['related'] ? ' checked' : '') . '>記事の下に、関連記事を' . NL_RELATED_SHOWN . '件出す</label>'
+        . '<label>関連とみなす分類<select name="related_by">' . $by . '</select></label>'
+        . nl_radio_list('related_order', NL_RELATED_ORDER, $s['related_order'], [
+            'random' => '同じ分類の記事から、開くたびに違う' . NL_RELATED_SHOWN . '件を選びます。関係の深い記事（同じカテゴリ、重なるタグが多い記事）ほど選ばれやすくなります。',
+            'updated' => '同じ分類の記事のうち、最近更新した' . NL_RELATED_SHOWN . '件を並べます。'])
+        . '<p class="note">同じ分類の記事がない記事には出しません。ランダムでもページはキャッシュしたまま、ブラウザーで選び直します。</p></fieldset>'
+        . '<button class="btn primary">一覧と記事の下の表示を保存</button></form></section>';
+}
+/** What search engines see, for the current settings. */
+function nl_seo_panel(): string
+{
+    $s = nl_settings();
+    $grid = $s['layout'] === 'grid';
+    $rows = $grid
+        ? [['トップ・カテゴリ（2ページ目以降も）', 'index,follow'], ['個別の記事', 'index,follow'], ['ハッシュタグ・日付・月・検索結果', 'noindex,follow'], ['ログイン・管理画面・404', 'noindex,nofollow']]
+        : [['トップ・カテゴリの1ページ目', 'index,follow'], ['個別の記事・2ページ目以降', 'noindex,follow'], ['ハッシュタグ・日付・月・検索結果', 'noindex,follow'], ['ログイン・管理画面・404', 'noindex,nofollow']];
+    $table = '';
+    foreach ($rows as [$page, $rule]) $table .= '<tr><th scope="row">' . h($page) . '</th><td><code>' . ($s['search_engines'] ? $rule : 'noindex,nofollow') . '</code></td></tr>';
+    $sitemap = !$s['public'] ? '<p class="note">自分専用のMemoでは、サイトマップを出しません。</p>'
+        : (!$s['search_engines'] ? '<p class="note">検索エンジンを避けている間は、サイトマップを出しません（404）。</p>'
+            : '<p class="log-copy-row"><input class="copy-src wide" readonly value="' . h(nl_sitemap_url()) . '" aria-label="サイトマップのURL"> <button type="button" class="btn js-copy">コピー</button></p>'
+            . '<p class="note">' . ($grid ? 'トップ（優先度1.0）、個別の記事（0.7）、記事のあるカテゴリ（0.5）を、最終更新日つきで載せます。' : 'ミニブログでは個別の記事を検索に出さないため、トップ（優先度1.0）と、記事のあるカテゴリ（0.5）だけを載せます。')
+            . 'Google Search ConsoleやBing Webmaster Toolsの「サイトマップ」にこのURLを登録してください。LOGをサブフォルダーに置いた場合、ドメイン直下のrobots.txtには自動で書き込めません。</p>');
+    return '<section class="card" id="log-seo"><h2>検索エンジンとサイトマップ</h2><form method="post" action="index.php" class="form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_seo_settings">'
+        . '<fieldset class="log-visibility"><legend>検索エンジンに載せますか？</legend>'
+        . nl_radio_list('search_engines', ['allow' => '載せる（標準）', 'block' => 'すべてのページを載せない（noindex,nofollow）'], $s['search_engines'] ? 'allow' : 'block', [
+            'allow' => '下の表のとおり、検索の入口になるページだけを載せます。',
+            'block' => '二次創作のサイトや、公式と間違われたくない場合に。全ページと画像に「載せない・リンクをたどらない」と伝え、サイトマップも止めます。指定に従うのは、ルールを守る検索エンジンだけです。すでに載っているページは、検索エンジンが次に読みに来たときに消えます。'])
+        . '</fieldset><table class="table log-seo-table"><caption>今の設定での指定（' . h(NL_LAYOUTS[$s['layout']]) . '）</caption><tbody>' . $table . '</tbody></table>'
+        . '<button class="btn primary">検索エンジンの設定を保存</button></form><h3>サイトマップ</h3>' . $sitemap . '</section>';
+}
+/** RSS URLs for the whole LOG, one category or one hashtag; the select fills the field and Copy copies it. */
+function nl_rss_panel(): string
+{
+    $s = nl_settings();
+    if (!$s['public']) return '<section class="card" id="log-rss"><h2>RSS</h2><p class="note">自分専用のMemoでは、RSSを出しません。</p></section>';
+    $options = '<option value="' . h(nl_feed_url()) . '">LOG全体</option>';
+    $cats = '';
+    foreach (nl_taxonomy()['categories'] as $id => $name) $cats .= '<option value="' . h(nl_feed_url('category=' . $id)) . '">' . h($name) . '</option>';
+    $tags = '';
+    foreach (nl_ordered_hashtags(true) as $name) $tags .= '<option value="' . h(nl_feed_url('tag=' . rawurlencode($name))) . '">#' . h($name) . '</option>';
+    if ($cats !== '') $options .= '<optgroup label="カテゴリ">' . $cats . '</optgroup>';
+    if ($tags !== '') $options .= '<optgroup label="ハッシュタグ">' . $tags . '</optgroup>';
+    return '<section class="card" id="log-rss" data-rss-builder><h2>RSS</h2><p>RSSリーダーでLOGを読みたい人向けのURLです。新しい' . NL_FEED_ITEMS . '件の、タイトル・URL・投稿日・説明文（本文の最初の部分）を配信します。本文の全文は配信しません。</p>'
+        . '<div class="form"><label>配信する範囲<select data-rss-select>' . $options . '</select></label>'
+        . '<p class="log-copy-row"><input class="copy-src wide" readonly value="' . h(nl_feed_url()) . '" aria-label="RSSのURL" data-rss-url> <button type="button" class="btn js-copy">コピー</button></p></div>'
+        . '<p class="note">LOGのページには、全体のRSS（カテゴリやタグの一覧ではそのRSSも）を案内するタグを入れています。RSSリーダーにLOGのURLを入れるだけでも見つけられます。</p></section>';
 }
 function nl_settings_panel(): string
 {

@@ -12,7 +12,7 @@ function nl_backup_download(): never
         $zip = new ZipArchive();
         if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::EXCL) !== true) throw new RuntimeException('zip failed');
         try {
-            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings(), 'likes' => (object)nl_like_counts()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
             foreach (nl_post_summaries(false) as $summary) {
                 $p = nl_load_post($summary['id']);
                 if ($p) $zip->addFromString('posts/' . $p['id'] . '.json', json_encode($p, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -87,6 +87,17 @@ function nl_backup_restore(string $file, bool $overwrite): array
         $preferences['posts_per_page'] = $settings['posts_per_page'] ?? nl_settings()['posts_per_page'];
         if (array_key_exists('pager', $settings) && (!is_string($settings['pager']) || !isset(NL_PAGERS[$settings['pager']]))) throw new UnexpectedValueException('LOGのページ送りの設定が壊れています');
         $preferences['pager'] = $settings['pager'] ?? nl_settings()['pager'];
+        foreach (['likes', 'related', 'search_engines'] as $field) {
+            if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException('LOGの表示設定が壊れています');
+            $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
+        }
+        foreach (['layout' => NL_LAYOUTS, 'related_by' => NL_RELATED_BY, 'related_order' => NL_RELATED_ORDER] as $field => $choices) {
+            if (array_key_exists($field, $settings) && (!is_string($settings[$field]) || !isset($choices[$settings[$field]]))) throw new UnexpectedValueException('LOGの表示設定が壊れています');
+            $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
+        }
+        $likes = $mark['likes'] ?? [];
+        if (!is_array($likes) || count($likes) > 100000) throw new UnexpectedValueException('いいねの数が壊れています');
+        foreach ($likes as $id => $n) if (!nl_valid_post((string)$id) || !is_int($n) || $n < 0 || $n > NL_LIKE_MAX) throw new UnexpectedValueException('いいねの数が壊れています');
         $preferences['footer_text'] = nl_restore_string($settings + ['footer_text' => nl_settings()['footer_text']], 'footer_text', 800);
         if (mb_strlen($preferences['footer_text']) > 200 || preg_match('/[\x00-\x1F\x7F]/', $preferences['footer_text'])) throw new UnexpectedValueException('フッターの文字データが壊れています');
         $settings = ['title' => nl_restore_string($settings, 'title', 600), 'description' => nl_restore_string($settings, 'description', 1500), 'name' => nl_restore_string($settings, 'name', 600),
@@ -129,7 +140,7 @@ function nl_backup_restore(string $file, bool $overwrite): array
             $categories = array_map('strval', $categories);
             $posts[$id] = ['id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'status' => $p['status'], 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
         }
-        return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $settings, $tax, $tagOrder, $sidebar, $overwrite) {
+        return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite) {
             // Validate all references before replacing any live file.
             if ($settings['icon'] !== '' && !isset($media[$settings['icon']]) && !nl_load_media($settings['icon'])) throw new UnexpectedValueException('アイコンの画像がバックアップにありません');
             if ($settings['og_image'] !== '' && !isset($media[$settings['og_image']]) && !nl_load_media($settings['og_image'])) throw new UnexpectedValueException('紹介画像がバックアップにありません');
@@ -177,6 +188,15 @@ function nl_backup_restore(string $file, bool $overwrite): array
                     $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
                     $oldSidebar = nl_sidebar_settings();
                     nl_write_record($dest, ['revision' => $oldSidebar['revision'] + 1, 'updated' => time(), 'items' => $sidebar]);
+                }
+                if ($likes) {
+                    $dest = nl_likes_file();
+                    $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
+                    nm_with_lock('log-likes', static function () use ($likes, $overwrite) {
+                        $counts = nl_likes_read();
+                        foreach ($likes as $id => $n) if ($overwrite || !isset($counts[(string)$id])) $counts[(string)$id] = $n;
+                        nl_likes_write($counts);
+                    });
                 }
                 $dest = nl_root() . '/index.php';
                 $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];

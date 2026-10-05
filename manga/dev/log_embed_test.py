@@ -129,7 +129,7 @@ def run(site,other_site,c,csrf,other,ot):
     check('てがろぐの書き方は特別扱いしない','embed/oldSyntax12' not in body_html and '[Umekomi]' in body_html)
     check('本文に<script>を書き出さない','<script' not in body_html)
     csp=res.getheader('Content-Security-Policy') or ''
-    check('CSPは対応サービスのフレームと公式スクリプトだけ許可','frame-src https://www.youtube-nocookie.com' in csp and 'https://shonenjumpplus.com' in csp and "script-src 'self' https://platform.twitter.com https://www.instagram.com https://note.com" in csp and "media-src 'self' https:" in csp and "object-src 'none'" in csp and "img-src 'self' data: blob:;" in csp)
+    check('CSPは対応サービスのフレームと公式スクリプトだけ許可','frame-src https://www.youtube-nocookie.com' in csp and 'https://shonenjumpplus.com' in csp and "script-src 'self' https://platform.twitter.com https://www.instagram.com https://note.com" in csp and "media-src 'self' https:" in csp and "object-src 'none'" in csp and "img-src 'self' data: blob: https://i.ytimg.com;" in csp)
     check('埋め込み用JSをキャッシュバスター付きで読む',re.search(r'viewer/log-embed\.js\?v=[a-z0-9]+',page) and pub.get('/viewer/log-embed.js').status==200)
     evil=save('悪い入力\nhttps://www.youtube.com/watch?v=abc"onload="alert(1)\nhttps://evil.example/watch?v=dQw4w9WgXcQ\nhttps://youtube.com.evil.example/watch?v=dQw4w9WgXcQ\njavascript:alert(1)')
     ev=pub.get('/?id='+evil).text; eb=ev[ev.index('<div class="log-body">'):ev.index('</article>')]
@@ -137,7 +137,8 @@ def run(site,other_site,c,csrf,other,ot):
     first=save('https://youtu.be/dQw4w9WgXcQ\n2行目の本文')
     fp=pub.get('/?id='+first).text
     check('1行目が埋め込みのURLならタイトルは「YouTubeの記録」で本文に表示','<title>YouTubeの記録｜' in fp and 'youtube-nocookie.com/embed/dQw4w9WgXcQ' in fp)
-    check('説明文では埋め込みをサービス名にする','（YouTube）' in pub.get('/?id='+eid).text.split('name="description" content="')[1].split('"')[0])
+    desc=pub.get('/?id='+eid).text.split('name="description" content="')[1].split('"')[0]
+    check('説明文は文章だけで、埋め込みのURLもサービス名も入れない','（YouTube）' not in desc and 'http' not in desc)
     post({'do':'log_settings','title':'埋め込みLOG','name':'記録する人','description':'説明','theme':'dark-navy'})
     check('ダーク配色ではXの埋め込みもダーク','data-theme="dark"' in pub.get('/?id='+eid).text)
     preview=json.loads(post({**base.payload(body='プレビュー\nhttps://youtu.be/dQw4w9WgXcQ'),'do':'log_preview'}).text)['html']

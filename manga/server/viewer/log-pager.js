@@ -15,10 +15,16 @@
             const res = await fetch(link.href, {credentials: 'same-origin', headers: {Accept: 'text/html'}});
             if (!res.ok) throw new Error(String(res.status));
             const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-            const posts = [...doc.querySelectorAll('#log-main > .log-post')];
+            // Mini blog: whole posts before the pager. Tiles: items added to the tile list.
+            const tiles = main.querySelector(':scope > .log-tiles');
+            const posts = [...doc.querySelectorAll(tiles ? '#log-main > .log-tiles > .log-tile' : '#log-main > .log-post')];
             const next = doc.querySelector('#log-main > .log-pager');
             if (!posts.length || !next) throw new Error('empty');
-            posts.forEach(p => { p.classList.add('log-pager-added'); main.insertBefore(document.adoptNode(p), nav); });
+            posts.forEach(p => {
+                p.classList.add('log-pager-added');
+                const node = document.adoptNode(p);
+                if (tiles) tiles.append(node); else main.insertBefore(node, nav);
+            });
             next.dataset.start = nav.dataset.start;
             next.querySelector('.log-pager-back')?.remove();
             const back = nav.querySelector('.log-pager-back');
@@ -27,10 +33,11 @@
             status(next);
             history.replaceState(history.state, '', link.href);
             // Keyboard and screen reader users continue from the first new post.
-            const first = posts[0].querySelector('h2 a');
+            const first = posts[0].querySelector(tiles ? 'a' : 'h2 a');
             if (first) first.focus({preventScroll: true});
             window.NagiSwipe?.init?.();
             window.NagiLogEmbeds?.load?.(main);
+            window.NagiLogLikes?.refresh?.();
         } catch {
             location.href = link.href;
         } finally {
