@@ -549,3 +549,169 @@
         });
     }
 })();
+
+/*
+ * LOG restore with a progress screen. The ZIP goes up once, then the server converts images
+ * a few seconds at a time, so no request outlasts the host's time limit; the wave meter shows
+ * the step, the share done and the time left. Without JavaScript the form restores in one request.
+ */
+(() => {
+    'use strict';
+    const form = document.querySelector('[data-log-restore]');
+    if (!form || !window.fetch || !window.FormData) return;
+    const csrf = form.querySelector('[name="csrf"]').value;
+    // Shares of the meter: sending the ZIP, then converting images; the rest is the swap.
+    const UPLOAD = 25, IMAGES = 70;
+    const dialog = document.createElement('dialog');
+    dialog.className = 'log-restore-dialog'; dialog.setAttribute('aria-labelledby', 'log-restore-title');
+    dialog.innerHTML = '<h2 id="log-restore-title">LOGを復元しています</h2>'
+        + '<ol class="log-restore-steps"><li data-step="upload">ZIPを送る</li><li data-step="images">画像を復元</li><li data-step="finish">投稿と設定を反映</li></ol>'
+        + '<div class="log-restore-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="log-restore-title"><div class="log-restore-fill"><span class="log-restore-wave is-back"></span><span class="log-restore-wave"></span></div></div>'
+        + '<p class="log-restore-numbers"><strong data-restore-percent>0%</strong><span data-restore-eta></span></p>'
+        + '<p class="log-restore-detail" data-restore-detail aria-live="polite"></p>'
+        + '<p class="note" data-restore-note></p>'
+        + '<div class="log-restore-actions"><button type="button" class="btn" data-restore-cancel>中止する</button></div>';
+    document.body.append(dialog);
+    const $ = selector => dialog.querySelector(selector);
+    const meter = $('.log-restore-meter'), fill = $('.log-restore-fill'), title = $('#log-restore-title'), note = $('[data-restore-note]'), cancelButton = $('[data-restore-cancel]');
+    let running = false, stopped = false, xhr = null, token = '';
+
+    const timeLeft = seconds => seconds < 60 ? `残り約${Math.max(5, Math.ceil(seconds / 5) * 5)}秒` : `残り約${Math.ceil(seconds / 60)}分`;
+    const show = (percent, eta, detail) => {
+        const value = Math.max(0, Math.min(100, Math.round(percent)));
+        fill.style.width = `${value}%`;
+        meter.setAttribute('aria-valuenow', String(value));
+        $('[data-restore-percent]').textContent = `${value}%`;
+        if (eta !== undefined) $('[data-restore-eta]').textContent = eta;
+        if (detail !== undefined) $('[data-restore-detail]').textContent = detail;
+    };
+    const step = name => {
+        let reached = false;
+        dialog.querySelectorAll('[data-step]').forEach(li => {
+            const current = li.dataset.step === name;
+            if (current) reached = true;
+            li.classList.toggle('is-current', current);
+            li.classList.toggle('is-done', !reached);
+            if (current) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+        });
+    };
+    const fail = (message, maybeDone) => {
+        running = false; xhr = null;
+        dialog.classList.add('is-error');
+        title.textContent = '復元できませんでした';
+        $('[data-restore-eta]').textContent = '';
+        $('[data-restore-detail]').textContent = message;
+        if (maybeDone) note.innerHTML = '<a href="index.php?p=log">LOGの一覧を開いて、復元されたか確認する</a>';
+        else {
+            note.textContent = 'LOGは書き換えていません。内容を確かめて、もう一度お試しください。';
+            // Drop the uploaded ZIP and the converted images now rather than after a day.
+            if (token) post({do: 'log_restore_cancel', token});
+        }
+        cancelButton.textContent = '閉じる'; cancelButton.disabled = false; cancelButton.focus();
+    };
+    // A busy host answers with its own HTML page; tell that apart from the app's messages.
+    const reason = (status, data) => data?.error || ([0, 502, 503, 504].includes(status)
+        ? 'サーバーが混み合っていて応答がありませんでした。少し待ってから、もう一度お試しください。'
+        : `サーバーから予期しない応答がありました（${status}）。`);
+    const post = async fields => {
+        const body = new FormData();
+        body.set('csrf', csrf);
+        Object.entries(fields).forEach(([key, value]) => body.set(key, value));
+        try {
+            const response = await fetch('index.php', {method: 'POST', body, credentials: 'same-origin', headers: {'X-NM-CSRF': csrf}});
+            let data = null;
+            try { data = await response.json(); } catch { data = null; }
+            return {status: response.status, data};
+        } catch { return {status: 0, data: null}; }
+    };
+    // XMLHttpRequest, because fetch cannot report how much of the ZIP has been sent.
+    const upload = data => new Promise(resolve => {
+        xhr = new XMLHttpRequest();
+        const started = performance.now();
+        const mb = n => (n / 1048576).toFixed(1);
+        xhr.upload.addEventListener('progress', event => {
+            if (!event.lengthComputable || !event.total) return;
+            const rate = event.loaded / Math.max(.5, (performance.now() - started) / 1000);
+            show(UPLOAD * event.loaded / event.total, event.loaded < event.total && rate ? `送信 ${timeLeft((event.total - event.loaded) / rate)}` : '',
+                `${mb(event.loaded)} / ${mb(event.total)} MB を送りました`);
+        });
+        xhr.upload.addEventListener('load', () => show(UPLOAD, '', 'ZIPの中身に壊れたところがないか確認しています'));
+        xhr.addEventListener('load', () => { let parsed = null; try { parsed = JSON.parse(xhr.responseText); } catch { parsed = null; } resolve({status: xhr.status, data: parsed}); });
+        xhr.addEventListener('error', () => resolve({status: 0, data: null}));
+        xhr.addEventListener('abort', () => resolve({status: 0, data: null}));
+        xhr.open('POST', 'index.php');
+        xhr.setRequestHeader('X-NM-CSRF', csrf);
+        xhr.send(data);
+    });
+
+    const run = async () => {
+        running = true; stopped = false; token = '';
+        dialog.classList.remove('is-error');
+        title.textContent = 'LOGを復元しています';
+        note.textContent = '終わるまで、この画面を閉じずにお待ちください。';
+        cancelButton.textContent = '中止する'; cancelButton.disabled = false; cancelButton.hidden = false;
+        step('upload'); show(0, '残り時間を計算しています', 'ZIPを送っています');
+        dialog.showModal();
+
+        const data = new FormData(form);
+        data.set('do', 'log_restore_begin');
+        const begun = await upload(data);
+        xhr = null;
+        if (stopped) return;
+        if (!begun.data?.ok) return fail(reason(begun.status, begun.data));
+        token = begun.data.token;
+        const total = begun.data.total;
+
+        step('images');
+        const started = performance.now();
+        let done = 0, retries = 0;
+        show(UPLOAD, total ? '残り時間を計算しています' : '', total ? `画像 0 / ${total} 枚` : '復元する画像はありません');
+        while (done < total) {
+            const r = await post({do: 'log_restore_step', token});
+            if (stopped) return;
+            if (!r.data?.ok) {
+                // The job survives a busy host or a dropped line: wait, then ask again.
+                if (!r.data && retries < 3) {
+                    retries++;
+                    $('[data-restore-eta]').textContent = `サーバーの応答を待っています（${retries}/3）`;
+                    await new Promise(resolve => setTimeout(resolve, 3000 * retries));
+                    if (stopped) return;
+                    continue;
+                }
+                return fail(reason(r.status, r.data));
+            }
+            retries = 0; done = r.data.done;
+            const seconds = (performance.now() - started) / 1000;
+            show(UPLOAD + IMAGES * done / total, done < total ? timeLeft(seconds / done * (total - done) + 2) : 'まもなく完了します', `画像 ${done} / ${total} 枚`);
+        }
+
+        step('finish');
+        cancelButton.disabled = true;
+        show(UPLOAD + IMAGES, 'まもなく完了します', `投稿 ${begun.data.posts}件と設定を書き込んでいます`);
+        const r = await post({do: 'log_restore_finish', token});
+        // Without a reply, the swap may still have finished on the server.
+        if (!r.data?.ok) return fail(r.data ? reason(r.status, r.data) : reason(r.status, null) + ' 復元は終わっている場合があります。', !r.data);
+        running = false;
+        step('');
+        title.textContent = '復元が完了しました';
+        note.textContent = ''; cancelButton.hidden = true;
+        show(100, '', `投稿 ${r.data.posts}件・画像 ${r.data.media}件を復元しました。LOGの一覧へ移動します。`);
+        setTimeout(() => { location.href = r.data.redirect; }, 1200);
+    };
+
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!running) run();
+    });
+    cancelButton.addEventListener('click', () => {
+        if (running) {
+            running = false; stopped = true;
+            if (xhr) xhr.abort();
+            if (token) post({do: 'log_restore_cancel', token});
+        }
+        dialog.close();
+    });
+    // Escape must not hide a restore that is still running.
+    dialog.addEventListener('cancel', event => { if (running) event.preventDefault(); });
+    window.addEventListener('beforeunload', event => { if (running) { event.preventDefault(); event.returnValue = ''; } });
+})();

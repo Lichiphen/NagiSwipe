@@ -73,6 +73,9 @@
     let uploading = 0;
     let saving = false;
     let dirty = false;
+    // Edits made on this page. A draft brought back from sessionStorage stays there when the page is left,
+    // so it alone must not ask before leaving: the editor on every public page shares the same draft.
+    let touched = false;
     const storageKey = 'nagimanga-log:' + location.pathname + ':' + ($('input[name="post_id"]', form).value || 'new');
     const initialRevision = $('input[name="revision"]', form).value;
     const categoryFields = $$('input[name="categories[]"]', form);
@@ -96,7 +99,8 @@
         mediaRatings = saved.mediaRatings && typeof saved.mediaRatings === 'object' ? saved.mediaRatings : {};
     }
     function say(message, error = false) { status.textContent = message; status.classList.toggle('error', error); }
-    function changed() {
+    function changed(user = true) {
+        if (user) touched = true;
         Object.keys(refs).forEach(tag => { if (!body.value.includes(tag)) delete refs[tag]; });
         refsField.value = JSON.stringify(refs);
         $('input[name="media_ratings"]', form).value = JSON.stringify(mediaRatings);
@@ -104,6 +108,8 @@
         $('[data-preview-body]', form).hidden = true; $('[data-preview]', form).setAttribute('aria-pressed', 'false');
         $('[data-character-count]', form).textContent = Array.from(body.value).length + '文字';
         dirty = snapshot() !== initial;
+        fab?.classList.toggle('log-fab-draft', dirty);
+        if (fab) fab.title = dirty ? '書きかけがあります' : '';
         try { sessionStorage.setItem(storageKey, JSON.stringify({ ...current(), revision: initialRevision })); } catch { /* storage may be disabled */ }
     }
     try {
@@ -111,6 +117,14 @@
         if (saved && saved.revision === initialRevision && (saved.body || saved.title)) {
             restore(saved);
             say('このタブで書いていた本文を戻しました。');
+            const discard = document.createElement('button');
+            discard.type = 'button'; discard.className = 'btn'; discard.textContent = '書きかけを消す';
+            status.after(discard);
+            discard.addEventListener('click', () => {
+                restore(JSON.parse(initial)); changed(false); touched = false; discard.remove();
+                try { sessionStorage.removeItem(storageKey); } catch { /* storage may be disabled */ }
+                say('書きかけを消しました。');
+            });
         } else if (saved && saved.revision !== initialRevision) {
             const recover = document.createElement('button');
             recover.type = 'button'; recover.className = 'btn'; recover.textContent = 'このタブの未保存本文を戻す';
@@ -240,7 +254,7 @@
         warning.value = b.dataset.warningPreset; changed();
         warning.focus(); warning.setSelectionRange(warning.value.length, warning.value.length);
     }));
-    changed();
+    changed(false);
     body.addEventListener('input', changed); title.addEventListener('input', changed);
     categoryFields.forEach(input => input.addEventListener('change', changed));
     newCategories.addEventListener('input', changed);
@@ -287,8 +301,10 @@
     }
     function setPanel(open) {
         if (open && publicEditor && !panel.classList.contains('active')) {
+            // The top page's editor in view only needs the focus. Elsewhere the editor is hidden in an empty
+            // slot that can sit inside the screen, so it always opens as a panel.
             const rect = slot.getBoundingClientRect();
-            if (rect.bottom > 0 && rect.top < window.innerHeight) { body.focus({ preventScroll: true }); return; }
+            if (!collapsed && rect.bottom > 0 && rect.top < window.innerHeight) { body.focus({ preventScroll: true }); return; }
             slot.style.minHeight = panel.offsetHeight + 'px';
         }
         if (open) previousFocus = document.activeElement;
@@ -335,7 +351,7 @@
     // Without the open editor (pages other than the top, the admin list) the button floats in shortly after load.
     if (collapsed) setTimeout(checkFab, 220); else checkFab();
     if (panel.dataset.edit || dirty) setPanel(true);
-    window.addEventListener('beforeunload', e => { if ((dirty || uploading) && !saving) { e.preventDefault(); e.returnValue = ''; } });
+    window.addEventListener('beforeunload', e => { if (((dirty && touched) || uploading) && !saving) { e.preventDefault(); e.returnValue = ''; } });
 
     const uploadInput = $('[data-upload-input]', form);
     $('[data-upload]', form).addEventListener('click', () => uploadInput.click());

@@ -324,6 +324,32 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore', 'overwrite': '1'}, files={'backup': ('log.zip', backup.body, 'application/zip')})
     check("上書き復元で元の本文に戻せる", '編集した本文' in other.get('/?id=' + pid).text)
     check("下書きもバックアップから復元できる", keep_draft in other.get('/admin/index.php?p=log').text and other.get('/?id=' + keep_draft).status == 404)
+    # The admin's progress screen restores in steps: receive, a few seconds of images at a time, swap.
+    other_tmp = site.parent / 'other/data/tmp'
+    other_edit = other.get('/admin/index.php?p=log_edit&id=' + pid)
+    other.post('/admin/index.php', {'csrf': other_csrf, **payload(body='分割復元の前に変更', post_id=pid, revision=re.search(r'name="revision" value="([0-9]+)"', other_edit.text).group(1))})
+    begun = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_begin', 'overwrite': '1'}, files={'backup': ('log.zip', backup.body, 'application/zip')}).text)
+    check("分割復元の受付で画像と投稿の数を返す", begun.get('ok') and begun['total'] == sum(n.endswith('/media.json') for n in archive.namelist()) and begun['posts'] == sum(n.startswith('posts/') for n in archive.namelist()))
+    check("分割復元の受付だけでは書き換えない", '分割復元の前に変更' in other.get('/?id=' + pid).text)
+    check("別のセッションは復元の受付を使えない", post({'do': 'log_restore_step', 'token': begun['token']}).status == 422)
+    check("画像が終わる前の仕上げを拒否", begun['total'] == 0 or other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_finish', 'token': begun['token']}).status == 422)
+    begun = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_begin', 'overwrite': '1'}, files={'backup': ('log.zip', backup.body, 'application/zip')}).text)
+    steps, done = 0, 0
+    while done < begun['total'] and steps < 100:
+        stepped = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_step', 'token': begun['token']}).text)
+        steps += 1; done = stepped['done']
+    check("分割復元で画像を少しずつ進める", done == begun['total'] and stepped['total'] == begun['total'])
+    finished = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_finish', 'token': begun['token']}).text)
+    check("分割復元の仕上げで投稿と画像を書き込む", finished.get('ok') and finished['redirect'] == 'index.php?p=log' and finished['media'] == begun['total'] and '編集した本文' in other.get('/?id=' + pid).text and other.get(public_media_url).status == 200)
+    check("分割復元の完了を一覧で知らせる", 'LOGを復元しました' in other.get('/admin/index.php?p=log').text)
+    check("分割復元の作業フォルダを残さない", not list(other_tmp.glob('log-restore-*')))
+    check("終わった受付はもう使えない", other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_step', 'token': begun['token']}).status == 422)
+    begun = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_begin'}, files={'backup': ('log.zip', backup.body, 'application/zip')}).text)
+    other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_cancel', 'token': begun['token']})
+    check("分割復元を中止すると作業フォルダを消す", not list(other_tmp.glob('log-restore-*')))
+    broken = json.loads(other.post('/admin/index.php', {'csrf': other_csrf, 'do': 'log_restore_begin'}, files={'backup': ('bad.zip', b'not a zip', 'application/zip')}).text)
+    check("壊れたZIPは受付の時点で理由を返す", broken.get('error') and not list(other_tmp.glob('log-restore-*')))
+    check("バックアップ画面の復元フォームに進捗表示の印", "data-log-restore" in other.get("/admin/index.php?p=backup").text)
     badzip = io.BytesIO()
     with zipfile.ZipFile(badzip, "w") as z:
         z.writestr("backup.json", archive.read("backup.json"))

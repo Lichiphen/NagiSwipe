@@ -170,6 +170,17 @@ function nl_handle_post(string $do): never
                 nm_save_config(nl_guard_input(nm_config()));
                 nm_flash('ok', '画像収集BOTへの対策を保存しました');
                 nm_redirect('p=settings&section=common#log-guard');
+            case 'log_restore_begin':
+                nm_json(['ok' => true] + nl_restore_begin($_FILES['backup'] ?? [], !empty($_POST['overwrite'])));
+            case 'log_restore_step':
+                nm_json(['ok' => true] + nl_restore_step(nm_str($_POST, 'token', 16)));
+            case 'log_restore_finish':
+                $r = nl_restore_finish(nm_str($_POST, 'token', 16));
+                nm_flash('ok', 'LOGを復元しました（投稿 ' . $r['posts'] . '件・画像 ' . $r['media'] . '件）');
+                nm_json(['ok' => true, 'redirect' => 'index.php?p=log'] + $r);
+            case 'log_restore_cancel':
+                nl_restore_cancel(nm_str($_POST, 'token', 16));
+                nm_json(['ok' => true]);
             case 'log_restore':
                 $f = $_FILES['backup'] ?? [];
                 if (($f['error'] ?? -1) !== UPLOAD_ERR_OK || !is_uploaded_file((string)($f['tmp_name'] ?? ''))) throw new UnexpectedValueException('バックアップを受け取れませんでした');
@@ -181,7 +192,7 @@ function nl_handle_post(string $do): never
     } catch (Throwable $e) {
         $message = $e instanceof UnexpectedValueException ? $e->getMessage() : '保存できませんでした。空き容量や書き込み権限を確認してください';
         nm_log('log_error', $e->getMessage());
-        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings'], true)) nm_json(['error' => $message], 422);
+        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings'], true) || str_starts_with($do, 'log_restore_')) nm_json(['error' => $message], 422);
         nm_flash('err', $message);
         nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? 'p=log_media' : 'p=log' });
     }
@@ -484,7 +495,7 @@ function nl_rating_select(string $current): string
 function nl_backup_panel(): string
 {
     return '<section class="card"><h2>LOGのバックアップ</h2><p>投稿・下書き・LOGの画像・サイト名を、別のZIPにまとめます。漫画は上の作品バックアップに入ります。引っ越すときは両方を保存してください。</p>'
-        . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_backup"><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGをダウンロード</button></form><h3>LOGを復元</h3><form method="post" action="index.php" enctype="multipart/form-data" class="form">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_restore"><label>LOGのバックアップZIP<input type="file" name="backup" accept=".zip,application/zip" required></label><label class="check"><input type="checkbox" name="overwrite" value="1">同じ投稿・画像を上書きする（LOGの設定も戻します）</label><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGを復元する</button></form><p class="note">漫画を含む場合は、先に作品バックアップを復元してください。ZipArchiveがないサーバーでは、FTPでdata/logフォルダを保存できます。画像の保存先は秘密鍵に結び付くため、FTPで引っ越す場合はdata/config.phpも一緒に保管してください。</p></section>';
+        . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_backup"><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGをダウンロード</button></form><h3>LOGを復元</h3><form method="post" action="index.php" enctype="multipart/form-data" class="form" data-log-restore>' . nm_csrf_field() . '<input type="hidden" name="do" value="log_restore"><label>LOGのバックアップZIP<input type="file" name="backup" accept=".zip,application/zip" required></label><label class="check"><input type="checkbox" name="overwrite" value="1">同じ投稿・画像を上書きする（LOGの設定も戻します）</label><button class="btn"' . (nm_zip_available() ? '' : ' disabled') . '>LOGを復元する</button></form><p class="note">漫画を含む場合は、先に作品バックアップを復元してください。ZipArchiveがないサーバーでは、FTPでdata/logフォルダを保存できます。画像の保存先は秘密鍵に結び付くため、FTPで引っ越す場合はdata/config.phpも一緒に保管してください。</p></section>';
 }
 
 /**

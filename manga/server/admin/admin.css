@@ -263,3 +263,34 @@ details.more[open] > summary { margin-bottom: 12px; }
 .log-like-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 16px; }.log-like-form label { max-width:220px; }.log-like-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .log-list-likes { display:inline-flex; align-items:center; gap:3px; color:var(--like-ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }.log-list-likes svg { width:13px; height:13px; fill:currentColor; }
 .log-list-likes { flex-shrink:0; }
+
+/* LOG restore: steps, a wave meter that fills from the left, the share done and the time left. */
+.log-restore-dialog { width:min(520px,calc(100% - 32px)); padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--text); box-shadow:0 20px 60px #0000004d; }
+.log-restore-dialog::backdrop { background:#0e161f80; }
+.log-restore-dialog h2 { margin:0 0 12px; font-size:18px; }
+.log-restore-steps { display:flex; gap:6px; margin:0 0 14px; padding:0; list-style:none; counter-reset:restore; font-size:13px; }
+.log-restore-steps li { flex:1; display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; color:var(--muted); counter-increment:restore; }
+.log-restore-steps li::before { content:counter(restore); display:inline-grid; place-items:center; flex-shrink:0; width:20px; height:20px; border-radius:50%; border:1px solid currentColor; font-size:11px; font-weight:700; }
+.log-restore-steps li.is-current { border-color:var(--accent); color:var(--text); font-weight:700; }
+.log-restore-steps li.is-current::before { background:var(--accent); border-color:var(--accent); color:var(--accent-text); }
+.log-restore-steps li.is-done { color:var(--text); }
+.log-restore-steps li.is-done::before { content:"✓"; background:color-mix(in srgb,var(--accent) 16%,var(--card)); border-color:var(--accent); color:var(--accent); }
+.log-restore-meter { position:relative; height:48px; border:1px solid var(--field); border-radius:12px; background:color-mix(in srgb,var(--accent) 7%,var(--card)); overflow:hidden; }
+.log-restore-fill { position:absolute; inset:0 auto 0 0; width:0; overflow:hidden; transition:width .5s ease; }
+/* Two wave crests drift at different speeds over the water; the mask draws the crest, the background its color. */
+.log-restore-wave { position:absolute; inset:0; background:var(--accent);
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48' preserveAspectRatio='none'%3E%3Cpath d='M0 13Q30 3 60 13T120 13V48H0Z'/%3E%3C/svg%3E") 0 0/120px 100% repeat-x;
+    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48' preserveAspectRatio='none'%3E%3Cpath d='M0 13Q30 3 60 13T120 13V48H0Z'/%3E%3C/svg%3E") 0 0/120px 100% repeat-x;
+    animation:log-restore-wave 2.4s linear infinite; }
+.log-restore-wave.is-back { opacity:.4; top:-5px; -webkit-mask-size:160px 100%; mask-size:160px 100%; animation:log-restore-wave-back 3.8s linear infinite reverse; }
+@keyframes log-restore-wave { to { -webkit-mask-position:120px 0; mask-position:120px 0; } }
+@keyframes log-restore-wave-back { to { -webkit-mask-position:160px 0; mask-position:160px 0; } }
+.log-restore-dialog.is-error .log-restore-wave { background:var(--danger); animation-play-state:paused; }
+.log-restore-numbers { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin:10px 0 2px; font-variant-numeric:tabular-nums; }
+.log-restore-numbers strong { font-size:24px; }
+.log-restore-numbers span { color:var(--muted); font-size:14px; }
+.log-restore-detail { margin:0 0 6px; line-height:1.6; overflow-wrap:anywhere; }
+.log-restore-dialog.is-error .log-restore-detail { color:var(--danger); font-weight:600; }
+.log-restore-actions { display:flex; justify-content:flex-end; margin-top:12px; }
+@media(max-width:600px) { .log-restore-steps { flex-direction:column; } .log-restore-actions .btn { width:100%; } }
+@media(prefers-reduced-motion:reduce) { .log-restore-wave { animation:none; } .log-restore-fill { transition:none; } }
