@@ -18,6 +18,9 @@
     --ok-bg: #e6f4ea;
     --err-bg: #fce8e6;
     --warn-bg: #fff4d6;
+    /* Down chevrons: one SVG for selects (drawn in a fixed colour, 3:1 on every field) and a mask for the rest. */
+    --chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f5761' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -34,6 +37,7 @@
         --ok-bg: #1e3326;
         --err-bg: #3b1f1d;
         --warn-bg: #3a3016;
+        --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c3c8cf' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     }
 }
 
@@ -56,11 +60,11 @@ code { font-size: .92em; background: var(--bg); padding: 0 .3em; border-radius: 
 .brand { font-weight: 700; letter-spacing: .04em; }
 .nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .top .brand { display:flex; align-items:center; gap:10px; font-size:14px; }
-.log-ui-icon { width:20px; height:20px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.log-ui-icon { width:20px; height:20px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }.log-ui-icon-up,.log-ui-icon-down { stroke-width:2.2; }
 .workspace-nav { margin-left:auto; gap:4px; padding:3px; border:1px solid var(--line); border-radius:12px; background:var(--bg); font-size:13px; }
 .workspace-nav > a,.nav-more > summary { display:block; padding:7px 12px; border-radius:8px; text-decoration:none; cursor:pointer; color:var(--text); list-style:none; }
 .workspace-nav > a[aria-current],.workspace-tabs > a[aria-current] { background:var(--accent); color:var(--accent-text); }
-.nav-more { position:relative; }.nav-more > summary::-webkit-details-marker { display:none; }.nav-more > summary::after { content:'⌄'; margin-left:7px; }
+.nav-more { position:relative; }.nav-more > summary::-webkit-details-marker { display:none; }.nav-more > summary::after { content:''; display:inline-block; width:12px; height:12px; margin-left:6px; vertical-align:-1px; background:currentColor; -webkit-mask:var(--chevron-mask) center/contain no-repeat; mask:var(--chevron-mask) center/contain no-repeat; transition:transform .15s ease; }.nav-more[open] > summary::after { transform:rotate(180deg); }
 .nav-more > div { position:absolute; right:0; top:calc(100% + 8px); z-index:70; display:grid; gap:4px; min-width:210px; padding:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 25px #0002; }
 .nav-more a,.nav-more button { display:block; padding:9px; text-decoration:none; font:inherit; }.nav-more a:hover,.nav-more button:hover { background:var(--bg); }.nav-more button.link { width:100%; padding:9px; text-align:left; }
 .workspace-tabs { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 22px; border-bottom:1px solid var(--line); padding:0 0 12px; }
@@ -92,6 +96,9 @@ input, select, textarea {
 }
 ::placeholder { color: var(--muted); opacity: 1; }
 input[type="checkbox"], input[type="radio"] { width: auto; margin-top: .35em; }
+html[data-log-theme^="light"] { --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f5761' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+html[data-log-theme^="dark"] { --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c3c8cf' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+select:not([multiple]):not([size]) { -webkit-appearance: none; appearance: none; padding-right: 34px; background-image: var(--select-chevron); background-repeat: no-repeat; background-position: right 11px center; background-size: 14px 14px; }
 textarea { resize: vertical; }
 .wide { max-width: 100%; }
 .inline { display: inline; }
@@ -203,6 +210,12 @@ details.more[open] > summary { margin-bottom: 12px; }
 .settings-toc a:hover { background:var(--bg); }
 .settings-toc a[aria-current] { background:color-mix(in srgb,var(--accent) 14%,var(--card)); color:var(--accent); font-weight:700; }
 .settings-body .card { scroll-margin-top:16px; }
+/* Under a block's heading: labels that jump to its parts. */
+.settings-parts { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; margin:-4px 0 16px; }
+.settings-parts a { display:block; padding:6px 10px; border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px; line-height:1.45; text-decoration:none; }
+.settings-parts a:hover { border-color:var(--accent); color:var(--accent); }
+.settings-parts a:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.settings-body .card :is(h3,fieldset,details) { scroll-margin-top:16px; }
 .settings-body .card:focus { outline:none; }
 /* Two columns at most (the table of contents and one column of blocks); wider screens keep the blocks readable. */
 .settings-form { min-width:0; max-width:880px; }
@@ -210,12 +223,6 @@ details.more[open] > summary { margin-bottom: 12px; }
 .settings-body .card.is-changed { box-shadow:inset 4px 0 0 var(--accent); }
 .settings-toc a.is-changed::after,.settings-toc-dialog ol a.is-changed::after { content:""; display:inline-block; width:7px; height:7px; margin-left:6px; border-radius:50%; background:var(--accent); vertical-align:middle; }
 /* The one save button: stays at the bottom of the screen while the settings scroll. */
-/* Under a block's heading: labels that jump to its parts. */
-.settings-parts { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; margin:-4px 0 16px; }
-.settings-parts a { display:block; padding:6px 10px; border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px; line-height:1.45; text-decoration:none; }
-.settings-parts a:hover { border-color:var(--accent); color:var(--accent); }
-.settings-parts a:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-.settings-body .card :is(h3,fieldset,details) { scroll-margin-top:16px; }
 .settings-savebar { position:sticky; bottom:12px; z-index:50; display:flex; align-items:center; gap:12px; margin-top:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:color-mix(in srgb,var(--card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 8px 28px #00000024; }
 .settings-savebar-status { flex:1; min-width:0; margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
 .settings-form.has-changes .settings-savebar { border-color:var(--accent); }
