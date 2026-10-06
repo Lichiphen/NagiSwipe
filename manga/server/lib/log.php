@@ -32,6 +32,8 @@ function nl_memo(string $key, callable $fn): mixed
 }
 /** Browser cache for public LOG images (seconds). */
 const NL_MEDIA_MAX_AGE = 86400;
+/** LOG pictures fit this box on upload, as on X: smaller files, and a size every phone's GPU can draw. */
+const NL_MEDIA_MAX_SIDE = 4096;
 function nl_post_file(string $id): string
 {
     if (!nl_valid_post($id)) throw new InvalidArgumentException('bad post');
@@ -401,7 +403,7 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         $id = $old ? $old['id'] : bin2hex(random_bytes(8));
         $dir = nl_media_dir($id);
         $cfg = nm_config();
-        $page = nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, true, true);
+        $page = nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, true, true, NL_MEDIA_MAX_SIDE);
         if (is_string($page)) throw new UnexpectedValueException($page);
         $name = (string)($file['name'] ?? '画像');
         if (!mb_check_encoding($name, 'UTF-8')) $name = '画像';

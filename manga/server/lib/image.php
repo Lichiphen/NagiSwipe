@@ -52,11 +52,12 @@ function nm_memory_available(): int
 }
 
 /**
- * Import one uploaded file into $pagesDir.
+ * Import one uploaded file into $pagesDir. With $maxSide, a larger picture is scaled down to fit a
+ * $maxSide x $maxSide box (animated GIFs keep their size).
  *
  * @return array{f:string,w:int,h:int}|string  page info, or an error message
  */
-function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true, bool $animated = false): array|string
+function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true, bool $animated = false, int $maxSide = 0): array|string
 {
     $sup = nm_image_support();
     if (!$sup['gd'] || !$sup['finfo']) return 'サーバーの PHP に GD / fileinfo がありません';
@@ -105,6 +106,15 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
         if (!imageistruecolor($src)) imagepalettetotruecolor($src);
         $w = imagesx($src);
         $h = imagesy($src);
+        if ($maxSide > 0 && max($w, $h) > $maxSide) {
+            $k = $maxSide / max($w, $h);
+            $sw = max(1, (int)round($w * $k)); $sh = max(1, (int)round($h * $k));
+            $small = imagecreatetruecolor($sw, $sh);
+            nm_prepare_canvas($small, $sup['webp'] ? 'webp' : 'jpg');
+            imagecopyresampled($small, $src, 0, 0, 0, 0, $sw, $sh, $w, $h);
+            imagedestroy($src);
+            [$src, $w, $h] = [$small, $sw, $sh];
+        }
 
         // 5) Re-encode into a fresh file with a name we choose
         nm_ensure_dir($pagesDir);
