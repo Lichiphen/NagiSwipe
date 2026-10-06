@@ -4,3 +4,7 @@ dev/results/
 dev/reference-nagimemo/
 __pycache__/
 demo-site/
+# A local install's data (install.lock, sessions, works, LOG posts…): only the folder's guards ship
+server/data/*
+!server/data/.htaccess
+!server/data/index.html
