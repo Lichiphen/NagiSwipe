@@ -307,3 +307,9 @@ details.more[open] > summary { margin-bottom: 12px; }
 .log-restore-actions { display:flex; justify-content:flex-end; margin-top:12px; }
 @media(max-width:600px) { .log-restore-steps { flex-direction:column; } .log-restore-actions .btn { width:100%; } }
 @media(prefers-reduced-motion:reduce) { .log-restore-wave { animation:none; } .log-restore-fill { transition:none; } }
+/* Settings contents: the way back to the admin and to the public page, at the top of the column and of the phone dialog. */
+.settings-toc-exits { display:grid; gap:6px; margin:0 0 12px; padding:0 0 12px; border-bottom:1px solid var(--line); }
+.settings-toc a.settings-toc-exit,.settings-toc-dialog a.settings-toc-exit { display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); font-weight:600; text-decoration:none; }
+.settings-toc a.settings-toc-exit:hover,.settings-toc-dialog a.settings-toc-exit:hover { border-color:var(--accent); color:var(--accent); }
+.settings-toc-exit svg { width:17px; height:17px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.settings-toc-dialog .settings-toc-exits { grid-template-columns:1fr 1fr; }

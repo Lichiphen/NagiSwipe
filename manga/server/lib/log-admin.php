@@ -120,9 +120,12 @@ function nl_handle_post(string $do): never
                     if ($m['revision'] !== (int)nm_str($_POST, 'revision', 10)) throw new UnexpectedValueException('別の画面で更新されています。開き直してください');
                     if (nl_settings()['icon'] === $id) throw new UnexpectedValueException('アイコンで使っている画像は削除できません');
                     if (nl_settings()['og_image'] === $id) throw new UnexpectedValueException('OGPで使っている画像は削除できません');
+                    if (nl_settings()['logo'] === $id) throw new UnexpectedValueException('タイトルロゴで使っている画像は削除できません');
+                    if (in_array($id, nl_pages_media_ids(), true)) throw new UnexpectedValueException('固定ページで使っている画像は削除できません');
                     if (in_array($id, nl_sidebar_media_ids(), true)) throw new UnexpectedValueException('サイドバーで使っている画像は削除できません');
                     foreach (nl_post_summaries(false) as $p) if (in_array($id, $p['media'], true)) throw new UnexpectedValueException('投稿や下書きで使っている画像は削除できません');
                     nm_rmdir_recursive(nl_media_dir($id));
+                    nm_touch_content();
                 });
                 nm_flash('ok', '未使用の画像を削除しました');
                 nm_redirect(nl_media_back());
@@ -160,6 +163,20 @@ function nl_handle_post(string $do): never
             case 'log_footer_settings':
                 nl_settings_update([nl_footer_input()]);
                 nm_flash('ok', 'フッターを保存しました'); nm_redirect('p=settings&section=log#log-footer');
+            case 'log_page_save':
+                $page = nl_page_save(nm_str($_POST, 'page_id', 14), nl_revision_input(), nl_page_input(['title' => nm_str($_POST, 'title', 1000), 'slug' => nm_str($_POST, 'slug', 200), 'body' => is_string($_POST['body'] ?? null) ? $_POST['body'] : '', 'layout' => nm_str($_POST, 'layout', 10), 'status' => nm_str($_POST, 'status', 10)]));
+                nm_flash('ok', $page['status'] === 'published' ? '固定ページを公開しました' : '固定ページを下書きとして保存しました');
+                // The editor sends with fetch so a refused save keeps the text on screen.
+                if (str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) nm_json(['ok' => true, 'redirect' => 'index.php?p=log_page&id=' . $page['id']]);
+                nm_redirect('p=log_page&id=' . $page['id']);
+            case 'log_page_preview':
+                $body = is_string($_POST['body'] ?? null) ? $_POST['body'] : '';
+                if (strlen($body) > NL_PAGE_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException('本文は200KB以内にしてください');
+                nm_json(['html' => '<h1>' . h(trim(nm_str($_POST, 'title', 1000)) ?: '（タイトル）') . '</h1>' . nl_markdown($body, true)]);
+            case 'log_page_delete':
+                nl_page_delete(nm_str($_POST, 'page_id', 14), nl_revision_input());
+                nm_flash('ok', '固定ページを削除しました');
+                nm_redirect('p=log_pages');
             case 'log_taxonomy_rename':
                 nl_taxonomy_rename(['kind' => nm_str($_POST, 'kind', 10), 'old' => nm_str($_POST, 'old', 250), 'name' => nm_str($_POST, 'name', 250), 'revision' => (int)nm_str($_POST, 'revision', 10)]);
                 nm_flash('ok', '分類の名前を保存しました。ハッシュタグは本文にも反映しています');
@@ -194,9 +211,10 @@ function nl_handle_post(string $do): never
     } catch (Throwable $e) {
         $message = $e instanceof UnexpectedValueException ? $e->getMessage() : '保存できませんでした。空き容量や書き込み権限を確認してください';
         nm_log('log_error', $e->getMessage());
-        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings'], true) || str_starts_with($do, 'log_restore_')) nm_json(['error' => $message], 422);
+        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings', 'log_page_preview'], true) || str_starts_with($do, 'log_restore_')
+            || ($do === 'log_page_save' && str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json'))) nm_json(['error' => $message], 422);
         nm_flash('err', $message);
-        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
+        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', 'log_page_save' => 'p=log_page' . (preg_match(NL_PAGE_ID_PATTERN, nm_str($_POST, 'page_id', 14)) ? '&id=' . nm_str($_POST, 'page_id', 14) : ''), 'log_page_delete' => 'p=log_pages', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
     }
 }
 /*
@@ -263,6 +281,12 @@ function nl_seo_input(): Closure
     if (!in_array($engines, ['allow', 'block'], true)) throw new UnexpectedValueException('検索エンジンに載せるかを選んでください');
     return static function (array $s) use ($engines): array { $s['search_engines'] = $engines === 'allow'; return $s; };
 }
+/** The HOME link at the start of the footer links (a field of the footer links block). */
+function nl_footer_home_input(): Closure
+{
+    $home = nm_str($_POST, 'footer_home', 1) === '1';
+    return static function (array $s) use ($home): array { $s['footer_home'] = $home; return $s; };
+}
 function nl_footer_input(): Closure
 {
     $text = $_POST['footer_text'] ?? '';
@@ -288,12 +312,17 @@ function nl_design_input(): array
     if ($s['title'] === '' || $s['name'] === '') throw new UnexpectedValueException('サイト名と名前を入力してください');
     $s['theme'] = nm_str($_POST, 'theme', 30) ?: nl_settings()['theme'];
     if (!isset(NL_THEMES[$s['theme']])) throw new UnexpectedValueException('デザインを6種類から選んでください');
-    return $s + ['remove_icon' => !empty($_POST['remove_icon']), 'remove_og_image' => !empty($_POST['remove_og_image'])];
+    // Forms without the switch (older pages, scripts) leave it as it was.
+    $s['show_description'] = isset($_POST['description_form']) ? nm_str($_POST, 'show_description', 1) === '1' : nl_settings()['show_description'];
+    return $s + ['remove_icon' => !empty($_POST['remove_icon']), 'remove_og_image' => !empty($_POST['remove_og_image']), 'remove_logo' => !empty($_POST['remove_logo'])];
 }
 /** Upload outside the settings lock; the media library takes the same lock. */
 function nl_design_uploads(): array
 {
-    $ids = ['icon' => null, 'og_image' => null];
+    $ids = ['icon' => null, 'og_image' => null, 'logo' => null];
+    // Share cards need a bitmap: refuse an SVG before anything is stored.
+    $og = $_FILES['og_image'] ?? null;
+    if (is_array($og) && ($og['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && is_string($og['tmp_name'] ?? null) && is_uploaded_file($og['tmp_name']) && nl_svg_upload($og['tmp_name'], (string)($og['name'] ?? ''))) throw new UnexpectedValueException('共通のOGP画像にはSVGを使えません。PNGかJPEGを選んでください');
     foreach ($ids as $name => $_) {
         $file = $_FILES[$name] ?? null;
         if (is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) $ids[$name] = nl_upload_media($file)['id'];
@@ -304,7 +333,8 @@ function nl_design_apply(array $s, array $design, array $uploads): array
 {
     $s['icon'] = $uploads['icon'] ?? ($design['remove_icon'] ? '' : $s['icon']);
     $s['og_image'] = $uploads['og_image'] ?? ($design['remove_og_image'] ? '' : $s['og_image']);
-    unset($design['remove_icon'], $design['remove_og_image']);
+    $s['logo'] = $uploads['logo'] ?? ($design['remove_logo'] ? '' : $s['logo']);
+    unset($design['remove_icon'], $design['remove_og_image'], $design['remove_logo']);
     return array_replace($s, $design);
 }
 /** The sidebar from the settings screen: checked here, saved with nl_sidebar_save after the other blocks. */
@@ -440,7 +470,7 @@ function nl_view_log(): void
     $saved = nm_str($_GET, 'saved', 24);
     $notice = $saved !== '' && nl_load_post($saved) ? '<p class="flash flash-ok">保存しました</p>' : '';
     $taxonomy = nm_str($_GET, 'view', 20) === 'taxonomy';
-    $tabs = '<nav class="workspace-tabs log-admin-tabs" aria-label="LOGの管理"><a href="index.php?p=log"' . (!$taxonomy ? ' aria-current="page"' : '') . '>' . nl_ui_icon('list') . '<span>投稿一覧</span></a><a href="index.php?p=log&view=taxonomy"' . ($taxonomy ? ' aria-current="page"' : '') . '>' . nl_ui_icon('tag') . '<span>カテゴリ・タグ</span></a><a href="index.php?p=settings&section=log">' . nl_ui_icon('settings') . '<span>LOGの設定</span></a></nav>';
+    $tabs = nl_pages_tabs($taxonomy ? 'taxonomy' : 'posts');
     $header = '<div class="log-heading"><div><h1>LOG・投稿</h1><p class="note">' . h($s['title']) . ' · ' . ($s['public'] ? '全体公開' : '自分専用Memo') . '</p></div><div class="log-toolbar"><a class="btn" href="../">' . nl_ui_icon($s['public'] ? 'globe' : 'lock') . '<span>' . ($s['public'] ? '公開ページ' : '自分のMemo') . '</span></a><a class="btn" href="index.php?p=log_media">' . nl_ui_icon('images') . '<span>画像一覧・差し替え</span></a>' . (!$taxonomy ? '<button type="button" class="btn primary" data-compose-open>' . nl_ui_icon() . ' 新しく書く</button>' : '') . '</div></div>';
     if ($taxonomy) { nm_layout('LOGの分類', $header . $tabs . nl_taxonomy_panel()); return; }
     $pagerQuery = 'p=log' . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '');
@@ -506,9 +536,11 @@ function nl_view_media(): void
     $usedBy = [];
     foreach (nl_post_summaries(false) as $p) foreach ($p['media'] as $id) $usedBy[$id][] = $p;
     $icon = nl_settings()['icon'];
+    $logo = nl_settings()['logo'];
     $ogImage = nl_settings()['og_image'];
     $sidebarImages = nl_sidebar_media_ids();
-    $places = static fn($id) => array_values(array_filter([$id === $icon ? 'アイコン' : '', $id === $ogImage ? '共通OGP' : '', in_array($id, $sidebarImages, true) ? 'サイドバー' : '']));
+    $pageImages = nl_pages_media_ids();
+    $places = static fn($id) => array_values(array_filter([$id === $icon ? 'アイコン' : '', $id === $logo ? 'タイトルロゴ' : '', $id === $ogImage ? '共通OGP' : '', in_array($id, $sidebarImages, true) ? 'サイドバー' : '', in_array($id, $pageImages, true) ? '固定ページ' : '']));
     $filters = nl_media_filters($_GET);
     $q = $filters['q'] ?? ''; $use = $filters['use'] ?? ''; $rating = $filters['rating'] ?? '';
     $terms = nl_search_terms($q);
@@ -540,7 +572,8 @@ function nl_view_media(): void
         $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '">' . nl_veil_badge(nl_rating($m['rating'] ?? ''), 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a><p class="note">' . h(nl_date($m['created'])) . '・' . ($count ? $count . '件で使用' : '未使用') . ($locations ? '（' . nl_search_mark(implode('・', $locations), $terms) . '）' : '') . '</p>'
             . ($list !== '' ? '<ul class="log-media-used" aria-label="この画像を使っている記事">' . $list . '</ul>' : '')
             . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>画像の説明<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? '')) . '<button class="btn small">説明と閲覧注意を保存</button></form>'
-            . '<label class="btn log-replace-label">画像を差し替える<input type="file" class="log-replace" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp" hidden></label><p class="note log-drop-hint">この枠に画像をドロップしても差し替えられます。</p><p class="note" role="status" data-replace-status></p>'
+            . '<div class="log-media-copy"><button type="button" class="btn small" data-copy-text="' . h(nl_media_url($m)) . '" title="サイドバーのHTMLやトップメニューに使えるURL">' . nl_ui_icon('copy') . '<span>URL</span></button><button type="button" class="btn small" data-copy-text="' . h('![' . str_replace([']', '['], '', $m['alt']) . '](' . nl_media_url($m) . ')') . '" title="固定ページの本文に貼るMarkdown">' . nl_ui_icon('copy') . '<span>Markdown</span></button>' . (nl_is_svg($m) ? '<span class="badge">SVG</span>' : '') . '</div>'
+            . '<label class="btn log-replace-label">画像を差し替える<input type="file" class="log-replace" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" hidden></label><p class="note log-drop-hint">この枠に画像をドロップしても差し替えられます。</p><p class="note" role="status" data-replace-status></p>'
             . '<form method="post" action="index.php" class="js-confirm" data-confirm="この未使用画像を削除しますか？">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_delete"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><button class="btn small danger"' . ($count ? ' disabled' : '') . '>未使用画像を削除</button></form></article>';
     }
     $option = static fn($value, $current, $label) => '<option value="' . $value . '"' . ($value === $current ? ' selected' : '') . '>' . $label . '</option>';
@@ -554,8 +587,12 @@ function nl_view_media(): void
     $keep = '';
     foreach (array_diff_key($filters, ['page' => 1]) as $key => $value) $keep .= '<input type="hidden" name="' . $key . '" value="' . h($value) . '">';
     $empty = $all ? '見つかりませんでした。言葉を短くするか、絞り込みを「すべて」にしてみてください。' : '投稿画面から画像を追加すると、ここに並びます。';
+    $upload = '<section class="log-media-upload" data-media-upload aria-labelledby="log-media-upload-title"><div class="log-media-upload-icon" aria-hidden="true">' . nl_compose_icon('upload') . '</div><div><h2 id="log-media-upload-title">画像だけを追加</h2>'
+        . '<p class="note">ここ（またはこの画面のどこか）へ画像をドロップすると、投稿を書かずに画像一覧へ追加します。サイドバー・固定ページ・タイトルロゴなどに使えます。JPEG・PNG・WebP・GIF・AVIF・BMP・SVGに対応しています。カードの上にドロップした場合は、その画像の差し替えです。</p>'
+        . '<p class="note">追加した画像は、投稿・サイドバー・固定ページ・設定のどこかで使うまでは公開ページに出ません（ログイン中は見られます）。</p>'
+        . '<label class="btn primary log-media-upload-pick">画像を選ぶ<input type="file" data-media-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden></label><p class="note log-media-upload-status" role="status" aria-live="polite" data-media-upload-status></p></div></section>';
     nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">LOGへ戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p>'
-        . $search
+        . $upload . $search
         . '<div class="log-list-controls"><span>' . ($searching ? '' : count($all) . '枚の画像') . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log_media">' . $keep
         . '<label>1ページの表示件数<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">表示</button></form></div></div>'
         . '<div class="log-media-grid">' . ($cards ?: '<p>' . $empty . '</p>') . '</div>'
@@ -618,7 +655,7 @@ function nl_warning_presets_panel(): string
 function nl_footer_panel(): string
 {
     $s = nl_settings();
-    return '<section class="card" id="log-footer"><h2>サイト下部の表記</h2>' . nl_settings_block('log_footer') . '<label class="check"><input type="checkbox" name="show_footer" value="1"' . ($s['show_footer'] ? ' checked' : '') . '>フッターを表示する</label><label>表示する文章<input name="footer_text" maxlength="200" value="' . h($s['footer_text']) . '" placeholder="例：自分の名前・サイトの案内"></label><p class="note">200文字までの1行で入力できます。HTMLは使いません。空欄の場合も表示しません。</p></div></section>';
+    return '<section class="card" id="log-footer"><h2>サイト下部の表記</h2>' . nl_settings_block('log_footer') . '<label class="check"><input type="checkbox" name="show_footer" value="1"' . ($s['show_footer'] ? ' checked' : '') . '>フッターの文章を表示する</label><label>表示する文章<input name="footer_text" maxlength="200" value="' . h($s['footer_text']) . '" placeholder="例：自分の名前・サイトの案内"></label><p class="note">200文字までの1行で入力できます。HTMLは使いません。空欄の場合も表示しません。フッターのリンク（HOME・利用規約など）は、下の「フッターのリンク」で設定します。</p></div></section>';
 }
 /** Choices as radio buttons with a note under each. */
 function nl_radio_list(string $name, array $choices, string $current, array $notes = []): string
@@ -707,12 +744,17 @@ function nl_settings_panel(): string
         $choices .= '</div></fieldset>';
     }
     return '<section class="card" id="log-settings"><h2>LOGのデザイン・アイコン</h2>' . nl_settings_block('log_design', ' data-log-settings')
-        . '<label>サイト名<input name="title" maxlength="100" required value="' . h($s['title']) . '"></label><label>紹介文<textarea name="description" maxlength="300">' . h($s['description']) . '</textarea></label><label>名前<input name="name" maxlength="100" required value="' . h($s['name']) . '"></label>'
+        . '<label>サイト名<input name="title" maxlength="100" required value="' . h($s['title']) . '"></label><label>紹介文<textarea name="description" maxlength="300">' . h($s['description']) . '</textarea></label>'
+        . '<input type="hidden" name="description_form" value="1"><label class="check"><input type="checkbox" name="show_description" value="1"' . ($s['show_description'] ? ' checked' : '') . '>紹介文をサイト名の下に表示する</label><p class="note">オフにすると画面には出さず、検索結果や共有したときの説明文（meta description）としてだけ使います。</p>'
+        . '<label>名前<input name="name" maxlength="100" required value="' . h($s['name']) . '"></label>'
+        . '<h3>タイトルロゴ</h3><p class="note">サイト名の代わりに、画像のロゴを表示します。トップや一覧のページでは見出し（h1）になり、画像の説明（alt）にはサイト名を入れます。横長のバナー（例：200×40px）が向いています。SVGも使えます。高さはPCで64px・スマホで44pxまでに縮めて表示します。</p><div class="log-logo-preview">' . (($logo = nl_load_media($s['logo'])) ? '<img src="' . h('../' . nl_media_url($logo)) . '" alt="' . h($s['title']) . '">' : '<span class="note">未設定（アイコンとサイト名を表示しています）</span>') . '</div>'
+        . '<label>ロゴの画像<input type="file" name="logo" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg"></label>'
+        . ($s['logo'] !== '' ? '<label class="check"><input type="checkbox" name="remove_logo" value="1">ロゴを外して、アイコンとサイト名に戻す</label>' : '')
         . '<h3>デザイン</h3><p class="note">色を選ぶと、この画面で見比べられます。保存すると公開サイトにも反映されます。</p>' . $choices
-        . '<h3>アイコン</h3><div class="log-icon-preview">' . nl_icon_html($s, '../', 'log-settings-avatar') . '</div><label>新しいアイコン<input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
+        . '<h3>アイコン</h3><div class="log-icon-preview">' . nl_icon_html($s, '../', 'log-settings-avatar') . '</div><label>新しいアイコン<input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg"></label>'
         . '<p class="note">サイト名の横・投稿者表示・サイドバーのプロフィール・ログイン画面で使います。画像は丸く表示します。</p>'
         . ($s['icon'] !== '' ? '<label class="check"><input type="checkbox" name="remove_icon" value="1">今のアイコンを外す</label>' : '')
-        . '<h3>共通のOGP画像</h3><p class="note">リンクを共有したときに表示される紹介画像です。投稿に画像がないときと、トップ・分類一覧で使います。横1200×縦630pxの画像が目安です。</p><div class="log-og-preview">' . ($og ? '<img src="' . h('../' . nl_media_url($og, true)) . '" alt="共通の紹介画像">' : '') . '</div><label>OGP画像<input type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
+        . '<h3>共通のOGP画像</h3><p class="note">リンクを共有したときに表示される紹介画像です。投稿に画像がないときと、トップ・分類一覧で使います。横1200×縦630pxの画像が目安です。SNSが表示しないため、SVGは使えません。</p><div class="log-og-preview">' . ($og ? '<img src="' . h('../' . nl_media_url($og, true)) . '" alt="共通の紹介画像">' : '') . '</div><label>OGP画像<input type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
         . ($og ? '<label class="check"><input type="checkbox" name="remove_og_image" value="1">共通のOGP画像を外す</label>' : '')
         . '</div></section>';
 }

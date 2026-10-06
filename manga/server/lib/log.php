@@ -5,6 +5,8 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 const NL_POST_PATTERN = '/\A(?:[0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\z/';
 const NL_MEDIA_PATTERN = '/\A[a-f0-9]{16}\z/';
+/** A LOG picture's file: the manga page names, plus SVG (checked by log-svg.php). */
+const NL_MEDIA_FILE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif|svg)\z/';
 const NL_BODY_MAX = 100000;
 const NL_INDEX_SCHEMA = 7;
 const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライトセージ', 'light-paper' => 'ライトペーパー',
@@ -18,6 +20,10 @@ require_once __DIR__ . '/log-grid.php';
 require_once __DIR__ . '/log-likes.php';
 require_once __DIR__ . '/log-feed.php';
 require_once __DIR__ . '/log-veil.php';
+require_once __DIR__ . '/log-svg.php';
+require_once __DIR__ . '/log-pages.php';
+require_once __DIR__ . '/log-topmenu.php';
+require_once __DIR__ . '/log-og.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -69,7 +75,20 @@ function nl_load_media(string $id): ?array
 {
     if (!nl_valid_media($id)) return null;
     $m = nl_read_record(nl_media_dir($id) . '/media.php');
-    return $m && ($m['id'] ?? '') === $id && preg_match(NM_PAGE_PATTERN, (string)($m['f'] ?? '')) ? $m : null;
+    return $m && ($m['id'] ?? '') === $id && preg_match(NL_MEDIA_FILE_PATTERN, (string)($m['f'] ?? '')) ? $m : null;
+}
+/** Delete a LOG picture's file and thumbnail (SVG included). */
+function nl_delete_media_files(string $dir, string $file): void
+{
+    if (!preg_match(NL_MEDIA_FILE_PATTERN, $file)) return;
+    @unlink("$dir/$file");
+    @unlink("$dir/t_$file");
+}
+function nl_is_svg(?array $m): bool { return $m !== null && str_ends_with((string)$m['f'], '.svg'); }
+/** Pictures the settings use outside posts: icon, title logo, shared OGP image. */
+function nl_settings_media(array $s): array
+{
+    return array_values(array_filter([$s['icon'], $s['logo'], $s['og_image']], static fn($id) => $id !== ''));
 }
 function nl_post_summary(array $p): array
 {
@@ -193,8 +212,9 @@ function nl_delete_posts(mixed $items): array
             $p = nl_load_post(basename($file, '.php'));
             if ($p && !isset($selected[$p['id']])) foreach (nl_media_refs($p['body']) as $id) $used[$id] = true;
         }
-        $s = nl_settings(); $used[$s['icon']] = true; $used[$s['og_image']] = true;
+        foreach (nl_settings_media(nl_settings()) as $id) $used[$id] = true;
         foreach (nl_sidebar_media_ids() as $id) $used[$id] = true;
+        foreach (nl_pages_media_ids() as $id) $used[$id] = true;
         $indexFile = nl_root() . '/index.php';
         $oldIndex = is_file($indexFile) ? file_get_contents($indexFile) : null;
         if ($oldIndex === false) throw new RuntimeException('cannot read index before delete');
@@ -233,6 +253,7 @@ function nl_delete_posts(mixed $items): array
         // The temporary transaction folder is removed, never retained as trash.
         nm_rmdir_recursive($stage);
         try { nl_likes_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
+        nl_og_forget(array_keys($selected));
         $clean = !is_dir($stage);
         foreach ($selected as $p) $clean = nl_prune_empty_dir(dirname(nl_post_file($p['id']))) && $clean;
         foreach (['posts', 'media', 'receipts'] as $dir) $clean = nl_prune_empty_dir(nl_root() . '/' . $dir) && $clean;
@@ -261,7 +282,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -286,6 +307,10 @@ function nl_read_settings(): array
     $s['search_engines'] = $s['search_engines'] !== false;
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';
     if ($s['og_image'] !== '' && !nl_valid_media($s['og_image'])) $s['og_image'] = '';
+    // false: the description stays out of the page header and is only the meta description.
+    $s['show_description'] = $s['show_description'] !== false;
+    $s['footer_home'] = $s['footer_home'] !== false;
+    if (!is_string($s['logo']) || ($s['logo'] !== '' && !nl_valid_media($s['logo']))) $s['logo'] = '';
     return $s;
 }
 function nl_date(int $time, string $format = 'Y/m/d H:i'): string
@@ -403,7 +428,10 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         $id = $old ? $old['id'] : bin2hex(random_bytes(8));
         $dir = nl_media_dir($id);
         $cfg = nm_config();
-        $page = nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, true, true, NL_MEDIA_MAX_SIDE);
+        // SVG is checked for scripts and outside references and written out again (log-svg.php); everything else is redrawn by GD.
+        $page = nl_svg_upload($file['tmp_name'], (string)($file['name'] ?? ''))
+            ? nl_svg_store((string)file_get_contents($file['tmp_name']), $dir)
+            : nm_import_image($file['tmp_name'], $dir, 1, (int)($cfg['image_quality'] ?? 90), (int)($cfg['max_upload_mb'] ?? 30) * 1024 * 1024, true, true, NL_MEDIA_MAX_SIDE);
         if (is_string($page)) throw new UnexpectedValueException($page);
         $name = (string)($file['name'] ?? '画像');
         if (!mb_check_encoding($name, 'UTF-8')) $name = '画像';
@@ -411,9 +439,9 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         $name = (string)preg_replace('/[\x00-\x1F\x7F]/u', '', $name);
         $m = array_merge($page, ['id' => $id, 'alt' => $old['alt'] ?? $name, 'created' => $old['created'] ?? time(), 'updated' => time(), 'revision' => (int)($old['revision'] ?? 0) + 1]);
         try { nl_write_record($dir . '/media.php', $m); }
-        catch (Throwable $e) { nm_delete_page_files($dir, $page['f']); throw $e; }
+        catch (Throwable $e) { nl_delete_media_files($dir, $page['f']); throw $e; }
         nm_touch_content();
-        if ($old) nm_delete_page_files($dir, $old['f']);
+        if ($old) nl_delete_media_files($dir, $old['f']);
         nm_log($old ? 'log_image_replaced' : 'log_image_uploaded', $id);
         return $m;
     });
@@ -422,8 +450,9 @@ function nl_media_public(string $id): bool
 {
     $s = nl_settings();
     if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER)) return false;
-    if ($s['icon'] === $id || $s['og_image'] === $id) return true;
+    if (in_array($id, nl_settings_media($s), true)) return true;
     if (in_array($id, nl_memo('sidebar-media', static fn() => nl_sidebar_media_ids(true)), true)) return true;
+    if (in_array($id, nl_memo('pages-media', static fn() => nl_pages_media_ids(true)), true)) return true;
     $refs = nl_memo('media-refs', static function (): array {
         $refs = [];
         foreach (nl_post_summaries() as $p) foreach ($p['media'] ?? [] as $mid) $refs[$mid][] = $p['id'];
@@ -453,6 +482,11 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false): never
     if (!is_file($file)) nm_not_found();
     header('Content-Type: ' . nm_image_mime($m['f']));
     header('X-Content-Type-Options: nosniff');
+    // An SVG opened on its own is a document: no scripts, no outside requests, nothing it may navigate.
+    if (nl_is_svg($m)) {
+        header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
+        header('Content-Disposition: inline; filename="image.svg"');
+    }
     header('Vary: Cookie');
     if ($admin) {
         header('Cache-Control: private, no-store');

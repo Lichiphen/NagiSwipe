@@ -64,13 +64,13 @@ def main():
             if response.status!=200: raise RuntimeError(response.text)
             return json.loads(response.text)['media']
         design={'do':'log_settings','title':'清掃監査','description':'保存と削除の確認','name':'監査者','theme':'light-blue'}
-        check('既定のフッターを表示','<footer class="log-site-footer">Powered by NagiLog＆NagiManga</footer>' in public.get('/').text)
+        check('既定のフッターを表示','<p class="log-footer-text">Powered by NagiLog＆NagiManga</p>' in public.get('/').text)
         footer(' 私の記録 © 2026 ')
-        check('フッターの前後空白を除いて日本語を保存','<footer class="log-site-footer">私の記録 © 2026</footer>' in public.get('/').text and state(site)['settings']['footer_text']=='私の記録 © 2026')
-        footer('表示を隠す',False); check('フッター非表示でも入力を保管','<footer' not in public.get('/').text and state(site)['settings']['footer_text']=='表示を隠す')
-        footer(''); check('空欄のフッターは表示しない','<footer' not in public.get('/').text)
+        check('フッターの前後空白を除いて日本語を保存','<p class="log-footer-text">私の記録 © 2026</p>' in public.get('/').text and state(site)['settings']['footer_text']=='私の記録 © 2026')
+        footer('表示を隠す',False); check('フッター非表示でも入力を保管','log-footer-text' not in public.get('/').text and state(site)['settings']['footer_text']=='表示を隠す')
+        footer(''); check('空欄のフッターは表示しない','log-footer-text' not in public.get('/').text)
         evil='<script>alert(1)</script> <img src=x onerror=alert(2)> " &'
-        footer(evil); fm=re.search(r'<footer class="log-site-footer">(.*?)</footer>',public.get('/').text,re.S)
+        footer(evil); fm=re.search(r'<p class="log-footer-text">(.*?)</p>',public.get('/').text,re.S)
         check('フッターのHTMLを文字として表示',fm is not None and html.unescape(fm.group(1))==evil and '<script' not in fm.group(1) and '<img' not in fm.group(1))
         footer('字'*200); check('フッター200文字を保存',state(site)['settings']['footer_text']=='字'*200)
         for text in ('字'*201,'改行\n文字','タブ\t文字','制御\x01文字'):

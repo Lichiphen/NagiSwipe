@@ -28,8 +28,10 @@ const NM_SETTINGS_SECTIONS = [
     'log_display' => ['一覧の見せ方・記事の下', 'log'],
     'log_design' => ['LOGのデザイン・アイコン', 'log'],
     'log_seo' => ['検索エンジンとサイトマップ', 'log'],
+    'log_topmenu' => ['トップメニュー', 'log'],
     'log_sidebar' => ['サイドバー・メニュー', 'log'],
     'log_footer' => ['サイト下部の表記', 'log'],
+    'log_footmenu' => ['フッターのリンク', 'log'],
     'log_warning' => ['閲覧注意の定型文', 'log'],
     'lscache' => ['LiteSpeed Cache', 'common'],
     'login_days' => ['ログインを保つ期間', 'common'],
@@ -110,6 +112,8 @@ match ($page) {
     'log' => nm_is_guest() ? nm_view_guest_denied('LOG') : nl_view_log(),
     'log_edit' => nm_is_guest() ? nm_view_guest_denied('LOG') : nl_view_edit(nm_str($_GET, 'id', 24)),
     'log_media' => nm_is_guest() ? nm_view_guest_denied('LOGの画像') : nl_view_media(),
+    'log_pages' => nm_is_guest() ? nm_view_guest_denied('固定ページ') : nl_view_pages(),
+    'log_page' => nm_is_guest() ? nm_view_guest_denied('固定ページ') : nl_view_page_edit(nm_str($_GET, 'id', 14)),
     'log_image' => nm_is_guest() ? nm_not_found() : nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), true),
     'log_media_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(false),
     'log_manga_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(true),
@@ -182,11 +186,13 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi
             ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '">'
-              . '<script src="' . nm_asset('log-settings.js') . '" defer></script>' : '')
+              . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
+              . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage
             ? '<link rel="stylesheet" href="' . nm_asset('../viewer/NagiSwipe-main.css') . '">'
               . '<script src="' . nm_asset('log-editor.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-manage.js') . '" defer></script>'
+              . '<script src="' . nm_asset('log-pages.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiSwipe-main.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiManga.js') . '" defer></script>' : '')
         . '</head><body><header class="top"><span class="brand">' . nl_ui_icon() . '<span>NagiManga / LOG</span></span>' . $navHtml . '</header>'
@@ -766,6 +772,10 @@ function nm_settings_save_all(array $cfg): never
         if (in_array('log_design', $sections, true)) { $at = 'log_design'; $design = nl_design_input(); }
         $sidebar = null;
         if (in_array('log_sidebar', $sections, true)) { $at = 'log_sidebar'; $sidebar = nl_sidebar_input(); }
+        $topmenu = null;
+        if (in_array('log_topmenu', $sections, true)) { $at = 'log_topmenu'; $topmenu = nl_topmenu_input(); }
+        $footmenu = null;
+        if (in_array('log_footmenu', $sections, true)) { $at = 'log_footmenu'; $footmenu = nl_menu_input('foot'); if (isset($_POST['footer_home_form'])) $changes[] = nl_footer_home_input(); }
         // 2. Pictures: an image that cannot be read stops here, before any setting changes.
         if ($design !== null) {
             $at = 'log_design';
@@ -777,6 +787,8 @@ function nm_settings_save_all(array $cfg): never
         if ($next !== $cfg) nm_save_config($next);
         if ($changes) nl_settings_update($changes);
         if ($sidebar !== null) { $at = 'log_sidebar'; nl_sidebar_save($sidebar[0], $sidebar[1]); }
+        if ($topmenu !== null) { $at = 'log_topmenu'; nl_topmenu_save($topmenu[0], $topmenu[1]); }
+        if ($footmenu !== null) { $at = 'log_footmenu'; nl_menu_save('foot', $footmenu[0], $footmenu[1]); }
     } catch (Throwable $e) {
         $message = $e instanceof UnexpectedValueException ? $e->getMessage() : '保存できませんでした。空き容量や書き込み権限を確認してください';
         nm_log('settings_error', $at . ' ' . $e->getMessage());
@@ -1261,7 +1273,7 @@ function nm_view_settings(array $cfg): void
     // so their forms sit after it and their fields join them with form="…".
     nm_layout('設定', $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="設定の目次" hidden></nav>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
-        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_warning_presets_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
         . '<section class="card"><h2>ログイン URL</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
         . '<p><button class="btn" form="settings-regen-key">ログイン URL を変更する</button></p><p class="note">押すとすぐに変わります（「設定を保存」とは別です）。</p></section>'

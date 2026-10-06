@@ -387,7 +387,7 @@ function nm_lscache_soft_action(array $post): bool
 /** Content-Type for a stored page or LOG image, by its extension. */
 function nm_image_mime(string $file): string
 {
-    return match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) { 'webp' => 'image/webp', 'gif' => 'image/gif', default => 'image/jpeg' };
+    return match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) { 'webp' => 'image/webp', 'gif' => 'image/gif', 'svg' => 'image/svg+xml', default => 'image/jpeg' };
 }
 
 function nm_config(bool $reload = false): ?array

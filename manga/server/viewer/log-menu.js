@@ -6,7 +6,7 @@
     const backdrop = document.querySelector('.log-menu-backdrop');
     if (!button || !menu || !backdrop) return;
     const mobile = matchMedia('(max-width:900px)');
-    const background = [document.querySelector('.log-site-header'), document.querySelector('.log-site-main'), document.querySelector('.log-site-footer'), button];
+    const background = [document.querySelector('.log-site-header'), document.querySelector('.log-topmenu'), document.querySelector('.log-site-main'), document.querySelector('.log-site-footer'), button];
     let opened = false;
     function setOpen(value, restore = true) {
         opened = value && mobile.matches;

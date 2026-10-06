@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <style> text { font-family:'M PLUS Rounded 1c',sans-serif; fill:#fff; text-anchor:middle; }</style>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1424" stop-opacity=".18"/><stop offset="1" stop-color="#0b1424" stop-opacity=".52"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity=".08"/></linearGradient>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#050a14" flood-opacity=".35"/></filter>
+    <filter id="ink" x="-10%" y="-30%" width="120%" height="160%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#050a14" flood-opacity=".45"/></filter>
+  </defs>
+  <!-- The server draws this shade itself (nl_og_shade), so the label file only holds the card. -->
+  <rect width="1200" height="630" fill="url(#shade)" class="shade"/>
+  <g filter="url(#lift)">
+    <rect x="270" y="150" width="660" height="330" rx="40" fill="url(#glass)" stroke="#fff" stroke-opacity=".42" stroke-width="2"/>
+  </g>
+  <circle cx="600" cy="232" r="46" fill="#b98bff"/>
+  <circle cx="600" cy="232" r="56" fill="none" stroke="#b98bff" stroke-opacity=".4" stroke-width="4"/>
+  <g transform="translate(572 204) scale(2.333)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>
+  </g>
+  <text x="600" y="360" font-size="92" font-weight="800" letter-spacing="3" filter="url(#ink)">R-18G</text>
+  <text x="600" y="430" font-size="31" font-weight="700" fill-opacity=".92" letter-spacing="1" filter="url(#ink)">刺激の強い表現を含みます</text>
+  <rect x="528" y="500" width="144" height="40" rx="20" fill="#0b1424" fill-opacity=".38" stroke="#fff" stroke-opacity=".3"/>
+  <text x="600" y="528" font-size="20" font-weight="700" letter-spacing="4" fill-opacity=".9">閲覧注意</text>
+</svg>

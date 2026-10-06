@@ -117,7 +117,15 @@
                 card.scrollIntoView({behavior: reduce.matches ? 'auto' : 'smooth', block: 'start'});
                 card.tabIndex = -1; card.focus({preventScroll: true});
             };
-            toc.append(list()); toc.hidden = false;
+            // Ways out without scrolling back up: the LOG admin and the public page (a new tab, so edits stay here).
+            const exits = () => {
+                const box = document.createElement('div');
+                box.className = 'settings-toc-exits';
+                box.innerHTML = '<a class="settings-toc-exit" href="index.php?p=log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 6-6 6 6 6M5 12h14"/></svg><span>管理画面に戻る</span></a>'
+                    + '<a class="settings-toc-exit" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span>公開ページを見る</span></a>';
+                return box;
+            };
+            toc.append(exits(), list()); toc.hidden = false;
 
             // Phones: a button floating at the bottom right opens the same list in a dialog.
             const fab = document.createElement('button');
@@ -126,7 +134,7 @@
             const dialog = document.createElement('dialog');
             dialog.className = 'settings-toc-dialog'; dialog.setAttribute('aria-labelledby', 'settings-toc-title');
             dialog.innerHTML = '<div class="settings-toc-dialog-head"><h2 id="settings-toc-title">設定の目次</h2><button type="button" class="btn" data-toc-close>閉じる</button></div>';
-            dialog.append(list());
+            dialog.append(exits(), list());
             document.body.append(fab, dialog);
             fab.addEventListener('click', () => { sync(); dialog.showModal(); });
             dialog.addEventListener('click', e => {
@@ -166,9 +174,9 @@
             const button = $('[data-settings-save]', form);
             const idle = status.textContent;
             const name = section => $(':scope > h2, :scope > details > summary', section.closest('.card'))?.textContent.trim() || '';
-            // A block's current values; the sidebar has no named fields and gives its JSON.
-            const snap = section => section.nlSidebarItems ? section.nlSidebarItems()
-                : JSON.stringify($$('input, select, textarea', section).filter(c => c.name && c.form === form && c.type !== 'hidden')
+            // A block's current values; the sidebar and the top menu have no named fields and give their JSON.
+            const items = section => section.nlItems || section.nlSidebarItems;
+            const snap = section => (items(section) ? items(section)() : '') + JSON.stringify($$('input, select, textarea', section).filter(c => c.name && c.form === form && c.type !== 'hidden')
                     .map(c => c.type === 'checkbox' || c.type === 'radio' ? c.checked : c.type === 'file' ? Array.from(c.files, f => f.name + ':' + f.size).join('|') : c.value));
             const saved = new Map(sections.map(s => [s, snap(s)]));
             let changed = [], busy = false, leaving = false, armed = false, reloadTo = '';
@@ -205,8 +213,10 @@
                 const data = new FormData(form);
                 data.delete('sections[]');
                 changed.forEach(s => data.append('sections[]', s.dataset.settingsSection));
-                const sidebar = changed.find(s => s.nlSidebarItems);
-                if (sidebar) { data.set('sidebar_items', sidebar.nlSidebarItems()); data.set('sidebar_revision', sidebar.dataset.revision); }
+                changed.filter(items).forEach(s => {
+                    data.set(s.dataset.itemsField || 'sidebar_items', items(s)());
+                    data.set(s.dataset.revisionField || 'sidebar_revision', s.dataset.revision);
+                });
                 busy = true; form.inert = true; button.disabled = true; say('保存しています…');
                 try {
                     const response = await fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });

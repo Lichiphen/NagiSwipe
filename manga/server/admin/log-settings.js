@@ -199,3 +199,166 @@
     const select = box.querySelector('[data-rss-select]'), field = box.querySelector('[data-rss-url]');
     select.addEventListener('change', () => { field.value = select.value; });
 })();
+
+/*
+ * Top menu: rows sorted like the sidebar (handle or arrow buttons), each with a name and a link.
+ * Typing a name lists the fixed pages, categories and hashtags whose names contain it; choosing one fills in the link.
+ * form.nlItems gives the JSON the settings screen's save button sends.
+ */
+(() => {
+    'use strict';
+    // The top menu and the footer links share this editor.
+    document.querySelectorAll('[data-topmenu-manager]').forEach(setup);
+    function setup(form) {
+    const group = form.querySelector('[data-topmenu-items]');
+    const status = form.querySelector('[data-topmenu-status]');
+    const empty = form.querySelector('[data-topmenu-empty]');
+    const template = form.closest('section').querySelector('template[data-topmenu-template]');
+    let candidates = [];
+    try { candidates = JSON.parse(form.dataset.candidates || '[]'); } catch { candidates = []; }
+    // Folding for the search: width, case, and katakana to hiragana.
+    const fold = text => text.normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+    let dragging = null, before = null, pointer = null;
+    const rows = () => Array.from(group.children);
+    const dirty = () => { status.textContent = '未保存の変更があります。画面の下の「設定を保存」で反映します。'; form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
+    const buttons = () => {
+        rows().forEach((row, i, all) => {
+            row.querySelector('[data-topmenu-step="-1"]').disabled = i === 0;
+            row.querySelector('[data-topmenu-step="1"]').disabled = i === all.length - 1;
+        });
+        empty.hidden = rows().length > 0;
+        form.querySelector('[data-topmenu-add]').disabled = rows().length >= 30;
+    };
+    const name = row => row.querySelector('[data-topmenu-label]').value.trim() || '新しい項目';
+    const relabel = row => {
+        row.querySelector('.log-sort-handle').setAttribute('aria-label', name(row) + 'をドラッグして移動');
+        row.querySelector('[data-topmenu-enabled]').setAttribute('aria-label', name(row) + 'を表示する');
+        row.querySelector('[data-topmenu-remove]').setAttribute('aria-label', name(row) + 'を外す');
+    };
+    const end = cancel => {
+        if (!dragging) return;
+        dragging.classList.remove('log-sort-dragging');
+        dragging = null; pointer = null;
+        if (cancel) { before.forEach(row => group.append(row)); status.textContent = '今回の並び替えを取り消しました。'; }
+        else dirty();
+        before = null; buttons();
+    };
+    const wire = row => {
+        const handle = row.querySelector('.log-sort-handle');
+        handle.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || dragging) return;
+            event.preventDefault(); dragging = row; before = rows(); pointer = event.pointerId;
+            row.classList.add('log-sort-dragging'); handle.setPointerCapture(pointer);
+        });
+        handle.addEventListener('pointermove', event => {
+            if (pointer !== event.pointerId) return;
+            const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-topmenu-item]');
+            if (target && target !== row && target.parentElement === group) {
+                const box = target.getBoundingClientRect();
+                group.insertBefore(row, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+                handle.setPointerCapture(pointer);
+            }
+            if (event.clientY < 80) window.scrollBy(0, -16);
+            else if (event.clientY > innerHeight - 80) window.scrollBy(0, 16);
+        });
+        handle.addEventListener('pointerup', event => { if (pointer === event.pointerId) end(false); });
+        handle.addEventListener('pointercancel', event => { if (pointer === event.pointerId) end(true); });
+        handle.addEventListener('lostpointercapture', () => { if (dragging && pointer !== null) end(true); });
+    };
+    // --- Suggestions under the name field ---
+    let active = -1;
+    const box = row => row.querySelector('[data-topmenu-suggest]');
+    const close = row => {
+        const list = box(row), input = row.querySelector('[data-topmenu-label]');
+        list.hidden = true; list.replaceChildren(); active = -1;
+        input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
+    };
+    const choose = (row, item) => {
+        row.querySelector('[data-topmenu-label]').value = item.t;
+        row.querySelector('[data-topmenu-url]').value = item.u;
+        close(row); relabel(row); dirty();
+        status.textContent = '「' + item.t + '」（' + item.k + '）のリンク先を入れました：' + item.u;
+    };
+    const suggest = row => {
+        const input = row.querySelector('[data-topmenu-label]'), list = box(row);
+        const query = fold(input.value.trim());
+        const found = candidates.filter(c => !query || fold(c.t).includes(query)).slice(0, 8);
+        list.replaceChildren(); active = -1;
+        if (!found.length || document.activeElement !== input) { close(row); return; }
+        found.forEach((item, i) => {
+            const option = document.createElement('button');
+            option.type = 'button'; option.className = 'log-topmenu-option'; option.tabIndex = -1;
+            option.setAttribute('role', 'option'); option.id = row.dataset.topmenuId + '-option-' + i;
+            const title = document.createElement('span'); title.textContent = item.t;
+            const kind = document.createElement('small'); kind.textContent = item.k + ' · ' + item.u;
+            option.append(title, kind);
+            // mousedown keeps the focus in the field until the choice is made.
+            option.addEventListener('mousedown', event => event.preventDefault());
+            option.addEventListener('click', () => choose(row, item));
+            list.append(option);
+        });
+        list.hidden = false; input.setAttribute('aria-expanded', 'true');
+    };
+    const mark = (row, step) => {
+        const options = Array.from(box(row).children);
+        if (!options.length) return;
+        active = (active + step + options.length) % options.length;
+        options.forEach((o, i) => o.setAttribute('aria-selected', String(i === active)));
+        row.querySelector('[data-topmenu-label]').setAttribute('aria-activedescendant', options[active].id);
+        options[active].scrollIntoView({block: 'nearest'});
+    };
+    rows().forEach(wire);
+    form.addEventListener('input', event => {
+        const row = event.target.closest('[data-topmenu-item]');
+        if (!row) return;
+        if (event.target.matches('[data-topmenu-label]')) { suggest(row); relabel(row); }
+        dirty();
+    });
+    form.addEventListener('focusin', event => { if (event.target.matches('[data-topmenu-label]')) suggest(event.target.closest('[data-topmenu-item]')); });
+    form.addEventListener('focusout', event => {
+        if (!event.target.matches('[data-topmenu-label]')) return;
+        const row = event.target.closest('[data-topmenu-item]');
+        setTimeout(() => { if (document.activeElement !== row.querySelector('[data-topmenu-label]')) close(row); }, 0);
+    });
+    form.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && dragging) { event.preventDefault(); end(true); return; }
+        if (!event.target.matches('[data-topmenu-label]') || event.isComposing) return;
+        const row = event.target.closest('[data-topmenu-item]'), list = box(row);
+        if (event.key === 'ArrowDown') { event.preventDefault(); if (list.hidden) suggest(row); mark(row, 1); }
+        else if (event.key === 'ArrowUp' && !list.hidden) { event.preventDefault(); mark(row, -1); }
+        else if (event.key === 'Enter' && !list.hidden && active >= 0) { event.preventDefault(); list.children[active].click(); }
+        else if (event.key === 'Escape' && !list.hidden) { event.preventDefault(); close(row); }
+    });
+    form.addEventListener('click', event => {
+        if (dragging) return;
+        const step = event.target.closest('[data-topmenu-step]');
+        if (step) {
+            const row = step.closest('[data-topmenu-item]');
+            if (step.dataset.topmenuStep === '-1' && row.previousElementSibling) group.insertBefore(row, row.previousElementSibling);
+            else if (step.dataset.topmenuStep === '1' && row.nextElementSibling) group.insertBefore(row.nextElementSibling, row);
+            buttons(); (step.disabled ? row.querySelector('[data-topmenu-step]:not(:disabled)') : step)?.focus(); dirty(); return;
+        }
+        const remove = event.target.closest('[data-topmenu-remove]');
+        if (remove) {
+            const row = remove.closest('[data-topmenu-item]'), next = row.nextElementSibling || row.previousElementSibling;
+            row.remove(); buttons();
+            (next?.querySelector('[data-topmenu-label]') || form.querySelector('[data-topmenu-add]')).focus();
+            dirty(); status.textContent = '「' + name(row) + '」を外しました。保存するまでは、画面を読み込み直すと元に戻せます。';
+            return;
+        }
+        if (event.target.closest('[data-topmenu-add]') && template) {
+            const row = template.content.firstElementChild.cloneNode(true);
+            const random = crypto.getRandomValues(new Uint8Array(6));
+            row.dataset.topmenuId = 'tm-' + Array.from(random, b => b.toString(16).padStart(2, '0')).join('');
+            group.append(row); wire(row); dirty(); buttons(); row.querySelector('[data-topmenu-label]').focus();
+        }
+    });
+    form.nlItems = () => JSON.stringify(rows().map(row => ({
+        id: row.dataset.topmenuId,
+        label: row.querySelector('[data-topmenu-label]').value,
+        url: row.querySelector('[data-topmenu-url]').value,
+        enabled: row.querySelector('[data-topmenu-enabled]').checked,
+    })));
+    buttons();
+    }
+})();

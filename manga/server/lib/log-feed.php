@@ -79,12 +79,15 @@ function nl_serve_sitemap(array $s, array $summaries): never
         $last = max($last, (int)$p['updated']);
         foreach ($p['categories'] ?? [] as $id) $byCategory[$id] = max($byCategory[$id] ?? 0, (int)$p['updated']);
     }
+    $pages = nl_pages(true);
+    foreach ($pages as $p) $last = max($last, (int)$p['updated']);
     $grid = $s['layout'] === 'grid';
     header('X-Robots-Tag: noindex');
-    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries) . '|' . implode(',', array_column(array_filter($summaries, static fn($p) => ($p['rating'] ?? '') === 'r18'), 'id')));
+    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries) . '|' . implode(',', array_column($pages, 'slug')) . '|' . implode(',', array_column(array_filter($summaries, static fn($p) => ($p['rating'] ?? '') === 'r18'), 'id')));
     $url = static fn(string $loc, int $time, string $priority): string => '<url><loc>' . nl_xml($loc) . '</loc>' . ($time > 0 ? '<lastmod>' . nl_date($time, 'c') . '</lastmod>' : '') . '<priority>' . $priority . "</priority></url>\n";
     $out = $url($base . '/', $last, '1.0');
     foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($byCategory[$id])) $out .= $url($base . '/?category=' . rawurlencode((string)$id), $byCategory[$id], '0.5');
+    foreach ($pages as $p) $out .= $url($base . '/?pg=' . rawurlencode($p['slug']), (int)$p['updated'], '0.5');
     // R-18 posts answer noindex, so they are not listed.
     if ($grid) foreach ($summaries as $p) if (($p['rating'] ?? '') !== 'r18') $out .= $url($base . '/?id=' . rawurlencode($p['id']), (int)$p['updated'], '0.7');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n" . $out . '</urlset>';

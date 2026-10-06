@@ -20,11 +20,11 @@
     async function replaceImage(card, file) {
         const input = $('.log-replace', card);
         if (!file || card.dataset.busy) return;
-        if (!/^image\/(jpeg|png|webp|gif|avif|bmp)$/.test(file.type)) { $('[data-replace-status]', card).textContent = 'JPEG・PNG・WebP・GIF・AVIF・BMPの画像を選んでください。'; return; }
+        if (!/^image\/(jpeg|png|webp|gif|avif|bmp|svg\+xml)$/.test(file.type) && !/\.svg$/i.test(file.name)) { $('[data-replace-status]', card).textContent = 'JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'; return; }
         if (!window.confirm('この画像を使うすべての投稿が変わります。差し替えますか？')) { input.value = ''; return; }
         const status = $('[data-replace-status]', card);
         input.disabled = true; card.dataset.busy = '1';
-        status.textContent = '画像を差し替えています…';
+        status.textContent = '画像を差し替えています…'; status.classList.add('log-busy');
         try {
             const data = new FormData();
             data.set('do', 'log_upload'); data.set('media', card.dataset.mediaCard); data.set('revision', card.dataset.revision); data.set('image', file);
@@ -36,7 +36,7 @@
             window.NagiSwipe?.init();
             status.textContent = '差し替えました。本文のタグはそのまま使えます。';
         } catch (e) { status.textContent = e.message; }
-        finally { input.disabled = false; input.value = ''; delete card.dataset.busy; }
+        finally { input.disabled = false; input.value = ''; delete card.dataset.busy; status.classList.remove('log-busy'); }
     }
     $$('.log-replace').forEach(input => input.addEventListener('change', () => replaceImage(input.closest('[data-media-card]'), input.files[0])));
     $$('[data-media-card]').forEach(card => {
@@ -52,8 +52,8 @@
             replaceImage(card, e.dataTransfer.files[0]);
         });
     });
-    // Outside the cards a dropped file must not open in the browser and leave the page.
-    if ($('[data-media-card]')) ['dragover', 'drop'].forEach(type => document.addEventListener(type, e => { if (!e.defaultPrevented && [...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); }));
+    // Outside the cards a dropped file must not open in the browser and leave the page (with the upload box, log-pages.js adds it instead).
+    if ($('[data-media-card]') && !$('[data-media-upload]')) ['dragover', 'drop'].forEach(type => document.addEventListener(type, e => { if (!e.defaultPrevented && [...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); }));
 
     // Deleting a post from the public page asks first (admin.js, which asks on the admin pages, is not loaded there).
     $$('form[data-log-delete]').forEach(f => f.addEventListener('submit', e => {
@@ -297,7 +297,8 @@
         warning.value = saved.warning || '';
         mediaRatings = saved.mediaRatings && typeof saved.mediaRatings === 'object' ? saved.mediaRatings : {};
     }
-    function say(message, error = false) { status.textContent = message; status.classList.toggle('error', error); }
+    // A message still at work ends with "…": it gets the small wave (log.css .log-busy).
+    function say(message, error = false) { status.textContent = message; status.classList.toggle('error', error); status.classList.toggle('log-busy', !error && message.endsWith('…')); }
     function changed(user = true) {
         if (user) touched = true;
         Object.keys(refs).forEach(tag => { if (!body.value.includes(tag)) delete refs[tag]; });
@@ -635,7 +636,7 @@
         inertNodes.forEach(([el, was]) => { el.inert = was; }); inertNodes = [];
         if (open && (mobile.matches || slot)) {
             panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'true');
-            $$('header.top, footer.foot, .main > :not(#log-compose):not(.log-fab):not(.log-picker):not(.log-compose-slot), .log-site-header, .log-site-footer, .log-menu-toggle, .log-sidebar, .log-site-main > :not(.log-compose-slot)').forEach(el => { inertNodes.push([el, el.inert]); el.inert = true; });
+            $$('header.top, footer.foot, .main > :not(#log-compose):not(.log-fab):not(.log-picker):not(.log-compose-slot), .log-site-header, .log-topmenu, .log-site-footer, .log-menu-toggle, .log-sidebar, .log-site-main > :not(.log-compose-slot)').forEach(el => { inertNodes.push([el, el.inert]); el.inert = true; });
         } else { panel.removeAttribute('role'); panel.removeAttribute('aria-modal'); }
         document.body.classList.toggle('log-composing', open && (mobile.matches || !!slot));
     }
