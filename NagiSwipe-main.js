@@ -972,8 +972,11 @@
             // (times the device pixel ratio) is too much for the GPU: while opening, frames came out blank or
             // jumped. Drawing still uses the full image, so zooming in stays sharp.
             // Zoomed in, the slide takes its full size again (see _syncLayout): a scaled-up layer would look soft.
-            const limit = wrap._nsFull ? Infinity : Math.max(2048, 2 * Math.max(window.innerWidth, window.innerHeight));
-            const k = Math.min(1, limit / Math.max(w, h));
+            // At fit: twice its size on screen, never less than that size, and at most 4096 device pixels on the
+            // long side. Counted in CSS px alone, a phone at a 2.6 pixel ratio still got a 5000+ px layer, and
+            // Android's GPU drew it torn into blocks while opening.
+            const fit = SmartUtils.getFitScale(w, h);
+            const k = wrap._nsFull ? 1 : Math.min(1, Math.max(fit, Math.min(2 * fit, 4096 / (window.devicePixelRatio || 1) / Math.max(w, h))));
             w = Math.round(w * k);
             h = Math.round(h * k);
             wrap._nsW = w;
