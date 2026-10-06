@@ -572,7 +572,35 @@
         tool.dataset.veil = shown; tool.setAttribute('aria-label', '閲覧注意' + (shown ? '：' + LABEL[shown] : ''));
         $('[data-panel="categories"]', form).classList.toggle('is-set', names.length > 0);
     }
-    // One panel at a time under the tool row.
+    // Phones: a panel opening under the tool row would push the text up and down, so it opens as a sheet from the bottom.
+    // The sheet is a dialog inside the form: the fields moved into it are still sent. Tapping outside or 閉じる closes it.
+    const phone = matchMedia('(max-width:900px)');
+    const sheet = document.createElement('dialog');
+    sheet.className = 'log-panel-sheet';
+    sheet.setAttribute('aria-labelledby', 'log-panel-sheet-title');
+    sheet.innerHTML = '<div class="log-panel-sheet-head"><span class="log-panel-sheet-grip" aria-hidden="true"></span><h2 id="log-panel-sheet-title"></h2><button type="button" class="btn" data-sheet-close>閉じる</button></div><div class="log-panel-sheet-body"></div>';
+    form.append(sheet);
+    let sheetPanel = null, sheetPlace = null;
+    function sheetIn(panelBody, button) {
+        if (sheetPanel === panelBody) return;
+        sheetOut();
+        sheetPlace = document.createComment('panel'); panelBody.before(sheetPlace);
+        $('.log-panel-sheet-body', sheet).append(panelBody); sheetPanel = panelBody;
+        $('#log-panel-sheet-title', sheet).textContent = button.getAttribute('aria-label');
+        if (!sheet.open) sheet.showModal();
+    }
+    function sheetOut() {
+        if (!sheetPanel) return;
+        sheetPlace.replaceWith(sheetPanel); sheetPanel = sheetPlace = null;
+    }
+    sheet.addEventListener('close', () => {
+        const name = sheetPanel?.dataset.panelBody;
+        sheetOut();
+        if (name) { togglePanel(name, false); $('[data-panel="' + name + '"]', form)?.focus({ preventScroll: true }); }
+    });
+    sheet.addEventListener('click', event => { if (event.target === sheet || event.target.closest('[data-sheet-close]')) sheet.close(); });
+    phone.addEventListener('change', () => { if (sheet.open) sheet.close(); });
+    // One panel at a time under the tool row (a sheet on phones).
     function togglePanel(name, open) {
         $$('[data-panel]', form).forEach(button => {
             const on = button.dataset.panel === name && (open ?? button.getAttribute('aria-expanded') !== 'true');
@@ -580,8 +608,11 @@
             $('[data-panel-body="' + button.dataset.panel + '"]', form).hidden = !on;
         });
         const panelBody = $('[data-panel-body="' + name + '"]:not([hidden])', form);
-        if (panelBody && open) (panelBody.querySelector('input:checked, input, button') || panelBody).focus({ preventScroll: true });
-        panelBody?.scrollIntoView({ block: 'nearest' });
+        if (phone.matches && panelBody) sheetIn(panelBody, $('[data-panel="' + name + '"]', form));
+        else if (sheet.open && !panelBody) sheet.close();
+        // On phones never start in a text field: the keyboard would cover the sheet.
+        if (panelBody && (open || phone.matches)) (panelBody.querySelector(phone.matches ? 'input:checked, input[type="checkbox"], input[type="radio"], button' : 'input:checked, input, button') || $('[data-sheet-close]', sheet)).focus({ preventScroll: true });
+        if (!phone.matches) panelBody?.scrollIntoView({ block: 'nearest' });
     }
     $$('[data-panel]', form).forEach(button => button.addEventListener('click', () => togglePanel(button.dataset.panel)));
     ratingFields.forEach(input => input.addEventListener('change', () => {

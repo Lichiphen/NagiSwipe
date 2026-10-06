@@ -800,3 +800,17 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-footer-nav a:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
 .log-footer-text { margin:0; }
 @media(prefers-reduced-motion:reduce) { .log-site .log-footer-nav a { transition:none; } }
+
+/* Phones: the compose box's panels (hashtags, categories, content warning, help) open as a sheet from the bottom. */
+.log-panel-sheet { box-sizing:border-box; width:100%; max-width:100%; max-height:min(82dvh,680px); margin:auto 0 0; padding:0; border:0; border-radius:22px 22px 0 0; background:var(--log-card); color:var(--log-text); box-shadow:0 -12px 40px #00000040; overscroll-behavior:contain; }
+.log-panel-sheet[open] { display:flex; flex-direction:column; animation:log-sheet-up .28s cubic-bezier(.16,1,.3,1); }
+.log-panel-sheet::backdrop { background:#10192d80; animation:log-sheet-fade .28s ease; }
+.log-panel-sheet-head { position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 16px 12px; border-bottom:1px solid var(--log-line); }
+.log-panel-sheet-head h2 { margin:0; font-size:16px; }
+.log-panel-sheet-grip { position:absolute; top:7px; left:50%; width:40px; height:4px; margin-left:-20px; border-radius:2px; background:var(--log-line); }
+.log-panel-sheet-body { overflow-y:auto; padding:14px 16px calc(22px + env(safe-area-inset-bottom)); }
+.log-panel-sheet .log-compose-panel { margin:0; padding:0; border:0; background:none; }
+.log-panel-sheet .log-compose-panel > .log-panel-title:first-child,.log-panel-sheet .log-rating > legend.log-panel-title { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+@keyframes log-sheet-up { from { transform:translateY(100%); } }
+@keyframes log-sheet-fade { from { opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .log-panel-sheet[open],.log-panel-sheet::backdrop { animation:none; } }
