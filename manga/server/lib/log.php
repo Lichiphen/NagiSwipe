@@ -636,11 +636,17 @@ function nl_render_body(array $p, bool $admin = false): string
     $warning = nl_warning_text($p['warning'] ?? '');
     $fold = !$admin && nl_rating_folds(nl_post_rating($p)) ? nl_post_rating($p) : '';
     // Pictures with only line breaks between them become one gallery of square thumbnails (like NagiMemo).
-    $run = []; $gap = '';
-    $flush = static function () use (&$run, &$gap, &$out, $admin): void {
+    // The line break right after a block (picture, gallery, card, player) would only leave an empty line: drop that one.
+    $run = []; $gap = ''; $block = false;
+    $text = static function (string $t) use (&$block, $admin): string {
+        if ($block && $t !== '') { $t = (string)preg_replace('/\A\r?\n/', '', $t); $block = false; }
+        return nl_render_text($t, $admin);
+    };
+    $flush = static function () use (&$run, &$gap, &$out, &$block, $text): void {
         if (count($run) > 1) $out .= '<div class="log-gallery' . (in_array(count($run), [2, 4], true) ? ' is-two' : '') . '">' . implode('', $run) . '</div>';
         else $out .= implode('', $run);
-        if ($gap !== '') $out .= nl_render_text($gap, $admin);
+        if ($run) $block = true;
+        if ($gap !== '') $out .= $text($gap);
         $run = []; $gap = '';
     };
     foreach ($tokens ?: [] as $token) {
@@ -658,19 +664,22 @@ function nl_render_body(array $p, bool $admin = false): string
         $flush();
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
-            $out .= nl_embed_html(trim($token), $dark) ?? nl_card_html(trim($token), $admin) ?? nl_render_text($token, $admin);
+            $html = nl_embed_html(trim($token), $dark) ?? nl_card_html(trim($token), $admin);
+            $out .= $html ?? $text($token);
+            if ($html !== null) $block = true;
             continue;
         }
-        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) $out .= '<span class="note">画像が見つかりません</span>';
+        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) { $out .= '<span class="note">画像が見つかりません</span>'; $block = false; }
         elseif (isset($p['manga'][$token])) {
             $w = nm_load_work($p['manga'][$token]);
-            if (!$w || empty($w['pages'])) { $out .= '<span class="note">漫画が見つかりません</span>'; continue; }
+            if (!$w || empty($w['pages'])) { $out .= '<span class="note">漫画が見つかりません</span>'; $block = false; continue; }
             $prefix = $admin ? '../' : '';
             $href = $prefix . 'read.php?nagimanga=' . $w['id'] . '&dir=' . rawurlencode($w['direction']);
             $cover = empty($w['password_hash']) && nm_work_page_public($w) ? $prefix . 'read.php?a=o&id=' . $w['id'] : $prefix . 'viewer/og.jpg';
             $out .= '<a class="log-manga" href="' . h($href) . '" data-nagimanga="' . h($w['id']) . '" data-endpoint="' . $prefix . 'read.php" data-direction="' . h($w['direction']) . '" data-view="auto" data-cover="1"><img src="' . h($cover) . '" alt="" loading="lazy"><span><strong>' . h($w['title']) . '</strong><small>' . (!empty($w['password_hash']) ? 'パスワードを入れて読む' : '漫画を読む') . '</small></span></a>';
-        } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>';
-        else $out .= nl_render_text($token, $admin);
+            $block = true;
+        } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) { $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>'; $block = false; }
+        else $out .= $text($token);
     }
     $flush();
     $out = '<div class="log-body">' . $out . '</div>';
