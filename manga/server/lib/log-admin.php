@@ -268,6 +268,17 @@ function nl_footer_input(): Closure
     $show = nm_str($_POST, 'show_footer', 1) === '1';
     return static function (array $s) use ($text, $show): array { $s['footer_text'] = trim($text); $s['show_footer'] = $show; return $s; };
 }
+/** The compose box's ready-made warning notes, one per line. */
+function nl_warning_presets_input(): Closure
+{
+    $raw = $_POST['warning_presets'] ?? '';
+    if (!is_string($raw) || strlen($raw) > 16000 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException('閲覧注意の定型文を確認してください');
+    $lines = array_values(array_filter(array_map('trim', preg_split('/\R/u', $raw) ?: []), 'strlen'));
+    if (count($lines) > NL_WARNING_PRESETS_MAX) throw new UnexpectedValueException('閲覧注意の定型文は' . NL_WARNING_PRESETS_MAX . '個までにしてください');
+    foreach ($lines as $line) if (mb_strlen($line) > NL_WARNING_MAX) throw new UnexpectedValueException('閲覧注意の定型文は1行' . NL_WARNING_MAX . '文字以内にしてください（' . mb_strimwidth($line, 0, 30, '…', 'UTF-8') . '）');
+    $list = nl_warning_presets($lines);
+    return static function (array $s) use ($list): array { $s['warning_presets'] = $list; return $s; };
+}
 /** Site name, profile and theme; the pictures are uploaded separately (nl_design_uploads) once everything checks out. */
 function nl_design_input(): array
 {
@@ -376,7 +387,7 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<div class="log-compose-panel" id="log-panel-categories" data-panel-body="categories" hidden><p class="log-panel-title">カテゴリ</p><div class="log-chip-list">' . ($categories ?: '<p class="note">下の欄から作れます。</p>') . '</div><label class="log-panel-field">新しいカテゴリ<input name="new_categories" maxlength="800" placeholder="例：日記、制作メモ（「、」で区切って複数）"></label></div>'
         . '<div class="log-compose-panel" id="log-panel-rating" data-panel-body="rating" hidden><fieldset class="log-rating"><legend class="log-panel-title">閲覧注意</legend><div class="log-rating-choices">' . $ratings . '</div></fieldset>'
         . '<label class="log-panel-field">注意書き（任意）<input name="warning" maxlength="' . NL_WARNING_MAX . '" value="' . h(nl_warning_text($p['warning'] ?? '')) . '" placeholder="例：流血表現があります"></label>'
-        . '<div class="log-chip-list log-warning-presets" role="group" aria-label="注意書きの定型文">' . implode('', array_map(fn($t) => '<button type="button" class="log-tag-chip" data-warning-preset="' . h($t) . '">' . h($t) . '</button>', NL_WARNING_PRESETS)) . '</div>'
+        . '<div class="log-chip-list log-warning-presets" role="group" aria-label="注意書きの定型文">' . implode('', array_map(fn($t) => '<button type="button" class="log-tag-chip" data-warning-preset="' . h($t) . '">' . h($t) . '</button>', nl_settings()['warning_presets'])) . '</div>'
         . '<label class="log-panel-check"><input type="checkbox" data-rate-all checked>選んだとき、本文の画像にも同じ注意を付ける</label><p class="note">画像ごとの注意は、サムネイルの左下のボタンで変えられます。</p></div>'
         . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」にできます。</li><li>画像はここへドロップ、または貼り付けでも追加できます。本文の画像タグを動かすと、表示する位置も変わります。</li><li>URLだけを1行に貼ると、YouTubeやXなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。</li><li>閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。</li></ul></div>'
         . '<div class="log-preview" data-preview-body hidden></div>'
@@ -593,6 +604,14 @@ function nl_pager_fieldset(array $s): string
         . '<label class="check"><input type="checkbox" name="pager_status" value="1"' . ($s['pager_status'] ? ' checked' : '') . '>「120件中 11〜20件目」のように、全体の件数と今の位置を出す</label>'
         . '<label class="check"><input type="checkbox" name="post_nav" value="1"' . ($s['post_nav'] ? ' checked' : '') . '>記事のページの下に、前後の投稿と「すべての投稿」を出す</label>'
         . '<p class="note">どの形式でも、ページ送りは普通のリンクです。検索エンジンも2ページ目以降をたどれ、ブラウザの「戻る」で元のページに戻れます。</p></fieldset>';
+}
+function nl_warning_presets_panel(): string
+{
+    return '<section class="card" id="log-warning"><h2>閲覧注意の定型文</h2>' . nl_settings_block('log_warning')
+        . '<label>注意書きの定型文（1行に1つ）<textarea name="warning_presets" rows="10">' . h(implode("
+", nl_settings()['warning_presets'])) . '</textarea></label>'
+        . '<p class="note">投稿画面の「閲覧注意」（注意の三角）で、注意書きの欄の下に並ぶ文です。押すと欄に入り、そのあと書き足せます。1行' . NL_WARNING_MAX . '文字まで、' . NL_WARNING_PRESETS_MAX . '個まで、上から順に並びます。</p>'
+        . '<p class="note">空にして保存すると、標準の' . count(NL_WARNING_PRESETS) . 'つ（' . h(implode('・', NL_WARNING_PRESETS)) . '）に戻ります。変えても、投稿済みの記事の注意書きはそのままです。</p></div></section>';
 }
 function nl_footer_panel(): string
 {

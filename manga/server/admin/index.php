@@ -30,6 +30,7 @@ const NM_SETTINGS_SECTIONS = [
     'log_seo' => ['検索エンジンとサイトマップ', 'log'],
     'log_sidebar' => ['サイドバー・メニュー', 'log'],
     'log_footer' => ['サイト下部の表記', 'log'],
+    'log_warning' => ['閲覧注意の定型文', 'log'],
     'lscache' => ['LiteSpeed Cache', 'common'],
     'login_days' => ['ログインを保つ期間', 'common'],
     'log_guard' => ['画像収集BOTへの対策', 'common'],
@@ -758,7 +759,7 @@ function nm_settings_save_all(array $cfg): never
         }
         if (in_array('log_guard', $sections, true)) { $at = 'log_guard'; $next = nl_guard_input($next); }
         $changes = [];
-        foreach (['log_preferences' => 'nl_preferences_input', 'log_display' => 'nl_display_input', 'log_seo' => 'nl_seo_input', 'log_footer' => 'nl_footer_input'] as $key => $fn) {
+        foreach (['log_preferences' => 'nl_preferences_input', 'log_display' => 'nl_display_input', 'log_seo' => 'nl_seo_input', 'log_footer' => 'nl_footer_input', 'log_warning' => 'nl_warning_presets_input'] as $key => $fn) {
             if (in_array($key, $sections, true)) { $at = $key; $changes[] = $fn(); }
         }
         $design = null;
@@ -1260,7 +1261,7 @@ function nm_view_settings(array $cfg): void
     // so their forms sit after it and their fields join them with form="…".
     nm_layout('設定', $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="設定の目次" hidden></nav>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
-        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_warning_presets_panel() . '<section class="card"><h2>投稿の整理</h2><p>カテゴリとハッシュタグは、LOG・投稿のページで編集できます。</p><a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a></section></div>' . $panel('common')
         . '<section class="card"><h2>ログイン URL</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">コピー</button></p>'
         . '<p><button class="btn" form="settings-regen-key">ログイン URL を変更する</button></p><p class="note">押すとすぐに変わります（「設定を保存」とは別です）。</p></section>'

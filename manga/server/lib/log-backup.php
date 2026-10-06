@@ -105,6 +105,8 @@ function nl_restore_plan(ZipArchive $zip): array
     if (array_key_exists('crumb_label', $settings) && (!is_string($settings['crumb_label']) || nl_crumb_label($settings['crumb_label']) !== $settings['crumb_label'])) throw new UnexpectedValueException('LOGの表示設定が壊れています');
     $preferences['crumb_home'] = $settings['crumb_home'] ?? nl_settings()['crumb_home'];
     $preferences['crumb_label'] = $settings['crumb_label'] ?? nl_settings()['crumb_label'];
+    if (array_key_exists('warning_presets', $settings) && (!is_array($settings['warning_presets']) || !array_is_list($settings['warning_presets']) || nl_warning_presets($settings['warning_presets']) !== $settings['warning_presets'])) throw new UnexpectedValueException('閲覧注意の定型文が壊れています');
+    $preferences['warning_presets'] = $settings['warning_presets'] ?? nl_settings()['warning_presets'];
     $likes = $mark['likes'] ?? [];
     if (!is_array($likes) || count($likes) > 100000) throw new UnexpectedValueException('いいねの数が壊れています');
     foreach ($likes as $id => $n) if (!nl_valid_post((string)$id) || !is_int($n) || $n < 0 || $n > NL_LIKE_MAX) throw new UnexpectedValueException('いいねの数が壊れています');

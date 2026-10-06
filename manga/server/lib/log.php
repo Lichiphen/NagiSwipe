@@ -259,7 +259,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -279,6 +279,7 @@ function nl_read_settings(): array
     $s['new_label'] = is_string($s['new_label']) ? nl_new_label($s['new_label']) : 'NEW';
     if (!is_string($s['crumb_home']) || !isset(NL_CRUMB_HOMES[$s['crumb_home']])) $s['crumb_home'] = 'home';
     $s['crumb_label'] = is_string($s['crumb_label']) ? nl_crumb_label($s['crumb_label']) : '';
+    $s['warning_presets'] = nl_warning_presets($s['warning_presets']);
     // false: every page asks search engines not to index or follow it (fan works, unofficial sites).
     $s['search_engines'] = $s['search_engines'] !== false;
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';

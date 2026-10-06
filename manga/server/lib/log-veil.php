@@ -10,7 +10,7 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 const NL_RATINGS = ['' => 'なし', 'sensitive' => 'センシティブ', 'r18g' => 'R-18G', 'r18' => 'R-18'];
 const NL_RATING_NOTES = ['' => '注意なし', 'sensitive' => '肌の露出・軽い流血など。画像をぼかします', 'r18g' => '強い流血・暴力・グロテスク。記事を折りたたみ、年齢を確認します', 'r18' => '性的な表現。記事を折りたたみ、年齢を確認します'];
 const NL_WARNING_MAX = 40;
-/** Notes the compose box offers as a start; the owner can edit the text after choosing one. */
+/** Notes the compose box offers as a start (the standard set; the settings screen edits the list). The owner can edit the text after choosing one. */
 const NL_WARNING_PRESETS = ['流血表現があります', '肌の露出があります', '性的な表現があります', '暴力表現があります', 'グロテスクな表現があります', 'ホラー表現があります', '死を扱う内容です', '虫が描かれています', '苦手な方はご注意ください'];
 
 function nl_rating(mixed $value): string
@@ -46,6 +46,13 @@ function nl_warning_text(mixed $value): string
 {
     $text = trim((string)preg_replace('/[\x00-\x1F\x7F]+/u', ' ', is_string($value) ? $value : ''));
     return mb_substr($text, 0, NL_WARNING_MAX);
+}
+const NL_WARNING_PRESETS_MAX = 30;
+/** The settings' list of notes: trimmed, without blanks or repeats; an empty list means the standard set. */
+function nl_warning_presets(mixed $list): array
+{
+    $out = is_array($list) ? array_slice(array_values(array_unique(array_filter(array_map('nl_warning_text', $list), 'strlen'))), 0, NL_WARNING_PRESETS_MAX) : [];
+    return $out ?: NL_WARNING_PRESETS;
 }
 /** The post's own rating and its optional short note (e.g. 流血表現があります). */
 function nl_rating_input(array $input): array
