@@ -78,7 +78,7 @@ def main():
     for port in (args.port,args.other_port):
         with socket.socket() as sock: sock.bind((h.HOST,port))
     temp=ROOT/'manga/dev/results'/('lscache-test-'+secrets.token_hex(4)); site=temp/'site'; plain_site=temp/'plain'
-    for path in (site,plain_site): shutil.copytree(ROOT/'manga/server',path,ignore=shutil.ignore_patterns('paths.php'))
+    for path in (site,plain_site): h.copy_server(path, ROOT/'manga/server')
     processes=[]
     try:
         os.environ['NAGIMANGA_LSCACHE_FORCE']='1'; processes.append(base.start(site,args.port))

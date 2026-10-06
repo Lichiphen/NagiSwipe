@@ -218,7 +218,7 @@ def main():
     root = RESULTS / ("log-feature-test-" + secrets.token_hex(4))
     root.mkdir()
     site = root / "site"
-    shutil.copytree(HERE.parent / "server", site, ignore=shutil.ignore_patterns('paths.php'))
+    helper.copy_server(site, HERE.parent/"server")
     process = start(site, 5198)
     try:
         c, csrf, _ = install(5198)

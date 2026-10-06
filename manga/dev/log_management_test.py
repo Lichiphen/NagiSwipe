@@ -44,7 +44,7 @@ def main():
     for port in (PORT,OTHER_PORT):
         with socket.socket() as probe: probe.bind((h.HOST,port))
     temp=ROOT/'manga/dev/results'/('cleanup-test-'+secrets.token_hex(4)); site=temp/'site'; other_site=temp/'other'
-    for path in (site,other_site): shutil.copytree(ROOT/'manga/server',path,ignore=shutil.ignore_patterns('paths.php'))
+    for path in (site,other_site): h.copy_server(path, ROOT/'manga/server')
     processes=[]
     try:
         processes.extend((base.start(site,PORT),base.start(other_site,OTHER_PORT)))

@@ -190,7 +190,7 @@ def main():
     root = RESULTS / ('contrast-audit-' + secrets.token_hex(4))
     root.mkdir()
     site = root / 'site'
-    shutil.copytree(HERE.parent / 'server', site, ignore=shutil.ignore_patterns('paths.php'))
+    helper.copy_server(site, HERE.parent/'server')
     process = start(site, PORT)
     try:
         c, csrf, _ = install(PORT)

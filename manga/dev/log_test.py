@@ -494,8 +494,8 @@ def main():
     root.mkdir()
     site = root / "site"
     other_site = root / "other"
-    shutil.copytree(HERE.parent / "server", site, ignore=shutil.ignore_patterns('paths.php'))
-    shutil.copytree(HERE.parent / "server", other_site, ignore=shutil.ignore_patterns('paths.php'))
+    helper.copy_server(site, HERE.parent/"server")
+    helper.copy_server(other_site, HERE.parent/"server")
     processes = [start(site, 5194), start(site, 5195, raw=True), start(other_site, 5196)]
     try:
         c, csrf, key = install(5194)

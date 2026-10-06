@@ -118,7 +118,7 @@ def main():
     root = RESULTS / ("log-veil-test-" + secrets.token_hex(4))
     root.mkdir()
     site = root / "site"
-    shutil.copytree(HERE.parent / "server", site, ignore=shutil.ignore_patterns('paths.php'))
+    helper.copy_server(site, HERE.parent/"server")
     process = start(site, 5196)
     try:
         c, csrf, _ = install(5196)

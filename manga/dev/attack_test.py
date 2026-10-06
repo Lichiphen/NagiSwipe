@@ -41,6 +41,17 @@ HOST = "127.0.0.1"
 results = []
 
 
+def copy_server(dest, src=SERVER_DIR):
+    """Copy server/ like a fresh install: a local run's data/ (install.lock, sessions, posts…) stays behind."""
+    src = Path(src)
+
+    def skip(folder, names):
+        if Path(folder) == src / "data":
+            return [n for n in names if n not in (".htaccess", "index.html")]
+        return [n for n in names if n == "paths.php"]
+    shutil.copytree(src, dest, ignore=skip)
+
+
 def check(name, ok, detail=""):
     results.append((name, bool(ok), detail))
     mark = "PASS" if ok else "FAIL"
@@ -1126,7 +1137,7 @@ def run(data_dir):
 def main():
     RESULTS.mkdir(exist_ok=True)
     site = RESULTS / ("site-" + time.strftime("%Y%m%d-%H%M%S"))
-    shutil.copytree(SERVER_DIR, site, ignore=shutil.ignore_patterns("paths.php"))
+    copy_server(site)
     data_dir = site / "data"
     mock = start_mock()
     procs = start_servers(site)

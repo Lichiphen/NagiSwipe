@@ -218,7 +218,7 @@ def main():
     for port in (args.port,args.other_port):
         with socket.socket() as sock: sock.bind((h.HOST,port))
     temp=ROOT/'manga/dev/results'/('embed-test-'+secrets.token_hex(4)); site=temp/'site'; other_site=temp/'other'
-    for path in (site,other_site): shutil.copytree(ROOT/'manga/server',path,ignore=shutil.ignore_patterns('paths.php'))
+    for path in (site,other_site): h.copy_server(path, ROOT/'manga/server')
     global PNG
     PNG=h.png(600,314,extra_after_iend=b"<?php echo 'x'; ?>")
     server=http.server.ThreadingHTTPServer((h.HOST,OGP_PORT),OGP); threading.Thread(target=server.serve_forever,daemon=True).start()
