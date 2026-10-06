@@ -635,23 +635,34 @@ function nl_render_body(array $p, bool $admin = false): string
     $postRating = nl_rating($p['rating'] ?? '');
     $warning = nl_warning_text($p['warning'] ?? '');
     $fold = !$admin && nl_rating_folds(nl_post_rating($p)) ? nl_post_rating($p) : '';
+    // Pictures with only line breaks between them become one gallery of square thumbnails (like NagiMemo).
+    $run = []; $gap = '';
+    $flush = static function () use (&$run, &$gap, &$out, $admin): void {
+        if (count($run) > 1) $out .= '<div class="log-gallery' . (in_array(count($run), [2, 4], true) ? ' is-two' : '') . '">' . implode('', $run) . '</div>';
+        else $out .= implode('', $run);
+        if ($gap !== '') $out .= nl_render_text($gap, $admin);
+        $run = []; $gap = '';
+    };
     foreach ($tokens ?: [] as $token) {
+        if ($run && preg_match('/\A\s*\z/u', $token)) { $gap .= $token; continue; }
+        if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m) && ($im = nl_load_media($m[1])) && ($admin || nl_media_public($m[1]))) {
+            $gap = '';
+            $rating = nl_rating_max($postRating, nl_media_rating($p, $im));
+            if (!$admin && $fold === '' && $rating !== '') { $run[] = nl_veil_figure($im, $rating, $warning, $admin); continue; }
+            if ($admin && $rating !== '') { $run[] = '<figure class="log-figure is-rated">' . nl_veil_badge($rating, 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($im, false, true)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, true)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" loading="lazy"></a></figure>'; continue; }
+            $load = !$admin && $firstImage && $fold === '' ? 'fetchpriority="high"' : 'loading="lazy"';
+            if (!$admin) $firstImage = false;
+            $run[] = '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" ' . $load . '></a></figure>';
+            continue;
+        }
+        $flush();
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
             $out .= nl_embed_html(trim($token), $dark) ?? nl_card_html(trim($token), $admin) ?? nl_render_text($token, $admin);
             continue;
         }
-        if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m)) {
-            $im = nl_load_media($m[1]);
-            if ($im && ($admin || nl_media_public($m[1]))) {
-                $rating = nl_rating_max($postRating, nl_media_rating($p, $im));
-                if (!$admin && $fold === '' && $rating !== '') { $out .= nl_veil_figure($im, $rating, $warning, $admin); continue; }
-                if ($admin && $rating !== '') { $out .= '<figure class="log-figure is-rated">' . nl_veil_badge($rating, 'log-veil-badge log-figure-badge') . '<a class="imagelink" href="' . h(nl_media_url($im, false, true)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, true)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" loading="lazy"></a></figure>'; continue; }
-                $load = !$admin && $firstImage && $fold === '' ? 'fetchpriority="high"' : 'loading="lazy"';
-                if (!$admin) $firstImage = false;
-                $out .= '<figure class="log-figure"><a class="imagelink" href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '" width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '" alt="' . h($im['alt']) . '" ' . $load . '></a></figure>';
-            } else $out .= '<span class="note">画像が見つかりません</span>';
-        } elseif (isset($p['manga'][$token])) {
+        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) $out .= '<span class="note">画像が見つかりません</span>';
+        elseif (isset($p['manga'][$token])) {
             $w = nm_load_work($p['manga'][$token]);
             if (!$w || empty($w['pages'])) { $out .= '<span class="note">漫画が見つかりません</span>'; continue; }
             $prefix = $admin ? '../' : '';
@@ -661,6 +672,7 @@ function nl_render_body(array $p, bool $admin = false): string
         } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>';
         else $out .= nl_render_text($token, $admin);
     }
+    $flush();
     $out = '<div class="log-body">' . $out . '</div>';
     return $admin ? nl_veil_admin_note($p) . $out : ($fold !== '' ? nl_veil_post($fold, $warning, $out) : $out);
 }

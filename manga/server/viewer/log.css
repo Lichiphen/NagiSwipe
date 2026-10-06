@@ -197,6 +197,13 @@ html[data-log-theme="light-paper"] .log-site-header > a { font-family:"Yu Mincho
 .log-card-image { flex:0 0 auto; width:min(36%,220px); height:auto; min-height:100%; aspect-ratio:1.91 / 1; object-fit:cover; background:var(--log-bg); border-left:1px solid var(--log-line); }
 @media(max-width:560px) { .log-site .log-card,.log-card { flex-direction:column-reverse; }.log-card-image { width:100%; border-left:0; border-bottom:1px solid var(--log-line); } }
 .log-figure { margin:16px 0; }.log-figure a { display:block; }.log-figure img { display:block; max-width:100%; width:auto; height:auto; max-height:500px; border-radius:10px; }
+/* Pictures in a row (only line breaks between them): square thumbnails, two columns; three on PCs from three pictures (2 and 4 stay two by two). */
+.log-gallery { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:16px 0; }
+@media(min-width:901px) { .log-gallery:not(.is-two) { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+/* Also the picture inside an opened veil, which otherwise keeps .log-figure's margin and sits lower than its row. */
+.log-gallery .log-figure,.log-gallery > .log-veil { min-width:0; margin:0; }.log-gallery .log-figure.is-rated { width:auto; }
+.log-gallery .log-figure img,.log-gallery .log-veil-shade { width:100%; height:auto; max-height:none; aspect-ratio:1; object-fit:cover; }
+.log-gallery .log-veil-image > .log-veil-cover { width:100%; min-width:0; min-height:0; aspect-ratio:1; }.log-gallery .log-veil-shade { height:100%; }
 .log-manga { display:flex; width:100%; max-width:580px; gap:18px; padding:12px; border:1px solid var(--log-line); background:var(--log-bg); border-radius:12px; margin:16px 0; text-decoration:none; color:var(--log-text)!important; align-items:center; }
 .log-manga img { width:100px; height:130px; object-fit:cover; flex-shrink:0; border-radius:6px; }.log-manga strong { display:block; }.log-manga small { display:block; color:var(--log-cyan); margin-top:8px; }
 .log-empty { text-align:center; color:var(--log-muted); padding:48px 12px; }.log-pagination { display:flex; justify-content:center; gap:20px; padding:20px 0 28px; }

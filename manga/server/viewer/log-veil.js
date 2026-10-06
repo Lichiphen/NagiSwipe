@@ -40,7 +40,8 @@
         yes.addEventListener('click', () => { remember(level, true); text.textContent = '次から' + LABEL[level] + 'を最初から表示します。'; yes.remove(); no.remove(); });
         no.addEventListener('click', () => bar.remove());
         bar.append(text, yes, no);
-        details.after(bar);
+        // In a gallery of thumbnails, under the whole gallery rather than in one of its squares.
+        (details.closest('.log-gallery') || details).after(bar);
     }
 
     document.addEventListener('toggle', e => {
