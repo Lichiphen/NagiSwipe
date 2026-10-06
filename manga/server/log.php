@@ -125,7 +125,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <meta property="og:type" content="<?= $single ? 'article' : 'website' ?>"><meta property="og:site_name" content="<?= h($s['title']) ?>">
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>"><?php if ($ogWidth > 0): ?><meta property="og:image:width" content="<?= $ogWidth ?>"><meta property="og:image:height" content="<?= $ogHeight ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
-<link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>">
+<link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><?php endif; ?>
 <?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
 <?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>

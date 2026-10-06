@@ -185,7 +185,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi
-            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '">'
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '">'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage

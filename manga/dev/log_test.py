@@ -455,6 +455,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     # The manga reader loads only where a manga is shown; the owner's page always has it.
     manga_before = c.get('/').text
     check("漫画のないページでは漫画リーダーを読まない", 'viewer/NagiManga.js' not in before and 'viewer/NagiManga.js' in manga_before)
+    check("投稿画面のCSSはログイン中と管理画面だけで読む", 'viewer/log-owner.css' not in before and 'viewer/log-owner.css' in manga_before and 'viewer/log-owner.css' in c.get('/admin/index.php?p=log').text)
     for path in ('viewer/log.css', 'viewer/log-menu.js', 'viewer/log-mail.js'):
         original = (site / path).read_bytes()
         (site / path).write_bytes(original + b'\n/* cache-key fixture */\n')
