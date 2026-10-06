@@ -240,13 +240,26 @@ function nl_delete_posts(mixed $items): array
 }
 /** Public list paging: numbered pages, newer/older only, or a "show more" button (no infinite scroll). */
 const NL_PAGERS = ['numbers' => '番号つき', 'simple' => '新しい・過去だけ', 'more' => 'もっと見る'];
+/** What the breadcrumb's first step (the top page) says. */
+const NL_CRUMB_HOMES = ['home' => 'HOME', 'site' => 'サイト名', 'custom' => '任意の文字'];
+const NL_CRUMB_LABEL_MAX = 30;
+function nl_crumb_label(string $text): string
+{
+    return mb_substr(trim((string)preg_replace('/[\x00-\x1F\x7F\s]+/u', ' ', mb_check_encoding($text, 'UTF-8') ? $text : '')), 0, NL_CRUMB_LABEL_MAX);
+}
+/** The breadcrumb's first step; a blank custom text falls back to HOME. */
+function nl_crumb_home(array $s): string
+{
+    if ($s['crumb_home'] === 'site') return $s['title'];
+    return $s['crumb_home'] === 'custom' && $s['crumb_label'] !== '' ? $s['crumb_label'] : 'HOME';
+}
 function nl_settings(): array
 {
     return nl_memo('settings', 'nl_read_settings');
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -264,6 +277,8 @@ function nl_read_settings(): array
     if (!is_string($s['related_order']) || !isset(NL_RELATED_ORDER[$s['related_order']])) $s['related_order'] = 'random';
     $s['new_days'] = is_int($s['new_days']) ? max(0, min(NL_NEW_DAYS_MAX, $s['new_days'])) : 7;
     $s['new_label'] = is_string($s['new_label']) ? nl_new_label($s['new_label']) : 'NEW';
+    if (!is_string($s['crumb_home']) || !isset(NL_CRUMB_HOMES[$s['crumb_home']])) $s['crumb_home'] = 'home';
+    $s['crumb_label'] = is_string($s['crumb_label']) ? nl_crumb_label($s['crumb_label']) : '';
     // false: every page asks search engines not to index or follow it (fan works, unofficial sites).
     $s['search_engines'] = $s['search_engines'] !== false;
     if ($s['icon'] !== '' && !nl_valid_media($s['icon'])) $s['icon'] = '';

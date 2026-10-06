@@ -52,7 +52,7 @@ function nl_has_image_links(string $html): bool
  */
 function nl_breadcrumb_trail(array $s, array $filter, int $page, ?array $post = null): array
 {
-    $trail = [[$s['title'], '']];
+    $trail = [[nl_crumb_home($s), '']];
     if ($post) {
         $cats = nl_taxonomy()['categories'];
         foreach ($post['categories'] ?? [] as $id) if (isset($cats[$id])) { $trail[] = [$cats[$id], 'category=' . $id]; break; }
@@ -77,7 +77,7 @@ function nl_breadcrumb_trail(array $s, array $filter, int $page, ?array $post = 
     return $trail;
 }
 /**
- * The visible breadcrumb (house icon + site name › … › this page) and the same steps as schema.org
+ * The visible breadcrumb (house icon + HOME or the site name › … › this page) and the same steps as schema.org
  * BreadcrumbList JSON-LD for search engines. Returns [html, json] ('' when there is no trail).
  */
 function nl_breadcrumb(array $trail, string $canonical): array
@@ -92,7 +92,7 @@ function nl_breadcrumb(array $trail, string $canonical): array
         $url = $current ? $canonical : $base . '/' . ($query !== '' ? '?' . $query : '');
         $label = ($i === 0 ? $home : '') . '<span>' . h($name) . '</span>';
         $items .= '<li' . ($current ? ' aria-current="page"' : '') . '>' . ($i > 0 ? $sep : '')
-            . ($current ? '<span class="log-crumb">' . $label . '</span>' : '<a class="log-crumb" href="./' . ($query !== '' ? '?' . h($query) : '') . '"' . ($i === 0 ? ' title="' . h($name) . 'のトップ"' : '') . '>' . $label . '</a>') . '</li>';
+            . ($current ? '<span class="log-crumb">' . $label . '</span>' : '<a class="log-crumb" href="./' . ($query !== '' ? '?' . h($query) : '') . '"' . ($i === 0 ? ' title="' . h(nl_settings()['title']) . 'のトップ"' : '') . '>' . $label . '</a>') . '</li>';
         $list[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $name, 'item' => $url];
     }
     $json = json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);

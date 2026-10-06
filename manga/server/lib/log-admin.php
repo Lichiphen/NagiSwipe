@@ -240,11 +240,18 @@ function nl_display_input(): Closure
     $likes = nm_str($_POST, 'likes', 1) === '1'; $related = nm_str($_POST, 'related', 1) === '1';
     $days = isset($_POST['new_days']) ? max(0, min(NL_NEW_DAYS_MAX, (int)nm_str($_POST, 'new_days', 3))) : null;
     $label = isset($_POST['new_label']) ? nl_new_label(nm_str($_POST, 'new_label', 200)) : null;
-    return static function (array $s) use ($layout, $by, $order, $likes, $related, $days, $label): array {
+    // Forms without the breadcrumb fieldset (older pages) leave it as it was.
+    $crumb = null;
+    if (isset($_POST['crumb_home'])) {
+        $crumb = [nm_str($_POST, 'crumb_home', 10), nl_crumb_label(nm_str($_POST, 'crumb_label', 300))];
+        if (!isset(NL_CRUMB_HOMES[$crumb[0]])) throw new UnexpectedValueException('パンくずリストの先頭を選んでください');
+    }
+    return static function (array $s) use ($layout, $by, $order, $likes, $related, $days, $label, $crumb): array {
         $s['layout'] = $layout; $s['related_by'] = $by; $s['related_order'] = $order;
         $s['likes'] = $likes; $s['related'] = $related;
         if ($days !== null) $s['new_days'] = $days;
         if ($label !== null) $s['new_label'] = $label;
+        if ($crumb !== null) [$s['crumb_home'], $s['crumb_label']] = $crumb;
         return $s;
     };
 }
@@ -612,6 +619,10 @@ function nl_display_panel(): string
         . '<fieldset class="log-visibility"><legend>新着の印</legend><label>印を付ける期間（投稿から何日）<input type="number" name="new_days" min="0" max="' . NL_NEW_DAYS_MAX . '" value="' . $s['new_days'] . '" inputmode="numeric"></label>'
         . '<label>印の文字<input name="new_label" maxlength="' . NL_NEW_LABEL_MAX . '" value="' . h($s['new_label']) . '" placeholder="NEW"></label>'
         . '<p class="note">期間内の記事に、タイルではサムネイルの左上、ミニブログでは記事の枠の左上に印を付けます。0日にすると付けません。文字は「新」「New!」のように' . NL_NEW_LABEL_MAX . '文字まで変えられます。空にすると「NEW」です。</p></fieldset>'
+        . '<fieldset class="log-visibility"><legend>パンくずリストの先頭</legend>' . nl_radio_list('crumb_home', NL_CRUMB_HOMES, $s['crumb_home'], [
+            'site' => '今のサイト名「' . h($s['title']) . '」を出します。'])
+        . '<label>任意の文字（「任意の文字」を選んだとき）<input name="crumb_label" maxlength="' . NL_CRUMB_LABEL_MAX . '" value="' . h($s['crumb_label']) . '" placeholder="トップ"></label>'
+        . '<p class="note">カテゴリ・タグ・記事のページ上部にある、家のアイコンの文字です。任意の文字は' . NL_CRUMB_LABEL_MAX . '文字まで。空のままだと「HOME」です。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>いいねボタン</legend><label class="check"><input type="checkbox" name="likes" value="1"' . ($s['likes'] ? ' checked' : '') . '>記事の下の「Share」の左に、いいねボタンを出す</label>'
         . '<p class="note">タップで1つ、長押しすると10ずつ増えます。同じ回線・同じ端末（IPアドレスとブラウザーの端末情報）から1つの記事に押せるのは、1日' . NL_LIKE_DAILY . 'までです。端末情報は書き換えられるため、同じ回線全体でも1日' . NL_LIKE_LINE_DAILY . 'までにしています。数は記事の編集画面で確認・変更・削除できます。押されてもページのキャッシュは消さないため、表示の速さは変わりません。</p></fieldset>'
         . '<fieldset class="log-visibility"><legend>関連記事</legend><label class="check"><input type="checkbox" name="related" value="1"' . ($s['related'] ? ' checked' : '') . '>記事の下に、関連記事を' . NL_RELATED_SHOWN . '件出す</label>'

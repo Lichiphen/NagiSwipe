@@ -43,6 +43,34 @@
         });
         select(tabs.find(t => t.hasAttribute('aria-current')) || tabs[0]);
 
+        // --- Under each block's heading, labels that jump to its parts (fieldsets, h3, folded areas) ---
+        // The theme swatches and the sidebar's repeated rows are not parts of their own; folded blocks show their parts once opened.
+        $$('[data-settings-panel] > .card').forEach((card, c) => {
+            const head = $(':scope > h2', card);
+            if (!head) return;
+            const parts = $$('h3, fieldset > legend, details > summary', card).filter(el => el !== head
+                && !el.closest('.log-theme-group, .log-sidebar-list') && !el.parentElement.parentElement.closest('fieldset'));
+            if (!parts.length) return;
+            const nav = document.createElement('nav');
+            nav.className = 'settings-parts'; nav.setAttribute('aria-label', head.textContent.trim() + 'の項目');
+            parts.forEach((el, i) => {
+                const target = el.tagName === 'H3' ? el : el.parentElement;
+                if (!target.id) target.id = (card.id || 'settings-card-' + (c + 1)) + '-part-' + (i + 1);
+                const a = document.createElement('a');
+                a.href = '#' + target.id; a.textContent = el.textContent.trim();
+                a.addEventListener('click', e => {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                    e.preventDefault();
+                    for (let d = target.parentElement.closest('details'); d && card.contains(d); d = d.parentElement.closest('details')) d.open = true;
+                    if (target.tagName === 'DETAILS') target.open = true;
+                    history.replaceState(null, '', '#' + target.id);
+                    target.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'});
+                });
+                nav.append(a);
+            });
+            head.after(nav);
+        });
+
         // --- Table of contents: a column beside the settings on PCs, a floating button and a dialog on phones ---
         const toc = $('[data-settings-toc]');
         if (toc) {

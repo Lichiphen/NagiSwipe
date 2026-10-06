@@ -210,6 +210,12 @@ details.more[open] > summary { margin-bottom: 12px; }
 .settings-body .card.is-changed { box-shadow:inset 4px 0 0 var(--accent); }
 .settings-toc a.is-changed::after,.settings-toc-dialog ol a.is-changed::after { content:""; display:inline-block; width:7px; height:7px; margin-left:6px; border-radius:50%; background:var(--accent); vertical-align:middle; }
 /* The one save button: stays at the bottom of the screen while the settings scroll. */
+/* Under a block's heading: labels that jump to its parts. */
+.settings-parts { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; margin:-4px 0 16px; }
+.settings-parts a { display:block; padding:6px 10px; border:1px solid var(--line); border-radius:8px; color:var(--text); font-size:13px; line-height:1.45; text-decoration:none; }
+.settings-parts a:hover { border-color:var(--accent); color:var(--accent); }
+.settings-parts a:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.settings-body .card :is(h3,fieldset,details) { scroll-margin-top:16px; }
 .settings-savebar { position:sticky; bottom:12px; z-index:50; display:flex; align-items:center; gap:12px; margin-top:8px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:color-mix(in srgb,var(--card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 8px 28px #00000024; }
 .settings-savebar-status { flex:1; min-width:0; margin:0; color:var(--muted); font-size:13px; line-height:1.5; }
 .settings-form.has-changes .settings-savebar { border-color:var(--accent); }
