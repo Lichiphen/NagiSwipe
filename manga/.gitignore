@@ -2,6 +2,8 @@
 dev/data/
 dev/results/
 dev/reference-nagimemo/
+# Local preview sample (dev/sample_data.py export): this PC's test material, never published
+dev/sample/
 __pycache__/
 demo-site/
 # A local install's data (install.lock, sessions, works, LOG posts…): only the folder's guards ship

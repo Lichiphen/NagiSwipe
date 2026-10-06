@@ -1,4 +1,5 @@
-﻿# Start the local LOG preview. The first run builds it from the committed sample (dev/sample/*.zip);
+﻿# Start the local LOG preview. The first run builds it from this PC's sample (dev/sample/*.zip, not in Git;
+# without it the LOG starts empty);
 # later runs keep the saved posts and settings.
 [CmdletBinding()]
 param(
@@ -39,7 +40,11 @@ if ($Reset -and (Test-Path -LiteralPath $taskData)) {
     Move-Item -LiteralPath $taskData -Destination $taskBackup
     Write-Host "今までのデータは $taskBackup に移しました。"
 }
-if (!$Empty -and !(Test-Path -LiteralPath (Join-Path $taskData 'config.php'))) {
+$taskSample = (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'sample/nagimanga-works.zip')) -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'sample/nagimanga-log.zip'))
+if (!$Empty -and !$taskSample -and !(Test-Path -LiteralPath (Join-Path $taskData 'config.php'))) {
+    Write-Host 'サンプル（dev/sample/*.zip）がないため、空のLOGで始めます。'
+}
+if (!$Empty -and $taskSample -and !(Test-Path -LiteralPath (Join-Path $taskData 'config.php'))) {
     $taskPython = Get-Command python -ErrorAction SilentlyContinue
     if (!$taskPython) { throw 'サンプルの作成にはPython 3が必要です。空のLOGで始める場合は -Empty を付けてください。' }
     & $taskPython.Source (Join-Path $PSScriptRoot 'sample_data.py') install $taskData

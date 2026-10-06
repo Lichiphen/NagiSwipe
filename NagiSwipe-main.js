@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.3.0
+ * NagiSwipe v1.3.1
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE

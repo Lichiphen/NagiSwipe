@@ -16,10 +16,10 @@
 <meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagimanga-ogp.png?v=9cf836eea0">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=96c65b80dd" type="image/svg+xml">
-<link rel="stylesheet" href="NagiSwipe-main.css?v=be7805759d">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=3bbc2aee92">
 <link rel="stylesheet" href="site/site.css?v=ec433c2c1d">
-<script src="NagiSwipe-main.js?v=5f11a5e981" defer></script>
-<script src="site/site.js?v=c5210cda67" data-index="site/search.json?v=64ac417846" defer></script>
+<script src="NagiSwipe-main.js?v=3848531ac5" defer></script>
+<script src="site/site.js?v=c5210cda67" data-index="site/search.json?v=4324edb25e" defer></script>
 </head>
 <body class="page-nagimanga">
 <a class="skip" href="#main">本文へ移動</a>
@@ -40,7 +40,7 @@
 <h1 class="doc-title">NagiManga（漫画ビューアー）</h1>
 <div class="lead"><p>NagiSeries（<a href="nagiswipe.html">NagiSwipe</a>・NagiManga・<a href="nagilog.html">NagiLog</a>）の漫画ビューアーです。</p>
 <p>ブログやサイトに <strong>タグを 1 つ貼るだけ</strong> で、クリックしたときに漫画ビューアーが開きます。作品の管理は、データベースのいらない小さな管理画面（PHP）で行います。</p>
-<p>作業ブランチ <code>feature/personal-log-cms</code> では、文章・画像・漫画を投稿できる個人用LOG「NagiLog」を追加しています。スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。使い方、メリット・デメリット、設置と検証結果は <a href="nagilog.html">NagiLog の README</a> にまとめています。</p></div>
+<p>v0.4.0 から、文章・画像・漫画を投稿できる個人用LOG「NagiLog」を同梱しています。スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。使い方、メリット・デメリット、設置と検証結果は <a href="nagilog.html">NagiLog の README</a> にまとめています。</p></div>
 <nav class="toc-inline" aria-labelledby="toc-title-nagimanga"><p class="toc-title" id="toc-title-nagimanga">このページの目次</p><ol class="toc-list"><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#できること" data-id="できること">できること</a></li><li><a href="#2-つの使い方" data-id="2-つの使い方">2 つの使い方</a></li><li><a href="#管理画面phpを使う" data-id="管理画面phpを使う">管理画面（PHP）を使う</a><ol><li><a href="#1-設置" data-id="1-設置">1. 設置</a></li><li><a href="#2-セットアップ30-分以内に" data-id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）</a></li><li><a href="#3-設置したら確認すること" data-id="3-設置したら確認すること">3. 設置したら確認すること</a></li><li><a href="#4-作品を作って共有する" data-id="4-作品を作って共有する">4. 作品を作って共有する</a></li><li><a href="#てがろぐに載せる" data-id="てがろぐに載せる">てがろぐに載せる</a></li></ol></li><li><a href="#機能の説明" data-id="機能の説明">機能の説明</a><ol><li><a href="#epub-から作る" data-id="epub-から作る">EPUB から作る</a></li><li><a href="#小容量版スマホ用" data-id="小容量版スマホ用">小容量版（スマホ用）</a></li><li><a href="#パスワード限定公開" data-id="パスワード限定公開">パスワード（限定公開）</a></li><li><a href="#バックアップ" data-id="バックアップ">バックアップ</a></li><li><a href="#更新v020-以降" data-id="更新v020-以降">更新（v0.2.0 以降）</a></li><li><a href="#設置用コード" data-id="設置用コード">設置用コード</a></li><li><a href="#個別ページ共有リンクv030-以降" data-id="個別ページ共有リンクv030-以降">個別ページ（共有リンク・v0.3.0 以降）</a></li><li><a href="#直リンク防止上級者向けv030-以降" data-id="直リンク防止上級者向けv030-以降">直リンク防止（上級者向け・v0.3.0 以降）</a></li><li><a href="#プラグインゲストモード" data-id="プラグインゲストモード">プラグイン（ゲストモード）</a></li><li><a href="#困ったとき" data-id="困ったとき">困ったとき</a></li><li><a href="#data-フォルダを守る" data-id="data-フォルダを守る">data フォルダを守る</a></li><li><a href="#管理画面の-ip-制限をさらに固くする任意" data-id="管理画面の-ip-制限をさらに固くする任意">管理画面の IP 制限をさらに固くする（任意）</a></li></ol></li><li><a href="#php-なしftp-だけで使う" data-id="php-なしftp-だけで使う">PHP なし（FTP だけ）で使う</a></li><li><a href="#セキュリティの考え方" data-id="セキュリティの考え方">セキュリティの考え方</a><ol><li><a href="#攻撃テスト" data-id="攻撃テスト">攻撃テスト</a></li></ol></li><li><a href="#開発" data-id="開発">開発</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></nav>
 <div class="doc-body">
 <h2 id="デモ">デモ<a class="anchor" href="#デモ" aria-label="この見出しへのリンク">#</a></h2>
@@ -75,7 +75,7 @@
 <h3 id="2-セットアップ30-分以内に">2. セットアップ（30 分以内に）<a class="anchor" href="#2-セットアップ30-分以内に" aria-label="この見出しへのリンク">#</a></h3>
 <p>ブラウザで <code>https://あなたのサイト/nagimanga/admin/</code> を開き、管理者パスワード（10 文字以上）を決めます。</p>
 <ul><li>この画面は、<strong>最初に開いてから 30 分だけ</strong> 表示されます（他人に先にセットアップされないようにするため）。過ぎてしまったら、FTP で <code>data/install.lock</code> を削除してから開き直してください。</li><li>「今の IP アドレスからだけ管理画面を開けるようにする」は、できるだけオンにしてください。</li></ul>
-<p>完了すると <strong>ログイン用の URL</strong> が表示されます。<strong>必ずブックマークしてください。</strong> 管理画面を直接開こうとすると「Not Found」になります。このLOG開発版では、公開サイトの「ログイン」からもパスワード付きの入口へ進めます。IP制限と試行回数の制限は、この入口でも適用します。</p>
+<p>完了すると <strong>ログイン用の URL</strong> が表示されます。<strong>必ずブックマークしてください。</strong> 管理画面を直接開こうとすると「Not Found」になります。v0.4.0 からは、公開サイトの「ログイン」からもパスワード付きの入口へ進めます。IP制限と試行回数の制限は、この入口でも適用します。</p>
 <h3 id="3-設置したら確認すること">3. 設置したら確認すること<a class="anchor" href="#3-設置したら確認すること" aria-label="この見出しへのリンク">#</a></h3>
 <ul><li>ブックマークした URL でログインし、作品一覧に <strong>「data フォルダがインターネットから見える状態です」という警告が出ていない</strong> こと（出ていたら <code>.htaccess</code> が届いていないか、効いていません。下の「data フォルダを守る」を見てください）</li><li><code>https://あなたのサイト/nagimanga/data/</code> を開くと、中身ではなく「Forbidden」などのエラーになること</li><li><code>https://あなたのサイト/nagimanga/admin/</code> をそのまま開くと「Not Found」になること（セットアップが済んでいる証拠です）</li></ul>
 <h3 id="4-作品を作って共有する">4. 作品を作って共有する<a class="anchor" href="#4-作品を作って共有する" aria-label="この見出しへのリンク">#</a></h3>
