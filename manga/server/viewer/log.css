@@ -280,6 +280,8 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .log-compose-collapsed .log-fab,.log-compose-collapsed .log-fab-admin { transform:translateY(14px) scale(.97); transition:transform .7s cubic-bezier(.22,1,.36,1), opacity .55s ease, visibility 0s linear .7s; }
 .log-compose-collapsed .log-fab-admin { transition-delay:.1s, .1s, .8s; }
 .log-compose-collapsed .log-fab.log-fab-visible,.log-compose-collapsed .log-fab-admin.log-fab-visible { transform:none; transition-delay:0s; }
+.log-delete-form { display:contents; }.log-delete-link { display:inline-flex; align-items:center; gap:6px; padding:5px 8px; border:0; border-radius:8px; background:var(--log-bg); color:#c0392b; font:inherit; cursor:pointer; }.log-delete-link:hover { background:color-mix(in srgb,#c0392b 12%,var(--log-bg)); }
+.log-delete-link:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
 .log-compose-collapsed .log-fab-admin.log-fab-visible { transition-delay:.1s, .1s, 0s; }
 .log-fab-admin .log-ui-icon { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 @media(prefers-reduced-motion:reduce) { .log-compose-slot .log-fab,.log-compose-slot .log-fab-admin { transition:none; } }

@@ -93,7 +93,9 @@ $postsHtml = '';
 if ($grid && !$single) $postsHtml = nl_tiles($posts, $s);
 else foreach ($posts as $p) {
     $postsHtml .= '<article class="log-post">' . ($single ? '' : nl_new_badge($p, $s, 'log-post-new')) . '<div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
-        . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>' : '') . "</div>\n"
+        . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>'
+            . '<form class="log-delete-form" method="post" action="admin/index.php" data-log-delete><input type="hidden" name="csrf" value="' . h(nm_csrf_token()) . '"><input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '"><input type="hidden" name="back" value="public">'
+            . '<button class="log-delete-link" type="submit" title="この記事を削除">' . nl_ui_icon('delete') . '<span>削除</span></button></form>' : '') . "</div>\n"
         . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="./?id=' . h($p['id']) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
         . nl_render_body($p) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
 }

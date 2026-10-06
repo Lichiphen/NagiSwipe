@@ -55,6 +55,11 @@
     // Outside the cards a dropped file must not open in the browser and leave the page.
     if ($('[data-media-card]')) ['dragover', 'drop'].forEach(type => document.addEventListener(type, e => { if (!e.defaultPrevented && [...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); }));
 
+    // Deleting a post from the public page asks first (admin.js, which asks on the admin pages, is not loaded there).
+    $$('form[data-log-delete]').forEach(f => f.addEventListener('submit', e => {
+        if (!window.confirm('この記事を削除しますか？この記事だけで使う画像も削除します。元に戻せません。')) e.preventDefault();
+    }));
+
     if (!form) return;
     const panel = $('#log-compose');
     const body = $('textarea[name="body"]', form);

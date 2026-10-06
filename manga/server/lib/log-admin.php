@@ -89,6 +89,8 @@ function nl_handle_post(string $do): never
             case 'log_bulk_delete':
                 $items = $do === 'log_delete' ? [['id' => nm_str($_POST, 'post_id', 24), 'revision' => nl_revision_input()]] : nl_json_list(nm_str($_POST, 'posts', 30000));
                 $result = nl_delete_posts($items);
+                // From a post on the public page: back to its top (the post is gone).
+                if ($do === 'log_delete' && nm_str($_POST, 'back', 10) === 'public') { header('Location: ../', true, 303); exit; }
                 nm_flash($result['clean'] ? 'ok' : 'err', $result['clean'] ? $result['posts'] . '件の記事と、専用画像' . $result['media'] . '件を削除しました。共有画像は残しています' : '記事は削除しましたが、画像の掃除が完了していません。保存先の権限を確認してください');
                 nm_redirect('p=log');
             case 'log_media_alt':
@@ -441,7 +443,7 @@ function nl_view_log(): void
     $tabs = '<nav class="workspace-tabs log-admin-tabs" aria-label="LOGの管理"><a href="index.php?p=log"' . (!$taxonomy ? ' aria-current="page"' : '') . '>' . nl_ui_icon('list') . '<span>投稿一覧</span></a><a href="index.php?p=log&view=taxonomy"' . ($taxonomy ? ' aria-current="page"' : '') . '>' . nl_ui_icon('tag') . '<span>カテゴリ・タグ</span></a><a href="index.php?p=settings&section=log">' . nl_ui_icon('settings') . '<span>LOGの設定</span></a></nav>';
     $header = '<div class="log-heading"><div><h1>LOG・投稿</h1><p class="note">' . h($s['title']) . ' · ' . ($s['public'] ? '全体公開' : '自分専用Memo') . '</p></div><div class="log-toolbar"><a class="btn" href="../">' . nl_ui_icon($s['public'] ? 'globe' : 'lock') . '<span>' . ($s['public'] ? '公開ページ' : '自分のMemo') . '</span></a><a class="btn" href="index.php?p=log_media">' . nl_ui_icon('images') . '<span>画像一覧・差し替え</span></a>' . (!$taxonomy ? '<button type="button" class="btn primary" data-compose-open>' . nl_ui_icon() . ' 新しく書く</button>' : '') . '</div></div>';
     if ($taxonomy) { nm_layout('LOGの分類', $header . $tabs . nl_taxonomy_panel()); return; }
-    $pagerQuery = 'index.php?p=log&per_page=' . $perPage . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '') . '&page=';
+    $pagerQuery = 'p=log' . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '');
     $search = '<form class="log-admin-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log">'
         . '<label class="log-admin-search-box"><span class="sr-only">投稿を検索</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="タイトル・本文・#タグ・カテゴリで探す" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
         . '<label class="log-admin-search-status"><span class="sr-only">公開状態</span><select name="status"><option value="">すべて</option><option value="published"' . ($status === 'published' ? ' selected' : '') . '>公開</option><option value="draft"' . ($status === 'draft' ? ' selected' : '') . '>下書き</option></select></label>'
@@ -451,7 +453,7 @@ function nl_view_log(): void
         . $search . '<div class="log-list-controls"><span>' . ($searching ? '' : count($posts) . '件の記録') . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log"><label>1ページの表示件数<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">表示</button></form><button class="btn" type="button" data-bulk-toggle aria-expanded="false" aria-controls="log-bulk-bar">' . nl_ui_icon('delete') . '<span data-bulk-label>まとめて削除</span></button></div></div>'
         . '<form id="log-bulk-bar" class="log-bulk-bar" data-bulk-form method="post" action="index.php" hidden>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_bulk_delete"><input type="hidden" name="posts" value="[]"><label><input type="checkbox" data-bulk-all>このページをすべて選ぶ</label><span data-bulk-count aria-live="polite">0件選択</span><button class="btn danger" disabled data-bulk-submit>選んだ記事を削除</button><p class="note">選んだ記事だけで使う画像も削除します。共有画像は残します。取り消しにはバックアップが必要です。</p></form>'
         . '<div class="log-compose-slot log-compose-collapsed" data-compose-slot>' . nl_editor() . '</div><ul class="log-post-list' . ($searching ? ' is-search' : '') . '">' . ($cards ?: '<li class="log-empty">' . ($searching ? '見つかりませんでした。言葉を短くするか、公開状態を「すべて」にしてみてください。' : 'まだ記録はありません。ひとことから、どうぞ。') . '</li>') . '</ul>'
-        . '<nav class="log-pagination" aria-label="投稿一覧のページ">' . ($page > 1 ? '<a class="btn" href="' . h($pagerQuery . ($page - 1)) . '">新しい投稿</a>' : '') . ($page * $perPage < count($posts) ? '<a class="btn" href="' . h($pagerQuery . ($page + 1)) . '">前の投稿</a>' : '') . '</nav>');
+        . nl_pager(['posts_per_page' => $perPage, 'pager' => 'numbers', 'pager_status' => true], $pagerQuery, $page, count($posts), 'index.php'));
 }
 /** Search result details: the matching part of the body, and where the post is on the public site. */
 function nl_admin_search_where(array $p, array $terms, array $publicIds, int $publicPer): string
@@ -548,7 +550,7 @@ function nl_view_media(): void
         . '<label class="log-admin-search-status"><span class="sr-only">閲覧注意</span><select name="rating">' . $option('', $rating, '注意：問わない') . $option('set', $rating, '注意あり') . $option('none', $rating, '注意なし') . '</select></label>'
         . '<button class="btn primary">探す</button></form>'
         . ($searching ? '<p class="log-admin-search-result" role="status"><span>' . ($q !== '' ? '「' . h($q) . '」で' : '') . ['' => '', 'used' => '使用中の', 'unused' => '未使用の'][$use] . ['' => '', 'set' => '閲覧注意ありの', 'none' => '閲覧注意なしの'][$rating] . '画像<b>' . count($found) . '枚</b></span><a class="btn" href="index.php?p=log_media">検索をやめる</a></p>' : '');
-    $pagerQuery = 'index.php?' . http_build_query(['p' => 'log_media'] + array_diff_key($filters, ['page' => 1]), '', '&', PHP_QUERY_RFC3986) . '&page=';
+    $pagerQuery = http_build_query(['p' => 'log_media'] + array_diff_key($filters, ['page' => 1, 'per_page' => 1]), '', '&', PHP_QUERY_RFC3986);
     $keep = '';
     foreach (array_diff_key($filters, ['page' => 1]) as $key => $value) $keep .= '<input type="hidden" name="' . $key . '" value="' . h($value) . '">';
     $empty = $all ? '見つかりませんでした。言葉を短くするか、絞り込みを「すべて」にしてみてください。' : '投稿画面から画像を追加すると、ここに並びます。';
@@ -557,7 +559,7 @@ function nl_view_media(): void
         . '<div class="log-list-controls"><span>' . ($searching ? '' : count($all) . '枚の画像') . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log_media">' . $keep
         . '<label>1ページの表示件数<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">表示</button></form></div></div>'
         . '<div class="log-media-grid">' . ($cards ?: '<p>' . $empty . '</p>') . '</div>'
-        . '<nav class="log-pagination" aria-label="画像一覧のページ">' . ($page > 1 ? '<a class="btn" href="' . h($pagerQuery . ($page - 1)) . '">新しい画像</a>' : '') . ($page * $perPage < count($found) ? '<a class="btn" href="' . h($pagerQuery . ($page + 1)) . '">前の画像</a>' : '') . '</nav>');
+        . nl_pager(['posts_per_page' => $perPage, 'pager' => 'numbers', 'pager_status' => true], $pagerQuery, $page, count($found), 'index.php', '画像'));
 }
 /** The rating of one image, as a short select (画像一覧). */
 function nl_rating_select(string $current): string
