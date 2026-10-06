@@ -5,6 +5,7 @@ import json
 import re
 import secrets
 import shutil
+import sys
 import urllib.parse
 import zipfile
 from pathlib import Path
@@ -12,6 +13,7 @@ from pathlib import Path
 import attack_test as helper
 from log_test import HERE, RESULTS, install, payload, start
 
+sys.stdout.reconfigure(encoding='utf-8')  # '›' and other names a cp932 console cannot print
 checks = []
 
 
