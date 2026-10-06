@@ -34,6 +34,15 @@ html[data-log-theme]::-webkit-scrollbar-corner,html[data-log-theme] *::-webkit-s
 .log-compose-head h2 { margin:0; font-size:1.08rem; }.log-close { display:none; }
 .log-compose textarea { background:transparent; color:var(--log-text); min-height:136px; padding:16px; font-size:16px; line-height:1.8; width:100%; border:1px solid var(--log-field); border-radius:12px; resize:vertical; }
 .log-compose textarea:focus { outline:2px solid var(--log-accent); outline-offset:2px; }
+/* 〔画像N〕 in the text: a layer over the textarea draws only the marks, each as a band in the theme's accent with its pictures (opaque, it covers the plain glyphs below), dragged to another line. */
+.log-mark-layer { position:absolute; z-index:1; overflow:hidden; box-sizing:border-box; margin:0; border:0; color:transparent; white-space:pre-wrap; overflow-wrap:break-word; word-break:normal; pointer-events:none; }.log-mark-layer[hidden],.log-mark-drop[hidden] { display:none; }
+.log-mark { position:relative; }
+.log-mark-band { position:absolute; left:-4px; top:50%; z-index:1; display:inline-flex; align-items:center; gap:4px; min-width:calc(100% + 8px); height:1.6em; padding:0 8px 0 4px; box-sizing:border-box; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 16%,var(--log-card)); box-shadow:0 0 0 1px color-mix(in srgb,var(--log-accent) 35%,var(--log-card)); color:var(--log-accent); font:700 12.5px/1 system-ui,sans-serif; white-space:nowrap; transform:translateY(-50%); pointer-events:auto; cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.log-mark-band svg { width:14px; height:14px; flex:none; fill:none; stroke:currentColor; stroke-width:3; stroke-linecap:round; }.log-mark-band b { margin-right:2px; }
+.log-mark-band img,.log-mark-band i { width:20px; height:20px; flex:none; border-radius:5px; object-fit:cover; background:color-mix(in srgb,var(--log-accent) 30%,var(--log-card)); }
+.log-mark-band.is-dragging { z-index:3; cursor:grabbing; box-shadow:0 6px 18px #00000040,0 0 0 2px var(--log-accent); }
+.log-mark-layer.is-probing { pointer-events:auto; }.log-mark-layer.is-probing .log-mark-band { pointer-events:none; }
+.log-mark-drop { position:absolute; z-index:2; height:0; border-top:3px solid var(--log-accent); border-radius:3px; margin-top:-1.5px; pointer-events:none; }
 .log-compose label { display:grid; gap:6px; }.log-compose details { margin:14px 0; }.log-compose summary { color:var(--log-muted); cursor:pointer; }
 .log-compose.dragover { outline:3px dashed var(--log-cyan); outline-offset:-8px; }
 .log-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }.log-toolbar .btn { font-size:13px; border-radius:999px; }
@@ -41,10 +50,22 @@ html[data-log-theme]::-webkit-scrollbar-corner,html[data-log-theme] *::-webkit-s
 .log-status { color:var(--log-muted); font-size:14px; margin:10px 0 0; }.log-status:empty { display:none; }.log-status.error { color:var(--danger,#b3261e); }
 /* Editor: the pictures in the text, chips for what is set, one row of tools and the panel it opens. */
 .log-compose form { position:relative; }
-.log-attachments { display:flex; gap:8px; overflow-x:auto; margin-top:10px; padding:2px 2px 4px; }.log-attachments[hidden],.log-compose-chips[hidden],.log-compose-panel[hidden],.log-att-menu[hidden] { display:none; }
+.log-attachments { display:grid; gap:10px; margin-top:10px; }.log-attachments[hidden],.log-compose-chips[hidden],.log-compose-panel[hidden],.log-att-menu[hidden] { display:none; }
 .log-att { position:relative; flex:0 0 auto; }
 .log-att-thumb { display:grid; place-items:center; width:76px; height:76px; padding:0; border:1px solid var(--log-line); border-radius:10px; overflow:hidden; background:var(--log-bg); color:var(--log-muted); font:inherit; font-size:12px; cursor:pointer; }.log-att-thumb img { display:block; width:100%; height:100%; object-fit:cover; }
-.log-att-thumb:focus-visible,.log-att-rating:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-att-thumb:focus-visible,.log-att-rating:focus-visible,.log-att-remove:focus-visible,.log-att-add:focus-visible,.log-att-action:focus-visible,.log-att-new:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+/* The strip as the post's pictures: one row per group (画像N), drag to sort or to another row (hold first on touch screens), x to take one out, + to add. */
+.log-att-thumb { cursor:grab; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }.log-attachments.is-sorting,.log-attachments.is-sorting .log-att-thumb { cursor:grabbing; }
+.log-att.is-dragging { z-index:2; opacity:.85; transform:scale(1.06); }.log-att.is-dragging .log-att-thumb { box-shadow:0 8px 20px #00000040; border-color:var(--log-accent); }
+.log-att-remove { position:absolute; top:4px; right:4px; display:grid; place-items:center; width:24px; height:24px; padding:0; border:0; border-radius:50%; background:#000000a6; color:#fff; cursor:pointer; }.log-att-remove svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; }.log-att-remove:hover { background:#000000d9; }
+.log-att-group { display:grid; gap:6px; }
+.log-att-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-size:12px; }.log-att-where { color:var(--log-muted); }
+.log-att-label { padding:2px 9px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 16%,var(--log-card)); color:var(--log-accent); font-weight:700; }.log-att-group.is-active .log-att-label { background:var(--log-accent); color:var(--log-card); }
+.log-att-action { margin-left:auto; padding:3px 10px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-accent); font:inherit; cursor:pointer; }.log-att-action:hover { border-color:var(--log-accent); }
+.log-att-row { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 4px; }
+.log-att-add { flex:0 0 auto; display:grid; place-items:center; width:76px; height:76px; padding:0; border:1px dashed var(--log-line); border-radius:10px; background:none; color:var(--log-muted); cursor:pointer; }.log-att-add:hover { border-color:var(--log-accent); color:var(--log-accent); }
+.log-att-add svg,.log-att-new svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }.log-att-new svg { width:16px; height:16px; }
+.log-att-new { justify-self:start; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border:1px dashed var(--log-line); border-radius:999px; background:none; color:var(--log-muted); font:inherit; font-size:13px; cursor:pointer; }.log-att-new:hover { border-color:var(--log-accent); color:var(--log-accent); }
 .log-att-rating { position:absolute; left:4px; bottom:4px; display:inline-flex; align-items:center; gap:3px; height:24px; min-width:24px; padding:0 6px 0 5px; border:0; border-radius:999px; background:#000000a6; color:#fff; font:700 10.5px/1 system-ui,sans-serif; cursor:pointer; }
 .log-att-rating[data-veil=""] { padding:0; justify-content:center; }.log-att-rating:not([data-veil=""]) { right:4px; justify-content:center; padding:0 4px; background:var(--veil-color); font-size:10px; white-space:nowrap; }.log-att-rating:not([data-veil=""]) .log-veil-icon { display:none; }.log-att-rating .log-veil-icon { width:14px; height:14px; stroke-width:2.2; }
 .log-att-menu { position:absolute; z-index:5; display:grid; gap:2px; min-width:180px; padding:6px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); box-shadow:0 12px 32px #00000033; }
@@ -259,6 +280,8 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .btn .log-ui-icon { display:block; }
 .log-edit-link,.log-fab,.log-list-edit,.log-list-delete .btn { align-items:center; gap:6px; }
 .log-post-meta .log-edit-link { display:inline-flex; margin-left:auto; color:var(--log-accent); padding:5px 8px; border-radius:8px; background:var(--log-bg); }
+.log-delete-form { display:contents; }.log-delete-link { display:inline-flex; align-items:center; gap:6px; padding:5px 8px; border:0; border-radius:8px; background:var(--log-bg); color:#c0392b; font:inherit; cursor:pointer; }.log-delete-link:hover { background:color-mix(in srgb,#c0392b 12%,var(--log-bg)); }
+.log-delete-link:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
 .log-private-note { padding:10px 16px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-card); color:var(--log-muted); font-size:13px; }
 .log-site .btn { display:inline-flex; align-items:center; justify-content:center; font:inherit; cursor:pointer; padding:7px 14px; border:1px solid var(--log-line); border-radius:8px; background:var(--log-card); color:var(--log-text); text-decoration:none; }
 .log-site .btn.primary { background:var(--log-accent); color:var(--log-on-accent); border-color:var(--log-accent); }.log-site .btn:disabled { opacity:.5; cursor:wait; }
@@ -280,8 +303,6 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .log-compose-collapsed .log-fab,.log-compose-collapsed .log-fab-admin { transform:translateY(14px) scale(.97); transition:transform .7s cubic-bezier(.22,1,.36,1), opacity .55s ease, visibility 0s linear .7s; }
 .log-compose-collapsed .log-fab-admin { transition-delay:.1s, .1s, .8s; }
 .log-compose-collapsed .log-fab.log-fab-visible,.log-compose-collapsed .log-fab-admin.log-fab-visible { transform:none; transition-delay:0s; }
-.log-delete-form { display:contents; }.log-delete-link { display:inline-flex; align-items:center; gap:6px; padding:5px 8px; border:0; border-radius:8px; background:var(--log-bg); color:#c0392b; font:inherit; cursor:pointer; }.log-delete-link:hover { background:color-mix(in srgb,#c0392b 12%,var(--log-bg)); }
-.log-delete-link:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
 .log-compose-collapsed .log-fab-admin.log-fab-visible { transition-delay:.1s, .1s, 0s; }
 .log-fab-admin .log-ui-icon { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 @media(prefers-reduced-motion:reduce) { .log-compose-slot .log-fab,.log-compose-slot .log-fab-admin { transition:none; } }

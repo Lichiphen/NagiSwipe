@@ -91,12 +91,206 @@
     // Pictures known to the editor: id -> { thumb, alt, rating }. Ratings changed here are sent with the post.
     const mediaInfo = JSON.parse(attachments.dataset.media || '{}');
     let mediaRatings = {};
+    // Pictures sit in rows under the text, not as tags in it. Each row is a group with a number; the text marks
+    // where a group goes with a 〔画像N〕 line. Groups without a mark go after the text. Numbers stay as they are
+    // while writing (an undone deletion finds its group again); a post opened again is numbered from the top.
+    // Saving and the preview put the tags back in place of the marks, so the server only ever sees tags.
+    const MARK_RE = /〔画像(\d+)〕/g;
+    const markOf = n => '〔画像' + n + '〕';
+    const TAG = /\[Image:([a-f0-9]{16})\]/g;
+    let groups = [], active = null;
+    const tagsOf = ids => ids.map(id => '[Image:' + id + ']').join('\n');
+    function split(value) {
+        const found = [...value.matchAll(TAG)], runs = [];
+        found.forEach((m, i) => {
+            if (i && value.slice(found[i - 1].index + found[i - 1][0].length, m.index).trim() === '') runs.at(-1).push(m);
+            else runs.push([m]);
+        });
+        let text = '', from = 0;
+        const list = runs.map((run, k) => {
+            const start = run[0].index, end = run.at(-1).index + run.at(-1)[0].length;
+            const last = k === runs.length - 1 && value.slice(end).trim() === '';
+            text += value.slice(from, start) + (last ? '' : markOf(k + 1));
+            from = last ? value.length : end;
+            return { n: k + 1, ids: [...new Set(run.map(m => m[1]))] };
+        });
+        return { text: text + value.slice(from), groups: list };
+    }
+    // Where each group goes: the first mark of its number, top to bottom; the rest after the text, by number.
+    function view(text = body.value) {
+        const at = new Map();
+        for (const m of text.matchAll(MARK_RE)) { const n = +m[1]; if (!at.has(n) && groups.some(g => g.n === n)) at.set(n, m.index); }
+        return {
+            marked: groups.filter(g => at.has(g.n)).sort((a, b) => at.get(a.n) - at.get(b.n)),
+            end: groups.filter(g => !at.has(g.n)).sort((a, b) => a.n - b.n), at,
+        };
+    }
+    const allImages = () => { const v = view(); return [...new Set([...v.marked, ...v.end].flatMap(g => g.ids))]; };
+    const nextNumber = () => Math.max(0, ...groups.map(g => g.n), ...[...body.value.matchAll(MARK_RE)].map(m => +m[1])) + 1;
+    function compose(text = body.value) {
+        const used = new Set(), { end } = view(text);
+        // A mark that brings nothing (an empty group, an unknown number) goes with its line break.
+        const out = text.replace(/(\n)?〔画像(\d+)〕(\n)?/g, (m, lead = '', n, tail = '') => {
+            const g = groups.find(x => x.n === +n), ids = g && !used.has(g) ? g.ids : [];
+            if (g) used.add(g);
+            return ids.length ? lead + tagsOf(ids) + tail : (lead && tail ? '\n' : '');
+        });
+        const rest = end.flatMap(g => g.ids);
+        if (!rest.length) return out;
+        if (out.trim() === '') return tagsOf(rest);
+        return out + (out.endsWith('\n') ? '' : '\n') + tagsOf(rest);
+    }
+    function useBody(value) {
+        const parts = split(value);
+        groups = parts.groups; active = null;
+        body.value = parts.text;
+    }
+    useBody(body.value);
+    selection = [body.value.length, body.value.length];
+    // Each mark drawn over the text as a band in the theme's accent with its pictures, which can be dragged to
+    // another line. Only the bands are drawn (the rest is transparent), so typing, the IME's underlines and the
+    // caret stay the textarea's own.
+    const markLayer = document.createElement('div');
+    markLayer.className = 'log-mark-layer'; markLayer.setAttribute('aria-hidden', 'true'); markLayer.hidden = true;
+    body.after(markLayer);
+    const COPIED = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'wordSpacing', 'textIndent', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
+    const grip = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>';
+    function drawMark() {
+        const { at } = view();
+        markLayer.hidden = !at.size;
+        if (!at.size) return;
+        const cs = getComputedStyle(body);
+        COPIED.forEach(name => { markLayer.style[name] = cs[name]; });
+        markLayer.style.left = (body.offsetLeft + body.clientLeft) + 'px'; markLayer.style.top = (body.offsetTop + body.clientTop) + 'px';
+        markLayer.style.width = body.clientWidth + 'px'; markLayer.style.height = body.clientHeight + 'px';
+        const text = body.value, nodes = [];
+        let from = 0;
+        for (const m of text.matchAll(MARK_RE)) {
+            const g = groups.find(x => x.n === +m[1]);
+            if (!g || at.get(g.n) !== m.index) continue;
+            nodes.push(text.slice(from, m.index));
+            const mark = document.createElement('span'); mark.className = 'log-mark'; mark.dataset.len = String(m[0].length); mark.textContent = m[0];
+            const band = document.createElement('span'); band.className = 'log-mark-band'; band.dataset.n = String(g.n);
+            band.title = 'ドラッグで別の行へ動かす';
+            band.innerHTML = grip;
+            const label = document.createElement('b'); label.textContent = '画像' + g.n; band.append(label);
+            g.ids.slice(0, 4).forEach(id => {
+                const thumb = mediaInfo[id]?.thumb;
+                const img = document.createElement(thumb ? 'img' : 'i');
+                if (thumb) { img.src = adminUrl(thumb); img.alt = ''; img.draggable = false; }
+                band.append(img);
+            });
+            if (g.ids.length > 4) band.append('+' + (g.ids.length - 4));
+            if (!g.ids.length) band.append('空');
+            mark.append(band); nodes.push(mark);
+            from = m.index + m[0].length;
+        }
+        nodes.push(text.slice(from), '​');
+        markLayer.replaceChildren(...nodes);
+        markLayer.scrollTop = body.scrollTop;
+    }
+    body.addEventListener('scroll', () => { markLayer.scrollTop = body.scrollTop; });
+    if ('ResizeObserver' in window) new ResizeObserver(() => drawMark()).observe(body);
+    // Dragging a band: the line under the pointer is found from the layer, which is laid out like the text.
+    const caretAt = (x, y) => {
+        if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); return p ? [p.offsetNode, p.offset] : null; }
+        if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); return r ? [r.startContainer, r.startOffset] : null; }
+        return null;
+    };
+    const nodeLength = node => node.nodeType === 3 ? node.length : +(node.dataset?.len || 0);
+    function offsetIn(node, offset) {
+        let at = 0;
+        for (const child of markLayer.childNodes) {
+            if (child === node) return at + offset;
+            if (child.contains(node)) return at + (node === child.firstChild ? offset : 0);
+            at += nodeLength(child);
+        }
+        return null;
+    }
+    function pointIn(offset) {
+        let at = 0;
+        for (const child of markLayer.childNodes) {
+            const length = nodeLength(child);
+            if (offset < at + length || child === markLayer.lastChild) return child.nodeType === 3 ? [child, Math.min(offset - at, child.length)] : [child.firstChild, 0];
+            at += length;
+        }
+        return null;
+    }
+    // The start of the line under y; the end of the text below the last line.
+    function lineAt(y) {
+        const box = markLayer.getBoundingClientRect(), x = box.left + parseFloat(markLayer.style.paddingLeft || '0') + 1;
+        const text = body.value, last = document.createRange();
+        last.selectNodeContents(markLayer.lastChild);
+        if (y > last.getBoundingClientRect().bottom) return text.length;
+        markLayer.classList.add('is-probing');
+        const hit = caretAt(x, Math.max(box.top + 1, Math.min(box.bottom - 1, y)));
+        markLayer.classList.remove('is-probing');
+        const offset = hit ? offsetIn(...hit) : null;
+        if (offset === null) return null;
+        return Math.min(offset, text.length) === text.length && y > box.bottom - 2 ? text.length : text.lastIndexOf('\n', Math.min(offset, text.length) - 1) + 1;
+    }
+    const dropLine = document.createElement('i'); dropLine.className = 'log-mark-drop'; dropLine.hidden = true;
+    function showDrop(start) {
+        if (start === null) { dropLine.hidden = true; return; }
+        const range = document.createRange(), text = body.value;
+        const [node, local] = pointIn(Math.min(start, Math.max(0, text.length - 1)));
+        range.setStart(node, local); range.setEnd(node, Math.min(local + 1, node.length ?? 0));
+        const rect = range.getClientRects()[0] || range.getBoundingClientRect(), box = markLayer.getBoundingClientRect();
+        // Beside the layer, not in it: the layer's nodes must stay the text alone.
+        if (!dropLine.isConnected) markLayer.after(dropLine);
+        dropLine.style.left = (markLayer.offsetLeft + 8) + 'px'; dropLine.style.width = (markLayer.offsetWidth - 16) + 'px';
+        dropLine.style.top = (markLayer.offsetTop + (start >= text.length ? rect.bottom : rect.top) - box.top) + 'px'; dropLine.hidden = false;
+    }
+    function moveMark(n, start) {
+        let text = body.value;
+        const m = [...text.matchAll(MARK_RE)].find(x => +x[1] === n);
+        if (!m || start === null) return;
+        let a = m.index, b = a + m[0].length;
+        if (text[b] === '\n') b++; else if (a > 0 && text[a - 1] === '\n') a--;
+        if (start >= a && start <= b) return;
+        text = text.slice(0, a) + text.slice(b);
+        if (start > b) start -= b - a;
+        start = Math.min(start, text.length);
+        text = start >= text.length ? text + (text === '' || text.endsWith('\n') ? '' : '\n') + m[0] : text.slice(0, start) + m[0] + '\n' + text.slice(start);
+        body.value = text; rememberSelection(); changed();
+        say('「' + m[0] + '」の行を動かしました。');
+    }
+    let bandDrag = null;
+    markLayer.addEventListener('pointerdown', e => {
+        const band = e.target.closest('.log-mark-band');
+        if (!band || e.button !== 0) return;
+        e.preventDefault();
+        bandDrag = { n: +band.dataset.n, band, x: e.clientX, y: e.clientY, pointer: e.pointerId, on: false, start: null };
+        try { band.setPointerCapture(e.pointerId); } catch { /* already released */ }
+    });
+    markLayer.addEventListener('pointermove', e => {
+        if (!bandDrag || e.pointerId !== bandDrag.pointer) return;
+        if (!bandDrag.on) {
+            if (Math.hypot(e.clientX - bandDrag.x, e.clientY - bandDrag.y) < 5) return;
+            bandDrag.on = true; bandDrag.band.classList.add('is-dragging'); markLayer.classList.add('is-moving');
+        }
+        const box = body.getBoundingClientRect();
+        if (e.clientY < box.top + 24) body.scrollTop -= 12; else if (e.clientY > box.bottom - 24) body.scrollTop += 12;
+        markLayer.scrollTop = body.scrollTop;
+        bandDrag.band.style.transform = 'translateY(calc(-50% + ' + (e.clientY - bandDrag.y) + 'px))';
+        bandDrag.start = lineAt(e.clientY);
+        showDrop(bandDrag.start);
+    });
+    function endBand(apply) {
+        if (!bandDrag) return;
+        const { n, on, start } = bandDrag;
+        bandDrag = null; dropLine.hidden = true; markLayer.classList.remove('is-moving');
+        if (on && apply) moveMark(n, start);
+        drawMark();
+    }
+    markLayer.addEventListener('pointerup', e => { if (bandDrag && e.pointerId === bandDrag.pointer) endBand(true); });
+    markLayer.addEventListener('pointercancel', () => endBand(false));
     const rating = () => ratingFields.find(i => i.checked)?.value || '';
-    const current = () => ({ body: body.value, title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value, rating: rating(), warning: warning.value, mediaRatings });
+    const current = () => ({ body: compose(), title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value, rating: rating(), warning: warning.value, mediaRatings });
     const initial = JSON.stringify(current());
     const snapshot = () => JSON.stringify(current());
     function restore(saved) {
-        body.value = saved.body; title.value = saved.title || ''; refs = saved.refs || {};
+        useBody(saved.body || ''); title.value = saved.title || ''; refs = saved.refs || {};
         if (Array.isArray(saved.categories)) categoryFields.forEach(i => { i.checked = saved.categories.includes(i.value); });
         newCategories.value = saved.newCategories || '';
         if (typeof saved.rating === 'string') ratingFields.forEach(i => { i.checked = i.value === saved.rating; });
@@ -109,7 +303,9 @@
         Object.keys(refs).forEach(tag => { if (!body.value.includes(tag)) delete refs[tag]; });
         refsField.value = JSON.stringify(refs);
         $('input[name="media_ratings"]', form).value = JSON.stringify(mediaRatings);
-        renderAttachments(); renderChips();
+        // A group with no pictures lives only while its mark is in the text.
+        const { at } = view(); groups = groups.filter(g => g.ids.length || at.has(g.n));
+        renderAttachments(); renderChips(); drawMark();
         $('[data-preview-body]', form).hidden = true; $('[data-preview]', form).setAttribute('aria-pressed', 'false');
         $('[data-character-count]', form).textContent = Array.from(body.value).length + '文字';
         dirty = snapshot() !== initial;
@@ -143,12 +339,11 @@
     // Ratings, weakest first, as on the server (NL_RATINGS).
     const RANK = ['', 'sensitive', 'r18g', 'r18'];
     const LABEL = { '': 'なし', sensitive: 'センシティブ', r18: 'R-18', r18g: 'R-18G' };
-    const bodyMedia = () => [...new Set([...body.value.matchAll(/\[Image:([a-f0-9]{16})\]/g)].map(m => m[1]))];
+    const bodyMedia = () => allImages();
     const mediaRating = id => mediaRatings[id] ?? mediaInfo[id]?.rating ?? '';
     const strongest = list => list.reduce((a, b) => RANK.indexOf(b) > RANK.indexOf(a) ? b : a, '');
     const veilIcon = '<svg class="log-veil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/></svg>';
-    // The strip under the text: every picture tagged in the body, in order, each with its own rating button.
-    // Tags typed or pasted by hand: ask the server once for their thumbnails and ratings.
+    // Pictures from tags typed or pasted by hand: ask the server once for their thumbnails and ratings.
     const asked = new Set();
     async function lookup(ids) {
         ids.forEach(id => asked.add(id));
@@ -156,32 +351,172 @@
             const response = await fetch(adminUrl('index.php?p=log_media_json&ids=' + ids.join(',')), { credentials: 'same-origin', cache: 'no-store' });
             if (!response.ok) return;
             (await response.json()).items.forEach(item => { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; });
-            renderAttachments(); renderChips();
+            renderAttachments(); renderChips(); drawMark();
         } catch { /* the strip keeps its placeholders */ }
     }
+    // Under the text: one row per group, in the order they appear (after the text last). Pictures move by
+    // dragging (hold first on touch screens) within a row or to another, or with the arrow keys.
     function renderAttachments() {
-        const ids = bodyMedia();
+        const ids = allImages();
         const unknown = ids.filter(id => !mediaInfo[id] && !asked.has(id));
         if (unknown.length) lookup(unknown);
-        const key = ids.map(id => id + ':' + mediaRating(id) + ':' + (mediaInfo[id]?.thumb || '')).join(',');
+        const { marked, end } = view(), rows = [...marked, ...end];
+        const key = JSON.stringify([rows.map(g => [g.n, marked.includes(g), g === active, g.ids.map(id => id + ':' + mediaRating(id) + ':' + (mediaInfo[id]?.thumb || ''))])]);
         if (attachments.dataset.key === key) return;
         attachments.dataset.key = key;
-        attachments.replaceChildren(...ids.map(id => {
-            const info = mediaInfo[id] || {}, r = mediaRating(id);
-            const item = document.createElement('div'); item.className = 'log-att'; item.dataset.mediaId = id;
-            const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'log-att-thumb'; thumb.title = 'この画像のタグをもう一度入れる';
-            if (info.thumb) { const img = document.createElement('img'); img.src = adminUrl(info.thumb); img.alt = info.alt || '本文の画像'; thumb.append(img); }
-            else thumb.textContent = '画像';
-            thumb.addEventListener('click', () => insert('\n[Image:' + id + ']\n'));
-            const rate = document.createElement('button'); rate.type = 'button'; rate.className = 'log-att-rating'; rate.dataset.veil = r;
-            rate.setAttribute('aria-haspopup', 'menu'); rate.setAttribute('aria-expanded', 'false');
-            rate.setAttribute('aria-label', 'この画像の閲覧注意：' + LABEL[r]); rate.title = '閲覧注意：' + LABEL[r];
-            rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
-            rate.addEventListener('click', () => openMenu(rate, id));
-            item.append(thumb, rate);
-            return item;
+        const button = (className, html, title, onClick) => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = className; b.innerHTML = html;
+            if (title) b.title = title;
+            b.addEventListener('click', onClick); return b;
+        };
+        const nodes = rows.map(g => {
+            const inText = marked.includes(g);
+            const group = document.createElement('section'); group.className = 'log-att-group' + (g === active ? ' is-active' : ''); group.dataset.n = String(g.n);
+            const head = document.createElement('div'); head.className = 'log-att-head';
+            const label = document.createElement('b'); label.className = 'log-att-label'; label.textContent = '画像' + g.n;
+            const where = document.createElement('span'); where.className = 'log-att-where';
+            where.textContent = inText ? '本文の「' + markOf(g.n) + '」の行' : '本文の最後';
+            head.append(label, where);
+            if (inText) head.append(button('log-att-action', g.ids.length ? '本文の最後へ' : 'この場所を消す', g.ids.length ? '「' + markOf(g.n) + '」の行を消して、本文の最後に並べます' : '「' + markOf(g.n) + '」の行を消します', () => {
+                body.value = removeMarkOf(body.value, g.n); rememberSelection(); changed();
+                say(g.ids.length ? '画像' + g.n + 'を本文の最後に並べます。' : '「' + markOf(g.n) + '」を消しました。');
+            }));
+            else head.append(button('log-att-action', 'カーソルの位置へ', '本文のカーソル位置に「' + markOf(g.n) + '」の行を入れます', () => {
+                insertMark(g.n); say('「' + markOf(g.n) + '」の行に画像' + g.n + 'を並べます。本文の中の帯をドラッグすると、行を動かせます。');
+            }));
+            const row = document.createElement('div'); row.className = 'log-att-row';
+            g.ids.forEach((id, i) => {
+                const info = mediaInfo[id] || {}, r = mediaRating(id);
+                const item = document.createElement('div'); item.className = 'log-att'; item.dataset.mediaId = id;
+                const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'log-att-thumb';
+                thumb.title = 'ドラッグで並べ替え・別のまとまりへ移動'; thumb.setAttribute('aria-label', '画像' + g.n + 'の' + (i + 1) + '枚目（矢印キーで移動）');
+                // Never dragged by the browser itself: a dropped copy would be uploaded again.
+                if (info.thumb) { const img = document.createElement('img'); img.src = adminUrl(info.thumb); img.alt = ''; img.draggable = false; thumb.append(img); }
+                else thumb.append('画像');
+                const rate = document.createElement('button'); rate.type = 'button'; rate.className = 'log-att-rating'; rate.dataset.veil = r;
+                rate.setAttribute('aria-haspopup', 'menu'); rate.setAttribute('aria-expanded', 'false');
+                rate.setAttribute('aria-label', 'この画像の閲覧注意：' + LABEL[r]); rate.title = '閲覧注意：' + LABEL[r];
+                rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
+                rate.addEventListener('click', () => openMenu(rate, id));
+                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', 'この投稿から外す（画像一覧には残ります）', () => {
+                    g.ids = g.ids.filter(other => other !== id); changed();
+                    ($$('.log-att-group[data-n="' + g.n + '"] .log-att-thumb', attachments)[Math.min(i, g.ids.length - 1)] || body).focus();
+                    say('画像を外しました。画像そのものは画像一覧に残っています。');
+                });
+                remove.setAttribute('aria-label', '画像' + g.n + 'の' + (i + 1) + '枚目を外す');
+                item.append(thumb, rate, remove);
+                row.append(item);
+            });
+            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', '画像' + g.n + 'に画像を追加', () => { active = g; uploadInput.click(); });
+            add.setAttribute('aria-label', '画像' + g.n + 'に画像を追加');
+            row.append(add);
+            group.append(head, row);
+            return group;
+        });
+        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>別の場所にも画像を置く</span>', '本文のカーソル位置に新しい「〔画像N〕」の行を入れます', () => {
+            const g = { n: nextNumber(), ids: [] };
+            groups.push(g); active = g; insertMark(g.n);
+            say('「' + markOf(g.n) + '」の行を入れました。画像' + g.n + 'の＋から画像を追加してください。');
         }));
-        attachments.hidden = !ids.length;
+        attachments.replaceChildren(...nodes);
+        attachments.hidden = !rows.length;
+    }
+    // The mark on its own line goes with its line break; anywhere else, just the mark.
+    const removeMarkOf = (text, n) => text.replace(new RegExp('(\\n)?〔画像' + n + '〕(\\n)?', 'g'), (m, lead, tail) => lead && tail ? '\n' : '');
+    function insertMark(n) {
+        const [start, end] = selection, before = body.value.slice(0, start);
+        insert((before === '' || before.endsWith('\n') ? '' : '\n') + markOf(n) + (body.value.slice(end).startsWith('\n') ? '' : '\n'));
+    }
+    let drag = null;
+    const rowsNow = () => $$('.log-att-group', attachments);
+    function endDrag(apply) {
+        if (!drag) return;
+        clearTimeout(drag.timer);
+        if (drag.on) {
+            drag.item.classList.remove('is-dragging'); attachments.classList.remove('is-sorting');
+            if (apply) {
+                rowsNow().forEach(row => { const g = groups.find(x => x.n === +row.dataset.n); if (g) g.ids = $$('.log-att', row).map(n => n.dataset.mediaId); });
+                active = groups.find(x => x.n === +drag.item.closest('.log-att-group').dataset.n) || active;
+                changed();
+            } else { attachments.dataset.key = ''; renderAttachments(); }
+        }
+        drag = null;
+    }
+    attachments.addEventListener('pointerdown', e => {
+        const thumb = e.target.closest('.log-att-thumb');
+        if (!thumb || e.button !== 0) return;
+        drag = { item: thumb.closest('.log-att'), x: e.clientX, y: e.clientY, pointer: e.pointerId, on: false, timer: 0 };
+        drag.start = () => { drag.on = true; drag.item.classList.add('is-dragging'); attachments.classList.add('is-sorting'); try { drag.item.setPointerCapture(drag.pointer); } catch { /* already released */ } };
+        if (e.pointerType === 'touch') drag.timer = setTimeout(() => { if (drag && !drag.on) drag.start(); }, 350);
+    });
+    attachments.addEventListener('pointermove', e => {
+        if (!drag || e.pointerId !== drag.pointer) return;
+        if (!drag.on) {
+            if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+            // A quick swipe on a touch screen scrolls instead.
+            if (e.pointerType === 'touch') { endDrag(false); return; }
+            drag.start();
+        }
+        e.preventDefault();
+        // The row under the pointer (or the nearest), then the place in it.
+        const rows = rowsNow().map(group => [group, group.getBoundingClientRect()]);
+        const [group] = rows.find(([, r]) => e.clientY >= r.top && e.clientY <= r.bottom) || rows.reduce((best, cur) => Math.abs(e.clientY - (cur[1].top + cur[1].bottom) / 2) < Math.abs(e.clientY - (best[1].top + best[1].bottom) / 2) ? cur : best);
+        const row = $('.log-att-row', group);
+        const next = $$('.log-att', row).filter(n => n !== drag.item).find(n => { const r = n.getBoundingClientRect(); return e.clientX < r.left + r.width / 2; }) || $('.log-att-add', row);
+        if (drag.item.nextElementSibling !== next) row.insertBefore(drag.item, next);
+        const box = row.getBoundingClientRect();
+        if (e.clientX < box.left + 24) row.scrollLeft -= 12; else if (e.clientX > box.right - 24) row.scrollLeft += 12;
+    });
+    attachments.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.pointer) endDrag(true); });
+    attachments.addEventListener('pointercancel', () => endDrag(false));
+    attachments.addEventListener('touchmove', e => { if (drag?.on) e.preventDefault(); }, { passive: false });
+    attachments.addEventListener('contextmenu', e => { if (e.target.closest('.log-att-thumb')) e.preventDefault(); });
+    attachments.addEventListener('keydown', e => {
+        const thumb = e.target.closest('.log-att-thumb');
+        if (!thumb || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+        e.preventDefault();
+        const { marked, end } = view(), rows = [...marked, ...end];
+        const id = thumb.closest('.log-att').dataset.mediaId, g = groups.find(x => x.n === +thumb.closest('.log-att-group').dataset.n);
+        const i = g.ids.indexOf(id);
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            const to = i + (e.key === 'ArrowLeft' ? -1 : 1);
+            if (to < 0 || to >= g.ids.length) return;
+            g.ids.splice(i, 1); g.ids.splice(to, 0, id); changed();
+            say('画像' + g.n + 'の' + (to + 1) + '枚目に移しました。');
+        } else {
+            const other = rows[rows.indexOf(g) + (e.key === 'ArrowUp' ? -1 : 1)];
+            if (!other) return;
+            g.ids.splice(i, 1); other.ids.push(id); active = other; changed();
+            say('画像' + other.n + 'の最後に移しました。');
+        }
+        $('.log-att-group[data-n="' + groups.find(x => x.ids.includes(id))?.n + '"] .log-att[data-media-id="' + id + '"] .log-att-thumb', attachments)?.focus();
+    });
+    // New pictures go to the group last chosen (its +, a picture moved into it), otherwise after the text.
+    function addImage(id) {
+        if (allImages().includes(id)) { say('その画像はもう入っています。'); return; }
+        let g = groups.includes(active) ? active : view().end[0];
+        if (!g) { g = { n: nextNumber(), ids: [] }; groups.push(g); }
+        g.ids.push(id); active = g; changed();
+    }
+    // Tags typed or pasted into the text move to the rows: a new group where text follows them, else after the text.
+    function absorb() {
+        if (body.value.search(/\[Image:[a-f0-9]{16}\]/) < 0) return;
+        const caret = body.selectionStart, found = [];
+        let first = -1;
+        let text = body.value.replace(/[ \t]*\[Image:([a-f0-9]{16})\][ \t]*\r?\n?/g, (m, id, offset) => { if (!found.includes(id) && !allImages().includes(id)) found.push(id); if (first < 0) first = offset; return ''; });
+        if (found.length) {
+            if (text.slice(first).trim() !== '') {
+                const g = { n: nextNumber(), ids: found }; groups.push(g); active = g;
+                text = text.slice(0, first) + markOf(g.n) + '\n' + text.slice(first);
+            } else {
+                let g = view().end[0];
+                if (!g) { g = { n: nextNumber(), ids: [] }; groups.push(g); }
+                g.ids.push(...found); active = g;
+            }
+        }
+        const at = Math.max(0, Math.min(text.length, caret - (body.value.length - text.length)));
+        body.value = text; body.setSelectionRange(at, at); rememberSelection();
+        say('画像のタグを、本文の下の画像の列に移しました。');
     }
     const menu = $('[data-att-menu]', form);
     let menuFor = null;
@@ -260,7 +595,7 @@
         warning.focus(); warning.setSelectionRange(warning.value.length, warning.value.length);
     }));
     changed(false);
-    body.addEventListener('input', changed); title.addEventListener('input', changed);
+    body.addEventListener('input', () => { absorb(); changed(); }); title.addEventListener('input', changed);
     categoryFields.forEach(input => input.addEventListener('change', changed));
     newCategories.addEventListener('input', changed);
     function rememberSelection() { selection = [body.selectionStart, body.selectionEnd]; }
@@ -375,20 +710,27 @@
                     const data = new FormData(); data.set('do', 'log_upload'); data.set('image', file);
                     const { media } = await request(data);
                     mediaInfo[media.id] = { thumb: media.thumb, alt: media.alt, rating: media.rating || '' };
-                    insert('\n' + media.tag + '\n');
+                    addImage(media.id);
                 } catch (e) { errors.push(file.name + '：' + e.message); }
             }
-            say(errors.length ? errors.join(' / ') : '画像を追加しました。タグを動かすと、表示する位置も変わります。', errors.length > 0);
+            say(errors.length ? errors.join(' / ') : '画像を追加しました。サムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。', errors.length > 0);
         }).finally(() => { uploading--; });
         await uploadQueue;
     }
     let uploadQueue = Promise.resolve();
     uploadInput.addEventListener('change', () => { upload(uploadInput.files); uploadInput.value = ''; });
+    // A picture dragged from this page (a thumbnail, an image in a post) is not a new file: never upload it again,
+    // and keep the browser from writing its URL into the text.
+    let pageDrag = false;
+    document.addEventListener('dragstart', e => { pageDrag = !e.target.closest?.('textarea, input'); });
+    document.addEventListener('dragend', () => { pageDrag = false; });
     document.addEventListener('dragover', e => {
+        if (pageDrag) return;
         if (Array.from(e.dataTransfer?.types || []).includes('Files')) { e.preventDefault(); panel.classList.add('dragover'); }
     });
     document.addEventListener('dragleave', e => { if (!e.relatedTarget) panel.classList.remove('dragover'); });
     document.addEventListener('drop', e => {
+        if (pageDrag) { if (form.contains(e.target)) e.preventDefault(); return; }
         if (!e.dataTransfer?.files.length) return;
         e.preventDefault(); panel.classList.remove('dragover'); upload(e.dataTransfer.files);
     });
@@ -420,7 +762,7 @@
                         let tag = item.tag;
                         if (refs[tag] && refs[tag] !== item.id) tag = tag.slice(0, -1) + ' #' + item.id + ']';
                         refs[tag] = item.id; insert('\n' + tag + '\n');
-                    } else { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; insert('\n' + item.tag + '\n'); }
+                    } else { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; addImage(item.id); }
                     picker.close(); body.focus();
                 });
                 grid.append(button);
@@ -441,7 +783,7 @@
         const preview = $('[data-preview-body]', form), toggle = $('[data-preview]', form);
         if (!preview.hidden) { preview.hidden = true; toggle.setAttribute('aria-pressed', 'false'); return; }
         try {
-            const data = new FormData(form); data.set('do', 'log_preview');
+            const data = new FormData(form); data.set('do', 'log_preview'); data.set('body', compose());
             const result = await request(data);
             // HTML comes only from the server's escaping/token renderer.
             preview.innerHTML = result.html;
@@ -457,7 +799,7 @@
         e.preventDefault();
         if (saving) return;
         if (uploading) { say('画像の追加が終わってから保存してください。', true); return; }
-        const data = new FormData(form); data.set('status', e.submitter?.value || 'published');
+        const data = new FormData(form); data.set('status', e.submitter?.value || 'published'); data.set('body', compose());
         saving = true; $$('button[type="submit"],button[name="status"]', form).forEach(b => { b.disabled = true; });
         say('保存しています…');
         try {
