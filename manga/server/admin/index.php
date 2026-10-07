@@ -1348,7 +1348,7 @@ function nm_update_banner(): string
     if (!nm_update_auto(nm_config() ?? [])) return '';
     $st = nm_update_status();
     if (!nm_update_available($st)) return '';
-    return '<p class="update-banner">新しいバージョン <strong>NagiManga ' . h((string)$st['latest']) . '</strong> が出ています（今は ' . h(NM_VERSION) . '）。'
+    return '<p class="update-banner"><span>新しいバージョン <strong>NagiManga ' . h((string)$st['latest']) . '</strong> が出ています（今は ' . h(NM_VERSION) . '。NagiLogも一緒に更新します）。</span>'
         . ' <a class="btn small primary" href="index.php?p=update">更新画面へ</a></p>';
 }
 
@@ -1406,7 +1406,7 @@ function nm_view_update(array $cfg): void
     if ($newer) {
         $body .= '<div class="update-new"><h2>新しいバージョン ' . h((string)$st['latest']) . ' があります</h2>'
             . (!empty($st['published']) ? '<p class="note">公開日: ' . h(substr((string)$st['published'], 0, 10)) . '</p>' : '')
-            . (!empty($st['notes']) ? '<pre class="notes">' . h((string)$st['notes']) . '</pre>' : '')
+            . (!empty($st['notes']) ? '<div class="notes">' . nm_release_notes_html((string)$st['notes']) . '</div>' : '')
             . (!empty($st['page']) ? '<p><a href="' . h((string)$st['page']) . '" target="_blank" rel="noopener noreferrer">GitHub のリリースページで見る</a></p>' : '')
             . ($canApply
                 ? '<form method="post" action="index.php" class="js-confirm" data-confirm="NagiManga を ' . h((string)$st['latest']) . ' に更新しますか？作品と設定はそのままです。">' . $hidden

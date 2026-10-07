@@ -138,6 +138,42 @@ function nm_update_http(string $url, int $max, int $timeout, bool $json): array
     throw new RuntimeException('no transport');
 }
 
+/**
+ * Release notes are GitHub Markdown: headings, lists, paragraphs, **bold**, `code` and links.
+ * Everything is escaped first, so only these few tags can appear; links must be http(s).
+ */
+function nm_release_notes_html(string $md): string
+{
+    $inline = static function (string $text): string {
+        $t = htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $t = preg_replace('/`([^`]+)`/u', '<code>$1</code>', $t);
+        $t = preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $t);
+        $link = static fn(string $href, string $label): string => '<a href="' . $href . '" target="_blank" rel="noopener noreferrer">' . $label . '</a>';
+        $t = preg_replace_callback('~\[([^\]]+)\]\((https?://[^\s)<>"]+)\)|(?<![="\w])(https?://[^\s<>"]+)~u', static fn($m) => isset($m[3]) ? $link($m[3], $m[3]) : $link($m[2], $m[1]), $t);
+        return $t;
+    };
+    $html = ''; $para = []; $list = false;
+    $flush = static function () use (&$html, &$para, &$list, $inline): void {
+        if ($para) { $html .= '<p>' . implode('<br>', array_map($inline, $para)) . '</p>'; $para = []; }
+        if ($list) { $html .= '</ul>'; $list = false; }
+    };
+    foreach (preg_split('/\R/u', $md) as $line) {
+        $line = rtrim($line);
+        if ($line === '') { $flush(); continue; }
+        if (preg_match('/\A(#{1,4})\s+(.+)\z/u', $line, $m)) { $flush(); $level = min(5, strlen($m[1]) + 1); $html .= '<h' . $level . '>' . $inline($m[2]) . '</h' . $level . '>'; continue; }
+        if (preg_match('/\A\s*[-*]\s+(.+)\z/u', $line, $m)) {
+            if ($para) { $html .= '<p>' . implode('<br>', array_map($inline, $para)) . '</p>'; $para = []; }
+            if (!$list) { $html .= '<ul>'; $list = true; }
+            $html .= '<li>' . $inline($m[1]) . '</li>';
+            continue;
+        }
+        if ($list) { $html .= '</ul>'; $list = false; }
+        $para[] = $line;
+    }
+    $flush();
+    return $html;
+}
+
 function nm_update_cache_file(): string
 {
     return NM_DATA . '/update/check.json';

@@ -183,7 +183,14 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent); fon
 .update-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; background: var(--warn-bg); padding: 10px 14px; border-radius: 8px; margin: 0 0 12px; }
 .update-new { border: 1px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin: 0 0 12px; }
 .update-new h2 { margin-top: 0; }
-.notes { font: inherit; font-size: .9em; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; background: var(--bg); padding: 10px 12px; border-radius: 6px; }
+.notes { font-size: .95em; line-height: 1.75; overflow-wrap: anywhere; max-height: 420px; overflow: auto; background: var(--bg); padding: 4px 18px 14px; border-radius: 8px; }
+.notes h3 { margin: 18px 0 6px; padding-bottom: 4px; font-size: 1.05em; border-bottom: 1px solid var(--line); }
+.notes h4,.notes h5 { margin: 14px 0 4px; font-size: 1em; }
+.notes p { margin: 10px 0; }
+.notes ul { margin: 6px 0 10px; padding-left: 1.3em; }
+.notes li { margin: 4px 0; }
+.notes li::marker { color: var(--accent); }
+.notes code { padding: 1px 6px; border-radius: 4px; background: var(--card); font-size: .9em; }
 .badge.new { background: var(--danger); color: #fff; border-color: var(--danger); }
 .steps li, .checks li, .backups li { margin: 0 0 8px; }
 .checks { list-style: none; padding-left: 0; }

@@ -472,6 +472,8 @@ function nl_view_log(): void
     $taxonomy = nm_str($_GET, 'view', 20) === 'taxonomy';
     $tabs = nl_pages_tabs($taxonomy ? 'taxonomy' : 'posts');
     $header = '<div class="log-heading"><div><h1>LOG・投稿</h1><p class="note">' . h($s['title']) . ' · ' . ($s['public'] ? '全体公開' : '自分専用Memo') . '</p></div><div class="log-toolbar"><a class="btn" href="../">' . nl_ui_icon($s['public'] ? 'globe' : 'lock') . '<span>' . ($s['public'] ? '公開ページ' : '自分のMemo') . '</span></a><a class="btn" href="index.php?p=log_media">' . nl_ui_icon('images') . '<span>画像一覧・差し替え</span></a>' . (!$taxonomy ? '<button type="button" class="btn primary" data-compose-open>' . nl_ui_icon() . ' 新しく書く</button>' : '') . '</div></div>';
+    // NagiLog is updated together with NagiManga, so the same notice appears here.
+    $header = nm_update_banner() . $header;
     if ($taxonomy) { nm_layout('LOGの分類', $header . $tabs . nl_taxonomy_panel()); return; }
     $pagerQuery = 'p=log' . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '');
     $search = '<form class="log-admin-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log">'
