@@ -60,6 +60,41 @@
         if (!window.confirm('この記事を削除しますか？この記事だけで使う画像も削除します。元に戻せません。')) e.preventDefault();
     }));
 
+    // 編集 on a public page remembers where it was; closing or saving the editor goes back to that post.
+    const returnKey = 'nagilog-edit-return';
+    const readReturn = () => { try { return JSON.parse(sessionStorage.getItem(returnKey) || 'null'); } catch { return null; } };
+    const writeReturn = value => { try { if (value) sessionStorage.setItem(returnKey, JSON.stringify(value)); else sessionStorage.removeItem(returnKey); } catch {} };
+    const editId = link => { try { return new URL(link.href).searchParams.get('id') || ''; } catch { return ''; } };
+    document.addEventListener('click', e => {
+        const link = e.target.closest?.('a.log-edit-link');
+        if (!link || !/[?&]p=log_edit&/.test(link.getAttribute('href'))) return;
+        const post = link.closest('.log-post');
+        writeReturn({ id: editId(link), href: location.href.split('#')[0], y: scrollY, top: post ? post.getBoundingClientRect().top : 0 });
+    });
+    const back = readReturn();
+    if (back && !form?.closest('.log-edit') && back.href === location.href.split('#')[0]) {
+        writeReturn(null);
+        // Back from the editor: put the post where it was on screen. Posts added by もっと見る are loaded again first.
+        const find = () => $$('a.log-edit-link').find(a => editId(a) === back.id)?.closest('.log-post');
+        let moved = false, tries = 0;
+        const stop = () => { moved = true; };
+        ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(type => addEventListener(type, stop, { once: true, passive: true }));
+        const place = () => {
+            if (moved) return;
+            const post = find();
+            if (post) { scrollTo(0, scrollY + post.getBoundingClientRect().top - back.top); return; }
+            const more = $('[data-pager-more]');
+            if (more && tries++ < 20 && !more.hasAttribute('aria-busy')) { more.click(); setTimeout(place, 600); return; }
+            if (more && tries < 20) { setTimeout(place, 300); return; }
+            scrollTo(0, back.y);
+        };
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+        place();
+        // Embeds above the post change height while they load, so keep it in place for a moment.
+        addEventListener('load', () => { place(); setTimeout(place, 800); setTimeout(place, 2000); });
+    }
+    addEventListener('pageshow', e => { if (e.persisted && readReturn()?.href === location.href.split('#')[0]) writeReturn(null); });
+
     if (!form) return;
     const panel = $('#log-compose');
     const body = $('textarea[name="body"]', form);
@@ -688,8 +723,17 @@
     }
     fab.addEventListener('click', () => setPanel(true));
     $('[data-compose-open]')?.addEventListener('click', () => setPanel(true));
+    // The public page this edit was opened from, kept while the editor reloads for 続けて編集する.
+    const origin = (() => {
+        const id = $('input[name="post_id"]', form)?.value, from = document.referrer.split('#')[0];
+        if (!panel.dataset.edit || !back || back.id !== id) return null;
+        const again = (() => { try { const u = new URL(from); return u.pathname === location.pathname && u.searchParams.get('p') === 'log_edit' && u.searchParams.get('id') === id; } catch { return false; } })();
+        if (from !== back.href && !(back.active && again)) { writeReturn(null); return null; }
+        writeReturn({ ...back, active: true });
+        return back.href;
+    })();
     $('.log-close', panel).addEventListener('click', () => {
-        if (panel.dataset.edit) { location.href = 'index.php?p=log'; return; }
+        if (panel.dataset.edit) { location.href = origin || 'index.php?p=log'; return; }
         setPanel(false);
     });
     mobile.addEventListener('change', () => accessibility(panel.classList.contains('active')));
@@ -858,7 +902,7 @@
         const editUrl = adminUrl('index.php?p=log_edit&id=' + encodeURIComponent(result.id));
         const view = published ? link('記事を見る', new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
         const actions = el('div', 'log-saved-dialog-actions');
-        actions.append(link('続けて編集する', editUrl, 'btn'), link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
+        actions.append(link('続けて編集する', editUrl, 'btn'), origin ? link('元のページに戻る', origin, published ? 'btn' : 'btn primary') : link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
         if (view) actions.append(view);
         saved.append(heading, lead, actions);
         // Escape closes the dialog; the form holds the old revision, so reopen the editor.

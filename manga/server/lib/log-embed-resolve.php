@@ -24,9 +24,10 @@ function nl_embed_resolved(array $e): ?array
     return null;
 }
 
-/** Reuses the card fetcher's public-IP checks, TLS verification and size/time limits. */
-function nl_embeds_prepare(string $body, float $deadline): void
+/** Reuses the card fetcher's public-IP checks, TLS verification and size/time limits. Returns how many embeds became available. */
+function nl_embeds_prepare(string $body, float $deadline): int
 {
+    $resolved = 0;
     preg_match_all('/' . NL_EMBED_PATTERN . '/i', str_replace("\r", '', $body), $lines);
     $seen = [];
     foreach ($lines[0] as $line) {
@@ -41,11 +42,13 @@ function nl_embeds_prepare(string $body, float $deadline): void
         if ($old && time() - (int)($old['fetched'] ?? 0) < (!empty($old['ok']) ? NL_CARD_TTL : NL_CARD_RETRY)) continue;
         try { $data = nl_embed_fetch($e, $deadline); } catch (Throwable) { $data = null; }
         $record = ['type' => $e['type'], 'url' => $e['url'], 'fetched' => time(), 'ok' => $data !== null, 'data' => $data];
+        if ($data !== null && empty($old['ok'])) $resolved++;
         nm_with_lock('log-embeds', static function () use ($e, $record) {
             nm_ensure_dir(dirname(nl_embed_cache_file($e)));
             nl_write_record(nl_embed_cache_file($e), $record);
         });
     }
+    return $resolved;
 }
 
 function nl_embed_fetch(array $e, float $deadline): ?array

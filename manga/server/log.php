@@ -86,6 +86,13 @@ $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $bre
 function nl_public_asset(string $file): string { return h($file . '?v=' . nm_asset_version(__DIR__ . '/' . $file)); }
 // The top page keeps the open editor; other pages open it from the floating button.
 $index = !$single && !$fixed && $filter['query'] === '' && $page === 1;
+// Posts moved from another server lack the IDs some embeds need (Bandcamp, Bluesky, Mastodon).
+// The owner's visit fetches the missing ones; visitors never cause outside requests.
+if ($owner && !headers_sent()) {
+    $embedDeadline = microtime(true) + 8; $embedResolved = 0;
+    foreach ($posts as $embedPost) if (isset($embedPost['body']) && microtime(true) < $embedDeadline) $embedResolved += nl_embeds_prepare((string)$embedPost['body'], $embedDeadline);
+    if ($embedResolved > 0) nm_lscache_purge();
+}
 $postsHtml = '';
 if ($fixed) $postsHtml = '<article class="log-post log-page">' . ($owner ? '<div class="log-post-meta">' . ($fixed['status'] !== 'published' ? '<span class="badge">下書き（ログイン中だけ表示）</span>' : '') . '<a class="log-edit-link" href="admin/index.php?p=log_page&amp;id=' . h($fixed['id']) . '">' . nl_ui_icon() . '<span>編集</span></a></div>' : '')
     . '<h1>' . h($fixed['title']) . '</h1><div class="log-page-body">' . nl_markdown($fixed['body']) . '</div></article>';

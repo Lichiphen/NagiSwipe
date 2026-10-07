@@ -8,6 +8,7 @@
     ];
     const loading = new Map();
     const fitted = new WeakSet();
+    let facebookFrames = 0;
     function fitFacebook(frame) {
         const wrap = frame.closest('.embeddedfacebook');
         const available = wrap?.getBoundingClientRect().width;
@@ -16,6 +17,11 @@
         if (url.origin !== 'https://www.facebook.com' || !['/plugins/post.php', '/plugins/video.php'].includes(url.pathname)) return;
         const width = Math.max(350, Math.min(500, Math.floor(available)));
         url.searchParams.set('width', String(width));
+        // With the channel Facebook's own script would add, the plugin reports its height (type=resize) without that script.
+        if (!frame.dataset.fbCb) frame.dataset.fbCb = 'nagilog' + (++facebookFrames);
+        url.searchParams.set('sdk', 'joey'); url.searchParams.set('app_id', ''); url.searchParams.set('container_width', String(width));
+        url.searchParams.set('channel', 'https://staticxx.facebook.com/x/connect/xd_arbiter/?version=46#cb=' + frame.dataset.fbCb + '&domain=' + encodeURIComponent(location.hostname)
+            + '&is_canvas=false&origin=' + encodeURIComponent(location.origin + '/' + frame.dataset.fbCb) + '&relation=parent.parent');
         if (frame.src !== url.href) frame.src = url.href;
         const scale = Math.min(1, available / width);
         frame.style.width = width + 'px'; frame.style.maxWidth = 'none';
@@ -52,10 +58,14 @@
             selector = '.embeddedbluesky iframe'; height = Number(event.data.height);
         } else if (event.origin === 'https://www.threads.com' && (typeof event.data === 'number' || (typeof event.data === 'string' && /^\d{1,4}$/.test(event.data)))) {
             selector = '.embeddedthreads iframe'; height = Number(event.data);
+        } else if (event.origin === 'https://www.facebook.com' && typeof event.data === 'string' && event.data.startsWith('type=resize&')) {
+            selector = '.embeddedfacebook iframe'; height = Number(new URLSearchParams(event.data).get('height'));
         }
         if (!selector || !Number.isFinite(height) || height < 100 || height > 3000) return;
         const frame = [...document.querySelectorAll(selector)].find(el => el.contentWindow === event.source);
-        if (frame) frame.style.height = Math.ceil(height) + 'px';
+        if (!frame) return;
+        frame.style.height = Math.ceil(height) + 'px';
+        if (selector === '.embeddedfacebook iframe') fitFacebook(frame);
     });
     function script(src) {
         if (!loading.has(src)) loading.set(src, new Promise(resolve => {
