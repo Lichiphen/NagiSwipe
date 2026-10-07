@@ -12,5 +12,5 @@
   {"name":"Facebook","url":"https://www.facebook.com/Engineering/posts/were-sharing-an-early-view-into-how-were-building-private-processing-a-new-techn/1091181673044313/","note":"Engineering at Metaの公開投稿です。Facebook側の閲覧条件によって表示が変わる場合があります。","reference":"https://www.facebook.com/Engineering/posts/were-sharing-an-early-view-into-how-were-building-private-processing-a-new-techn/1091181673044313/"},
   {"name":"Threads","url":"https://www.threads.com/@threads/post/C--z-PKuPeh","note":"Metaの公式記事から案内されているThreads公式アカウントの投稿です。","reference":"https://about.fb.com/news/2025/03/new-threads-features-more-personalized-experience-you-control/"},
   {"name":"Vimeo","url":"https://vimeo.com/76979871","note":"Vimeoの公式ヘルプが、埋め込み例として紹介している動画です。","reference":"https://help.vimeo.com/hc/en-us/articles/30021987305873-How-do-I-embed-parameters-to-a-Vimeo-com-URL"},
-  {"name":"Twitch","url":"https://www.twitch.tv/twitchdev","note":"Twitch公式開発者チャンネルです。配信がないときはオフラインの表示になります。小さいスマホ画面ではリンク先で再生できます。","reference":"https://dev.twitch.tv/docs/embed/video-and-clips/"}
+  {"name":"Twitch","url":"https://www.twitch.tv/twitchdev","note":"Twitch公式開発者チャンネルです。配信がないときはオフラインの表示になります。スマホでは横向きにするとプレーヤーが表示されます。","reference":"https://dev.twitch.tv/docs/embed/video-and-clips/"}
 ]

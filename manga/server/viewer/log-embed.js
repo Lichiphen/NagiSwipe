@@ -22,7 +22,21 @@
         frame.style.transformOrigin = 'top left'; frame.style.transform = scale < 1 ? `scale(${scale})` : '';
         frame.style.marginBottom = scale < 1 ? -(frame.offsetHeight * (1 - scale)) + 'px' : '';
     }
+    // Bluesky and Threads report their height only while loading, so reload them after the width settles.
+    function watchWidth(frame) {
+        if (fitted.has(frame) || typeof ResizeObserver !== 'function') return;
+        fitted.add(frame);
+        let width = 0, timer = 0;
+        new ResizeObserver(([entry]) => {
+            const next = Math.round(entry.contentRect.width);
+            if (!width) { width = next; return; }
+            if (!next || next === width) return;
+            clearTimeout(timer);
+            timer = setTimeout(() => { width = next; frame.src = frame.src; }, 400);
+        }).observe(frame.parentElement);
+    }
     function fitFrames(root) {
+        root.querySelectorAll('.embeddedbluesky iframe, .embeddedthreads iframe').forEach(watchWidth);
         root.querySelectorAll('.embeddedfacebook iframe').forEach(frame => {
             fitFacebook(frame);
             if (fitted.has(frame)) return;
