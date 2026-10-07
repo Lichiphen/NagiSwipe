@@ -6,6 +6,9 @@
  */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const $ = (s, root = document) => root.querySelector(s);
     const csrf = $('input[name="csrf"]')?.value;
     const endpoint = new URL('index.php', location.href);
@@ -16,8 +19,8 @@
         const response = await fetch(endpoint, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
         let result;
         try { result = await response.json(); }
-        catch { throw new Error('ログインが切れた可能性があります。本文をコピーしてから、ログインし直してください。'); }
-        if (!response.ok || result.error) throw new Error(result.error || '保存できませんでした。もう一度お試しください。');
+        catch { throw new Error(t('ログインが切れた可能性があります。本文をコピーしてから、ログインし直してください。')); }
+        if (!response.ok || result.error) throw new Error(result.error || t('保存できませんでした。もう一度お試しください。'));
         return json ? result : null;
     }
     async function uploadOne(file) {
@@ -33,8 +36,8 @@
         const button = event.target.closest('[data-copy-text]');
         if (!button) return;
         const label = button.querySelector('span'), before = label?.textContent;
-        try { await navigator.clipboard.writeText(button.dataset.copyText); if (label) label.textContent = 'コピーしました'; }
-        catch { window.prompt('コピーしてください', button.dataset.copyText); }
+        try { await navigator.clipboard.writeText(button.dataset.copyText); if (label) label.textContent = t('コピーしました'); }
+        catch { window.prompt(t('コピーしてください'), button.dataset.copyText); }
         if (label) setTimeout(() => { label.textContent = before; }, 1600);
     });
     const box = $('[data-media-upload]');
@@ -46,18 +49,18 @@
             if (!list.length || busy) return;
             const bad = list.filter(f => !isImage(f));
             const good = list.filter(isImage);
-            if (!good.length) { status.textContent = 'JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'; return; }
+            if (!good.length) { status.textContent = t('JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'); return; }
             busy = true; box.classList.add('is-busy');
-            const errors = bad.map(f => f.name + '：画像ではありません');
+            const errors = bad.map(f => t('{name}：画像ではありません', { name: f.name }));
             let done = 0;
             for (const file of good) {
-                status.textContent = '追加しています…（' + (done + 1) + ' / ' + good.length + '）'; status.classList.add('log-busy');
+                status.textContent = t('追加しています…（{i} / {n}）', { i: done + 1, n: good.length }); status.classList.add('log-busy');
                 try { await uploadOne(file); done++; }
-                catch (e) { errors.push(file.name + '：' + e.message); }
+                catch (e) { errors.push(t('{name}：{message}', { name: file.name, message: e.message })); }
             }
             busy = false; box.classList.remove('is-busy'); input.value = ''; status.classList.remove('log-busy');
-            if (done && !errors.length) { status.textContent = done + '枚追加しました。一覧を読み込み直しています…'; location.href = 'index.php?p=log_media'; return; }
-            status.textContent = (done ? done + '枚追加しました。' : '') + errors.join(' / ') + (done ? '（一覧は読み込み直すと出ます）' : '');
+            if (done && !errors.length) { status.textContent = t('{n}枚追加しました。一覧を読み込み直しています…', { n: done }); location.href = 'index.php?p=log_media'; return; }
+            status.textContent = (done ? t('{n}枚追加しました。', { n: done }) : '') + errors.join(' / ') + (done ? t('（一覧は読み込み直すと出ます）') : '');
         }
         input.addEventListener('change', () => add(input.files));
         const files = e => [...(e.dataTransfer?.types || [])].includes('Files');
@@ -95,12 +98,12 @@
     // Block marks start on a line of their own.
     const lineStart = () => { const v = body.value, at = body.selectionStart; return at === 0 || v[at - 1] === '\n' ? '' : '\n'; };
     const marks = {
-        heading: () => insert(lineStart() + '## ', '', '見出し'),
-        bold: () => insert('**', '**', '太字'),
-        link: () => insert('[', '](https://)', 'リンクの文字'),
-        list: () => insert(lineStart() + '- ', '', '項目'),
-        ordered: () => insert(lineStart() + '1. ', '', '項目'),
-        table: () => insert(lineStart() + '| 項目 | 内容 |\n| --- | --- |\n| ', ' |  |\n', 'a'),
+        heading: () => insert(lineStart() + '## ', '', t('見出し')),
+        bold: () => insert('**', '**', t('太字')),
+        link: () => insert('[', '](https://)', t('リンクの文字')),
+        list: () => insert(lineStart() + '- ', '', t('項目')),
+        ordered: () => insert(lineStart() + '1. ', '', t('項目')),
+        table: () => insert(lineStart() + '| ' + t('項目') + ' | ' + t('内容') + ' |\n| --- | --- |\n| ', ' |  |\n', 'a'),
         rule: () => insert(lineStart() + '\n---\n', '', ''),
     };
     form.addEventListener('click', event => {
@@ -112,18 +115,18 @@
     $('[data-md-upload]', form).addEventListener('click', () => picker.click());
     async function pictures(files) {
         const list = Array.from(files).filter(isImage);
-        if (!list.length) { say('JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。', true); return; }
+        if (!list.length) { say(t('JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'), true); return; }
         const lines = []; const errors = [];
         for (const [i, file] of list.entries()) {
-            say('画像をアップロードしています…（' + (i + 1) + ' / ' + list.length + '）');
+            say(t('画像をアップロードしています…（{i} / {n}）', { i: i + 1, n: list.length }));
             try {
                 const media = await uploadOne(file);
                 known[media.id] = media;
                 lines.push('![' + String(media.alt || '').replace(/[[\]]/g, '') + '](' + publicUrl(media) + ')');
-            } catch (e) { errors.push(file.name + '：' + e.message); }
+            } catch (e) { errors.push(t('{name}：{message}', { name: file.name, message: e.message })); }
         }
         if (lines.length) { insert(lineStart() + lines.join('\n') + '\n'); drawStrip(); }
-        say(errors.length ? errors.join(' / ') : '画像を入れました。[ ] の中は画像の説明（alt）です。', errors.length > 0);
+        say(errors.length ? errors.join(' / ') : t('画像を入れました。[ ] の中は画像の説明（alt）です。'), errors.length > 0);
     }
     picker.addEventListener('change', () => { pictures(picker.files); picker.value = ''; });
     // Drop anywhere on the editor card; paste into the text.
@@ -166,23 +169,23 @@
         found.forEach(f => {
             const m = known[f.id];
             const item = document.createElement('div'); item.className = 'log-page-image';
-            const show = tile('log-page-image-thumb', '本文のこの画像の行を選ぶ', '');
+            const show = tile('log-page-image-thumb', t('本文のこの画像の行を選ぶ'), '');
             if (m) { const img = document.createElement('img'); img.src = m.thumb; img.alt = ''; show.append(img); } else show.textContent = '?';
             show.addEventListener('click', () => { body.focus(); body.setSelectionRange(f.at, f.at + f.text.length); scrollToCaret(); });
-            const remove = tile('log-page-image-remove', 'この画像を本文から外す', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
+            const remove = tile('log-page-image-remove', t('この画像を本文から外す'), '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
             remove.addEventListener('click', () => {
                 const v = body.value, at = v.indexOf(f.text);
                 if (at < 0) return;
                 const end = at + f.text.length + (v[at + f.text.length] === '\n' ? 1 : 0);
                 body.focus(); body.setSelectionRange(at, end);
                 if (!document.execCommand?.('insertText', false, '')) body.setRangeText('', at, end, 'start');
-                dirty = true; drawStrip(); say('画像を本文から外しました。画像そのものは画像一覧に残ります。');
+                dirty = true; drawStrip(); say(t('画像を本文から外しました。画像そのものは画像一覧に残ります。'));
             });
             item.append(show, remove); strip.append(item);
         });
-        const add = tile('log-page-image-add', '画像を追加', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>');
+        const add = tile('log-page-image-add', t('画像を追加'), '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>');
         add.addEventListener('click', () => picker.click());
-        const pick = tile('log-page-image-add', '画像一覧から選ぶ', '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/></svg>');
+        const pick = tile('log-page-image-add', t('画像一覧から選ぶ'), '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/></svg>');
         pick.addEventListener('click', openPicker);
         strip.append(add, pick);
     }
@@ -203,7 +206,7 @@
         if (loading) return;
         loading = true;
         if (reset) { pickPage = 1; grid.replaceChildren(); }
-        pickStatus.textContent = '読み込んでいます…'; pickStatus.classList.add('log-busy'); more.hidden = true;
+        pickStatus.textContent = t('読み込んでいます…'); pickStatus.classList.add('log-busy'); more.hidden = true;
         try {
             const url = new URL('index.php', location.href);
             url.search = new URLSearchParams({ p: 'log_media_json', page: String(pickPage), q: pickQuery }).toString();
@@ -211,20 +214,20 @@
             const data = await r.json();
             data.items.forEach(m => {
                 known[m.id] = m;
-                const b = tile('log-page-pick', (m.alt || '画像') + 'を本文に入れる', '');
+                const b = tile('log-page-pick', t('{name}を本文に入れる', { name: m.alt || t('画像') }), '');
                 const img = document.createElement('img'); img.src = m.thumb; img.alt = ''; img.loading = 'lazy';
-                const name = document.createElement('span'); name.textContent = m.alt || '画像';
+                const name = document.createElement('span'); name.textContent = m.alt || t('画像');
                 b.append(img, name);
                 b.addEventListener('click', () => {
                     dialog.close();
                     insert(lineStart() + '![' + String(m.alt || '').replace(/[[\]]/g, '') + '](' + publicUrl(m) + ')\n');
-                    drawStrip(); say('画像を入れました。[ ] の中は画像の説明（alt）です。');
+                    drawStrip(); say(t('画像を入れました。[ ] の中は画像の説明（alt）です。'));
                 });
                 grid.append(b);
             });
             more.hidden = !data.more; pickPage++;
-            pickStatus.textContent = grid.children.length ? '選ぶと、本文のカーソルの位置に入ります。' : (pickQuery ? '見つかりませんでした。' : 'まだ画像がありません。「画像を追加」から追加できます。');
-        } catch { pickStatus.textContent = '読み込めませんでした。ログインが切れた可能性があります。'; }
+            pickStatus.textContent = grid.children.length ? t('選ぶと、本文のカーソルの位置に入ります。') : (pickQuery ? t('見つかりませんでした。') : t('まだ画像がありません。「画像を追加」から追加できます。'));
+        } catch { pickStatus.textContent = t('読み込めませんでした。ログインが切れた可能性があります。'); }
         finally { loading = false; pickStatus.classList.remove('log-busy'); }
     }
     function openPicker() { dialog.showModal(); if (!grid.children.length) loadPicks(true); search.focus(); }
@@ -241,12 +244,12 @@
         previewButton.setAttribute('aria-pressed', String(on));
         if (!on) { preview.hidden = true; return; }
         const data = new FormData(); data.set('do', 'log_page_preview'); data.set('title', form.elements.title.value); data.set('body', body.value);
-        say('プレビューを作っています…');
+        say(t('プレビューを作っています…'));
         try {
             const { html } = await send(data);
             preview.innerHTML = html; preview.hidden = false;
             window.NagiSwipe?.init();
-            say('プレビューです。公開ページでは、ページの幅の設定に合わせて表示します。');
+            say(t('プレビューです。公開ページでは、ページの幅の設定に合わせて表示します。'));
         } catch (e) { previewButton.setAttribute('aria-pressed', 'false'); say(e.message, true); }
     });
     body.addEventListener('input', () => { if (!preview.hidden) { preview.hidden = true; previewButton.setAttribute('aria-pressed', 'false'); } });
@@ -257,11 +260,11 @@
         if (!form.reportValidity()) return;
         const data = new FormData(form);
         data.set('status', event.submitter?.value || 'draft');
-        saving = true; form.inert = true; say('保存しています…');
+        saving = true; form.inert = true; say(t('保存しています…'));
         try {
             const { redirect } = await send(data);
             dirty = false; location.href = redirect;
-        } catch (e) { saving = false; say(e.message + ' 入力した内容はこの画面に残っています。', true); }
+        } catch (e) { saving = false; say(e.message + ' ' + t('入力した内容はこの画面に残っています。'), true); }
         finally { form.inert = false; }
     });
 })();

@@ -34,26 +34,26 @@ const NL_SVG_FORBIDDEN = ['script', 'foreignobject', 'iframe', 'embed', 'object'
  */
 function nl_svg_clean(string $bytes): array|string
 {
-    if ($bytes === '' || strlen($bytes) > NL_SVG_MAX_BYTES) return 'SVGは2MBまでにしてください';
-    if (str_starts_with($bytes, "\x1f\x8b")) return '圧縮されたSVG（SVGZ）は使えません。通常のSVGで保存し直してください';
+    if ($bytes === '' || strlen($bytes) > NL_SVG_MAX_BYTES) return nm_t('SVGは2MBまでにしてください');
+    if (str_starts_with($bytes, "\x1f\x8b")) return nm_t('圧縮されたSVG（SVGZ）は使えません。通常のSVGで保存し直してください');
     // A DOCTYPE can declare entities (outside files, "billion laughs"); plain drawing never needs one.
-    if (preg_match('/<!DOCTYPE|<!ENTITY/i', $bytes)) return 'DOCTYPE・ENTITY宣言の入ったSVGは使えません（外部ファイルの読み込みに使われるため）';
-    if (!class_exists('DOMDocument')) return 'SVGを確認するには、PHPのDOM拡張が必要です';
+    if (preg_match('/<!DOCTYPE|<!ENTITY/i', $bytes)) return nm_t('DOCTYPE・ENTITY宣言の入ったSVGは使えません（外部ファイルの読み込みに使われるため）');
+    if (!class_exists('DOMDocument')) return nm_t('SVGを確認するには、PHPのDOM拡張が必要です');
     $doc = new DOMDocument();
     $before = libxml_use_internal_errors(true);
     try { $ok = $doc->loadXML($bytes, LIBXML_NONET | LIBXML_NOCDATA | LIBXML_COMPACT); }
     finally { libxml_clear_errors(); libxml_use_internal_errors($before); }
     $root = $ok ? $doc->documentElement : null;
-    if (!$root || $root->localName !== 'svg' || $root->namespaceURI !== NL_SVG_NS) return 'SVGとして読めませんでした（ルートが<svg>で、xmlns="http://www.w3.org/2000/svg"のファイルを選んでください）';
+    if (!$root || $root->localName !== 'svg' || $root->namespaceURI !== NL_SVG_NS) return nm_t('SVGとして読めませんでした（ルートが{root}で、{ns}のファイルを選んでください）', ['root' => '<svg>', 'ns' => 'xmlns="http://www.w3.org/2000/svg"']);
     $found = nl_svg_check($doc);
-    if ($found) return 'このSVGは安全のため使えません：' . implode('、', array_slice(array_unique($found), 0, 5));
+    if ($found) return nm_t('このSVGは安全のため使えません：{reasons}', ['reasons' => implode(nm_t('、'), array_slice(array_unique($found), 0, 5))]);
     [$w, $h] = nl_svg_size($root);
-    if ($w < 1 || $h < 1) return 'SVGの大きさが分かりません。width・height か viewBox を指定してください';
+    if ($w < 1 || $h < 1) return nm_t('SVGの大きさが分かりません。width・height か viewBox を指定してください');
     $out = new DOMDocument('1.0', 'UTF-8');
     $dropped = [];
     $out->appendChild(nl_svg_copy($root, $out, $dropped));
     $svg = $out->saveXML($out->documentElement);
-    if ($svg === false || strlen($svg) > NL_SVG_MAX_BYTES) return 'SVGを書き出せませんでした';
+    if ($svg === false || strlen($svg) > NL_SVG_MAX_BYTES) return nm_t('SVGを書き出せませんでした');
     return ['svg' => '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . $svg . "\n", 'w' => $w, 'h' => $h, 'dropped' => array_values(array_unique($dropped))];
 }
 
@@ -62,29 +62,29 @@ function nl_svg_check(DOMDocument $doc): array
 {
     $found = []; $nodes = 0;
     $walk = static function (DOMNode $node, int $depth) use (&$walk, &$found, &$nodes): void {
-        if (++$nodes > NL_SVG_MAX_NODES || $depth > 200) { $found[] = '要素が多すぎるか、入れ子が深すぎます'; return; }
-        if ($node instanceof DOMProcessingInstruction) { $found[] = '処理命令 <?' . $node->target . '?>（外部スタイルシートの読み込みなど）'; return; }
+        if (++$nodes > NL_SVG_MAX_NODES || $depth > 200) { $found[] = nm_t('要素が多すぎるか、入れ子が深すぎます'); return; }
+        if ($node instanceof DOMProcessingInstruction) { $found[] = nm_t('処理命令 {pi}（外部スタイルシートの読み込みなど）', ['pi' => '<?' . $node->target . '?>']); return; }
         if (!$node instanceof DOMElement) return;
         $name = strtolower($node->localName ?? '');
         $ns = (string)$node->namespaceURI;
         if (in_array($name, NL_SVG_FORBIDDEN, true) && ($ns === NL_SVG_NS || $ns === 'http://www.w3.org/1999/xhtml' || $ns === '')) {
-            $found[] = match ($name) { 'script' => '<script>（プログラム）', 'foreignobject' => '<foreignObject>（HTMLの埋め込み）', default => '<' . $name . '>' };
+            $found[] = match ($name) { 'script' => nm_t('{element}（プログラム）', ['element' => '<script>']), 'foreignobject' => nm_t('{element}（HTMLの埋め込み）', ['element' => '<foreignObject>']), default => '<' . $name . '>' };
             return;
         }
-        if ($ns === 'http://www.w3.org/1999/xhtml') { $found[] = 'HTMLの要素 <' . $name . '>'; return; }
+        if ($ns === 'http://www.w3.org/1999/xhtml') { $found[] = nm_t('HTMLの要素 {element}', ['element' => '<' . $name . '>']); return; }
         foreach ($node->attributes ?? [] as $attr) {
             $attrName = strtolower($attr->localName);
             $value = (string)$attr->value;
             $plain = (string)preg_replace('/[\x00-\x20]+/', '', html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-            if (str_starts_with($attrName, 'on')) { $found[] = $attrName . '属性（イベントで動くプログラム）'; continue; }
-            if (preg_match('/(?:java|vb)script:|data:text\/html|data:application/i', $plain)) { $found[] = $attrName . '属性の中のスクリプトURL'; continue; }
+            if (str_starts_with($attrName, 'on')) { $found[] = nm_t('{attr}属性（イベントで動くプログラム）', ['attr' => $attrName]); continue; }
+            if (preg_match('/(?:java|vb)script:|data:text\/html|data:application/i', $plain)) { $found[] = nm_t('{attr}属性の中のスクリプトURL', ['attr' => $attrName]); continue; }
             // A link (<a>) is unwrapped when the file is written out; only the targets of drawing are limited to the file.
-            if ($attrName === 'href' && $name !== 'a' && !nl_svg_href_ok($value, $name)) { $found[] = '<' . $node->localName . '> の外部への参照（' . mb_strimwidth($value, 0, 40, '…', 'UTF-8') . '）'; continue; }
-            if (in_array($attrName, ['attributename', 'attributetype'], true) && preg_match('/\A\s*(?:xlink:)?href\s*\z|\A\s*on/i', $value)) { $found[] = 'リンク先やイベントを書き換えるアニメーション'; continue; }
-            if ($attrName === 'style' && ($why = nl_svg_css_problem($value)) !== '') { $found[] = 'style属性の' . $why; continue; }
-            if ($attrName !== 'style' && stripos($value, 'url(') !== false && ($why = nl_svg_css_problem($value)) !== '') $found[] = $attrName . '属性の' . $why;
+            if ($attrName === 'href' && $name !== 'a' && !nl_svg_href_ok($value, $name)) { $found[] = nm_t('{element} の外部への参照（{value}）', ['element' => '<' . $node->localName . '>', 'value' => mb_strimwidth($value, 0, 40, '…', 'UTF-8')]); continue; }
+            if (in_array($attrName, ['attributename', 'attributetype'], true) && preg_match('/\A\s*(?:xlink:)?href\s*\z|\A\s*on/i', $value)) { $found[] = nm_t('リンク先やイベントを書き換えるアニメーション'); continue; }
+            if ($attrName === 'style' && ($why = nl_svg_css_problem($value)) !== '') { $found[] = nm_t('style属性の{why}', ['why' => $why]); continue; }
+            if ($attrName !== 'style' && stripos($value, 'url(') !== false && ($why = nl_svg_css_problem($value)) !== '') $found[] = nm_t('{attr}属性の{why}', ['attr' => $attrName, 'why' => $why]);
         }
-        if ($name === 'style' && ($why = nl_svg_css_problem($node->textContent)) !== '') $found[] = '<style>の' . $why;
+        if ($name === 'style' && ($why = nl_svg_css_problem($node->textContent)) !== '') $found[] = nm_t('{element}の{why}', ['element' => '<style>', 'why' => $why]);
         foreach ($node->childNodes as $child) $walk($child, $depth + 1);
     };
     foreach ($doc->childNodes as $child) $walk($child, 0);
@@ -103,16 +103,16 @@ function nl_svg_href_ok(string $value, string $element): bool
 function nl_svg_css_problem(string $css): string
 {
     // Escapes can spell any word (u\72l, \40import); drawing CSS never needs them.
-    if (str_contains($css, '\\')) return 'エスケープされた文字';
+    if (str_contains($css, '\\')) return nm_t('エスケープされた文字');
     $flat = strtolower((string)preg_replace('/\/\*.*?\*\//s', '?', $css));
-    if (str_contains($flat, '@import')) return '@import（外部スタイルシート）';
-    if (preg_match('/expression\s*\(|javascript:|vbscript:|-moz-binding|behavior\s*:/', $flat)) return 'スクリプト';
-    if (preg_match('/image-set\s*\(|(?<![\w-])(?:src|image)\s*\(/', $flat)) return '外部への参照';
+    if (str_contains($flat, '@import')) return nm_t('@import（外部スタイルシート）');
+    if (preg_match('/expression\s*\(|javascript:|vbscript:|-moz-binding|behavior\s*:/', $flat)) return nm_t('スクリプト');
+    if (preg_match('/image-set\s*\(|(?<![\w-])(?:src|image)\s*\(/', $flat)) return nm_t('外部への参照');
     if (preg_match_all('/url\s*\(\s*([\'"]?)(.*?)\1\s*\)/s', $flat, $m)) {
-        foreach ($m[2] as $url) if (!preg_match('/\A#[\w.:-]+\z/', trim($url)) && !preg_match('~\Adata:image/(?:png|jpeg|gif|webp);base64,~', trim($url))) return '外部への参照 url(' . mb_strimwidth(trim($url), 0, 30, '…', 'UTF-8') . ')';
+        foreach ($m[2] as $url) if (!preg_match('/\A#[\w.:-]+\z/', trim($url)) && !preg_match('~\Adata:image/(?:png|jpeg|gif|webp);base64,~', trim($url))) return nm_t('外部への参照 url({url})', ['url' => mb_strimwidth(trim($url), 0, 30, '…', 'UTF-8')]);
     }
     // An unclosed url( would still load what follows.
-    if (preg_match('/url\s*\(/', (string)preg_replace('/url\s*\(\s*([\'"]?)(.*?)\1\s*\)/s', '', $flat))) return '閉じていない url(';
+    if (preg_match('/url\s*\(/', (string)preg_replace('/url\s*\(\s*([\'"]?)(.*?)\1\s*\)/s', '', $flat))) return nm_t('閉じていない url(');
     return '';
 }
 
@@ -190,7 +190,7 @@ function nl_svg_store(string $bytes, string $dir): array|string
         if (file_put_contents($part, $svg['svg']) !== strlen($svg['svg']) || !@rename($part, $path)) {
             @unlink($part);
             nl_delete_media_files($dir, $file);
-            return 'SVGを保存できませんでした';
+            return nm_t('SVGを保存できませんでした');
         }
         @chmod($path, 0644);
     }

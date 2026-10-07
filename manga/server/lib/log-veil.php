@@ -58,20 +58,20 @@ function nl_warning_presets(mixed $list): array
 function nl_rating_input(array $input): array
 {
     $raw = $input['rating'] ?? '';
-    if (!is_string($raw) || ($raw !== '' && !isset(NL_RATINGS[$raw]))) throw new UnexpectedValueException('閲覧注意を選び直してください');
+    if (!is_string($raw) || ($raw !== '' && !isset(NL_RATINGS[$raw]))) throw new UnexpectedValueException(nm_t('閲覧注意を選び直してください'));
     $warning = $input['warning'] ?? '';
-    if (!is_string($warning) || !mb_check_encoding($warning, 'UTF-8')) throw new UnexpectedValueException('注意書きを確認してください');
+    if (!is_string($warning) || !mb_check_encoding($warning, 'UTF-8')) throw new UnexpectedValueException(nm_t('注意書きを確認してください'));
     return [$raw, nl_warning_text($warning)];
 }
 /** Image ratings sent with a post: {"<image id>": "<rating>"}, only for images in that post. */
 function nl_media_ratings_input(mixed $raw, array $media): array
 {
     if (is_string($raw)) $raw = $raw === '' ? [] : json_decode($raw, true);
-    if (!is_array($raw) || count($raw) > 500) throw new UnexpectedValueException('画像の閲覧注意を選び直してください');
+    if (!is_array($raw) || count($raw) > 500) throw new UnexpectedValueException(nm_t('画像の閲覧注意を選び直してください'));
     $out = [];
     foreach ($raw as $id => $rating) {
         $id = (string)$id;
-        if (!nl_valid_media($id) || !is_string($rating) || ($rating !== '' && !isset(NL_RATINGS[$rating]))) throw new UnexpectedValueException('画像の閲覧注意を選び直してください');
+        if (!nl_valid_media($id) || !is_string($rating) || ($rating !== '' && !isset(NL_RATINGS[$rating]))) throw new UnexpectedValueException(nm_t('画像の閲覧注意を選び直してください'));
         if (in_array($id, $media, true)) $out[$id] = $rating;
     }
     return $out;
@@ -100,12 +100,12 @@ function nl_veil_icon(): string
 }
 function nl_veil_badge(string $rating, string $class = 'log-veil-badge'): string
 {
-    return $rating === '' ? '' : '<span class="' . $class . '" data-veil="' . h($rating) . '">' . h(nl_rating_label($rating)) . '</span>';
+    return $rating === '' ? '' : '<span class="' . $class . '" data-veil="' . h($rating) . '">' . h(nm_t(nl_rating_label($rating))) . '</span>';
 }
 /** The cover text: badge, the post's note (or the default for the rating) and what tapping does. */
 function nl_veil_label(string $rating, string $warning, string $action): string
 {
-    $note = $warning !== '' ? $warning : ['sensitive' => 'センシティブな内容を含みます', 'r18g' => 'グロテスクな表現を含みます', 'r18' => '18歳未満の方は閲覧できません'][$rating];
+    $note = $warning !== '' ? $warning : ['sensitive' => nm_t('センシティブな内容を含みます'), 'r18g' => nm_t('グロテスクな表現を含みます'), 'r18' => nm_t('18歳未満の方は閲覧できません')][$rating];
     return '<span class="log-veil-label">' . nl_veil_icon() . nl_veil_badge($rating) . '<span class="log-veil-note">' . h($note) . '</span><span class="log-veil-show">' . $action . '</span></span>';
 }
 /**
@@ -116,21 +116,21 @@ function nl_veil_figure(array $im, string $rating, string $warning, bool $admin)
 {
     $size = ' width="' . (int)$im['w'] . '" height="' . (int)$im['h'] . '"';
     return '<details class="log-veil log-veil-image" data-veil="' . h($rating) . '"><summary class="log-veil-cover"><img class="log-veil-shade" src="' . h(nl_media_url($im, true, $admin)) . '"' . $size . ' alt="" loading="lazy" decoding="async">'
-        . nl_veil_label($rating, $warning, '押して表示') . '</summary>'
+        . nl_veil_label($rating, $warning, nm_t('押して表示')) . '</summary>'
         . '<figure class="log-figure"><a class="imagelink" data-veil-href="' . h(nl_media_url($im, false, $admin)) . '" data-ns-width="' . (int)$im['w'] . '" data-ns-height="' . (int)$im['h'] . '"><img src="' . h(nl_media_url($im, true, $admin)) . '"' . $size . ' alt="' . h($im['alt']) . '" loading="lazy"></a></figure></details>';
 }
 /** R-18 / R-18G: the whole body folds under one cover. Its image links wait like nl_veil_figure's. */
 function nl_veil_post(string $rating, string $warning, string $body): string
 {
     $body = (string)preg_replace('/<a class="imagelink" href=/', '<a class="imagelink" data-veil-href=', $body);
-    return '<details class="log-veil log-veil-post" data-veil="' . h($rating) . '"><summary class="log-veil-cover">' . nl_veil_label($rating, $warning, '本文と画像を表示する') . '</summary>' . $body . '</details>';
+    return '<details class="log-veil log-veil-post" data-veil="' . h($rating) . '"><summary class="log-veil-cover">' . nl_veil_label($rating, $warning, nm_t('本文と画像を表示する')) . '</summary>' . $body . '</details>';
 }
 /** In the admin screens and previews: a plain line saying what readers will see first. */
 function nl_veil_admin_note(array $p): string
 {
     $rating = nl_post_rating($p);
     if ($rating === '') return '';
-    $how = nl_rating_folds($rating) ? '読者には本文を折りたたんで表示します' : '読者には画像をぼかして表示します';
+    $how = nl_rating_folds($rating) ? nm_t('読者には本文を折りたたんで表示します') : nm_t('読者には画像をぼかして表示します');
     return '<p class="log-veil-admin" data-veil="' . h($rating) . '">' . nl_veil_icon() . nl_veil_badge($rating) . '<span>' . h(nl_warning_text($p['warning'] ?? '')) . '</span><small>' . $how . '</small></p>';
 }
 /** The description of a folded post for share cards, search results and RSS (its text stays folded). */
@@ -139,5 +139,5 @@ function nl_veil_description(array $p): string
     $rating = nl_post_rating($p);
     if (!nl_rating_folds($rating)) return '';
     $warning = nl_warning_text($p['warning'] ?? '');
-    return '閲覧注意（' . nl_rating_label($rating) . '）の記事です。' . ($warning !== '' ? $warning : '');
+    return nm_t('閲覧注意（{rating}）の記事です。', ['rating' => nm_t(nl_rating_label($rating))]) . ($warning !== '' ? $warning : '');
 }

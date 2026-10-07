@@ -1,13 +1,16 @@
 /* LOG theme and icon previews. MIT License (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const form = document.querySelector('[data-log-settings]');
     if (!form) return;
     const themes = new Set(['light-blue', 'light-sage', 'light-paper', 'dark-navy', 'dark-charcoal', 'dark-plum']);
     form.querySelectorAll('[name="theme"]').forEach(input => input.addEventListener('change', () => {
         if (input.checked && themes.has(input.value)) document.documentElement.dataset.logTheme = input.value;
     }));
-    [['icon', '.log-icon-preview', 'log-settings-avatar', '選んだアイコン'], ['og_image', '.log-og-preview', '', '選んだ紹介画像']].forEach(([name, selector, className, alt]) => {
+    [['icon', '.log-icon-preview', 'log-settings-avatar', t('選んだアイコン')], ['og_image', '.log-og-preview', '', t('選んだ紹介画像')]].forEach(([name, selector, className, alt]) => {
         const file = form.querySelector(`[name="${name}"]`), preview = form.querySelector(selector);
         let url = '';
         file.addEventListener('change', () => {
@@ -27,14 +30,17 @@
  */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const form = document.querySelector('[data-sidebar-manager]');
     if (!form) return;
     const group = form.querySelector('[data-sidebar-items]');
     const status = form.querySelector('[data-sidebar-status]');
     let dragging = null, before = null, pointer = null;
     const rows = () => Array.from(group.children);
-    const dirty = () => { status.textContent = '未保存の変更があります。画面の下の「設定を保存」で反映します。'; form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
-    const count = editor => { editor.closest('[data-sidebar-item]').querySelector('[data-sidebar-chip]').textContent = `${editor.querySelector('[data-link-items]').children.length}件のリンク`; };
+    const dirty = () => { status.textContent = t('未保存の変更があります。画面の下の「設定を保存」で反映します。'); form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
+    const count = editor => { editor.closest('[data-sidebar-item]').querySelector('[data-sidebar-chip]').textContent = t('{n}件のリンク', { n: editor.querySelector('[data-link-items]').children.length }); };
     const preview = select => {
         const source = select.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelector(`[data-link-icon-source="${select.value}"] svg`);
         if (source) select.closest('[data-link-item]').querySelector('[data-link-preview]').replaceChildren(source.cloneNode(true));
@@ -51,15 +57,15 @@
     };
     const label = row => {
         if (!row || row.dataset.sidebarKind !== 'html') return;
-        const text = row.querySelector('[data-sidebar-title]').value.trim() || 'HTML枠（見出しなし）';
+        const text = row.querySelector('[data-sidebar-title]').value.trim() || t('HTML枠（見出しなし）');
         row.querySelector('[data-sidebar-label]').textContent = text;
-        row.querySelector('.log-sort-handle').setAttribute('aria-label', `${text}をドラッグして移動`);
+        row.querySelector('.log-sort-handle').setAttribute('aria-label', t('{name}をドラッグして移動', { name: text }));
     };
     const end = cancel => {
         if (!dragging) return;
         dragging.classList.remove('log-sort-dragging');
         dragging = null; pointer = null;
-        if (cancel) { before.forEach(row => group.append(row)); status.textContent = '今回の並び替えを取り消しました。'; }
+        if (cancel) { before.forEach(row => group.append(row)); status.textContent = t('今回の並び替えを取り消しました。'); }
         else dirty();
         before = null; buttons();
     };
@@ -98,31 +104,31 @@
         const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text) n.textContent = text; return n; };
         const dialog = el('dialog', 'log-login-confirm');
         dialog.setAttribute('aria-labelledby', 'log-login-confirm-title');
-        const title = el('h2', '', '管理用URLをブックマークしましたか？'); title.id = 'log-login-confirm-title';
-        const lead = el('p', '', '「ログイン」のリンクを隠すと、公開ページから管理画面に入れなくなります。次のURLから入れるように、ブックマークしてから隠してください。');
-        const url = el('input', 'log-login-confirm-url'); url.readOnly = true; url.value = loginUrl; url.setAttribute('aria-label', '管理用URL');
-        const copy = el('button', 'btn', 'URLをコピー'); copy.type = 'button';
-        const open = el('a', 'btn', '新しいタブで開く'); open.href = loginUrl; open.target = '_blank'; open.rel = 'noopener';
+        const title = el('h2', '', t('管理用URLをブックマークしましたか？')); title.id = 'log-login-confirm-title';
+        const lead = el('p', '', t('「ログイン」のリンクを隠すと、公開ページから管理画面に入れなくなります。次のURLから入れるように、ブックマークしてから隠してください。'));
+        const url = el('input', 'log-login-confirm-url'); url.readOnly = true; url.value = loginUrl; url.setAttribute('aria-label', t('管理用URL'));
+        const copy = el('button', 'btn', t('URLをコピー')); copy.type = 'button';
+        const open = el('a', 'btn', t('新しいタブで開く')); open.href = loginUrl; open.target = '_blank'; open.rel = 'noopener';
         const tools = el('div', 'log-login-confirm-tools'); tools.append(copy, open);
-        const note = el('p', 'note', 'このURLは「設定 → 共通・安全 → ログイン URL」でも確認できます。'); note.setAttribute('role', 'status');
-        const yes = el('button', 'btn danger', 'ブックマークした（隠す）'); yes.type = 'button';
-        const no = el('button', 'btn primary', 'まだ（表示したままにする）'); no.type = 'button';
+        const note = el('p', 'note', t('このURLは「設定 → 共通・安全 → ログイン URL」でも確認できます。')); note.setAttribute('role', 'status');
+        const yes = el('button', 'btn danger', t('ブックマークした（隠す）')); yes.type = 'button';
+        const no = el('button', 'btn primary', t('まだ（表示したままにする）')); no.type = 'button';
         const actions = el('div', 'log-login-confirm-actions'); actions.append(no, yes);
         dialog.append(title, lead, url, tools, note, actions);
         document.body.append(dialog);
         copy.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(loginUrl); note.textContent = 'コピーしました。ブックマークやメモに保存してください。'; }
-            catch { url.select(); note.textContent = 'URLを選びました。Ctrl+C（スマホは長押し）でコピーしてください。'; }
+            try { await navigator.clipboard.writeText(loginUrl); note.textContent = t('コピーしました。ブックマークやメモに保存してください。'); }
+            catch { url.select(); note.textContent = t('URLを選びました。Ctrl+C（スマホは長押し）でコピーしてください。'); }
         });
         yes.addEventListener('click', () => {
             loginSwitch.checked = false; dirty();
-            status.textContent = '「ログイン・管理ページ」を隠します。画面の下の「設定を保存」で反映します。';
+            status.textContent = t('「ログイン・管理ページ」を隠します。画面の下の「設定を保存」で反映します。');
             dialog.close();
         });
         no.addEventListener('click', () => dialog.close('keep'));
         dialog.addEventListener('cancel', () => { dialog.returnValue = 'keep'; });
         dialog.addEventListener('close', () => {
-            if (dialog.returnValue === 'keep') status.textContent = '「ログイン・管理ページ」は表示したままにしました。ブックマークしてから、もう一度オフにしてください。';
+            if (dialog.returnValue === 'keep') status.textContent = t('「ログイン・管理ページ」は表示したままにしました。ブックマークしてから、もう一度オフにしてください。');
             dialog.returnValue = ''; loginSwitch.focus();
         });
         // Intercept before the switch changes; turning it back on needs no question.
@@ -130,7 +136,7 @@
             // During the click the box already shows its new state: checked means it is being turned on.
             if (loginSwitch.checked) return;
             event.preventDefault();
-            note.textContent = 'このURLは「設定 → 共通・安全 → ログイン URL」でも確認できます。';
+            note.textContent = t('このURLは「設定 → 共通・安全 → ログイン URL」でも確認できます。');
             dialog.showModal(); no.focus();
         });
     }
@@ -194,6 +200,9 @@
 /* RSS: the chosen range fills the URL field; the Copy button beside it copies it. */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const box = document.querySelector('[data-rss-builder]');
     if (!box) return;
     const select = box.querySelector('[data-rss-select]'), field = box.querySelector('[data-rss-url]');
@@ -207,6 +216,9 @@
  */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     // The top menu and the footer links share this editor.
     document.querySelectorAll('[data-topmenu-manager]').forEach(setup);
     function setup(form) {
@@ -220,7 +232,7 @@
     const fold = text => text.normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
     let dragging = null, before = null, pointer = null;
     const rows = () => Array.from(group.children);
-    const dirty = () => { status.textContent = '未保存の変更があります。画面の下の「設定を保存」で反映します。'; form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
+    const dirty = () => { status.textContent = t('未保存の変更があります。画面の下の「設定を保存」で反映します。'); form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
     const buttons = () => {
         rows().forEach((row, i, all) => {
             row.querySelector('[data-topmenu-step="-1"]').disabled = i === 0;
@@ -229,17 +241,17 @@
         empty.hidden = rows().length > 0;
         form.querySelector('[data-topmenu-add]').disabled = rows().length >= 30;
     };
-    const name = row => row.querySelector('[data-topmenu-label]').value.trim() || '新しい項目';
+    const name = row => row.querySelector('[data-topmenu-label]').value.trim() || t('新しい項目');
     const relabel = row => {
-        row.querySelector('.log-sort-handle').setAttribute('aria-label', name(row) + 'をドラッグして移動');
-        row.querySelector('[data-topmenu-enabled]').setAttribute('aria-label', name(row) + 'を表示する');
-        row.querySelector('[data-topmenu-remove]').setAttribute('aria-label', name(row) + 'を外す');
+        row.querySelector('.log-sort-handle').setAttribute('aria-label', t('{name}をドラッグして移動', { name: name(row) }));
+        row.querySelector('[data-topmenu-enabled]').setAttribute('aria-label', t('{name}を表示する', { name: name(row) }));
+        row.querySelector('[data-topmenu-remove]').setAttribute('aria-label', t('{name}を外す', { name: name(row) }));
     };
     const end = cancel => {
         if (!dragging) return;
         dragging.classList.remove('log-sort-dragging');
         dragging = null; pointer = null;
-        if (cancel) { before.forEach(row => group.append(row)); status.textContent = '今回の並び替えを取り消しました。'; }
+        if (cancel) { before.forEach(row => group.append(row)); status.textContent = t('今回の並び替えを取り消しました。'); }
         else dirty();
         before = null; buttons();
     };
@@ -277,7 +289,7 @@
         row.querySelector('[data-topmenu-label]').value = item.t;
         row.querySelector('[data-topmenu-url]').value = item.u;
         close(row); relabel(row); dirty();
-        status.textContent = '「' + item.t + '」（' + item.k + '）のリンク先を入れました：' + item.u;
+        status.textContent = t('「{name}」（{kind}）のリンク先を入れました：{url}', { name: item.t, kind: item.k, url: item.u });
     };
     const suggest = row => {
         const input = row.querySelector('[data-topmenu-label]'), list = box(row);
@@ -343,7 +355,7 @@
             const row = remove.closest('[data-topmenu-item]'), next = row.nextElementSibling || row.previousElementSibling;
             row.remove(); buttons();
             (next?.querySelector('[data-topmenu-label]') || form.querySelector('[data-topmenu-add]')).focus();
-            dirty(); status.textContent = '「' + name(row) + '」を外しました。保存するまでは、画面を読み込み直すと元に戻せます。';
+            dirty(); status.textContent = t('「{name}」を外しました。保存するまでは、画面を読み込み直すと元に戻せます。', { name: name(row) });
             return;
         }
         if (event.target.closest('[data-topmenu-add]') && template) {

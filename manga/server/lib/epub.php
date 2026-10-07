@@ -30,22 +30,22 @@ const NM_EPUB_MAX_IMAGE = 60 * 1024 * 1024;
  */
 function nm_epub_inspect(ZipArchive $zip): array|string
 {
-    if ($zip->numFiles > 20000) return 'ファイル数が多すぎます';
+    if ($zip->numFiles > 20000) return nm_t('ファイル数が多すぎます');
     if ($zip->locateName('META-INF/encryption.xml') !== false) {
-        return 'この EPUB は暗号化（DRM）されているため読めません。自分で書き出した EPUB を使ってください';
+        return nm_t('この EPUB は暗号化（DRM）されているため読めません。自分で書き出した EPUB を使ってください');
     }
 
     // container.xml -> the package document (OPF)
     $container = nm_epub_xml($zip, 'META-INF/container.xml');
-    if (!$container) return 'EPUB として読めません（container.xml がありません）';
+    if (!$container) return nm_t('EPUB として読めません（container.xml がありません）');
     $opfPath = '';
     foreach ($container->getElementsByTagName('rootfile') as $rf) {
         $opfPath = nm_epub_path('', (string)$rf->getAttribute('full-path'));
         if ($opfPath !== null && $opfPath !== '') break;
     }
-    if (!$opfPath) return 'EPUB として読めません（目録が見つかりません）';
+    if (!$opfPath) return nm_t('EPUB として読めません（目録が見つかりません）');
     $opf = nm_epub_xml($zip, $opfPath);
-    if (!$opf) return 'EPUB の目録を読めません';
+    if (!$opf) return nm_t('EPUB の目録を読めません');
     $opfDir = str_contains($opfPath, '/') ? substr($opfPath, 0, strrpos($opfPath, '/') + 1) : '';
 
     $title = '';
@@ -68,7 +68,7 @@ function nm_epub_inspect(ZipArchive $zip): array|string
     }
 
     $spine = $opf->getElementsByTagName('spine')->item(0);
-    if (!$spine) return 'EPUB の目録にページの順番がありません';
+    if (!$spine) return nm_t('EPUB の目録にページの順番がありません');
     $ppd = strtolower((string)$spine->getAttribute('page-progression-direction'));
     $direction = $ppd === 'ltr' ? 'ltr' : 'rtl';
 
@@ -82,9 +82,9 @@ function nm_epub_inspect(ZipArchive $zip): array|string
         $index = $zip->locateName($img);
         if ($index === false) continue;
         $pages[] = ['entry' => $img, 'index' => $index];
-        if (count($pages) > NM_EPUB_MAX_PAGES) return 'ページが多すぎます（' . NM_EPUB_MAX_PAGES . ' ページまで）';
+        if (count($pages) > NM_EPUB_MAX_PAGES) return nm_t('ページが多すぎます（{n} ページまで）', ['n' => NM_EPUB_MAX_PAGES]);
     }
-    if (!$pages) return '画像のページが見つかりません（文章だけの EPUB には対応していません）';
+    if (!$pages) return nm_t('画像のページが見つかりません（文章だけの EPUB には対応していません）');
 
     return ['title' => mb_substr($title, 0, 200), 'direction' => $direction, 'pages' => $pages];
 }
@@ -180,11 +180,11 @@ function nm_epub_xml(ZipArchive $zip, string $name): ?DOMDocument
  */
 function nm_epub_import(string $epubPath, string $titleOverride, string $series, array $cfg): array|string
 {
-    if (!class_exists('ZipArchive')) return 'サーバーの PHP に ZipArchive がありません';
+    if (!class_exists('ZipArchive')) return nm_t('サーバーの PHP に ZipArchive がありません');
     @set_time_limit(0);
 
     $zip = new ZipArchive();
-    if ($zip->open($epubPath, ZipArchive::RDONLY) !== true) return 'EPUB（ZIP）として開けません';
+    if ($zip->open($epubPath, ZipArchive::RDONLY) !== true) return nm_t('EPUB（ZIP）として開けません');
     try {
         $book = nm_epub_inspect($zip);
         if (is_string($book)) return $book;
@@ -222,7 +222,7 @@ function nm_epub_import(string $epubPath, string $titleOverride, string $series,
 
         if (!$pages) {
             nm_rmdir_recursive(nm_work_dir($id));
-            return '取り込める画像がありませんでした';
+            return nm_t('取り込める画像がありませんでした');
         }
         nm_save_work([
             'id' => $id,
@@ -248,13 +248,13 @@ function nm_epub_import(string $epubPath, string $titleOverride, string $series,
  */
 function nm_epub_attach_light(string $id, string $epubPath, array $cfg): array|string
 {
-    if (!class_exists('ZipArchive')) return 'サーバーの PHP に ZipArchive がありません';
+    if (!class_exists('ZipArchive')) return nm_t('サーバーの PHP に ZipArchive がありません');
     $work = nm_load_work($id);
-    if (!$work) return '作品が見つかりません';
+    if (!$work) return nm_t('作品が見つかりません');
     @set_time_limit(0);
 
     $zip = new ZipArchive();
-    if ($zip->open($epubPath, ZipArchive::RDONLY) !== true) return 'EPUB（ZIP）として開けません';
+    if ($zip->open($epubPath, ZipArchive::RDONLY) !== true) return nm_t('EPUB（ZIP）として開けません');
     try {
         $book = nm_epub_inspect($zip);
         if (is_string($book)) return $book;

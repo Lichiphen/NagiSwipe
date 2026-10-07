@@ -63,13 +63,13 @@ function nl_page_input(array $in): array
     $body = str_replace(["\r\n", "\r"], "\n", (string)($in['body'] ?? ''));
     $layout = (string)($in['layout'] ?? '');
     $status = (string)($in['status'] ?? '');
-    if ($title === '' || mb_strlen($title) > NL_PAGE_TITLE_MAX || preg_match('/[\x00-\x1F\x7F]/', $title)) throw new UnexpectedValueException('タイトルを' . NL_PAGE_TITLE_MAX . '文字以内の1行で入力してください');
+    if ($title === '' || mb_strlen($title) > NL_PAGE_TITLE_MAX || preg_match('/[\x00-\x1F\x7F]/', $title)) throw new UnexpectedValueException(nm_t('タイトルを{n}文字以内の1行で入力してください', ['n' => NL_PAGE_TITLE_MAX]));
     if ($slug === '') $slug = 'page-' . bin2hex(random_bytes(3));
-    if (!preg_match(NL_PAGE_SLUG_PATTERN, $slug)) throw new UnexpectedValueException('URL名は半角の英小文字・数字・ハイフンで、40文字以内にしてください（例：privacy）');
-    if (strlen($body) > NL_PAGE_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException('本文は200KB以内にしてください');
-    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $body)) throw new UnexpectedValueException('本文に使えない文字があります');
-    if (!isset(NL_PAGE_LAYOUTS[$layout])) throw new UnexpectedValueException('ページの幅を選んでください');
-    if (!in_array($status, ['published', 'draft'], true)) throw new UnexpectedValueException('公開か下書きを選んでください');
+    if (!preg_match(NL_PAGE_SLUG_PATTERN, $slug)) throw new UnexpectedValueException(nm_t('URL名は半角の英小文字・数字・ハイフンで、40文字以内にしてください（例：privacy）'));
+    if (strlen($body) > NL_PAGE_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException(nm_t('本文は200KB以内にしてください'));
+    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $body)) throw new UnexpectedValueException(nm_t('本文に使えない文字があります'));
+    if (!isset(NL_PAGE_LAYOUTS[$layout])) throw new UnexpectedValueException(nm_t('ページの幅を選んでください'));
+    if (!in_array($status, ['published', 'draft'], true)) throw new UnexpectedValueException(nm_t('公開か下書きを選んでください'));
     return ['title' => $title, 'slug' => $slug, 'body' => $body, 'layout' => $layout, 'status' => $status];
 }
 /** Save under the LOG lock; the revision stops two tabs overwriting each other. */
@@ -77,10 +77,10 @@ function nl_page_save(string $id, int $revision, array $fields): array
 {
     return nm_with_lock('personal-log', static function () use ($id, $revision, $fields) {
         $old = $id !== '' ? nl_load_page($id) : null;
-        if ($id !== '' && !$old) throw new UnexpectedValueException('固定ページが見つかりません。一覧を開き直してください');
-        if ($old && $old['revision'] !== $revision) throw new UnexpectedValueException('別の画面で更新されています。本文をコピーしてから開き直してください');
-        if (!$old && count(nl_pages()) >= NL_PAGE_MAX) throw new UnexpectedValueException('固定ページは' . NL_PAGE_MAX . '件までです');
-        foreach (nl_pages() as $p) if ($p['slug'] === $fields['slug'] && $p['id'] !== $id) throw new UnexpectedValueException('URL名「' . $fields['slug'] . '」はほかの固定ページで使っています');
+        if ($id !== '' && !$old) throw new UnexpectedValueException(nm_t('固定ページが見つかりません。一覧を開き直してください'));
+        if ($old && $old['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で更新されています。本文をコピーしてから開き直してください'));
+        if (!$old && count(nl_pages()) >= NL_PAGE_MAX) throw new UnexpectedValueException(nm_t('固定ページは{n}件までです', ['n' => NL_PAGE_MAX]));
+        foreach (nl_pages() as $p) if ($p['slug'] === $fields['slug'] && $p['id'] !== $id) throw new UnexpectedValueException(nm_t('URL名「{slug}」はほかの固定ページで使っています', ['slug' => $fields['slug']]));
         $now = time();
         $page = $fields + ['id' => $old['id'] ?? 'pg' . bin2hex(random_bytes(6)), 'media' => nl_page_media_refs($fields['body']), 'created' => $old['created'] ?? $now, 'updated' => $now, 'revision' => ($old['revision'] ?? 0) + 1];
         nl_write_record(nl_page_file($page['id']), $page);
@@ -92,8 +92,8 @@ function nl_page_delete(string $id, int $revision): void
 {
     nm_with_lock('personal-log', static function () use ($id, $revision) {
         $p = nl_load_page($id);
-        if (!$p) throw new UnexpectedValueException('固定ページが見つかりません');
-        if ($p['revision'] !== $revision) throw new UnexpectedValueException('別の画面で更新されています。開き直してください');
+        if (!$p) throw new UnexpectedValueException(nm_t('固定ページが見つかりません'));
+        if ($p['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で更新されています。開き直してください'));
         if (!@unlink(nl_page_file($id))) throw new RuntimeException('delete failed');
         if (function_exists('opcache_invalidate')) @opcache_invalidate(nl_page_file($id), true);
         nm_touch_content();
@@ -265,7 +265,7 @@ function nl_md_inline(string $text, bool $admin, bool $links = true): string
             $out .= $keep($href !== '' ? '<a href="' . h($href) . '"' . (preg_match('~\Ahttps?://~i', $href) ? ' rel="noopener noreferrer"' : '') . '>' . $label . '</a>' : $label);
             continue;
         }
-        $url = rtrim($m[7][0], '.,!?;:。、');
+        $url = rtrim($m[7][0], nm_t('.,!?;:。、'));
         $at -= strlen($m[7][0]) - strlen($url);
         $out .= $keep($links && filter_var($url, FILTER_VALIDATE_URL) ? '<a href="' . h($url) . '" rel="noopener noreferrer">' . h($url) . '</a>' : h($url));
     }
@@ -326,43 +326,43 @@ function nl_page_excerpt(array $p, int $length = 120): string
 
 function nl_pages_tabs(string $current): string
 {
-    $tab = static fn(string $key, string $href, string $icon, string $label) => '<a href="' . $href . '"' . ($key === $current ? ' aria-current="page"' : '') . '>' . nl_ui_icon($icon) . '<span>' . $label . '</span></a>';
-    return '<nav class="workspace-tabs log-admin-tabs" aria-label="LOGの管理">' . $tab('posts', 'index.php?p=log', 'list', '投稿一覧') . $tab('taxonomy', 'index.php?p=log&amp;view=taxonomy', 'tag', 'カテゴリ・タグ')
-        . $tab('pages', 'index.php?p=log_pages', 'page', '固定ページ') . $tab('settings', 'index.php?p=settings&amp;section=log', 'settings', 'LOGの設定') . '</nav>';
+    $tab = static fn(string $key, string $href, string $icon, string $label) => '<a href="' . $href . '"' . ($key === $current ? ' aria-current="page"' : '') . '>' . nl_ui_icon($icon) . '<span>' . nm_t($label) . '</span></a>';
+    return '<nav class="workspace-tabs log-admin-tabs" aria-label="' . nm_t('LOGの管理') . '">' . $tab('posts', 'index.php?p=log', 'list', nm_t('投稿一覧')) . $tab('taxonomy', 'index.php?p=log&amp;view=taxonomy', 'tag', nm_t('カテゴリ・タグ'))
+        . $tab('pages', 'index.php?p=log_pages', 'page', nm_t('固定ページ')) . $tab('settings', 'index.php?p=settings&amp;section=log', 'settings', nm_t('LOGの設定')) . '</nav>';
 }
 function nl_view_pages(): void
 {
     $rows = '';
     foreach (nl_pages() as $p) {
         $published = $p['status'] === 'published';
-        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">下書き</small>') . '</a>'
-            . '<code class="log-page-row-url">?pg=' . h($p['slug']) . '</code><span class="log-page-row-layout">' . h(NL_PAGE_LAYOUTS[$p['layout']] ?? '') . '</span><span class="log-page-row-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['updated'], 'c')) . '">' . h(nl_date($p['updated'])) . '</time></span>'
-            . ($published ? '<a class="btn log-list-view" href="../' . h(nl_fixed_url($p)) . '">' . nl_ui_icon('view') . '<span>ページを見る</span></a>' : '<span class="log-list-view note">非公開</span>')
-            . '<a class="btn log-list-edit" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a></li>';
+        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">' . nm_t('下書き') . '</small>') . '</a>'
+            . '<code class="log-page-row-url">?pg=' . h($p['slug']) . '</code><span class="log-page-row-layout">' . h(nm_t(NL_PAGE_LAYOUTS[$p['layout']] ?? '')) . '</span><span class="log-page-row-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['updated'], 'c')) . '">' . h(nl_date($p['updated'])) . '</time></span>'
+            . ($published ? '<a class="btn log-list-view" href="../' . h(nl_fixed_url($p)) . '">' . nl_ui_icon('view') . '<span>' . nm_t('ページを見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('非公開') . '</span>')
+            . '<a class="btn log-list-edit" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a></li>';
     }
     $s = nl_settings();
-    nm_layout('固定ページ', '<div class="log-heading"><div><h1>固定ページ</h1><p class="note">' . h($s['title']) . ' · プライバシーポリシー・利用規約・プロフィールなど、日付の流れに入らないページです。</p></div><div class="log-toolbar"><a class="btn primary" href="index.php?p=log_page">' . nl_ui_icon() . '<span>新しい固定ページ</span></a></div></div>'
+    nm_layout(nm_t('固定ページ'), '<div class="log-heading"><div><h1>' . nm_t('固定ページ') . '</h1><p class="note">' . h($s['title']) . ' ' . nm_t('· プライバシーポリシー・利用規約・プロフィールなど、日付の流れに入らないページです。') . '</p></div><div class="log-toolbar"><a class="btn primary" href="index.php?p=log_page">' . nl_ui_icon() . '<span>' . nm_t('新しい固定ページ') . '</span></a></div></div>'
         . nl_pages_tabs('pages')
-        . '<p class="note">本文はMarkdownで書きます。トップメニューやサイドバーのリンク集から、タイトルで探してリンクできます。</p>'
-        . '<ul class="log-page-list">' . ($rows ?: '<li class="log-empty">まだ固定ページはありません。「新しい固定ページ」から作れます。</li>') . '</ul>');
+        . '<p class="note">' . nm_t('本文はMarkdownで書きます。トップメニューやサイドバーのリンク集から、タイトルで探してリンクできます。') . '</p>'
+        . '<ul class="log-page-list">' . ($rows ?: '<li class="log-empty">' . nm_t('まだ固定ページはありません。「新しい固定ページ」から作れます。') . '</li>') . '</ul>');
 }
 /** Markdown help for the page editor. */
 function nl_page_help(): string
 {
     $rows = [
-        ['## 見出し', '大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく'],
-        ['**太字** *斜体* ~~取り消し線~~', '文字の強調'],
-        ['- 項目 / 1. 項目', '箇条書きと番号付きリスト。行頭に空白2つで入れ子'],
-        ['[文字](https://example.com/)', 'リンク。./?pg=privacy のようなサイト内のURLも使えます'],
-        ['![説明](./?media=…)', '画像。「画像を追加」かドロップで入ります'],
-        ['> 引用', '引用'],
-        ['| 項目 | 内容 |<br>|---|---|<br>| a | b |', '表（2行目は区切り）'],
-        ['---', '区切り線'],
-        ['`コード` / ```', 'コード。``` で囲むと複数行'],
+        [nm_t('## 見出し'), nm_t('大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく')],
+        [nm_t('**太字** *斜体* ~~取り消し線~~'), nm_t('文字の強調')],
+        [nm_t('- 項目 / 1. 項目'), nm_t('箇条書きと番号付きリスト。行頭に空白2つで入れ子')],
+        [nm_t('[文字](https://example.com/)'), nm_t('リンク。./?pg=privacy のようなサイト内のURLも使えます')],
+        [nm_t('![説明](./?media=…)'), nm_t('画像。「画像を追加」かドロップで入ります')],
+        ['> ' . nm_t('引用'), nm_t('引用')],
+        [nm_t('| 項目 | 内容 |<br>|---|---|<br>| a | b |'), nm_t('表（2行目は区切り）')],
+        ['---', nm_t('区切り線')],
+        [nm_t('`コード` / ```'), nm_t('コード。``` で囲むと複数行')],
     ];
     $body = '';
     foreach ($rows as [$code, $note]) $body .= '<tr><td><code>' . str_replace('&lt;br&gt;', '<br>', h($code)) . '</code></td><td>' . h($note) . '</td></tr>';
-    return '<details class="log-page-help"><summary>Markdownの書き方</summary><table class="table"><tbody>' . $body . '</tbody></table><p class="note">改行はそのまま改行になり、空行で段落が分かれます。HTMLのタグは文字として表示します。</p></details>';
+    return '<details class="log-page-help"><summary>' . nm_t('Markdownの書き方') . '</summary><table class="table"><tbody>' . $body . '</tbody></table><p class="note">' . nm_t('改行はそのまま改行になり、空行で段落が分かれます。HTMLのタグは文字として表示します。') . '</p></details>';
 }
 function nl_view_page_edit(string $id): void
 {
@@ -370,29 +370,29 @@ function nl_view_page_edit(string $id): void
     if ($id !== '' && !$p) nm_not_found();
     $p ??= ['id' => '', 'title' => '', 'slug' => '', 'body' => '', 'layout' => 'narrow', 'status' => 'draft', 'revision' => 0];
     $layouts = '';
-    $notes = ['sidebar' => '投稿のページと同じ、右にサイドバーのある形です。', 'wide' => 'サイドバーを出さず、本文を全幅で表示します。表の多いページに。', 'narrow' => 'サイドバーを出さず、本文の列だけを中央に寄せます。規約やポリシーの読みやすい幅です。'];
-    foreach (NL_PAGE_LAYOUTS as $key => $label) $layouts .= '<label class="log-page-layout-choice"><input type="radio" name="layout" value="' . $key . '"' . ($p['layout'] === $key ? ' checked' : '') . '><span class="log-page-layout-figure is-' . $key . '" aria-hidden="true"><i></i><i></i></span><span><b>' . h($label) . '</b><small>' . h($notes[$key]) . '</small></span></label>';
+    $notes = ['sidebar' => nm_t('投稿のページと同じ、右にサイドバーのある形です。'), 'wide' => nm_t('サイドバーを出さず、本文を全幅で表示します。表の多いページに。'), 'narrow' => nm_t('サイドバーを出さず、本文の列だけを中央に寄せます。規約やポリシーの読みやすい幅です。')];
+    foreach (NL_PAGE_LAYOUTS as $key => $label) $layouts .= '<label class="log-page-layout-choice"><input type="radio" name="layout" value="' . $key . '"' . ($p['layout'] === $key ? ' checked' : '') . '><span class="log-page-layout-figure is-' . $key . '" aria-hidden="true"><i></i><i></i></span><span><b>' . h(nm_t($label)) . '</b><small>' . h($notes[$key]) . '</small></span></label>';
     $tool = static fn(string $attrs, string $label, string $text) => '<button type="button" class="btn log-md-tool" ' . $attrs . ' title="' . h($label) . '" aria-label="' . h($label) . '">' . $text . '</button>';
     $public = $p['id'] !== '' && $p['status'] === 'published';
-    nm_layout($p['id'] !== '' ? '固定ページを編集' : '新しい固定ページ', '<p class="crumb crumb-back"><a href="index.php?p=log_pages">固定ページの一覧へ戻る</a></p>'
-        . '<section class="card log-page-editor"><h1>' . ($p['id'] !== '' ? '固定ページを編集' : '新しい固定ページ') . '</h1>'
+    nm_layout($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ'), '<p class="crumb crumb-back">' . nm_t('<a href="index.php?p=log_pages">固定ページの一覧へ戻る</a>') . '</p>'
+        . '<section class="card log-page-editor"><h1>' . ($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ')) . '</h1>'
         . '<form method="post" action="index.php" class="form" data-page-editor>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_save"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '">'
-        . '<label>タイトル<input name="title" maxlength="' . NL_PAGE_TITLE_MAX . '" required value="' . h($p['title']) . '" placeholder="例：プライバシーポリシー"></label>'
-        . '<label>URL名（半角英小文字・数字・ハイフン）<span class="log-page-slug"><span aria-hidden="true">./?pg=</span><input name="slug" maxlength="40" pattern="[a-z0-9](?:[a-z0-9\-]{0,38}[a-z0-9])?" value="' . h($p['slug']) . '" placeholder="privacy" autocapitalize="off" spellcheck="false"></span></label>'
-        . '<p class="note">空欄なら自動で付けます。変えると以前のURLは404になるので、公開後はなるべく変えないでください。</p>'
-        . '<fieldset class="log-page-layouts"><legend>ページの幅（PC）</legend>' . $layouts . '<p class="note">スマホでは、どの形でもサイドバーを「MENU」の中に出します。</p></fieldset>'
-        . '<div class="log-md-toolbar" role="toolbar" aria-label="Markdownの入力">' . $tool('data-md="heading"', '見出し', 'H') . $tool('data-md="bold"', '太字', '<b>B</b>') . $tool('data-md="link"', 'リンク', 'リンク') . $tool('data-md="list"', '箇条書き', '・') . $tool('data-md="ordered"', '番号付きリスト', '1.') . $tool('data-md="table"', '表', '表') . $tool('data-md="rule"', '区切り線', '―')
-        . '<button type="button" class="btn log-md-tool" data-md-upload>' . nl_compose_icon('upload') . '<span>画像を追加</span></button><button type="button" class="btn log-md-tool" data-md-pick aria-haspopup="dialog">' . nl_ui_icon('images') . '<span>画像一覧から選ぶ</span></button><input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'
-        . '<button type="button" class="btn log-md-tool" data-md-preview aria-pressed="false">' . nl_ui_icon('view') . '<span>プレビュー</span></button></div>'
-        . '<label class="log-page-body-label">本文（Markdown）<textarea name="body" rows="22" maxlength="' . NL_PAGE_BODY_MAX . '" spellcheck="false" data-md-body placeholder="## はじめに&#10;このサイトでは…">' . h($p['body']) . '</textarea></label>'
-        . '<div class="log-page-images" data-md-images aria-label="本文の画像"></div>'
-        . '<div class="log-page-preview log-page-body" data-md-preview-body hidden></div><p class="note" role="status" aria-live="polite" data-md-status>画像はこの枠のどこへドロップしても、本文へ貼り付けても追加できます。カーソルの位置に入ります。</p>'
+        . '<label>' . nm_t('タイトル') . '<input name="title" maxlength="' . NL_PAGE_TITLE_MAX . '" required value="' . h($p['title']) . '" placeholder="' . nm_t('例：プライバシーポリシー') . '"></label>'
+        . '<label>' . nm_t('URL名（半角英小文字・数字・ハイフン）') . '<span class="log-page-slug"><span aria-hidden="true">./?pg=</span><input name="slug" maxlength="40" pattern="[a-z0-9](?:[a-z0-9\-]{0,38}[a-z0-9])?" value="' . h($p['slug']) . '" placeholder="privacy" autocapitalize="off" spellcheck="false"></span></label>'
+        . '<p class="note">' . nm_t('空欄なら自動で付けます。変えると以前のURLは404になるので、公開後はなるべく変えないでください。') . '</p>'
+        . '<fieldset class="log-page-layouts"><legend>' . nm_t('ページの幅（PC）') . '</legend>' . $layouts . '<p class="note">' . nm_t('スマホでは、どの形でもサイドバーを「MENU」の中に出します。') . '</p></fieldset>'
+        . '<div class="log-md-toolbar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '">' . $tool('data-md="heading"', nm_t('見出し'), 'H') . $tool('data-md="bold"', nm_t('太字'), '<b>B</b>') . $tool('data-md="link"', nm_t('リンク'), nm_t('リンク')) . $tool('data-md="list"', nm_t('箇条書き'), nm_t('・')) . $tool('data-md="ordered"', nm_t('番号付きリスト'), '1.') . $tool('data-md="table"', nm_t('表'), nm_t('表')) . $tool('data-md="rule"', nm_t('区切り線'), '―')
+        . '<button type="button" class="btn log-md-tool" data-md-upload>' . nl_compose_icon('upload') . '<span>' . nm_t('画像を追加') . '</span></button><button type="button" class="btn log-md-tool" data-md-pick aria-haspopup="dialog">' . nl_ui_icon('images') . '<span>' . nm_t('画像一覧から選ぶ') . '</span></button><input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'
+        . '<button type="button" class="btn log-md-tool" data-md-preview aria-pressed="false">' . nl_ui_icon('view') . '<span>' . nm_t('プレビュー') . '</span></button></div>'
+        . '<label class="log-page-body-label">' . nm_t('本文（Markdown）') . '<textarea name="body" rows="22" maxlength="' . NL_PAGE_BODY_MAX . '" spellcheck="false" data-md-body placeholder="' . nm_t('## はじめに&#10;このサイトでは…') . '">' . h($p['body']) . '</textarea></label>'
+        . '<div class="log-page-images" data-md-images aria-label="' . nm_t('本文の画像') . '"></div>'
+        . '<div class="log-page-preview log-page-body" data-md-preview-body hidden></div><p class="note" role="status" aria-live="polite" data-md-status>' . nm_t('画像はこの枠のどこへドロップしても、本文へ貼り付けても追加できます。カーソルの位置に入ります。') . '</p>'
         . nl_page_help()
-        . '<div class="log-submit"><button class="btn" name="status" value="draft">下書き保存</button><button class="btn primary" name="status" value="published">公開して保存</button></div></form>'
-        . '<dialog class="log-page-picker" aria-labelledby="log-page-picker-title" data-md-picker><div class="log-page-picker-head"><h2 id="log-page-picker-title">画像一覧から選ぶ</h2><button type="button" class="btn" data-pick-close>閉じる</button></div>'
-        . '<label class="log-page-picker-search"><span class="sr-only">画像を検索</span><input type="search" data-pick-search placeholder="画像の説明で探す" autocomplete="off"></label><p class="note" data-pick-status role="status" aria-live="polite"></p>'
-        . '<div class="log-page-picker-grid" data-pick-grid></div><button type="button" class="btn" data-pick-more hidden>さらに表示</button></dialog>'
-        . ($public ? '<p><a class="btn" href="../' . h(nl_fixed_url($p)) . '" target="_blank" rel="noopener">' . nl_ui_icon('view') . '<span>公開ページで見る</span></a></p>' : '')
+        . '<div class="log-submit"><button class="btn" name="status" value="draft">' . nm_t('下書き保存') . '</button><button class="btn primary" name="status" value="published">' . nm_t('公開して保存') . '</button></div></form>'
+        . '<dialog class="log-page-picker" aria-labelledby="log-page-picker-title" data-md-picker><div class="log-page-picker-head"><h2 id="log-page-picker-title">' . nm_t('画像一覧から選ぶ') . '</h2><button type="button" class="btn" data-pick-close>' . nm_t('閉じる') . '</button></div>'
+        . '<label class="log-page-picker-search"><span class="sr-only">' . nm_t('画像を検索') . '</span><input type="search" data-pick-search placeholder="' . nm_t('画像の説明で探す') . '" autocomplete="off"></label><p class="note" data-pick-status role="status" aria-live="polite"></p>'
+        . '<div class="log-page-picker-grid" data-pick-grid></div><button type="button" class="btn" data-pick-more hidden>' . nm_t('さらに表示') . '</button></dialog>'
+        . ($public ? '<p><a class="btn" href="../' . h(nl_fixed_url($p)) . '" target="_blank" rel="noopener">' . nl_ui_icon('view') . '<span>' . nm_t('公開ページで見る') . '</span></a></p>' : '')
         . '</section>'
-        . ($p['id'] !== '' ? '<section class="card"><h2>この固定ページを削除</h2><p class="note">トップメニューやサイドバーに書いたリンクは残るので、あわせて外してください。本文の画像は画像一覧に残ります。</p><form method="post" action="index.php" class="js-confirm" data-confirm="この固定ページを削除しますか？元に戻せません。">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_delete"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '"><button class="btn danger">固定ページを削除</button></form></section>' : ''));
+        . ($p['id'] !== '' ? '<section class="card"><h2>' . nm_t('この固定ページを削除') . '</h2><p class="note">' . nm_t('トップメニューやサイドバーに書いたリンクは残るので、あわせて外してください。本文の画像は画像一覧に残ります。') . '</p><form method="post" action="index.php" class="js-confirm" data-confirm="' . nm_t('この固定ページを削除しますか？元に戻せません。') . '">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_delete"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '"><button class="btn danger">' . nm_t('固定ページを削除') . '</button></form></section>' : ''));
 }

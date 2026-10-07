@@ -1,6 +1,9 @@
 /* Personal LOG editor; panel structure inspired by NagiMemo. MIT (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const $ = (s, root = document) => root.querySelector(s);
     const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
     const csrf = $('input[name="csrf"]')?.value;
@@ -12,19 +15,19 @@
         const response = await fetch(endpoint, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
         let result;
         try { result = await response.json(); }
-        catch { throw new Error('ログインが切れた可能性があります。本文をコピーしてから、ログインし直してください。'); }
-        if (!response.ok || result.error) throw new Error(result.error || '保存できませんでした。もう一度お試しください。');
+        catch { throw new Error(t('ログインが切れた可能性があります。本文をコピーしてから、ログインし直してください。')); }
+        if (!response.ok || result.error) throw new Error(result.error || t('保存できませんでした。もう一度お試しください。'));
         return result;
     }
     // Replace from the file picker or by dropping an image anywhere on the card.
     async function replaceImage(card, file) {
         const input = $('.log-replace', card);
         if (!file || card.dataset.busy) return;
-        if (!/^image\/(jpeg|png|webp|gif|avif|bmp|svg\+xml)$/.test(file.type) && !/\.svg$/i.test(file.name)) { $('[data-replace-status]', card).textContent = 'JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'; return; }
-        if (!window.confirm('この画像を使うすべての投稿が変わります。差し替えますか？')) { input.value = ''; return; }
+        if (!/^image\/(jpeg|png|webp|gif|avif|bmp|svg\+xml)$/.test(file.type) && !/\.svg$/i.test(file.name)) { $('[data-replace-status]', card).textContent = t('JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'); return; }
+        if (!window.confirm(t('この画像を使うすべての投稿が変わります。差し替えますか？'))) { input.value = ''; return; }
         const status = $('[data-replace-status]', card);
         input.disabled = true; card.dataset.busy = '1';
-        status.textContent = '画像を差し替えています…'; status.classList.add('log-busy');
+        status.textContent = t('画像を差し替えています…'); status.classList.add('log-busy');
         try {
             const data = new FormData();
             data.set('do', 'log_upload'); data.set('media', card.dataset.mediaCard); data.set('revision', card.dataset.revision); data.set('image', file);
@@ -34,7 +37,7 @@
             $('img', card).src = media.thumb;
             $('a.imagelink', card).href = media.url;
             window.NagiSwipe?.init();
-            status.textContent = '差し替えました。本文のタグはそのまま使えます。';
+            status.textContent = t('差し替えました。本文のタグはそのまま使えます。');
         } catch (e) { status.textContent = e.message; }
         finally { input.disabled = false; input.value = ''; delete card.dataset.busy; status.classList.remove('log-busy'); }
     }
@@ -48,7 +51,7 @@
         card.addEventListener('drop', e => {
             if (!files(e)) return;
             e.preventDefault(); depth = 0; card.classList.remove('log-drop-over');
-            if (e.dataTransfer.files.length !== 1) { $('[data-replace-status]', card).textContent = '差し替える画像を1枚だけドロップしてください。'; return; }
+            if (e.dataTransfer.files.length !== 1) { $('[data-replace-status]', card).textContent = t('差し替える画像を1枚だけドロップしてください。'); return; }
             replaceImage(card, e.dataTransfer.files[0]);
         });
     });
@@ -57,7 +60,7 @@
 
     // Deleting a post from the public page asks first (admin.js, which asks on the admin pages, is not loaded there).
     $$('form[data-log-delete]').forEach(f => f.addEventListener('submit', e => {
-        if (!window.confirm('この記事を削除しますか？この記事だけで使う画像も削除します。元に戻せません。')) e.preventDefault();
+        if (!window.confirm(t('この記事を削除しますか？この記事だけで使う画像も削除します。元に戻せません。'))) e.preventDefault();
     }));
 
     // 編集 on a public page remembers where it was; closing or saving the editor goes back to that post.
@@ -206,9 +209,9 @@
             nodes.push(text.slice(from, m.index));
             const mark = document.createElement('span'); mark.className = 'log-mark'; mark.dataset.len = String(m[0].length); mark.textContent = m[0];
             const band = document.createElement('span'); band.className = 'log-mark-band'; band.dataset.n = String(g.n);
-            band.title = 'ドラッグで別の行へ動かす';
+            band.title = t('ドラッグで別の行へ動かす');
             band.innerHTML = grip;
-            const label = document.createElement('b'); label.textContent = '画像' + g.n; band.append(label);
+            const label = document.createElement('b'); label.textContent = t('画像{n}', { n: g.n }); band.append(label);
             g.ids.slice(0, 4).forEach(id => {
                 const thumb = mediaInfo[id]?.thumb;
                 const img = document.createElement(thumb ? 'img' : 'i');
@@ -216,7 +219,7 @@
                 band.append(img);
             });
             if (g.ids.length > 4) band.append('+' + (g.ids.length - 4));
-            if (!g.ids.length) band.append('空');
+            if (!g.ids.length) band.append(t('空'));
             mark.append(band); nodes.push(mark);
             from = m.index + m[0].length;
         }
@@ -288,7 +291,7 @@
         start = Math.min(start, text.length);
         text = start >= text.length ? text + (text === '' || text.endsWith('\n') ? '' : '\n') + m[0] : text.slice(0, start) + m[0] + '\n' + text.slice(start);
         body.value = text; rememberSelection(); changed();
-        say('「' + m[0] + '」の行を動かしました。');
+        say(t('「{mark}」の行を動かしました。', { mark: m[0] }));
     }
     let bandDrag = null;
     markLayer.addEventListener('pointerdown', e => {
@@ -343,38 +346,38 @@
         const { at } = view(); groups = groups.filter(g => g.ids.length || at.has(g.n));
         renderAttachments(); renderChips(); drawMark();
         $('[data-preview-body]', form).hidden = true; $('[data-preview]', form).setAttribute('aria-pressed', 'false');
-        $('[data-character-count]', form).textContent = Array.from(body.value).length + '文字';
+        $('[data-character-count]', form).textContent = t('{n}文字', { n: Array.from(body.value).length });
         dirty = snapshot() !== initial;
         fab?.classList.toggle('log-fab-draft', dirty);
-        if (fab) fab.title = dirty ? '書きかけがあります' : '';
+        if (fab) fab.title = dirty ? t('書きかけがあります') : '';
         try { sessionStorage.setItem(storageKey, JSON.stringify({ ...current(), revision: initialRevision })); } catch { /* storage may be disabled */ }
     }
     try {
         const saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
         if (saved && saved.revision === initialRevision && (saved.body || saved.title)) {
             restore(saved);
-            say('このタブで書いていた本文を戻しました。');
+            say(t('このタブで書いていた本文を戻しました。'));
             const discard = document.createElement('button');
-            discard.type = 'button'; discard.className = 'btn'; discard.textContent = '書きかけを消す';
+            discard.type = 'button'; discard.className = 'btn'; discard.textContent = t('書きかけを消す');
             status.after(discard);
             discard.addEventListener('click', () => {
                 restore(JSON.parse(initial)); changed(false); touched = false; discard.remove();
                 try { sessionStorage.removeItem(storageKey); } catch { /* storage may be disabled */ }
-                say('書きかけを消しました。');
+                say(t('書きかけを消しました。'));
             });
         } else if (saved && saved.revision !== initialRevision) {
             const recover = document.createElement('button');
-            recover.type = 'button'; recover.className = 'btn'; recover.textContent = 'このタブの未保存本文を戻す';
+            recover.type = 'button'; recover.className = 'btn'; recover.textContent = t('このタブの未保存本文を戻す');
             status.after(recover);
             recover.addEventListener('click', () => {
                 restore(saved); changed(); recover.remove();
-                say('未保存の本文を戻しました。新しい投稿内容と比べてから保存してください。');
+                say(t('未保存の本文を戻しました。新しい投稿内容と比べてから保存してください。'));
             });
         }
     } catch { /* storage may be disabled */ }
     // Ratings, weakest first, as on the server (NL_RATINGS).
     const RANK = ['', 'sensitive', 'r18g', 'r18'];
-    const LABEL = { '': 'なし', sensitive: 'センシティブ', r18: 'R-18', r18g: 'R-18G' };
+    const LABEL = { '': t('なし'), sensitive: t('センシティブ'), r18: 'R-18', r18g: 'R-18G' };
     const bodyMedia = () => allImages();
     const mediaRating = id => mediaRatings[id] ?? mediaInfo[id]?.rating ?? '';
     const strongest = list => list.reduce((a, b) => RANK.indexOf(b) > RANK.indexOf(a) ? b : a, '');
@@ -409,50 +412,50 @@
             const inText = marked.includes(g);
             const group = document.createElement('section'); group.className = 'log-att-group' + (g === active ? ' is-active' : ''); group.dataset.n = String(g.n);
             const head = document.createElement('div'); head.className = 'log-att-head';
-            const label = document.createElement('b'); label.className = 'log-att-label'; label.textContent = '画像' + g.n;
+            const label = document.createElement('b'); label.className = 'log-att-label'; label.textContent = t('画像{n}', { n: g.n });
             const where = document.createElement('span'); where.className = 'log-att-where';
-            where.textContent = inText ? '本文の「' + markOf(g.n) + '」の行' : '本文の最後';
+            where.textContent = inText ? t('本文の「{mark}」の行', { mark: markOf(g.n) }) : t('本文の最後');
             head.append(label, where);
-            if (inText) head.append(button('log-att-action', g.ids.length ? '本文の最後へ' : 'この場所を消す', g.ids.length ? '「' + markOf(g.n) + '」の行を消して、本文の最後に並べます' : '「' + markOf(g.n) + '」の行を消します', () => {
+            if (inText) head.append(button('log-att-action', g.ids.length ? t('本文の最後へ') : t('この場所を消す'), t(g.ids.length ? '「{mark}」の行を消して、本文の最後に並べます' : '「{mark}」の行を消します', { mark: markOf(g.n) }), () => {
                 body.value = removeMarkOf(body.value, g.n); rememberSelection(); changed();
-                say(g.ids.length ? '画像' + g.n + 'を本文の最後に並べます。' : '「' + markOf(g.n) + '」を消しました。');
+                say(g.ids.length ? t('画像{n}を本文の最後に並べます。', { n: g.n }) : t('「{mark}」を消しました。', { mark: markOf(g.n) }));
             }));
-            else head.append(button('log-att-action', 'カーソルの位置へ', '本文のカーソル位置に「' + markOf(g.n) + '」の行を入れます', () => {
-                insertMark(g.n); say('「' + markOf(g.n) + '」の行に画像' + g.n + 'を並べます。本文の中の帯をドラッグすると、行を動かせます。');
+            else head.append(button('log-att-action', t('カーソルの位置へ'), t('本文のカーソル位置に「{mark}」の行を入れます', { mark: markOf(g.n) }), () => {
+                insertMark(g.n); say(t('「{mark}」の行に画像{n}を並べます。本文の中の帯をドラッグすると、行を動かせます。', { mark: markOf(g.n), n: g.n }));
             }));
             const row = document.createElement('div'); row.className = 'log-att-row';
             g.ids.forEach((id, i) => {
                 const info = mediaInfo[id] || {}, r = mediaRating(id);
                 const item = document.createElement('div'); item.className = 'log-att'; item.dataset.mediaId = id;
                 const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'log-att-thumb';
-                thumb.title = 'ドラッグで並べ替え・別のまとまりへ移動'; thumb.setAttribute('aria-label', '画像' + g.n + 'の' + (i + 1) + '枚目（矢印キーで移動）');
+                thumb.title = t('ドラッグで並べ替え・別のまとまりへ移動'); thumb.setAttribute('aria-label', t('画像{n}の{i}枚目（矢印キーで移動）', { n: g.n, i: i + 1 }));
                 // Never dragged by the browser itself: a dropped copy would be uploaded again.
                 if (info.thumb) { const img = document.createElement('img'); img.src = adminUrl(info.thumb); img.alt = ''; img.draggable = false; thumb.append(img); }
-                else thumb.append('画像');
+                else thumb.append(t('画像'));
                 const rate = document.createElement('button'); rate.type = 'button'; rate.className = 'log-att-rating'; rate.dataset.veil = r;
                 rate.setAttribute('aria-haspopup', 'menu'); rate.setAttribute('aria-expanded', 'false');
-                rate.setAttribute('aria-label', 'この画像の閲覧注意：' + LABEL[r]); rate.title = '閲覧注意：' + LABEL[r];
+                rate.setAttribute('aria-label', t('この画像の閲覧注意：{label}', { label: LABEL[r] })); rate.title = t('閲覧注意：{label}', { label: LABEL[r] });
                 rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
                 rate.addEventListener('click', () => openMenu(rate, id));
-                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', 'この投稿から外す（画像一覧には残ります）', () => {
+                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('この投稿から外す（画像一覧には残ります）'), () => {
                     g.ids = g.ids.filter(other => other !== id); changed();
                     ($$('.log-att-group[data-n="' + g.n + '"] .log-att-thumb', attachments)[Math.min(i, g.ids.length - 1)] || body).focus();
-                    say('画像を外しました。画像そのものは画像一覧に残っています。');
+                    say(t('画像を外しました。画像そのものは画像一覧に残っています。'));
                 });
-                remove.setAttribute('aria-label', '画像' + g.n + 'の' + (i + 1) + '枚目を外す');
+                remove.setAttribute('aria-label', t('画像{n}の{i}枚目を外す', { n: g.n, i: i + 1 }));
                 item.append(thumb, rate, remove);
                 row.append(item);
             });
-            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', '画像' + g.n + 'に画像を追加', () => { active = g; uploadInput.click(); });
-            add.setAttribute('aria-label', '画像' + g.n + 'に画像を追加');
+            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', t('画像{n}に画像を追加', { n: g.n }), () => { active = g; uploadInput.click(); });
+            add.setAttribute('aria-label', t('画像{n}に画像を追加', { n: g.n }));
             row.append(add);
             group.append(head, row);
             return group;
         });
-        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>別の場所にも画像を置く</span>', '本文のカーソル位置に新しい「〔画像N〕」の行を入れます', () => {
+        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>' + t('別の場所にも画像を置く') + '</span>', t('本文のカーソル位置に新しい「〔画像N〕」の行を入れます'), () => {
             const g = { n: nextNumber(), ids: [] };
             groups.push(g); active = g; insertMark(g.n);
-            say('「' + markOf(g.n) + '」の行を入れました。画像' + g.n + 'の＋から画像を追加してください。');
+            say(t('「{mark}」の行を入れました。画像{n}の＋から画像を追加してください。', { mark: markOf(g.n), n: g.n }));
         }));
         attachments.replaceChildren(...nodes);
         attachments.hidden = !rows.length;
@@ -518,18 +521,18 @@
             const to = i + (e.key === 'ArrowLeft' ? -1 : 1);
             if (to < 0 || to >= g.ids.length) return;
             g.ids.splice(i, 1); g.ids.splice(to, 0, id); changed();
-            say('画像' + g.n + 'の' + (to + 1) + '枚目に移しました。');
+            say(t('画像{n}の{i}枚目に移しました。', { n: g.n, i: to + 1 }));
         } else {
             const other = rows[rows.indexOf(g) + (e.key === 'ArrowUp' ? -1 : 1)];
             if (!other) return;
             g.ids.splice(i, 1); other.ids.push(id); active = other; changed();
-            say('画像' + other.n + 'の最後に移しました。');
+            say(t('画像{n}の最後に移しました。', { n: other.n }));
         }
         $('.log-att-group[data-n="' + groups.find(x => x.ids.includes(id))?.n + '"] .log-att[data-media-id="' + id + '"] .log-att-thumb', attachments)?.focus();
     });
     // New pictures go to the group last chosen (its +, a picture moved into it), otherwise after the text.
     function addImage(id) {
-        if (allImages().includes(id)) { say('その画像はもう入っています。'); return; }
+        if (allImages().includes(id)) { say(t('その画像はもう入っています。')); return; }
         let g = groups.includes(active) ? active : view().end[0];
         if (!g) { g = { n: nextNumber(), ids: [] }; groups.push(g); }
         g.ids.push(id); active = g; changed();
@@ -552,7 +555,7 @@
         }
         const at = Math.max(0, Math.min(text.length, caret - (body.value.length - text.length)));
         body.value = text; body.setSelectionRange(at, at); rememberSelection();
-        say('画像のタグを、本文の下の画像の列に移しました。');
+        say(t('画像のタグを、本文の下の画像の列に移しました。'));
     }
     const menu = $('[data-att-menu]', form);
     let menuFor = null;
@@ -592,7 +595,7 @@
         if (shown) {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-rating'; b.dataset.open = 'rating'; b.dataset.veil = shown;
             b.innerHTML = veilIcon; const text = document.createElement('span');
-            text.textContent = LABEL[shown] + (shown !== own ? '（画像）' : '') + (warning.value.trim() ? '・' + warning.value.trim() : '');
+            text.textContent = LABEL[shown] + (shown !== own ? t('（画像）') : '') + (warning.value.trim() ? '・' + warning.value.trim() : '');
             b.append(text); out.push(b);
         }
         const names = categoryFields.filter(i => i.checked).map(i => i.nextElementSibling.textContent).concat(newCategories.value.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean));
@@ -604,7 +607,7 @@
         out.forEach(b => b.addEventListener('click', () => togglePanel(b.dataset.open, true)));
         chips.replaceChildren(...out); chips.hidden = !out.length;
         const tool = $('[data-panel="rating"]', form);
-        tool.dataset.veil = shown; tool.setAttribute('aria-label', '閲覧注意' + (shown ? '：' + LABEL[shown] : ''));
+        tool.dataset.veil = shown; tool.setAttribute('aria-label', shown ? t('閲覧注意：{label}', { label: LABEL[shown] }) : t('閲覧注意'));
         $('[data-panel="categories"]', form).classList.toggle('is-set', names.length > 0);
     }
     // Phones: a panel opening under the tool row would push the text up and down, so it opens as a sheet from the bottom.
@@ -613,7 +616,7 @@
     const sheet = document.createElement('dialog');
     sheet.className = 'log-panel-sheet';
     sheet.setAttribute('aria-labelledby', 'log-panel-sheet-title');
-    sheet.innerHTML = '<div class="log-panel-sheet-head"><span class="log-panel-sheet-grip" aria-hidden="true"></span><h2 id="log-panel-sheet-title"></h2><button type="button" class="btn" data-sheet-close>閉じる</button></div><div class="log-panel-sheet-body"></div>';
+    sheet.innerHTML = '<div class="log-panel-sheet-head"><span class="log-panel-sheet-grip" aria-hidden="true"></span><h2 id="log-panel-sheet-title"></h2><button type="button" class="btn" data-sheet-close>' + t('閉じる') + '</button></div><div class="log-panel-sheet-body"></div>';
     form.append(sheet);
     let sheetPanel = null, sheetPlace = null;
     function sheetIn(panelBody, button) {
@@ -692,7 +695,7 @@
             body.focus(); body.setSelectionRange(start + lead, start + wrapped.length - trail); rememberSelection();
             return;
         }
-        const text = '太字にする文字';
+        const text = t('太字にする文字');
         insert('**' + text + '**');
         body.focus(); body.setSelectionRange(start + 2, start + 2 + text.length); rememberSelection();
     });
@@ -737,7 +740,7 @@
     if (origin && crumb) {
         const toPublic = document.createElement('a');
         toPublic.className = 'crumb-return'; toPublic.href = origin;
-        toPublic.textContent = new URL(origin).searchParams.has('id') ? '記事ページに戻る' : '公開ページに戻る';
+        toPublic.textContent = new URL(origin).searchParams.has('id') ? t('記事ページに戻る') : t('公開ページに戻る');
         crumb.prepend(toPublic);
     }
     $('.log-close', panel).addEventListener('click', () => {
@@ -787,7 +790,7 @@
         // One queue preserves the order across separate drops and selection changes.
         uploading++;
         uploadQueue = uploadQueue.then(async () => {
-            setPanel(true); say('画像をアップロードしています…');
+            setPanel(true); say(t('画像をアップロードしています…'));
             const errors = [];
             for (const file of list) {
                 try {
@@ -795,9 +798,9 @@
                     const { media } = await request(data);
                     mediaInfo[media.id] = { thumb: media.thumb, alt: media.alt, rating: media.rating || '' };
                     addImage(media.id);
-                } catch (e) { errors.push(file.name + '：' + e.message); }
+                } catch (e) { errors.push(t('{name}：{message}', { name: file.name, message: e.message })); }
             }
-            say(errors.length ? errors.join(' / ') : '画像を追加しました。サムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。', errors.length > 0);
+            say(errors.length ? errors.join(' / ') : t('画像を追加しました。サムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。'), errors.length > 0);
         }).finally(() => { uploading--; });
         await uploadQueue;
     }
@@ -828,18 +831,18 @@
     async function loadCatalog(reset) {
         const currentGeneration = ++generation;
         if (reset) { catalogPage = 1; grid.replaceChildren(); }
-        more.disabled = true; pickerStatus.textContent = '読み込み中…';
+        more.disabled = true; pickerStatus.textContent = t('読み込み中…');
         try {
             const response = await fetch(adminUrl('index.php?p=log_' + kind + '_json&page=' + catalogPage + '&q=' + encodeURIComponent(search.value)), { credentials: 'same-origin', cache: 'no-store' });
-            if (!response.ok) throw new Error('一覧を読めませんでした。ログインを確認してください。');
+            if (!response.ok) throw new Error(t('一覧を読めませんでした。ログインを確認してください。'));
             const result = await response.json();
             if (currentGeneration !== generation) return;
             result.items.forEach(item => {
                 const button = document.createElement('button'); button.type = 'button';
                 const img = document.createElement('img'); img.src = adminUrl(item.thumb); img.alt = ''; img.loading = 'lazy';
-                const label = document.createElement('span'); label.textContent = item.title || item.alt || '画像';
+                const label = document.createElement('span'); label.textContent = item.title || item.alt || t('画像');
                 button.append(img, label);
-                if (item.locked) { const badge = document.createElement('small'); badge.textContent = 'パスワード付き'; button.append(badge); }
+                if (item.locked) { const badge = document.createElement('small'); badge.textContent = t('パスワード付き'); button.append(badge); }
                 button.addEventListener('click', () => {
                     if (kind === 'manga') {
                         // An old post may already use this label for another work.
@@ -851,12 +854,12 @@
                 });
                 grid.append(button);
             });
-            more.hidden = !result.more; pickerStatus.textContent = grid.children.length ? '選ぶと、本文のカーソル位置に入ります。' : '見つかりませんでした。';
+            more.hidden = !result.more; pickerStatus.textContent = grid.children.length ? t('選ぶと、本文のカーソル位置に入ります。') : t('見つかりませんでした。');
         } catch (e) { if (currentGeneration === generation) pickerStatus.textContent = e.message; }
         finally { if (currentGeneration === generation) more.disabled = false; }
     }
     $$('[data-picker]', form).forEach(button => button.addEventListener('click', () => {
-        kind = button.dataset.picker; search.value = ''; $('#log-picker-title').textContent = kind === 'manga' ? '漫画を選ぶ' : '画像を選ぶ';
+        kind = button.dataset.picker; search.value = ''; $('#log-picker-title').textContent = kind === 'manga' ? t('漫画を選ぶ') : t('画像を選ぶ');
         picker.showModal(); loadCatalog(true);
     }));
     $('[data-picker-close]', picker).addEventListener('click', () => picker.close());
@@ -882,10 +885,10 @@
     form.addEventListener('submit', async e => {
         e.preventDefault();
         if (saving) return;
-        if (uploading) { say('画像の追加が終わってから保存してください。', true); return; }
+        if (uploading) { say(t('画像の追加が終わってから保存してください。'), true); return; }
         const data = new FormData(form); data.set('status', e.submitter?.value || 'published'); data.set('body', compose());
         saving = true; $$('button[type="submit"],button[name="status"]', form).forEach(b => { b.disabled = true; });
-        say('保存しています…');
+        say(t('保存しています…'));
         try {
             const result = await request(data);
             try { sessionStorage.removeItem(storageKey); } catch { /* storage may be disabled */ }
@@ -905,18 +908,18 @@
         const link = (text, href, className) => { const a = el('a', className, text); a.href = href; return a; };
         saved = el('dialog', 'log-saved-dialog');
         saved.setAttribute('aria-labelledby', 'log-saved-title');
-        const heading = el('h2', '', published ? '保存しました。記事を見ますか？' : '下書きを保存しました'); heading.id = 'log-saved-title';
-        const lead = el('p', '', published ? '公開ページで、編集した記事を確認できます。' : '下書きは公開ページに出ないため、続けて編集するか一覧に戻ってください。');
+        const heading = el('h2', '', published ? t('保存しました。記事を見ますか？') : t('下書きを保存しました')); heading.id = 'log-saved-title';
+        const lead = el('p', '', published ? t('公開ページで、編集した記事を確認できます。') : t('下書きは公開ページに出ないため、続けて編集するか一覧に戻ってください。'));
         const editUrl = adminUrl('index.php?p=log_edit&id=' + encodeURIComponent(result.id));
-        const view = published ? link('記事を見る', new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
+        const view = published ? link(t('記事を見る'), new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
         const actions = el('div', 'log-saved-dialog-actions');
-        actions.append(link('続けて編集する', editUrl, 'btn'), origin ? link(new URL(origin).searchParams.has('id') ? '記事ページに戻る' : '公開ページに戻る', origin, published ? 'btn' : 'btn primary') : link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
+        actions.append(link(t('続けて編集する'), editUrl, 'btn'), origin ? link(new URL(origin).searchParams.has('id') ? t('記事ページに戻る') : t('公開ページに戻る'), origin, published ? 'btn' : 'btn primary') : link(t('一覧に戻る'), adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
         if (view) actions.append(view);
         saved.append(heading, lead, actions);
         // Escape closes the dialog; the form holds the old revision, so reopen the editor.
         saved.addEventListener('cancel', e => { e.preventDefault(); location.replace(editUrl); });
         document.body.append(saved);
-        say(published ? '保存しました。' : '下書きを保存しました。');
+        say(published ? t('保存しました。') : t('下書きを保存しました。'));
         saved.showModal();
         (view || actions.lastElementChild).focus();
     }

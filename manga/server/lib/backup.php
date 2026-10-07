@@ -87,24 +87,24 @@ function nm_backup_restore(string $zipPath, bool $overwrite): array
 {
     $result = ['restored' => 0, 'skipped' => 0, 'errors' => []];
     if (!nm_zip_available()) {
-        $result['errors'][] = 'サーバーの PHP に ZipArchive がありません';
+        $result['errors'][] = nm_t('サーバーの PHP に ZipArchive がありません');
         return $result;
     }
     @set_time_limit(0);
 
     $zip = new ZipArchive();
     if ($zip->open($zipPath, ZipArchive::RDONLY) !== true) {
-        $result['errors'][] = 'ZIP として開けません';
+        $result['errors'][] = nm_t('ZIP として開けません');
         return $result;
     }
 
     try {
         if ($zip->numFiles > NM_RESTORE_MAX_ENTRIES) {
-            $result['errors'][] = 'ファイル数が多すぎます';
+            $result['errors'][] = nm_t('ファイル数が多すぎます');
             return $result;
         }
         if ($zip->locateName(NM_BACKUP_MARK) === false) {
-            $result['errors'][] = 'NagiManga のバックアップではありません';
+            $result['errors'][] = nm_t('NagiManga のバックアップではありません');
             return $result;
         }
 
@@ -121,12 +121,12 @@ function nm_backup_restore(string $zipPath, bool $overwrite): array
                 continue;
             }
             if ($st['size'] > NM_RESTORE_MAX_ENTRY) {
-                $result['errors'][] = '大きすぎるファイルを含んでいます';
+                $result['errors'][] = nm_t('大きすぎるファイルを含んでいます');
                 return $result;
             }
             $total += $st['size'];
             if ($total > NM_RESTORE_MAX_TOTAL) {
-                $result['errors'][] = 'バックアップが大きすぎます';
+                $result['errors'][] = nm_t('バックアップが大きすぎます');
                 return $result;
             }
             $byWork[$m[1]][$m[2]] = $i;
@@ -147,13 +147,13 @@ function nm_backup_restore(string $zipPath, bool $overwrite): array
 /** @return string|null error, 'exists', or null on success */
 function nm_restore_work(ZipArchive $zip, string $id, array $entries, bool $overwrite): ?string
 {
-    if (!isset($entries['work.json'])) return 'work.json がありません';
+    if (!isset($entries['work.json'])) return nm_t('work.json がありません');
     $finalDir = nm_work_dir($id);
     if (is_dir($finalDir) && !$overwrite) return 'exists';
 
     $raw = nm_zip_read($zip, $entries['work.json'], 1024 * 1024);
     $data = $raw === null ? null : json_decode($raw, true);
-    if (!is_array($data)) return 'work.json が壊れています';
+    if (!is_array($data)) return nm_t('work.json が壊れています');
     $work = nm_sanitize_work($data, $id);
 
     // Stage everything in a temp dir, swap in at the end
@@ -170,7 +170,7 @@ function nm_restore_work(ZipArchive $zip, string $id, array $entries, bool $over
                     continue;
                 }
                 $bytes = nm_zip_read($zip, $entries[$key], NM_RESTORE_MAX_ENTRY);
-                if ($bytes === null) return '画像を読めません';
+                if ($bytes === null) return nm_t('画像を読めません');
                 $dest = "$stage/pages/$prefix{$p['f']}";
                 file_put_contents($dest, $bytes);
                 // Must really be the image type its name says
@@ -178,7 +178,7 @@ function nm_restore_work(ZipArchive $zip, string $id, array $entries, bool $over
                 $info = @getimagesize($dest);
                 if ($finfo->file($dest) !== $want || !$info || ($info['mime'] ?? '') !== $want) {
                     nm_log('restore_bad_image', "$id/$prefix{$p['f']}");
-                    return '画像の中身が正しくありません';
+                    return nm_t('画像の中身が正しくありません');
                 }
                 if ($prefix === '') {
                     $p['w'] = (int)$info[0];
@@ -216,7 +216,7 @@ function nm_restore_work(ZipArchive $zip, string $id, array $entries, bool $over
         return nm_with_lock('work-' . $id, static function () use ($stage, $finalDir) {
             nm_ensure_dir(dirname($finalDir));
             if (is_dir($finalDir)) nm_rmdir_recursive($finalDir);
-            if (!@rename($stage, $finalDir)) return '保存できませんでした';
+            if (!@rename($stage, $finalDir)) return nm_t('保存できませんでした');
             return null;
         });
     } finally {

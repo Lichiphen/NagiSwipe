@@ -238,7 +238,7 @@ function nm_guest_config(): ?array
     return [
         'enter_key' => (string)($g['enter_key'] ?? ''),
         'bypass_ip' => (bool)($g['bypass_ip'] ?? true),
-        'banner' => (string)($g['banner'] ?? 'ゲスト（閲覧のみ）で表示しています。内容の変更はできません。'),
+        'banner' => (string)($g['banner'] ?? nm_t('ゲスト（閲覧のみ）で表示しています。内容の変更はできません。')),
         // Where "ゲストを終了" leads: an absolute http(s) URL or a site path, nothing else
         'exit_url' => preg_match('~\A(https?://|/(?!/))[^\s"\'<>\\\\]*\z~i', $exit) ? $exit : '',
     ];

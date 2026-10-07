@@ -1,6 +1,9 @@
 /* LOG list selection and taxonomy ordering. MIT (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     // "/" jumps to the post search, unless the user is already typing somewhere.
     document.addEventListener('keydown', event => {
         const search = document.querySelector('[data-log-search]');
@@ -12,7 +15,7 @@
     deleteDialog.className = 'log-delete-dialog';
     deleteDialog.setAttribute('aria-labelledby', 'log-delete-title');
     deleteDialog.setAttribute('aria-describedby', 'log-delete-message');
-    deleteDialog.innerHTML = '<h2 id="log-delete-title">削除の確認</h2><p id="log-delete-message"></p><p class="note">共有画像は残します。取り消しにはバックアップが必要です。</p><div class="log-delete-actions"><button type="button" class="btn" data-delete-cancel autofocus>キャンセル</button><button type="button" class="btn danger" data-delete-confirm>削除する</button></div>';
+    deleteDialog.innerHTML = '<h2 id="log-delete-title">' + t('削除の確認') + '</h2><p id="log-delete-message"></p><p class="note">' + t('共有画像は残します。取り消しにはバックアップが必要です。') + '</p><div class="log-delete-actions"><button type="button" class="btn" data-delete-cancel autofocus>' + t('キャンセル') + '</button><button type="button" class="btn danger" data-delete-confirm>' + t('削除する') + '</button></div>';
     document.body.append(deleteDialog);
     let deleteAction = null;
     const confirmDelete = (message, action) => {
@@ -28,7 +31,7 @@
         if (!['log_delete', 'log_media_delete'].includes(form.querySelector('[name="do"]')?.value)) return;
         form.addEventListener('submit', event => {
             event.preventDefault(); event.stopImmediatePropagation();
-            confirmDelete(form.dataset.confirm || '削除しますか？', () => HTMLFormElement.prototype.submit.call(form));
+            confirmDelete(form.dataset.confirm || t('削除しますか？'), () => HTMLFormElement.prototype.submit.call(form));
         }, true);
     });
     const bulk = document.querySelector('[data-bulk-form]');
@@ -41,7 +44,7 @@
         const update = () => {
             const selected = items.filter(input => input.checked);
             bulk.elements.posts.value = JSON.stringify(selected.map(input => ({id: input.value, revision: Number(input.dataset.revision)})));
-            bulk.querySelector('[data-bulk-count]').textContent = selected.length + '件を選択';
+            bulk.querySelector('[data-bulk-count]').textContent = t('{n}件を選択', { n: selected.length });
             submit.disabled = selected.length === 0;
             all.checked = items.length > 0 && selected.length === items.length;
             all.indeterminate = selected.length > 0 && selected.length < items.length;
@@ -53,7 +56,7 @@
             toggle.setAttribute('aria-expanded', String(active));
             // While choosing, the same button ends the mode: say so and look different from the delete button.
             toggle.classList.toggle('log-bulk-on', active);
-            toggle.querySelector('[data-bulk-label]').textContent = active ? '選ぶのをやめる' : 'まとめて削除';
+            toggle.querySelector('[data-bulk-label]').textContent = active ? t('選ぶのをやめる') : t('まとめて削除');
             list.classList.toggle('log-bulk-active', active);
             document.body.classList.toggle('log-bulk-mode', active);
             items.forEach(input => { input.closest('.log-bulk-choice').hidden = !active; if (!active) input.checked = false; });
@@ -66,7 +69,7 @@
             event.preventDefault();
             update();
             const count = items.filter(input => input.checked).length;
-            if (count) confirmDelete(count + '件の記事と、その記事だけで使っていた画像を削除します。削除しますか？', () => { submit.disabled = true; HTMLFormElement.prototype.submit.call(bulk); });
+            if (count) confirmDelete(t('{n}件の記事と、その記事だけで使っていた画像を削除します。削除しますか？', { n: count }), () => { submit.disabled = true; HTMLFormElement.prototype.submit.call(bulk); });
         });
     }
 
@@ -82,8 +85,8 @@
         row.querySelector('.log-sort-handle').disabled = busy;
     }));
     const save = async (group, previous) => {
-        if (rows(group).every((row, i) => row === previous[i])) { status.textContent = '順番は変わっていません'; return; }
-        busy = true; buttons(); status.textContent = '順番を保存しています…';
+        if (rows(group).every((row, i) => row === previous[i])) { status.textContent = t('順番は変わっていません'); return; }
+        busy = true; buttons(); status.textContent = t('順番を保存しています…');
         const data = new FormData();
         data.set('do', 'log_taxonomy_order');
         data.set('csrf', manager.querySelector('[name="csrf"]').value);
@@ -93,13 +96,13 @@
         try {
             const response = await fetch(new URL('index.php', location.href), {method: 'POST', body: data, credentials: 'same-origin'});
             const result = await response.json();
-            if (!response.ok || !result.ok || !Number.isInteger(result.revision)) throw new Error(result.error || '保存できませんでした。画面を開き直してください');
+            if (!response.ok || !result.ok || !Number.isInteger(result.revision)) throw new Error(result.error || t('保存できませんでした。画面を開き直してください'));
             manager.dataset.revision = String(result.revision);
             manager.querySelectorAll('[name="revision"]').forEach(input => { input.value = result.revision; });
-            status.textContent = '順番を保存しました';
+            status.textContent = t('順番を保存しました');
         } catch (error) {
             previous.forEach(row => group.append(row));
-            status.textContent = error.message || '通信できませんでした。画面を開き直してください';
+            status.textContent = error.message || t('通信できませんでした。画面を開き直してください');
         } finally { busy = false; buttons(); }
     };
     const place = (target, y) => {
@@ -111,17 +114,17 @@
     const begin = row => {
         dragging = row; origin = row.parentElement; before = rows(origin);
         row.classList.add('log-sort-dragging');
-        status.textContent = '移動先へドラッグしてください';
+        status.textContent = t('移動先へドラッグしてください');
     };
     const end = cancel => {
         if (!dragging) return;
         const group = origin, previous = before;
         dragging.classList.remove('log-sort-dragging');
         dragging = origin = before = null; pointer = null;
-        if (cancel) { previous.forEach(row => group.append(row)); status.textContent = '並び替えを取り消しました'; }
+        if (cancel) { previous.forEach(row => group.append(row)); status.textContent = t('並び替えを取り消しました'); }
         else void save(group, previous);
     };
-    manager.addEventListener('submit', event => { if (busy || dragging) { event.preventDefault(); status.textContent = '並び替えの保存が終わってから、名前を保存してください'; } });
+    manager.addEventListener('submit', event => { if (busy || dragging) { event.preventDefault(); status.textContent = t('並び替えの保存が終わってから、名前を保存してください'); } });
     manager.addEventListener('click', event => {
         const step = event.target.closest('[data-sort-step]');
         if (!step || busy || dragging) return;

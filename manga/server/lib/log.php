@@ -196,13 +196,13 @@ function nl_prune_empty_dir(string $dir): bool
 function nl_delete_posts(mixed $items): array
 {
     return nm_with_lock('personal-log', static function () use ($items) {
-        if (!is_array($items) || !array_is_list($items) || count($items) < 1 || count($items) > 100) throw new UnexpectedValueException('削除する記事を1〜100件選んでください');
+        if (!is_array($items) || !array_is_list($items) || count($items) < 1 || count($items) > 100) throw new UnexpectedValueException(nm_t('削除する記事を1〜100件選んでください'));
         $selected = []; $candidates = [];
         foreach ($items as $item) {
-            if (!is_array($item) || !is_string($item['id'] ?? null) || !is_int($item['revision'] ?? null) || !nl_valid_post($item['id']) || isset($selected[$item['id']])) throw new UnexpectedValueException('記事の選択を確認してください');
+            if (!is_array($item) || !is_string($item['id'] ?? null) || !is_int($item['revision'] ?? null) || !nl_valid_post($item['id']) || isset($selected[$item['id']])) throw new UnexpectedValueException(nm_t('記事の選択を確認してください'));
             $p = nl_load_post($item['id']);
-            if (!$p) throw new UnexpectedValueException('記事が見つかりません。一覧を開き直してください');
-            if ($p['revision'] !== $item['revision']) throw new UnexpectedValueException('別の画面で更新された記事があります。一覧を開き直してください');
+            if (!$p) throw new UnexpectedValueException(nm_t('記事が見つかりません。一覧を開き直してください'));
+            if ($p['revision'] !== $item['revision']) throw new UnexpectedValueException(nm_t('別の画面で更新された記事があります。一覧を開き直してください'));
             $selected[$p['id']] = $p;
             foreach (nl_media_refs($p['body']) as $id) $candidates[$id] = true;
         }
@@ -345,36 +345,36 @@ function nl_manga_refs(string $body, array $refs): array
 }
 function nl_validate_body(string $body): void
 {
-    if (trim($body) === '') throw new UnexpectedValueException('本文か画像、漫画を入れてください');
-    if (strlen($body) > NL_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException('本文は100KB以内にしてください');
-    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $body)) throw new UnexpectedValueException('本文に使えない文字があります');
+    if (trim($body) === '') throw new UnexpectedValueException(nm_t('本文か画像、漫画を入れてください'));
+    if (strlen($body) > NL_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException(nm_t('本文は100KB以内にしてください'));
+    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $body)) throw new UnexpectedValueException(nm_t('本文に使えない文字があります'));
 }
 /** Called under the shared log lock; revisions prevent edits in two tabs losing data. */
 function nl_save_post(array $input): array
 {
     return nm_with_lock('personal-log', static function () use ($input) {
         $nonce = (string)($input['nonce'] ?? '');
-        if (!preg_match('/\A[a-f0-9]{32}\z/', $nonce)) throw new UnexpectedValueException('投稿画面を開き直してください');
+        if (!preg_match('/\A[a-f0-9]{32}\z/', $nonce)) throw new UnexpectedValueException(nm_t('投稿画面を開き直してください'));
         $receiptFile = nl_root() . '/receipts/' . $nonce . '.php';
         $receipt = nl_read_record($receiptFile);
         if ($receipt && ($saved = nl_load_post((string)($receipt['id'] ?? '')))) return $saved;
         $id = (string)($input['id'] ?? '');
         $old = $id !== '' ? nl_load_post($id) : null;
-        if ($id !== '' && !$old) throw new UnexpectedValueException('投稿が見つかりません');
-        if ($old && (int)($input['revision'] ?? 0) !== (int)$old['revision']) throw new UnexpectedValueException('別の画面で更新されています。本文をコピーしてから開き直してください');
+        if ($id !== '' && !$old) throw new UnexpectedValueException(nm_t('投稿が見つかりません'));
+        if ($old && (int)($input['revision'] ?? 0) !== (int)$old['revision']) throw new UnexpectedValueException(nm_t('別の画面で更新されています。本文をコピーしてから開き直してください'));
         $body = str_replace(["\r\n", "\r"], "\n", (string)($input['body'] ?? ''));
         nl_validate_body($body);
         $title = trim((string)($input['title'] ?? ''));
-        if (!mb_check_encoding($title, 'UTF-8') || mb_strlen($title) > 200) throw new UnexpectedValueException('タイトルは200文字以内にしてください');
+        if (!mb_check_encoding($title, 'UTF-8') || mb_strlen($title) > 200) throw new UnexpectedValueException(nm_t('タイトルは200文字以内にしてください'));
         $media = nl_media_refs($body);
-        foreach ($media as $mid) if (!nl_load_media($mid)) throw new UnexpectedValueException('本文に見つからない画像があります');
+        foreach ($media as $mid) if (!nl_load_media($mid)) throw new UnexpectedValueException(nm_t('本文に見つからない画像があります'));
         $refs = nl_manga_refs($body, (array)($input['manga'] ?? []));
         preg_match_all('/\[Manga[^\]\r\n]{1,230}\]/u', $body, $tags);
-        foreach ($tags[0] as $tag) if (!isset($refs[$tag])) throw new UnexpectedValueException('漫画タグは「漫画を選ぶ」から入れてください');
-        foreach ($refs as $wid) if (!nm_load_work($wid)) throw new UnexpectedValueException('選んだ漫画が見つかりません');
+        foreach ($tags[0] as $tag) if (!isset($refs[$tag])) throw new UnexpectedValueException(nm_t('漫画タグは「漫画を選ぶ」から入れてください'));
+        foreach ($refs as $wid) if (!nm_load_work($wid)) throw new UnexpectedValueException(nm_t('選んだ漫画が見つかりません'));
         $now = time();
         $status = (string)($input['status'] ?? '');
-        if (!in_array($status, ['published', 'draft'], true)) throw new UnexpectedValueException('公開か下書きを選んでください');
+        if (!in_array($status, ['published', 'draft'], true)) throw new UnexpectedValueException(nm_t('公開か下書きを選んでください'));
         if (!$old) $id = $status === 'published' ? nl_new_id($now) : 'd' . bin2hex(random_bytes(8));
         elseif (str_starts_with($id, 'd') && $status === 'published') $id = nl_new_id($now);
         $taxonomy = nl_taxonomy(); $oldTaxonomy = $taxonomy;
@@ -419,12 +419,12 @@ function nl_save_post(array $input): array
 function nl_upload_media(array $file, string $replace = '', int $revision = 0): array
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_string($file['tmp_name'] ?? null) || !is_uploaded_file($file['tmp_name'])) {
-        throw new UnexpectedValueException('画像を受け取れませんでした。アップロード上限も確認してください');
+        throw new UnexpectedValueException(nm_t('画像を受け取れませんでした。アップロード上限も確認してください'));
     }
     return nm_with_lock('personal-log', static function () use ($file, $replace, $revision) {
         $old = $replace !== '' ? nl_load_media($replace) : null;
-        if ($replace !== '' && !$old) throw new UnexpectedValueException('画像が見つかりません');
-        if ($old && $revision !== $old['revision']) throw new UnexpectedValueException('別の画面で画像が更新されています。開き直してください');
+        if ($replace !== '' && !$old) throw new UnexpectedValueException(nm_t('画像が見つかりません'));
+        if ($old && $revision !== $old['revision']) throw new UnexpectedValueException(nm_t('別の画面で画像が更新されています。開き直してください'));
         $id = $old ? $old['id'] : bin2hex(random_bytes(8));
         $dir = nl_media_dir($id);
         $cfg = nm_config();
@@ -532,8 +532,8 @@ function nl_post_parts(array $p): array
     preg_match_all('/\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]/u', $line, $media);
     $body = $embed !== '' ? trim($line) : implode("\n", $media[0]);
     if (($lines[1] ?? '') !== '') $body .= ($body !== '' ? "\n" : '') . $lines[1];
-    if ($title === '' && $embed !== '') $title = $embed . 'の記録';
-    return ['title' => $title !== '' ? $title : '画像の記録', 'body' => $body];
+    if ($title === '' && $embed !== '') $title = nm_t('{name}の記録', ['name' => $embed]);
+    return ['title' => $title !== '' ? $title : nm_t('画像の記録'), 'body' => $body];
 }
 function nl_post_title(array $p, int $limit = 80): string
 {
@@ -705,14 +705,14 @@ function nl_render_body(array $p, bool $admin = false): string
             if ($html !== null) $block = true;
             continue;
         }
-        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) { $out .= '<span class="note">画像が見つかりません</span>'; $block = false; }
+        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) { $out .= '<span class="note">' . nm_t('画像が見つかりません') . '</span>'; $block = false; }
         elseif (isset($p['manga'][$token])) {
             $w = nm_load_work($p['manga'][$token]);
-            if (!$w || empty($w['pages'])) { $out .= '<span class="note">漫画が見つかりません</span>'; $block = false; continue; }
+            if (!$w || empty($w['pages'])) { $out .= '<span class="note">' . nm_t('漫画が見つかりません') . '</span>'; $block = false; continue; }
             $prefix = $admin ? '../' : '';
             $href = $prefix . 'read.php?nagimanga=' . $w['id'] . '&dir=' . rawurlencode($w['direction']);
             $cover = empty($w['password_hash']) && nm_work_page_public($w) ? $prefix . 'read.php?a=o&id=' . $w['id'] : $prefix . 'viewer/og.jpg';
-            $out .= '<a class="log-manga" href="' . h($href) . '" data-nagimanga="' . h($w['id']) . '" data-endpoint="' . $prefix . 'read.php" data-direction="' . h($w['direction']) . '" data-view="auto" data-cover="1"><img src="' . h($cover) . '" alt="" loading="lazy"><span><strong>' . h($w['title']) . '</strong><small>' . (!empty($w['password_hash']) ? 'パスワードを入れて読む' : '漫画を読む') . '</small></span></a>';
+            $out .= '<a class="log-manga" href="' . h($href) . '" data-nagimanga="' . h($w['id']) . '" data-endpoint="' . $prefix . 'read.php" data-direction="' . h($w['direction']) . '" data-view="auto" data-cover="1"><img src="' . h($cover) . '" alt="" loading="lazy"><span><strong>' . h($w['title']) . '</strong><small>' . (!empty($w['password_hash']) ? nm_t('パスワードを入れて読む') : nm_t('漫画を読む')) . '</small></span></a>';
             $block = true;
         } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) { $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>'; $block = false; }
         else $out .= $text($token);

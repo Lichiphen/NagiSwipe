@@ -132,28 +132,29 @@ function nl_pager(array $s, string $query, int $page, int $total, string $base =
     if ($pages < 2) return '';
     $mode = $s['pager'];
     $start = ($page - 1) * $per + 1; $end = min($total, $page * $per);
-    $status = $s['pager_status'] ? '<p class="log-pager-status" aria-live="polite"><span class="log-pager-total">' . $total . '件中</span><b>' . $start . '〜' . $end . '件目</b>' . ($mode !== 'more' ? '<span class="log-pager-of">' . $page . ' / ' . $pages . 'ページ</span>' : '') . '</p>' : '';
+    $status = $s['pager_status'] ? '<p class="log-pager-status" aria-live="polite"><span class="log-pager-total">' . nm_t('{n}件中', ['n' => $total]) . '</span><b>' . nm_t('{start}〜{end}件目', ['start' => $start, 'end' => $end]) . '</b>' . ($mode !== 'more' ? '<span class="log-pager-of">' . nm_t('{page} / {pages}ページ', ['page' => $page, 'pages' => $pages]) . '</span>' : '') . '</p>' : '';
+    $newerLabel = nm_t('新しい' . $noun); $olderLabel = nm_t('過去の' . $noun); $listLabel = nm_t($noun . '一覧のページ');
     $newer = $page > 1
-        ? '<a class="log-pager-step is-newer" rel="prev" href="' . h(nl_page_url($query, $page - 1, $base)) . '">' . nl_pager_arrow(false) . '<span>新しい' . $noun . '</span></a>'
-        : '<span class="log-pager-step is-newer" aria-disabled="true">' . nl_pager_arrow(false) . '<span>新しい' . $noun . '</span></span>';
+        ? '<a class="log-pager-step is-newer" rel="prev" href="' . h(nl_page_url($query, $page - 1, $base)) . '">' . nl_pager_arrow(false) . '<span>' . $newerLabel . '</span></a>'
+        : '<span class="log-pager-step is-newer" aria-disabled="true">' . nl_pager_arrow(false) . '<span>' . $newerLabel . '</span></span>';
     $older = $page < $pages
-        ? '<a class="log-pager-step is-older" rel="next" href="' . h(nl_page_url($query, $page + 1, $base)) . '"><span>過去の' . $noun . '</span>' . nl_pager_arrow(true) . '</a>'
-        : '<span class="log-pager-step is-older" aria-disabled="true"><span>過去の' . $noun . '</span>' . nl_pager_arrow(true) . '</span>';
+        ? '<a class="log-pager-step is-older" rel="next" href="' . h(nl_page_url($query, $page + 1, $base)) . '"><span>' . $olderLabel . '</span>' . nl_pager_arrow(true) . '</a>'
+        : '<span class="log-pager-step is-older" aria-disabled="true"><span>' . $olderLabel . '</span>' . nl_pager_arrow(true) . '</span>';
     $data = ' data-mode="' . $mode . '" data-start="' . $start . '" data-end="' . $end . '" data-total="' . $total . '"';
     if ($mode === 'more') {
         $next = min($per, $total - $end);
         $body = ($page < $pages
-                ? '<a class="log-pager-more" rel="next" href="' . h(nl_page_url($query, $page + 1, $base)) . '" data-pager-more><span>もっと見る</span><small>過去の' . $noun . 'を' . $next . '件</small></a>'
-                : '<p class="log-pager-end">ここまでで全部です</p>')
-            . ($page > 1 ? '<a class="log-pager-back" href="' . h(nl_page_url($query, 1, $base)) . '">' . nl_pager_arrow(false) . '<span>最新の' . $noun . 'から見る</span></a>' : '');
-        return '<nav class="log-pager is-more" aria-label="' . $noun . '一覧のページ"' . $data . '>' . $status . $body . '</nav>';
+                ? '<a class="log-pager-more" rel="next" href="' . h(nl_page_url($query, $page + 1, $base)) . '" data-pager-more><span>' . nm_t('もっと見る') . '</span><small>' . nm_t('過去の' . $noun . 'を{n}件', ['n' => $next]) . '</small></a>'
+                : '<p class="log-pager-end">' . nm_t('ここまでで全部です') . '</p>')
+            . ($page > 1 ? '<a class="log-pager-back" href="' . h(nl_page_url($query, 1, $base)) . '">' . nl_pager_arrow(false) . '<span>' . nm_t('最新の' . $noun . 'から見る') . '</span></a>' : '');
+        return '<nav class="log-pager is-more" aria-label="' . $listLabel . '"' . $data . '>' . $status . $body . '</nav>';
     }
     $numbers = '';
     if ($mode === 'numbers') {
         foreach (nl_pager_numbers($page, $pages) as $n) {
             $numbers .= $n === null ? '<li class="log-pager-gap" aria-hidden="true"><span></span><span></span><span></span></li>'
-                : ($n === $page ? '<li><span class="log-pager-num" aria-current="page"><span class="sr-only">ページ</span>' . $n . '</span></li>'
-                    : '<li><a class="log-pager-num" href="' . h(nl_page_url($query, $n, $base)) . '"><span class="sr-only">ページ</span>' . $n . '</a></li>');
+                : ($n === $page ? '<li><span class="log-pager-num" aria-current="page"><span class="sr-only">' . nm_t('ページ') . '</span>' . $n . '</span></li>'
+                    : '<li><a class="log-pager-num" href="' . h(nl_page_url($query, $n, $base)) . '"><span class="sr-only">' . nm_t('ページ') . '</span>' . $n . '</a></li>');
         }
         $numbers = '<ol class="log-pager-pages">' . $numbers . '</ol>';
     }
@@ -162,9 +163,9 @@ function nl_pager(array $s, string $query, int $page, int $total, string $base =
         parse_str($query, $hidden);
         $fields = '';
         foreach ($hidden as $k => $v) if (is_string($v)) $fields .= '<input type="hidden" name="' . h((string)$k) . '" value="' . h($v) . '">';
-        $jump = '<form class="log-pager-jump" method="get" action="' . h($base) . '">' . $fields . '<label><span>ページを指定</span><input type="number" name="page" min="1" max="' . $pages . '" value="' . $page . '" inputmode="numeric" required></label><span aria-hidden="true">/ ' . $pages . '</span><button type="submit">移動</button></form>';
+        $jump = '<form class="log-pager-jump" method="get" action="' . h($base) . '">' . $fields . '<label><span>' . nm_t('ページを指定') . '</span><input type="number" name="page" min="1" max="' . $pages . '" value="' . $page . '" inputmode="numeric" required></label><span aria-hidden="true">/ ' . $pages . '</span><button type="submit">' . nm_t('移動') . '</button></form>';
     }
-    return '<nav class="log-pager is-' . $mode . '" aria-label="' . $noun . '一覧のページ"' . $data . '>' . $status . '<div class="log-pager-row">' . $newer . $numbers . $older . '</div>' . $jump . '</nav>';
+    return '<nav class="log-pager is-' . $mode . '" aria-label="' . $listLabel . '"' . $data . '>' . $status . '<div class="log-pager-row">' . $newer . $numbers . $older . '</div>' . $jump . '</nav>';
 }
 /** Newer / older neighbours of a published post, with a way back to the whole list. */
 function nl_post_nav(array $summaries, array $post): string

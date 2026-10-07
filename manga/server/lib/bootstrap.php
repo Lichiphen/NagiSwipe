@@ -35,6 +35,7 @@ define('NM_DATA', (static function (): string {
 const NM_ID_PATTERN = '/\A[A-Za-z0-9]{12}\z/';
 const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif)\z/';
 require_once __DIR__ . '/image-guard.php';
+require_once __DIR__ . '/i18n.php';
 
 /**
  * Content-based cache keys, including the reader's automatically loaded CSS.

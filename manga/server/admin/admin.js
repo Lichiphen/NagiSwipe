@@ -5,6 +5,9 @@
  */
 (function () {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
 
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -52,7 +55,7 @@
                 && !el.closest('.log-theme-group, .log-sidebar-list') && !el.parentElement.parentElement.closest('fieldset'));
             if (!parts.length) return;
             const nav = document.createElement('nav');
-            nav.className = 'settings-parts'; nav.setAttribute('aria-label', head.textContent.trim() + 'の項目');
+            nav.className = 'settings-parts'; nav.setAttribute('aria-label', t('{section}の項目', { section: head.textContent.trim() }));
             parts.forEach((el, i) => {
                 const target = el.tagName === 'H3' ? el : el.parentElement;
                 if (!target.id) target.id = (card.id || 'settings-card-' + (c + 1)) + '-part-' + (i + 1);
@@ -121,8 +124,8 @@
             const exits = () => {
                 const box = document.createElement('div');
                 box.className = 'settings-toc-exits';
-                box.innerHTML = '<a class="settings-toc-exit" href="index.php?p=log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 6-6 6 6 6M5 12h14"/></svg><span>管理画面に戻る</span></a>'
-                    + '<a class="settings-toc-exit" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span>公開ページを見る</span></a>';
+                box.innerHTML = '<a class="settings-toc-exit" href="index.php?p=log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 6-6 6 6 6M5 12h14"/></svg><span>' + t('管理画面に戻る') + '</span></a>'
+                    + '<a class="settings-toc-exit" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span>' + t('公開ページを見る') + '</span></a>';
                 return box;
             };
             toc.append(exits(), list()); toc.hidden = false;
@@ -130,10 +133,10 @@
             // Phones: a button floating at the bottom right opens the same list in a dialog.
             const fab = document.createElement('button');
             fab.type = 'button'; fab.className = 'settings-toc-fab'; fab.setAttribute('aria-haspopup', 'dialog');
-            fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span>目次</span>';
+            fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span>' + t('目次') + '</span>';
             const dialog = document.createElement('dialog');
             dialog.className = 'settings-toc-dialog'; dialog.setAttribute('aria-labelledby', 'settings-toc-title');
-            dialog.innerHTML = '<div class="settings-toc-dialog-head"><h2 id="settings-toc-title">設定の目次</h2><button type="button" class="btn" data-toc-close>閉じる</button></div>';
+            dialog.innerHTML = '<div class="settings-toc-dialog-head"><h2 id="settings-toc-title">' + t('設定の目次') + '</h2><button type="button" class="btn" data-toc-close>' + t('閉じる') + '</button></div>';
             dialog.append(exits(), list());
             document.body.append(fab, dialog);
             fab.addEventListener('click', () => { sync(); dialog.showModal(); });
@@ -188,7 +191,7 @@
                 sections.forEach(s => s.closest('.card').classList.toggle('is-changed', changed.includes(s)));
                 $$('[data-toc-target]').forEach(a => a.classList.toggle('is-changed', changed.some(s => s.closest('.card').id === a.dataset.tocTarget)));
                 form.classList.toggle('has-changes', changed.length > 0);
-                if (!busy) say(changed.length ? '保存していない変更：' + changed.map(name).join('、') : idle);
+                if (!busy) say(changed.length ? t('保存していない変更：{list}', { list: changed.map(name).join(t('、')) }) : idle);
                 if (changed.length && !armed) arm();
             };
             ['input', 'change', 'settings:change'].forEach(type => form.addEventListener(type, update));
@@ -203,11 +206,11 @@
             async function save() {
                 if (busy) return false;
                 update();
-                if (!changed.length) { say('変更はありません。'); return null; }
+                if (!changed.length) { say(t('変更はありません。')); return null; }
                 const invalid = changed.flatMap(s => $$('input, select, textarea', s)).find(c => c.form === form && !c.disabled && !c.checkValidity());
                 if (invalid) {
                     reveal(invalid); invalid.reportValidity();
-                    say('「' + name(invalid.closest('[data-settings-section]')) + '」の入力を確認してください。どの設定もまだ保存していません。', true);
+                    say(t('「{section}」の入力を確認してください。どの設定もまだ保存していません。', { section: name(invalid.closest('[data-settings-section]')) }), true);
                     return false;
                 }
                 const data = new FormData(form);
@@ -217,27 +220,27 @@
                     data.set(s.dataset.itemsField || 'sidebar_items', items(s)());
                     data.set(s.dataset.revisionField || 'sidebar_revision', s.dataset.revision);
                 });
-                busy = true; form.inert = true; button.disabled = true; say('保存しています…');
+                busy = true; form.inert = true; button.disabled = true; say(t('保存しています…'));
                 try {
                     const response = await fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
                     let result;
                     try { result = await response.json(); }
-                    catch { throw new Error('保存できませんでした。ログインが切れた可能性があります。入力した内容はこの画面に残っています。'); }
+                    catch { throw new Error(t('保存できませんでした。ログインが切れた可能性があります。入力した内容はこの画面に残っています。')); }
                     if (!response.ok || !result.ok) {
                         const section = sections.find(s => s.dataset.settingsSection === result.section);
                         if (section) { reveal(section); section.closest('.card').scrollIntoView({ block: 'start' }); }
-                        throw new Error((result.error || '保存できませんでした') + '。入力した内容はこの画面に残っています。');
+                        throw new Error(t('{message}。入力した内容はこの画面に残っています。', { message: result.error || t('保存できませんでした') }));
                     }
                     sections.forEach(s => saved.set(s, snap(s))); changed = [];
                     return true;
                 } catch (e) {
-                    say(e.message || '通信できませんでした。入力した内容はこの画面に残っています。', true);
+                    say(e.message || t('通信できませんでした。入力した内容はこの画面に残っています。'), true);
                     return false;
                 } finally { busy = false; form.inert = false; button.disabled = false; }
             }
             // Saved: reload so every block shows what the server kept (and the message), without a leftover history entry.
             const reload = () => {
-                leaving = true; say('保存しました。画面を読み込み直しています…');
+                leaving = true; say(t('保存しました。画面を読み込み直しています…'));
                 // The extra entry still has the tab chosen after it was made; open that tab again.
                 if (armed) { reloadTo = location.href; history.back(); } else location.reload();
             };
@@ -245,8 +248,8 @@
 
             const dialog = document.createElement('dialog');
             dialog.className = 'settings-leave-dialog'; dialog.setAttribute('aria-labelledby', 'settings-leave-title');
-            dialog.innerHTML = '<h2 id="settings-leave-title">保存していない変更があります</h2><p>このまま移動すると、次の設定の変更が消えます。</p><ul data-leave-list></ul>'
-                + '<div class="settings-leave-actions"><button type="button" class="btn" data-leave="stay">編集に戻る</button><button type="button" class="btn danger" data-leave="discard">保存せずに移動</button><button type="button" class="btn primary" data-leave="save">保存して移動</button></div>';
+            dialog.innerHTML = '<h2 id="settings-leave-title">' + t('保存していない変更があります') + '</h2><p>' + t('このまま移動すると、次の設定の変更が消えます。') + '</p><ul data-leave-list></ul>'
+                + '<div class="settings-leave-actions"><button type="button" class="btn" data-leave="stay">' + t('編集に戻る') + '</button><button type="button" class="btn danger" data-leave="discard">' + t('保存せずに移動') + '</button><button type="button" class="btn primary" data-leave="save">' + t('保存して移動') + '</button></div>';
             document.body.append(dialog);
             let pending = null;
             const ask = (go, stay = () => {}) => {
@@ -315,7 +318,7 @@
                 document.execCommand('copy');
             }
             const label = btn.textContent;
-            btn.textContent = 'コピーしました';
+            btn.textContent = t('コピーしました');
             setTimeout(() => { btn.textContent = label; }, 1500);
         });
     });
@@ -326,14 +329,14 @@
             const input = $('.js-pw', btn.parentNode);
             const show = input.type === 'password';
             input.type = show ? 'text' : 'password';
-            btn.textContent = show ? '隠す' : '表示';
+            btn.textContent = show ? t('隠す') : t('表示');
         });
     });
 
     // --- Confirm dangerous forms ------------------------------------------
     $$('form.js-confirm').forEach(form => {
         form.addEventListener('submit', e => {
-            if (!window.confirm(form.dataset.confirm || 'よろしいですか？')) e.preventDefault();
+            if (!window.confirm(form.dataset.confirm || t('よろしいですか？'))) e.preventDefault();
         });
     });
     // One dangerous button in a form that also saves (e.g. "いいねを削除" beside "数を保存").
@@ -442,19 +445,19 @@
             progress.value = 0;
             const errors = [];
             for (let i = 0; i < files.length; i++) {
-                status.textContent = `アップロード中… ${i + 1} / ${files.length}（${files[i].name}）`;
+                status.textContent = t('アップロード中… {i} / {n}（{name}）', { i: i + 1, n: files.length, name: files[i].name });
                 try {
                     const res = await post({ do: 'upload', id: drop.dataset.id, page: files[i] });
-                    const data = await res.json().catch(() => ({ ok: false, error: `エラー（${res.status}）` }));
-                    if (!data.ok) errors.push(`${files[i].name}: ${data.error || 'エラー'}`);
+                    const data = await res.json().catch(() => ({ ok: false, error: t('エラー（{status}）', { status: res.status }) }));
+                    if (!data.ok) errors.push(`${files[i].name}: ${data.error || t('エラー')}`);
                 } catch (e) {
-                    errors.push(`${files[i].name}: 通信エラー`);
+                    errors.push(`${files[i].name}: ${t('通信エラー')}`);
                 }
                 progress.value = i + 1;
             }
             busy = false;
             if (errors.length) {
-                status.textContent = `完了（${errors.length} 件失敗）: ` + errors.join(' / ');
+                status.textContent = t('完了（{n} 件失敗）:', { n: errors.length }) + ' ' + errors.join(' / ');
                 return;
             }
             if (sortAfter.checked) submitForm({ do: 'sort_name', id: drop.dataset.id });
@@ -489,7 +492,7 @@
             const pages = $$('.js-pages .page').map(li => li.dataset.f);
             const n = Math.min(files.length, pages.length);
             if (files.length !== pages.length &&
-                !window.confirm(`画像は ${files.length} 枚、ページは ${pages.length} ページです。1 ページ目から順に ${n} ページ分を割り当てますか？`)) {
+                !window.confirm(t('画像は {files} 枚、ページは {pages} ページです。1 ページ目から順に {n} ページ分を割り当てますか？', { files: files.length, pages: pages.length, n }))) {
                 return;
             }
             busyL = true;
@@ -498,7 +501,7 @@
             progressL.value = 0;
             const errors = [];
             for (let i = 0; i < n; i++) {
-                statusL.textContent = `アップロード中… ${i + 1} / ${n}（${files[i].name} → ${i + 1} ページ目）`;
+                statusL.textContent = t('アップロード中… {i} / {n}（{name} → {i} ページ目）', { i: i + 1, n, name: files[i].name });
                 const fd = new FormData();
                 fd.append('do', 'upload_light');
                 fd.append('id', dropL.dataset.id);
@@ -507,16 +510,16 @@
                 fd.append('csrf', dropL.dataset.csrf);
                 try {
                     const res = await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin' });
-                    const data = await res.json().catch(() => ({ ok: false, error: `エラー（${res.status}）` }));
-                    if (!data.ok) errors.push(`${files[i].name}: ${data.error || 'エラー'}`);
+                    const data = await res.json().catch(() => ({ ok: false, error: t('エラー（{status}）', { status: res.status }) }));
+                    if (!data.ok) errors.push(`${files[i].name}: ${data.error || t('エラー')}`);
                 } catch (e) {
-                    errors.push(`${files[i].name}: 通信エラー`);
+                    errors.push(`${files[i].name}: ${t('通信エラー')}`);
                 }
                 progressL.value = i + 1;
             }
             busyL = false;
             if (errors.length) {
-                statusL.textContent = `完了（${errors.length} 件失敗）: ` + errors.join(' / ');
+                statusL.textContent = t('完了（{n} 件失敗）:', { n: errors.length }) + ' ' + errors.join(' / ');
                 return;
             }
             location.reload();
@@ -578,11 +581,11 @@
                 const res = await fetch('index.php', { method: 'POST', body: fd, credentials: 'same-origin' });
                 const data = await res.json();
                 if (!data.ok) throw new Error(data.error || '');
-                saveBtn.textContent = '保存しました';
+                saveBtn.textContent = t('保存しました');
                 setTimeout(() => location.reload(), 600);
             } catch (e) {
                 saveBtn.disabled = false;
-                window.alert('保存できませんでした。' + (e.message || ''));
+                window.alert(t('保存できませんでした。{message}', { message: e.message || '' }));
             }
         });
     }
@@ -595,6 +598,9 @@
  */
 (() => {
     'use strict';
+    // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const form = document.querySelector('[data-log-restore]');
     if (!form || !window.fetch || !window.FormData) return;
     const csrf = form.querySelector('[name="csrf"]').value;
@@ -602,19 +608,19 @@
     const UPLOAD = 25, IMAGES = 70;
     const dialog = document.createElement('dialog');
     dialog.className = 'log-restore-dialog'; dialog.setAttribute('aria-labelledby', 'log-restore-title');
-    dialog.innerHTML = '<h2 id="log-restore-title">LOGを復元しています</h2>'
-        + '<ol class="log-restore-steps"><li data-step="upload">ZIPを送る</li><li data-step="images">画像を復元</li><li data-step="finish">投稿と設定を反映</li></ol>'
+    dialog.innerHTML = '<h2 id="log-restore-title">' + t('LOGを復元しています') + '</h2>'
+        + '<ol class="log-restore-steps"><li data-step="upload">' + t('ZIPを送る') + '</li><li data-step="images">' + t('画像を復元') + '</li><li data-step="finish">' + t('投稿と設定を反映') + '</li></ol>'
         + '<div class="log-restore-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="log-restore-title"><div class="log-restore-fill"><span class="log-restore-wave is-back"></span><span class="log-restore-wave"></span></div></div>'
         + '<p class="log-restore-numbers"><strong data-restore-percent>0%</strong><span data-restore-eta></span></p>'
         + '<p class="log-restore-detail" data-restore-detail aria-live="polite"></p>'
         + '<p class="note" data-restore-note></p>'
-        + '<div class="log-restore-actions"><button type="button" class="btn" data-restore-cancel>中止する</button></div>';
+        + '<div class="log-restore-actions"><button type="button" class="btn" data-restore-cancel>' + t('中止する') + '</button></div>';
     document.body.append(dialog);
     const $ = selector => dialog.querySelector(selector);
     const meter = $('.log-restore-meter'), fill = $('.log-restore-fill'), title = $('#log-restore-title'), note = $('[data-restore-note]'), cancelButton = $('[data-restore-cancel]');
     let running = false, stopped = false, xhr = null, token = '';
 
-    const timeLeft = seconds => seconds < 60 ? `残り約${Math.max(5, Math.ceil(seconds / 5) * 5)}秒` : `残り約${Math.ceil(seconds / 60)}分`;
+    const timeLeft = seconds => seconds < 60 ? t('残り約{n}秒', { n: Math.max(5, Math.ceil(seconds / 5) * 5) }) : t('残り約{n}分', { n: Math.ceil(seconds / 60) });
     const show = (percent, eta, detail) => {
         const value = Math.max(0, Math.min(100, Math.round(percent)));
         fill.style.width = `${value}%`;
@@ -636,21 +642,21 @@
     const fail = (message, maybeDone) => {
         running = false; xhr = null;
         dialog.classList.add('is-error');
-        title.textContent = '復元できませんでした';
+        title.textContent = t('復元できませんでした');
         $('[data-restore-eta]').textContent = '';
         $('[data-restore-detail]').textContent = message;
-        if (maybeDone) note.innerHTML = '<a href="index.php?p=log">LOGの一覧を開いて、復元されたか確認する</a>';
+        if (maybeDone) note.innerHTML = t('<a href="index.php?p=log">LOGの一覧を開いて、復元されたか確認する</a>');
         else {
-            note.textContent = 'LOGは書き換えていません。内容を確かめて、もう一度お試しください。';
+            note.textContent = t('LOGは書き換えていません。内容を確かめて、もう一度お試しください。');
             // Drop the uploaded ZIP and the converted images now rather than after a day.
             if (token) post({do: 'log_restore_cancel', token});
         }
-        cancelButton.textContent = '閉じる'; cancelButton.disabled = false; cancelButton.focus();
+        cancelButton.textContent = t('閉じる'); cancelButton.disabled = false; cancelButton.focus();
     };
     // A busy host answers with its own HTML page; tell that apart from the app's messages.
     const reason = (status, data) => data?.error || ([0, 502, 503, 504].includes(status)
-        ? 'サーバーが混み合っていて応答がありませんでした。少し待ってから、もう一度お試しください。'
-        : `サーバーから予期しない応答がありました（${status}）。`);
+        ? t('サーバーが混み合っていて応答がありませんでした。少し待ってから、もう一度お試しください。')
+        : t('サーバーから予期しない応答がありました（{status}）。', { status }));
     const post = async fields => {
         const body = new FormData();
         body.set('csrf', csrf);
@@ -670,10 +676,10 @@
         xhr.upload.addEventListener('progress', event => {
             if (!event.lengthComputable || !event.total) return;
             const rate = event.loaded / Math.max(.5, (performance.now() - started) / 1000);
-            show(UPLOAD * event.loaded / event.total, event.loaded < event.total && rate ? `送信 ${timeLeft((event.total - event.loaded) / rate)}` : '',
-                `${mb(event.loaded)} / ${mb(event.total)} MB を送りました`);
+            show(UPLOAD * event.loaded / event.total, event.loaded < event.total && rate ? t('送信 {eta}', { eta: timeLeft((event.total - event.loaded) / rate) }) : '',
+                t('{sent} / {total} MB を送りました', { sent: mb(event.loaded), total: mb(event.total) }));
         });
-        xhr.upload.addEventListener('load', () => show(UPLOAD, '', 'ZIPの中身に壊れたところがないか確認しています'));
+        xhr.upload.addEventListener('load', () => show(UPLOAD, '', t('ZIPの中身に壊れたところがないか確認しています')));
         xhr.addEventListener('load', () => { let parsed = null; try { parsed = JSON.parse(xhr.responseText); } catch { parsed = null; } resolve({status: xhr.status, data: parsed}); });
         xhr.addEventListener('error', () => resolve({status: 0, data: null}));
         xhr.addEventListener('abort', () => resolve({status: 0, data: null}));
@@ -685,10 +691,10 @@
     const run = async () => {
         running = true; stopped = false; token = '';
         dialog.classList.remove('is-error');
-        title.textContent = 'LOGを復元しています';
-        note.textContent = '終わるまで、この画面を閉じずにお待ちください。';
-        cancelButton.textContent = '中止する'; cancelButton.disabled = false; cancelButton.hidden = false;
-        step('upload'); show(0, '残り時間を計算しています', 'ZIPを送っています');
+        title.textContent = t('LOGを復元しています');
+        note.textContent = t('終わるまで、この画面を閉じずにお待ちください。');
+        cancelButton.textContent = t('中止する'); cancelButton.disabled = false; cancelButton.hidden = false;
+        step('upload'); show(0, t('残り時間を計算しています'), t('ZIPを送っています'));
         dialog.showModal();
 
         const data = new FormData(form);
@@ -703,7 +709,7 @@
         step('images');
         const started = performance.now();
         let done = 0, retries = 0;
-        show(UPLOAD, total ? '残り時間を計算しています' : '', total ? `画像 0 / ${total} 枚` : '復元する画像はありません');
+        show(UPLOAD, total ? t('残り時間を計算しています') : '', total ? t('画像 {done} / {total} 枚', { done: 0, total }) : t('復元する画像はありません'));
         while (done < total) {
             const r = await post({do: 'log_restore_step', token});
             if (stopped) return;
@@ -711,7 +717,7 @@
                 // The job survives a busy host or a dropped line: wait, then ask again.
                 if (!r.data && retries < 3) {
                     retries++;
-                    $('[data-restore-eta]').textContent = `サーバーの応答を待っています（${retries}/3）`;
+                    $('[data-restore-eta]').textContent = t('サーバーの応答を待っています（{n}/3）', { n: retries });
                     await new Promise(resolve => setTimeout(resolve, 3000 * retries));
                     if (stopped) return;
                     continue;
@@ -720,20 +726,20 @@
             }
             retries = 0; done = r.data.done;
             const seconds = (performance.now() - started) / 1000;
-            show(UPLOAD + IMAGES * done / total, done < total ? timeLeft(seconds / done * (total - done) + 2) : 'まもなく完了します', `画像 ${done} / ${total} 枚`);
+            show(UPLOAD + IMAGES * done / total, done < total ? timeLeft(seconds / done * (total - done) + 2) : t('まもなく完了します'), t('画像 {done} / {total} 枚', { done, total }));
         }
 
         step('finish');
         cancelButton.disabled = true;
-        show(UPLOAD + IMAGES, 'まもなく完了します', `投稿 ${begun.data.posts}件と設定を書き込んでいます`);
+        show(UPLOAD + IMAGES, t('まもなく完了します'), t('投稿 {n}件と設定を書き込んでいます', { n: begun.data.posts }));
         const r = await post({do: 'log_restore_finish', token});
         // Without a reply, the swap may still have finished on the server.
-        if (!r.data?.ok) return fail(r.data ? reason(r.status, r.data) : reason(r.status, null) + ' 復元は終わっている場合があります。', !r.data);
+        if (!r.data?.ok) return fail(r.data ? reason(r.status, r.data) : reason(r.status, null) + ' ' + t('復元は終わっている場合があります。'), !r.data);
         running = false;
         step('');
-        title.textContent = '復元が完了しました';
+        title.textContent = t('復元が完了しました');
         note.textContent = ''; cancelButton.hidden = true;
-        show(100, '', `投稿 ${r.data.posts}件・画像 ${r.data.media}件を復元しました。LOGの一覧へ移動します。`);
+        show(100, '', t('投稿 {posts}件・画像 {media}件を復元しました。LOGの一覧へ移動します。', { posts: r.data.posts, media: r.data.media }));
         setTimeout(() => { location.href = r.data.redirect; }, 1200);
     };
 

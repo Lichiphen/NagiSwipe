@@ -31,18 +31,18 @@ function nl_topmenu_url(string $url): string
 }
 function nl_topmenu_validate(mixed $items, string $kind = 'top'): array
 {
-    $name = NL_MENUS[$kind]['name'];
-    if (!is_array($items) || !array_is_list($items)) throw new UnexpectedValueException($name . 'の項目を確認してください');
-    if (count($items) > NL_TOPMENU_MAX) throw new UnexpectedValueException($name . 'は' . NL_TOPMENU_MAX . '項目までです');
+    $name = nm_t(NL_MENUS[$kind]['name']);
+    if (!is_array($items) || !array_is_list($items)) throw new UnexpectedValueException(nm_t('{menu}の項目を確認してください', ['menu' => $name]));
+    if (count($items) > NL_TOPMENU_MAX) throw new UnexpectedValueException(nm_t('{menu}は{n}項目までです', ['menu' => $name, 'n' => NL_TOPMENU_MAX]));
     $out = []; $ids = [];
     foreach ($items as $n => $item) {
-        $no = ($n + 1) . '番目の項目';
-        if (!is_array($item) || !is_string($item['id'] ?? null) || !preg_match('/\Atm-[a-f0-9]{12}\z/', $item['id']) || isset($ids[$item['id']]) || !is_bool($item['enabled'] ?? null) || !is_string($item['label'] ?? null) || !is_string($item['url'] ?? null)) throw new UnexpectedValueException($name . 'の項目が重複しているか、形式が違います');
+        $no = nm_t('{n}番目の項目', ['n' => $n + 1]);
+        if (!is_array($item) || !is_string($item['id'] ?? null) || !preg_match('/\Atm-[a-f0-9]{12}\z/', $item['id']) || isset($ids[$item['id']]) || !is_bool($item['enabled'] ?? null) || !is_string($item['label'] ?? null) || !is_string($item['url'] ?? null)) throw new UnexpectedValueException(nm_t('{menu}の項目が重複しているか、形式が違います', ['menu' => $name]));
         $ids[$item['id']] = true;
         $label = trim($item['label']);
-        if ($label === '' || mb_strlen($label) > NL_TOPMENU_LABEL_MAX || !mb_check_encoding($label, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $label)) throw new UnexpectedValueException($name . $no . 'の表示名を' . NL_TOPMENU_LABEL_MAX . '文字以内で入力してください');
+        if ($label === '' || mb_strlen($label) > NL_TOPMENU_LABEL_MAX || !mb_check_encoding($label, 'UTF-8') || preg_match('/[\x00-\x1F\x7F]/', $label)) throw new UnexpectedValueException(nm_t('{menu}{item}の表示名を{n}文字以内で入力してください', ['menu' => $name, 'item' => $no, 'n' => NL_TOPMENU_LABEL_MAX]));
         $url = nl_topmenu_url($item['url']);
-        if ($url === '') throw new UnexpectedValueException($name . $no . '（' . $label . '）のリンク先を確認してください。https:// で始まるURLか、./?pg=privacy のようなサイト内のURLを使えます');
+        if ($url === '') throw new UnexpectedValueException(nm_t('{menu}{item}（{label}）のリンク先を確認してください。https:// で始まるURLか、./?pg=privacy のようなサイト内のURLを使えます', ['menu' => $name, 'item' => $no, 'label' => $label]));
         $out[] = ['id' => $item['id'], 'label' => $label, 'url' => $url, 'enabled' => $item['enabled']];
     }
     return $out;
@@ -51,7 +51,7 @@ function nl_menu_save(string $kind, array $items, int $revision): int
 {
     $items = nl_topmenu_validate($items, $kind);
     return nm_with_lock('personal-log', static function () use ($kind, $items, $revision) {
-        if (nl_menu_settings($kind)['revision'] !== $revision) throw new UnexpectedValueException('別の画面で' . NL_MENUS[$kind]['name'] . 'が更新されています。開き直してください');
+        if (nl_menu_settings($kind)['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で{menu}が更新されています。開き直してください', ['menu' => nm_t(NL_MENUS[$kind]['name'])]));
         nl_write_record(nl_root() . '/' . NL_MENUS[$kind]['file'] . '.php', ['revision' => $revision + 1, 'updated' => time(), 'items' => $items]);
         return $revision + 1;
     });
@@ -60,36 +60,36 @@ function nl_topmenu_save(array $items, int $revision): int { return nl_menu_save
 /** A menu from the settings screen: checked here, saved with nl_menu_save after the other blocks. */
 function nl_menu_input(string $kind): array
 {
-    $field = NL_MENUS[$kind]['field']; $name = NL_MENUS[$kind]['name'];
+    $field = NL_MENUS[$kind]['field']; $name = nm_t(NL_MENUS[$kind]['name']);
     $raw = $_POST[$field . '_items'] ?? '';
-    if (!is_string($raw) || strlen($raw) > 100000 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException($name . 'の項目を確認してください');
+    if (!is_string($raw) || strlen($raw) > 100000 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException(nm_t('{menu}の項目を確認してください', ['menu' => $name]));
     $items = nl_topmenu_validate(nl_json_list($raw), $kind);
     $revision = nm_str($_POST, $field . '_revision', 20);
-    if (!preg_match('/\A[0-9]{1,10}\z/', $revision)) throw new UnexpectedValueException('更新情報を確認して、画面を開き直してください');
-    if (nl_menu_settings($kind)['revision'] !== (int)$revision) throw new UnexpectedValueException('別の画面で' . $name . 'が更新されています。開き直してください');
+    if (!preg_match('/\A[0-9]{1,10}\z/', $revision)) throw new UnexpectedValueException(nm_t('更新情報を確認して、画面を開き直してください'));
+    if (nl_menu_settings($kind)['revision'] !== (int)$revision) throw new UnexpectedValueException(nm_t('別の画面で{menu}が更新されています。開き直してください', ['menu' => $name]));
     return [$items, (int)$revision];
 }
 function nl_topmenu_input(): array { return nl_menu_input('top'); }
 /** What the editor can link by name: the top, fixed pages, categories and hashtags. */
 function nl_topmenu_candidates(): array
 {
-    $out = [['t' => 'ホーム（すべての投稿）', 'u' => './', 'k' => 'トップ']];
-    foreach (nl_pages() as $p) $out[] = ['t' => $p['title'], 'u' => nl_fixed_url($p), 'k' => $p['status'] === 'published' ? '固定ページ' : '固定ページ・下書き'];
-    foreach (nl_taxonomy()['categories'] as $id => $name) $out[] = ['t' => $name, 'u' => './?category=' . rawurlencode((string)$id), 'k' => 'カテゴリ'];
-    foreach (array_slice(nl_ordered_hashtags(true), 0, 100) as $tag) $out[] = ['t' => '#' . $tag, 'u' => './?tag=' . rawurlencode($tag), 'k' => 'ハッシュタグ'];
+    $out = [['t' => nm_t('ホーム（すべての投稿）'), 'u' => './', 'k' => nm_t('トップ')]];
+    foreach (nl_pages() as $p) $out[] = ['t' => $p['title'], 'u' => nl_fixed_url($p), 'k' => $p['status'] === 'published' ? nm_t('固定ページ') : nm_t('固定ページ・下書き')];
+    foreach (nl_taxonomy()['categories'] as $id => $name) $out[] = ['t' => $name, 'u' => './?category=' . rawurlencode((string)$id), 'k' => nm_t('カテゴリ')];
+    foreach (array_slice(nl_ordered_hashtags(true), 0, 100) as $tag) $out[] = ['t' => '#' . $tag, 'u' => './?tag=' . rawurlencode($tag), 'k' => nm_t('ハッシュタグ')];
     return $out;
 }
 function nl_topmenu_edit_row(array $item): string
 {
-    $label = $item['label'] !== '' ? $item['label'] : '新しい項目';
+    $label = $item['label'] !== '' ? $item['label'] : nm_t('新しい項目');
     return '<div class="log-topmenu-edit-row" data-topmenu-item data-topmenu-id="' . h($item['id']) . '">'
-        . '<button class="btn log-icon-btn log-sort-handle" type="button" aria-label="' . h($label) . 'をドラッグして移動">' . nl_sidebar_ui_icon('grip') . '</button>'
-        . '<label class="log-topmenu-switch"><input class="log-switch" type="checkbox" role="switch" data-topmenu-enabled' . ($item['enabled'] ? ' checked' : '') . ' aria-label="' . h($label) . 'を表示する"></label>'
-        . '<div class="log-topmenu-fields"><div class="log-topmenu-name"><label class="log-topmenu-label">表示名（入力すると候補が出ます）<input data-topmenu-label maxlength="' . NL_TOPMENU_LABEL_MAX . '" value="' . h($item['label']) . '" placeholder="例：プライバシー" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-expanded="false"></label>'
-        . '<div class="log-topmenu-suggest" data-topmenu-suggest role="listbox" aria-label="リンク先の候補" hidden></div></div>'
-        . '<label class="log-topmenu-url">リンク先<input data-topmenu-url maxlength="2000" value="' . h($item['url']) . '" placeholder="候補から選ぶか、https://… を入力" autocomplete="off" spellcheck="false" required></label></div>'
-        . '<span class="log-sidebar-steps"><button class="btn log-icon-btn" type="button" data-topmenu-step="-1" aria-label="左（上）へ移動">' . nl_sidebar_ui_icon('up') . '</button><button class="btn log-icon-btn" type="button" data-topmenu-step="1" aria-label="右（下）へ移動">' . nl_sidebar_ui_icon('down') . '</button>'
-        . '<button class="btn log-icon-btn" type="button" data-topmenu-remove aria-label="' . h($label) . 'を外す">' . nl_sidebar_ui_icon('remove') . '</button></span></div>';
+        . '<button class="btn log-icon-btn log-sort-handle" type="button" aria-label="' . nm_t('{name}をドラッグして移動', ['name' => h($label)]) . '">' . nl_sidebar_ui_icon('grip') . '</button>'
+        . '<label class="log-topmenu-switch"><input class="log-switch" type="checkbox" role="switch" data-topmenu-enabled' . ($item['enabled'] ? ' checked' : '') . ' aria-label="' . nm_t('{name}を表示する', ['name' => h($label)]) . '"></label>'
+        . '<div class="log-topmenu-fields"><div class="log-topmenu-name"><label class="log-topmenu-label">' . nm_t('表示名（入力すると候補が出ます）') . '<input data-topmenu-label maxlength="' . NL_TOPMENU_LABEL_MAX . '" value="' . h($item['label']) . '" placeholder="' . nm_t('例：プライバシー') . '" autocomplete="off" required role="combobox" aria-autocomplete="list" aria-expanded="false"></label>'
+        . '<div class="log-topmenu-suggest" data-topmenu-suggest role="listbox" aria-label="' . nm_t('リンク先の候補') . '" hidden></div></div>'
+        . '<label class="log-topmenu-url">' . nm_t('リンク先') . '<input data-topmenu-url maxlength="2000" value="' . h($item['url']) . '" placeholder="' . nm_t('候補から選ぶか、https://… を入力') . '" autocomplete="off" spellcheck="false" required></label></div>'
+        . '<span class="log-sidebar-steps"><button class="btn log-icon-btn" type="button" data-topmenu-step="-1" aria-label="' . nm_t('左（上）へ移動') . '">' . nl_sidebar_ui_icon('up') . '</button><button class="btn log-icon-btn" type="button" data-topmenu-step="1" aria-label="' . nm_t('右（下）へ移動') . '">' . nl_sidebar_ui_icon('down') . '</button>'
+        . '<button class="btn log-icon-btn" type="button" data-topmenu-remove aria-label="' . nm_t('{name}を外す', ['name' => h($label)]) . '">' . nl_sidebar_ui_icon('remove') . '</button></span></div>';
 }
 /** The editor of one menu ($lead: the explanation under its heading; $extra: more fields of its block). */
 function nl_menu_editor(string $kind, string $lead, string $extra = ''): string
@@ -97,25 +97,25 @@ function nl_menu_editor(string $kind, string $lead, string $extra = ''): string
     $m = NL_MENUS[$kind]; $s = nl_menu_settings($kind); $rows = '';
     foreach ($s['items'] as $item) $rows .= nl_topmenu_edit_row($item);
     $candidates = json_encode(nl_topmenu_candidates(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    return '<section class="card log-topmenu-manager" id="log-' . $m['file'] . '-settings"><h2>' . $m['name'] . '</h2><p class="note">' . $lead . '</p>'
+    return '<section class="card log-topmenu-manager" id="log-' . $m['file'] . '-settings"><h2>' . nm_t($m['name']) . '</h2><p class="note">' . $lead . '</p>'
         . '<div class="form" data-settings-section="' . $m['section'] . '" data-topmenu-manager data-items-field="' . $m['field'] . '_items" data-revision-field="' . $m['field'] . '_revision" data-revision="' . $s['revision'] . '" data-candidates="' . h((string)$candidates) . '">'
         . $extra
         . '<div class="log-topmenu-list" data-topmenu-items>' . $rows . '</div>'
-        . '<p class="log-topmenu-empty note" data-topmenu-empty' . ($rows !== '' ? ' hidden' : '') . '>項目はまだありません。</p>'
-        . '<button class="btn" type="button" data-topmenu-add>' . nl_sidebar_ui_icon('add') . '項目を追加</button>'
-        . '<p class="note">表示名に固定ページやカテゴリの名前の一部を入れると、候補が出ます。選ぶとリンク先（サイト内のURL）が入ります。外部サイトは https:// から入力します。最大' . NL_TOPMENU_MAX . '項目、表示名は' . NL_TOPMENU_LABEL_MAX . '文字までです。</p>'
-        . '<p class="note" data-topmenu-status role="status" aria-live="polite">並べ替えは左の持ち手のドラッグか、矢印のボタンで。画面の下の「設定を保存」で反映します。</p><noscript><p>' . $m['name'] . 'の編集には、ブラウザのJavaScriptを有効にしてください。</p></noscript></div>'
+        . '<p class="log-topmenu-empty note" data-topmenu-empty' . ($rows !== '' ? ' hidden' : '') . '>' . nm_t('項目はまだありません。') . '</p>'
+        . '<button class="btn" type="button" data-topmenu-add>' . nl_sidebar_ui_icon('add') . nm_t('項目を追加') . '</button>'
+        . '<p class="note">' . nm_t('表示名に固定ページやカテゴリの名前の一部を入れると、候補が出ます。選ぶとリンク先（サイト内のURL）が入ります。外部サイトは https:// から入力します。最大{n}項目、表示名は{chars}文字までです。', ['n' => NL_TOPMENU_MAX, 'chars' => NL_TOPMENU_LABEL_MAX]) . '</p>'
+        . '<p class="note" data-topmenu-status role="status" aria-live="polite">' . nm_t('並べ替えは左の持ち手のドラッグか、矢印のボタンで。画面の下の「設定を保存」で反映します。') . '</p><noscript><p>' . nm_t('{menu}の編集には、ブラウザのJavaScriptを有効にしてください。', ['menu' => nm_t($m['name'])]) . '</p></noscript></div>'
         . '<template data-topmenu-template>' . nl_topmenu_edit_row(['id' => '', 'label' => '', 'url' => '', 'enabled' => true]) . '</template></section>';
 }
 function nl_topmenu_panel(): string
 {
-    return nl_menu_editor('top', 'サイト名の下に並ぶリンクです。左から順に表示します。項目がないときは表示しません。スマホでは1行に並べ、入りきらないときは指で左右にスワイプして読めます（続きがあることを矢印と動きで知らせます）。');
+    return nl_menu_editor('top', nm_t('サイト名の下に並ぶリンクです。左から順に表示します。項目がないときは表示しません。スマホでは1行に並べ、入りきらないときは指で左右にスワイプして読めます（続きがあることを矢印と動きで知らせます）。'));
 }
 function nl_footmenu_panel(): string
 {
     $s = nl_settings();
-    return nl_menu_editor('foot', 'ページの一番下に並ぶリンクです。利用規約やプライバシーポリシーなどを置けます。左から順に表示し、スマホでは折り返して並べます。',
-        '<input type="hidden" name="footer_home_form" value="1"><label class="check"><input type="checkbox" name="footer_home" value="1"' . ($s['footer_home'] ? ' checked' : '') . '>先頭に、家のアイコンと「' . h(nl_crumb_home($s)) . '」のトップへのリンクを出す</label><p class="note">文字はパンくずリストの先頭と同じです（「一覧の見せ方・記事の下」で変えられます）。</p>');
+    return nl_menu_editor('foot', nm_t('ページの一番下に並ぶリンクです。利用規約やプライバシーポリシーなどを置けます。左から順に表示し、スマホでは折り返して並べます。'),
+        '<input type="hidden" name="footer_home_form" value="1"><label class="check"><input type="checkbox" name="footer_home" value="1"' . ($s['footer_home'] ? ' checked' : '') . '>' . nm_t('先頭に、家のアイコンと「{home}」のトップへのリンクを出す', ['home' => h(nl_crumb_home($s))]) . '</label><p class="note">' . nm_t('文字はパンくずリストの先頭と同じです（「一覧の見せ方・記事の下」で変えられます）。') . '</p>');
 }
 /** Whether a menu link points at the page being shown ($here: pg / category / tag / id / top). */
 function nl_menu_current(string $url, array $here): bool
@@ -148,8 +148,8 @@ function nl_topmenu_html(array $here): string
     $list = nl_menu_items('top', $here);
     if ($list === '') return '';
     $arrow = static fn(string $dir, string $label, string $path) => '<button class="log-topmenu-arrow is-' . $dir . '" type="button" tabindex="-1" aria-hidden="true" title="' . $label . '" hidden><svg viewBox="0 0 24 24"><path d="' . $path . '"/></svg></button>';
-    return '<nav class="log-topmenu" aria-label="サイトのメニュー"><div class="log-topmenu-inner"><div class="log-topmenu-scroller" data-topmenu-scroller><ul class="log-topmenu-links">' . $list . '</ul></div>'
-        . $arrow('prev', '前の項目', 'm14 6-6 6 6 6') . $arrow('next', '続きの項目', 'm10 6 6 6-6 6') . '</div></nav>';
+    return '<nav class="log-topmenu" aria-label="' . nm_t('サイトのメニュー') . '"><div class="log-topmenu-inner"><div class="log-topmenu-scroller" data-topmenu-scroller><ul class="log-topmenu-links">' . $list . '</ul></div>'
+        . $arrow('prev', nm_t('前の項目'), 'm14 6-6 6 6 6') . $arrow('next', nm_t('続きの項目'), 'm10 6 6 6-6 6') . '</div></nav>';
 }
 /** The footer: HOME with the house icon, the footer links, then the footer text. Empty when there is nothing to show. */
 function nl_footer_html(array $s, array $here): string
@@ -158,5 +158,5 @@ function nl_footer_html(array $s, array $here): string
     $links = $home . nl_menu_items('foot', $here + ['top' => false]);
     $text = $s['show_footer'] && $s['footer_text'] !== '' ? '<p class="log-footer-text">' . h($s['footer_text']) . '</p>' : '';
     if ($links === '' && $text === '') return '';
-    return '<footer class="log-site-footer">' . ($links !== '' ? '<nav class="log-footer-nav" aria-label="フッターのリンク"><ul>' . $links . '</ul></nav>' : '') . $text . '</footer>';
+    return '<footer class="log-site-footer">' . ($links !== '' ? '<nav class="log-footer-nav" aria-label="' . nm_t('フッターのリンク') . '"><ul>' . $links . '</ul></nav>' : '') . $text . '</footer>';
 }

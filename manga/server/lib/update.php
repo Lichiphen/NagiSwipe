@@ -26,7 +26,7 @@ const NM_UPDATE_MAX_ENTRY = 5 * 1024 * 1024;
 const NM_UPDATE_MAX_TOTAL = 30 * 1024 * 1024;
 const NM_UPDATE_KEEP_BACKUPS = 3;
 const NM_UPDATE_REQUIRED = ['index.php', 'read.php', 'log.php', 'lib/bootstrap.php', 'admin/index.php', 'viewer/NagiManga.js',
-    '404.php', 'viewer/404.css', 'lib/image-guard.php',
+    '404.php', 'viewer/404.css', 'lib/image-guard.php', 'lib/i18n.php', 'lib/lang/en.json',
     'lib/log.php', 'lib/log-taxonomy.php', 'lib/log-sidebar.php', 'lib/log-admin.php', 'lib/log-public.php', 'lib/log-backup.php', 'admin/login.php', 'admin/log-editor.js', 'admin/log-settings.js', 'admin/log-manage.js', 'viewer/log.css', 'viewer/log-owner.css', 'viewer/log-menu.js', 'viewer/log-mail.js', 'viewer/log-share.js', 'viewer/log-veil.js', 'viewer/log-new.js', 'lib/log-veil.php', 'viewer/log-pager.js', 'viewer/log-og.png',
     'viewer/NagiSwipe-main.js', 'viewer/NagiSwipe-main.css', 'lib/log-links.php', 'lib/log-embed.php', 'lib/log-embed-providers.php', 'lib/log-embed-resolve.php', 'embed.php', 'lib/log-card.php', 'viewer/log-embed.js',
     'lib/log-svg.php', 'lib/log-pages.php', 'lib/log-topmenu.php', 'admin/log-pages.js', 'viewer/log-topmenu.js',
@@ -211,8 +211,8 @@ function nm_update_status(bool $force = false): array
         if ($best) $st = array_merge($st, $best);
     } catch (Throwable $e) {
         $st['error'] = $e->getMessage() === 'no transport'
-            ? 'このサーバーからは GitHub に接続できません（PHP の curl も allow_url_fopen も使えません）'
-            : 'GitHub に接続できませんでした。しばらくしてからもう一度お試しください';
+            ? nm_t('このサーバーからは GitHub に接続できません（PHP の curl も allow_url_fopen も使えません）')
+            : nm_t('GitHub に接続できませんでした。しばらくしてからもう一度お試しください');
         // Keep what we knew, and try again sooner than usual
         if ($cache && !empty($cache['latest'])) {
             foreach (['latest', 'tag', 'notes', 'published', 'url', 'size', 'digest', 'page'] as $k) {
@@ -283,36 +283,36 @@ function nm_update_rel_kind(string $rel): string
 function nm_update_read_package(string $zipPath, string $expect): array
 {
     $zip = new ZipArchive();
-    if ($zip->open($zipPath, ZipArchive::RDONLY) !== true) return ['error' => '更新ファイルを開けませんでした'];
+    if ($zip->open($zipPath, ZipArchive::RDONLY) !== true) return ['error' => nm_t('更新ファイルを開けませんでした')];
     try {
-        if ($zip->numFiles < 1 || $zip->numFiles > 500) return ['error' => '更新ファイルの中身が正しくありません'];
+        if ($zip->numFiles < 1 || $zip->numFiles > 500) return ['error' => nm_t('更新ファイルの中身が正しくありません')];
         $files = [];
         $total = 0;
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $st = $zip->statIndex($i);
-            if (!$st) return ['error' => '更新ファイルの中身が正しくありません'];
+            if (!$st) return ['error' => nm_t('更新ファイルの中身が正しくありません')];
             $name = (string)$st['name'];
             if (!str_starts_with($name, 'nagimanga/')) continue;   // README, optional plugins
             $rel = substr($name, strlen('nagimanga/'));
             if ($rel === '' || str_ends_with($rel, '/')) continue;
             $kind = nm_update_rel_kind($rel);
-            if ($kind === 'bad') return ['error' => '更新ファイルに入っていてはいけないファイルがあります: ' . mb_substr($rel, 0, 80)];
+            if ($kind === 'bad') return ['error' => nm_t('更新ファイルに入っていてはいけないファイルがあります:') . ' ' . mb_substr($rel, 0, 80)];
             if ($kind === 'skip') continue;
             if ($st['size'] > NM_UPDATE_MAX_ENTRY || ($total += $st['size']) > NM_UPDATE_MAX_TOTAL) {
-                return ['error' => '更新ファイルが大きすぎます'];
+                return ['error' => nm_t('更新ファイルが大きすぎます')];
             }
             $bytes = nm_zip_read($zip, $i, NM_UPDATE_MAX_ENTRY);
-            if ($bytes === null || strlen($bytes) !== (int)$st['size']) return ['error' => '更新ファイルを読めませんでした'];
+            if ($bytes === null || strlen($bytes) !== (int)$st['size']) return ['error' => nm_t('更新ファイルを読めませんでした')];
             $files[$rel] = $bytes;
         }
     } finally {
         $zip->close();
     }
     foreach (NM_UPDATE_REQUIRED as $r) {
-        if (!isset($files[$r])) return ['error' => '更新ファイルに必要なファイルがありません: ' . $r];
+        if (!isset($files[$r])) return ['error' => nm_t('更新ファイルに必要なファイルがありません:') . ' ' . $r];
     }
     if (!preg_match("/const NM_VERSION = '([0-9]+\\.[0-9]+\\.[0-9]+)';/", $files['lib/bootstrap.php'], $m) || $m[1] !== $expect) {
-        return ['error' => '更新ファイルのバージョンが一致しません'];
+        return ['error' => nm_t('更新ファイルのバージョンが一致しません')];
     }
     return ['files' => $files];
 }
@@ -379,24 +379,24 @@ function nm_update_apply(): array
     return nm_with_lock('update', static function (): array {
         $st = nm_update_status(true);
         if (!nm_update_available($st)) {
-            return ['ok' => false, 'msg' => $st['error'] ?: 'すでに最新のバージョンです'];
+            return ['ok' => false, 'msg' => $st['error'] ?: nm_t('すでに最新のバージョンです')];
         }
-        if (!nm_zip_available()) return ['ok' => false, 'msg' => 'このサーバーの PHP には ZipArchive がないため、自動で更新できません'];
+        if (!nm_zip_available()) return ['ok' => false, 'msg' => nm_t('このサーバーの PHP には ZipArchive がないため、自動で更新できません')];
         if (!preg_match('/\Asha256:([a-f0-9]{64})\z/', (string)$st['digest'], $dm)) {
-            return ['ok' => false, 'msg' => '更新ファイルの確認用の値が取得できないため、安全のため自動更新を中止しました'];
+            return ['ok' => false, 'msg' => nm_t('更新ファイルの確認用の値が取得できないため、安全のため自動更新を中止しました')];
         }
         $size = (int)$st['size'];
-        if ($size <= 0 || $size > NM_UPDATE_MAX_ZIP) return ['ok' => false, 'msg' => '更新ファイルの大きさが正しくありません'];
+        if ($size <= 0 || $size > NM_UPDATE_MAX_ZIP) return ['ok' => false, 'msg' => nm_t('更新ファイルの大きさが正しくありません')];
 
         try {
             [$status, $body] = nm_update_http((string)$st['url'], NM_UPDATE_MAX_ZIP, 60, false);
         } catch (Throwable $e) {
             nm_log('update_download_failed', $e->getMessage());
-            return ['ok' => false, 'msg' => '更新ファイルをダウンロードできませんでした'];
+            return ['ok' => false, 'msg' => nm_t('更新ファイルをダウンロードできませんでした')];
         }
         if ($status !== 200 || strlen($body) !== $size || !hash_equals($dm[1], hash('sha256', $body))) {
             nm_log('update_digest_mismatch', (string)$st['latest']);
-            return ['ok' => false, 'msg' => 'ダウンロードした更新ファイルが正しくないため、更新を中止しました（何も変更していません）'];
+            return ['ok' => false, 'msg' => nm_t('ダウンロードした更新ファイルが正しくないため、更新を中止しました（何も変更していません）')];
         }
 
         $root = nm_update_backup_root();
@@ -411,12 +411,12 @@ function nm_update_apply(): array
         }
         if (isset($pkg['error'])) {
             nm_log('update_package_rejected', $pkg['error']);
-            return ['ok' => false, 'msg' => $pkg['error'] . '（何も変更していません）'];
+            return ['ok' => false, 'msg' => nm_t('{message}（何も変更していません）', ['message' => $pkg['error']])];
         }
         $files = $pkg['files'];
         $bad = nm_update_unwritable(array_keys($files));
         if ($bad) {
-            return ['ok' => false, 'msg' => '書き込めないファイルがあるため更新できません（何も変更していません）: ' . implode(', ', array_slice($bad, 0, 5))];
+            return ['ok' => false, 'msg' => nm_t('書き込めないファイルがあるため更新できません（何も変更していません）:') . ' ' . implode(', ', array_slice($bad, 0, 5))];
         }
 
         // Undo point: the files about to change, and the ones that will be new
@@ -447,12 +447,12 @@ function nm_update_apply(): array
         } catch (Throwable $e) {
             nm_update_restore(basename($backup));
             nm_log('update_failed', $e->getMessage());
-            return ['ok' => false, 'msg' => '更新の途中で失敗したため、元に戻しました'];
+            return ['ok' => false, 'msg' => nm_t('更新の途中で失敗したため、元に戻しました')];
         }
         @unlink(nm_update_cache_file());
         nm_update_prune();
         nm_log('update_applied', NM_VERSION . ' -> ' . $st['latest']);
-        return ['ok' => true, 'msg' => 'NagiManga を ' . $st['latest'] . ' に更新しました', 'version' => $st['latest']];
+        return ['ok' => true, 'msg' => nm_t('NagiManga を {v} に更新しました', ['v' => $st['latest']]), 'version' => $st['latest']];
     });
 }
 
@@ -481,17 +481,17 @@ function nm_update_rollback(string $name): array
 {
     return nm_with_lock('update', static function () use ($name): array {
         $known = array_column(nm_update_backups(), null, 'name');
-        if (!isset($known[$name])) return ['ok' => false, 'msg' => '元に戻すデータが見つかりません'];
+        if (!isset($known[$name])) return ['ok' => false, 'msg' => nm_t('元に戻すデータが見つかりません')];
         try {
             nm_update_restore($name);
         } catch (Throwable $e) {
             nm_log('update_rollback_failed', $e->getMessage());
-            return ['ok' => false, 'msg' => '元に戻せませんでした'];
+            return ['ok' => false, 'msg' => nm_t('元に戻せませんでした')];
         }
         nm_rmdir_recursive(nm_update_backup_root() . '/' . $name);
         @unlink(nm_update_cache_file());
         nm_log('update_rolled_back', $known[$name]['to'] . ' -> ' . $known[$name]['from']);
-        return ['ok' => true, 'msg' => 'NagiManga ' . $known[$name]['from'] . ' に戻しました'];
+        return ['ok' => true, 'msg' => nm_t('NagiManga {v} に戻しました', ['v' => $known[$name]['from']])];
     });
 }
 

@@ -102,7 +102,7 @@ function nl_likes_forget(array $ids): void
 function nl_like_button(array $p): string
 {
     $n = nl_like_count($p['id']);
-    return '<button class="log-share-btn log-like" type="button" data-like="' . h($p['id']) . '" aria-label="いいね（' . $n . '）">'
+    return '<button class="log-share-btn log-like" type="button" data-like="' . h($p['id']) . '" aria-label="' . nm_t('いいね（{n}）', ['n' => $n]) . '">'
         . '<svg class="log-share-icon log-like-heart" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>'
         . '<span class="log-like-count">' . $n . '</span></button>';
 }

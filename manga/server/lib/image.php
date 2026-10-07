@@ -60,28 +60,28 @@ function nm_memory_available(): int
 function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, int $maxBytes, bool $withThumb = true, bool $animated = false, int $maxSide = 0): array|string
 {
     $sup = nm_image_support();
-    if (!$sup['gd'] || !$sup['finfo']) return 'サーバーの PHP に GD / fileinfo がありません';
+    if (!$sup['gd'] || !$sup['finfo']) return nm_t('サーバーの PHP に GD / fileinfo がありません');
 
-    if (!is_file($tmp) || is_link($tmp)) return 'ファイルを受け取れませんでした';
+    if (!is_file($tmp) || is_link($tmp)) return nm_t('ファイルを受け取れませんでした');
     $size = filesize($tmp);
-    if ($size === false || $size <= 0) return '空のファイルです';
-    if ($size > $maxBytes) return 'ファイルが大きすぎます';
+    if ($size === false || $size <= 0) return nm_t('空のファイルです');
+    if ($size > $maxBytes) return nm_t('ファイルが大きすぎます');
 
     // 1) Content sniffing, not the file name
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
-    if (!is_string($mime) || !isset(NM_ALLOWED_MIME[$mime])) return '画像ではないか、対応していない形式です';
+    if (!is_string($mime) || !isset(NM_ALLOWED_MIME[$mime])) return nm_t('画像ではないか、対応していない形式です');
 
     // 2) The image header must agree with the sniffed type
     $info = @getimagesize($tmp);
-    if (!$info || !isset($info[0], $info[1], $info[2])) return '画像として読めません';
-    if ($info[2] !== NM_ALLOWED_MIME[$mime]) return '画像の形式が一致しません';
+    if (!$info || !isset($info[0], $info[1], $info[2])) return nm_t('画像として読めません');
+    if ($info[2] !== NM_ALLOWED_MIME[$mime]) return nm_t('画像の形式が一致しません');
     [$w, $h] = [(int)$info[0], (int)$info[1]];
     if ($w < 1 || $h < 1 || $w > NM_MAX_SIDE || $h > NM_MAX_SIDE || $w * $h > NM_MAX_PIXELS) {
-        return '画像の縦横が大きすぎます';
+        return nm_t('画像の縦横が大きすぎます');
     }
 
     // 3) Refuse before decoding if it cannot fit in memory (~5 bytes/px + margin)
-    if ($w * $h * 5 * 1.8 > nm_memory_available()) return 'サーバーのメモリが足りません（画像を小さくしてください）';
+    if ($w * $h * 5 * 1.8 > nm_memory_available()) return nm_t('サーバーのメモリが足りません（画像を小さくしてください）');
 
     // LOG posts keep GIF animation: the file is rebuilt block by block instead of re-encoded
     if ($animated && $info[2] === IMAGETYPE_GIF) {
@@ -99,7 +99,7 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
         IMAGETYPE_AVIF => function_exists('imagecreatefromavif') ? @imagecreatefromavif($tmp) : false,
         default => false,
     };
-    if (!$src) return '画像を読み込めませんでした';
+    if (!$src) return nm_t('画像を読み込めませんでした');
 
     try {
         if ($info[2] === IMAGETYPE_JPEG) $src = nm_apply_exif_orientation($src, $tmp);
@@ -124,7 +124,7 @@ function nm_import_image(string $tmp, string $pagesDir, int $seq, int $quality, 
         $out = "$pagesDir/$file";
         $thumbOut = "$pagesDir/t_$base.$ext";
 
-        if (!nm_encode($src, $out, $ext, $quality)) return '画像を保存できませんでした';
+        if (!nm_encode($src, $out, $ext, $quality)) return nm_t('画像を保存できませんでした');
 
         if (!$withThumb) return ['f' => $file, 'w' => $w, 'h' => $h];
 
@@ -219,7 +219,7 @@ function nm_import_animated_gif(string $tmp, string $pagesDir, int $seq): array|
     file_put_contents($probe, $gif['bytes']);
     $ok = @imagecreatefromgif($probe);
     @unlink($probe);
-    if (!$ok) return '画像を読み込めませんでした';
+    if (!$ok) return nm_t('画像を読み込めませんでした');
     imagedestroy($ok);
     nm_ensure_dir($pagesDir);
     $file = sprintf('p%04d_%s.gif', $seq % 10000, bin2hex(random_bytes(4)));
@@ -228,7 +228,7 @@ function nm_import_animated_gif(string $tmp, string $pagesDir, int $seq): array|
         if (file_put_contents($part, $gif['bytes']) !== strlen($gif['bytes']) || !@rename($part, $path)) {
             @unlink($part);
             nm_delete_page_files($pagesDir, $file);
-            return '画像を保存できませんでした';
+            return nm_t('画像を保存できませんでした');
         }
         @chmod($path, 0644);
     }
