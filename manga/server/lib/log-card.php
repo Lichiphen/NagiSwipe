@@ -44,6 +44,7 @@ function nl_card_targets(string $body): array
 function nl_cards_prepare(string $body): void
 {
     $deadline = microtime(true) + NL_CARD_BUDGET;
+    nl_embeds_prepare($body, $deadline);
     foreach (nl_card_targets($body) as $url) {
         if (microtime(true) > $deadline) break;
         try { $card = nl_card_fetch($url, $deadline); }

@@ -700,7 +700,7 @@ function nl_render_body(array $p, bool $admin = false): string
         $flush();
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
-            $html = nl_embed_html(trim($token), $dark) ?? nl_card_html(trim($token), $admin);
+            $html = nl_embed_html(trim($token), $dark, $admin) ?? nl_card_html(trim($token), $admin);
             $out .= $html ?? $text($token);
             if ($html !== null) $block = true;
             continue;

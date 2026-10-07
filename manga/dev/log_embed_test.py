@@ -34,6 +34,32 @@ EMBEDS={
     'spotify':('https://open.spotify.com/intl-ja/track/4uLU6hMCjMI75M1A2tKUQC?si=abc','https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC'),
     'spotify album':('https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3','log-embed-tall'),
     'apple music':('https://music.apple.com/jp/album/some-album/1440857781?i=1440857782','https://embed.music.apple.com/jp/album/some-album/1440857781?i=1440857782'),
+    'amazon music track':('https://music.amazon.co.jp/albums/B0CY5SN6Y4?marketplaceId=A1VC38T7YXB528&musicTerritory=JP&ref=dm_sh_unPe1nLQrVwXkl1sS4eRZMBIR&trackAsin=B0CY5ST1FH','https://music.amazon.co.jp/embed/B0CY5ST1FH/?marketplaceId=A1VC38T7YXB528&amp;musicTerritory=JP'),
+    'amazon music album':('https://music.amazon.co.jp/albums/B0CY5SN6Y4/','https://music.amazon.co.jp/embed/B0CY5SN6Y4/?marketplaceId=A1VC38T7YXB528&amp;musicTerritory=JP'),
+    'amazon music playlist':('https://music.amazon.co.jp/playlists/B01HB13YCQ?marketplaceId=A1VC38T7YXB528&musicTerritory=JP&ref=dm_sh_fRduyIbJRl37x8bMEafrTT3so','https://music.amazon.co.jp/embed/B01HB13YCQ/?marketplaceId=A1VC38T7YXB528&amp;musicTerritory=JP'),
+    'soundcloud track':('https://soundcloud.com/user-657615998/myuu_suffer_sick-rabbit-potion?si=af0a447eaeac44c791d27b729f8aaf87&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing','https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fuser-657615998%2Fmyuu_suffer_sick-rabbit-potion&amp;auto_play=false&amp;visual=false&amp;show_comments=false'),
+    'soundcloud playlist':('https://soundcloud.com/sei_peridot/sets/peritunematerial?si=19189b94f98c412a9a7bf9adf1ef207f&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing','https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fsei_peridot%2Fsets%2Fperitunematerial&amp;auto_play=false&amp;visual=false&amp;show_comments=false'),
+    'youtube music':('https://music.youtube.com/watch?v=pRrmQUm6Zvg&si=sharing','https://www.youtube-nocookie.com/embed/pRrmQUm6Zvg?rel=0'),
+    'bandcamp album':('https://hammock.bandcamp.com/album/everything-and-nothing?from=sharing','https://bandcamp.com/EmbeddedPlayer/album=4067613091/'),
+    'bandcamp track':('https://hammock.bandcamp.com/track/example','https://bandcamp.com/EmbeddedPlayer/track=1234567/'),
+    'tiktok':('https://www.tiktok.com/@scout2015/video/6718335390845095173?is_from_webapp=1','https://www.tiktok.com/player/v1/6718335390845095173?autoplay=0'),
+    'bluesky':('https://bsky.app/profile/bsky.app/post/3mx5e63uvns2d','https://embed.bsky.app/embed/did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mx5e63uvns2d'),
+    'bluesky did':('https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3mx5e63uvns2d','https://embed.bsky.app/embed/did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mx5e63uvns2d'),
+    'mastodon':('https://mastodon.social/@Mastodon/99730307203414093','data-embed="mastodon"'),
+    'mixcloud':('https://www.mixcloud.com/mixcloud/what-you-need-to-know-about-music-copyright-aneesh-patel-music-lawyer-and-copyright-expert/','https://player-widget.mixcloud.com/?hide_cover=0'),
+    'mixcloud playlist':('https://www.mixcloud.com/mixcloud/playlists/example/','class="log-embed embeddedmixcloud log-embed-tall"'),
+    'audiomack playlist':('https://audiomack.com/audiomack/playlist/audiomacks-fine-tuned-series','https://audiomack.com/embed/audiomack/playlist/audiomacks-fine-tuned-series'),
+    'audiomack song':('https://audiomack.com/inayah/song/crazy-too-ft-new-master','https://audiomack.com/embed/inayah/song/crazy-too-ft-new-master'),
+    'audiomack album':('https://audiomack.com/artist/album/example','class="log-embed embeddedaudiomack log-embed-tall"'),
+    'facebook':('https://www.facebook.com/Engineering/posts/were-sharing-an-early-view-into-how-were-building-private-processing-a-new-techn/1091181673044313/','https://www.facebook.com/plugins/post.php?href=https%3A%2F%2Fwww.facebook.com%2FEngineering%2Fposts%2F1091181673044313'),
+    'facebook video':('https://www.facebook.com/Engineering/videos/123456789/','https://www.facebook.com/plugins/video.php?href='),
+    'facebook permalink':('https://www.facebook.com/permalink.php?story_fbid=123456789&id=987654321','permalink.php%3Fstory_fbid%3D123456789%26id%3D987654321'),
+    'threads':('https://www.threads.net/@threads/post/C--z-PKuPeh?hl=en','https://www.threads.com/@threads/post/C--z-PKuPeh/embed/?theme=light'),
+    'vimeo':('https://vimeo.com/76979871','https://player.vimeo.com/video/76979871?autoplay=0&amp;dnt=1'),
+    'vimeo unlisted':('https://vimeo.com/76979871/abcdef1234','dnt=1&amp;h=abcdef1234'),
+    'twitch live':('https://www.twitch.tv/twitchdev','https://player.twitch.tv/?channel=twitchdev&amp;parent=127.0.0.1&amp;autoplay=false'),
+    'twitch vod':('https://www.twitch.tv/videos/40464143','https://player.twitch.tv/?video=v40464143&amp;parent=127.0.0.1&amp;autoplay=false'),
+    'twitch clip':('https://clips.twitch.tv/IncredulousAbstemiousFennelImGlitch','https://clips.twitch.tv/embed?clip=IncredulousAbstemiousFennelImGlitch&amp;parent=127.0.0.1&amp;autoplay=false'),
     'tweet':('https://x.com/nishishi/status/1234567890123456789','<blockquote class="twitter-tweet" data-dnt="true"><a href="https://twitter.com/nishishi/status/1234567890123456789"'),
     'tweet short id':('https://twitter.com/jack/status/20','href="https://twitter.com/jack/status/20"'),
     'instagram':('https://www.instagram.com/p/C0abcDEFghi/?igsh=xyz','data-instgrm-permalink="https://www.instagram.com/p/C0abcDEFghi/"'),
@@ -117,18 +143,94 @@ def run(site,other_site,c,csrf,other,ot):
     rep=post({'do':'log_upload','media':m['id'],'revision':1},files={'image':('new.png',h.png(30,20),'image/png')})
     check('アニメGIFを静止画へ差し替えると古いGIFを消す',rep.status==200 and not json.loads(rep.text)['media']['f'].endswith('.gif') and not list((site/'data').rglob('*'+m['f'])))
 
+    # Resolved-provider fixtures keep this suite independent of live APIs. Live browser checks use real URLs.
+    fixture_data=[
+        [EMBEDS['bandcamp album'][0],{'id':'4067613091'}],
+        [EMBEDS['bandcamp track'][0],{'id':'1234567'}],
+        [EMBEDS['bluesky'][0],{'did':'did:plc:z72i7hdynmk6r22z27h6tvur'}],
+        [EMBEDS['mastodon'][0],{'src':'https://mastodon.social/@Mastodon/99730307203414093/embed'}],
+    ]
+    fixture_json=json.dumps(fixture_data).replace('\\','\\\\').replace("'","\\'")
+    php(site,"foreach(json_decode('"+fixture_json+"',true) as [$url,$data]) {$e=nl_embed_detect($url); nm_ensure_dir(dirname(nl_embed_cache_file($e))); nl_write_record(nl_embed_cache_file($e), ['type'=>$e['type'],'url'=>$e['url'],'fetched'=>time(),'ok'=>true,'data'=>$data]);} echo json_encode(true);")
+    fixture_before={f.name:f.read_bytes() for f in (site/'data/log/embeds').glob('*.php')}
     # --- Embeds: a URL alone on its line, decided by domain --------------------------------
     lines='\n'.join(t for t,_ in EMBEDS.values())
     eid=save('埋め込みの記録\n'+lines+'\nhttps://cdn.example.com/movie.mp4\n  https://youtu.be/spacedXYZ12  \n文中のYouTube https://youtu.be/inlineABC12 は普通のリンク\n[Umekomi]https://youtu.be/oldSyntax12')
     res=pub.get('/?id='+eid); page=res.text
     body_html=page[page.index('<div class="log-body">'):page.index('</article>')]
     for name,(_,want) in EMBEDS.items(): check('自動埋め込み: '+name,want in body_html)
+    check('保存・読者の表示で有効な埋め込みキャッシュを取り直さない',fixture_before=={f.name:f.read_bytes() for f in (site/'data/log/embeds').glob('*.php')})
+    check('追加サービスは元の公開URLもリンクで表示','class="log-embed-source"' in body_html and 'Blueskyで開く' in body_html and 'Bandcampで開く' in body_html)
+    invalid_extra=[
+        'https://hammock.bandcamp.com.evil.example/album/example', 'https://bandcamp.com/album/example',
+        'https://hammock.bandcamp.com/album/../example', 'https://user:pw@hammock.bandcamp.com/album/example',
+        'https://www.tiktok.com.evil.example/@user/video/6718335390845095173','https://www.tiktok.com/@user/video/123',
+        'https://bsky.app/profile/evil%22onload/post/3mx5e63uvns2d','https://bsky.app/profile/foo..app/post/3mx5e63uvns2d',
+        'https://bsky.app/profile/did:plc:too-short/post/3mx5e63uvns2d',
+        'https://www.threads.com/@threads/post/example/extra','https://www.threads.com.evil.example/@threads/post/example',
+        'https://www.mixcloud.com/user/uploads/','https://audiomack.com/artist/song/../../x',
+        'https://www.facebook.com/Engineering/posts/123456789/extra','https://www.facebook.com/watch/?v[]=123456789',
+        'https://vimeo.com/76979871?h[]=abcdef1234','https://player.vimeo.com.evil.example/video/76979871',
+        'https://www.twitch.tv/login','https://clips.twitch.tv/IncredulousAbstemiousFennelImGlitch/extra',
+        'https://localhost/@user/12345678','https://127.0.0.1/@user/12345678',
+    ]
+    extra_json=json.dumps(invalid_extra).replace('\\','\\\\').replace("'","\\'")
+    check('追加サービスの似たドメイン・認証情報・不正なパスや配列を拒否',php(site,"echo json_encode(array_map('nl_embed_detect',json_decode('"+extra_json+"',true)));")==[None]*len(invalid_extra))
+    check('Twitchのparentには設置先ホストだけを使う',php(site,"$_SERVER['HTTP_HOST']='example.com:8443'; echo json_encode(nl_embed_html('https://www.twitch.tv/twitchdev'));").find('parent=example.com&amp;autoplay=false')>=0)
+    check('取得前のBandcampは元の公開URLへ案内',php(site,"echo json_encode(nl_embed_html('https://hammock.bandcamp.com/album/uncached'));").find('Bandcampで開く')>=0)
+    check('Mastodonの内部アドレスへ取得しに行かない',php(site,"echo json_encode(nl_embed_fetch(nl_embed_detect('https://127.0.0.1.nip.io/@user/12345678'),microtime(true)+2));") is None)
+    mastodon_key=re.search(r'embed\.php\?k=([a-f0-9]{20})',body_html).group(1)
+    mastodon_frame=pub.get('/embed.php?k='+mastodon_key)
+    check('Mastodonの中継枠は確認済みの投稿だけで、親のCSPを広げない',mastodon_frame.status==200 and 'https://mastodon.social/@Mastodon/99730307203414093/embed' in mastodon_frame.text and "frame-src https://mastodon.social; frame-ancestors 'self'" in (mastodon_frame.getheader('Content-Security-Policy') or '') and 'sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"' in mastodon_frame.text and pub.get('/embed.php?k=../../config').status==404)
+    check('Mastodonの外部HTMLは書き出さず、同じ投稿の公式枠だけ採用',php(site,"echo json_encode([nl_embed_mastodon_parse('<iframe src=\"https://evil.example/embed\"></iframe><script>alert(1)</script>','https://mastodon.social/@Mastodon/99730307203414093'),nl_embed_bandcamp_parse('<meta name=\"bc-page-properties\" content=\"{&quot;item_type&quot;:&quot;a&quot;,&quot;item_id&quot;:&quot;1/onload=alert(1)&quot;}\">','album')]);")==[None,None])
+    check('Amazon Musicは曲と曲一覧の高さを分ける',body_html.count('class="log-embed embeddedamazonmusic"')==1 and body_html.count('class="log-embed embeddedamazonmusic log-embed-tall"')==2)
+    check('SoundCloudは曲とプレイリストの高さを分け、自動再生しない',body_html.count('class="log-embed embeddedsoundcloud"')==1 and body_html.count('class="log-embed embeddedsoundcloud log-embed-tall"')==1 and body_html.count('auto_play=false')==2)
+    check('SoundCloudの共有用si・utmパラメータを枠に引き継がない','utm_' not in body_html and 'af0a447eaeac44c791d27b729f8aaf87' not in body_html and '19189b94f98c412a9a7bf9adf1ef207f' not in body_html)
+    check('Amazon Musicの共有用refや外部の地域指定を枠に引き継がない','dm_sh_' not in body_html)
+    invalid_amazon=[
+        'https://music.amazon.co.jp.evil.example/albums/B0CY5SN6Y4',
+        'https://evil.example/music.amazon.co.jp/playlists/B01HB13YCQ',
+        'https://music.amazon.co.jp/albums/B0CY5SN6Y4?trackAsin[]=B0CY5ST1FH',
+        'https://music.amazon.co.jp/albums/B0CY5SN6Y4?trackAsin=',
+        'https://music.amazon.co.jp/albums/B0CY5SN6Y4?trackAsin=B0CY5ST1FH%22onload%3Dalert(1)',
+        'https://music.amazon.co.jp/albums/B0CY5SN6Y4?trackAsin=../../../x',
+        'https://music.amazon.co.jp/playlists/B01HB13YCQ/extra',
+        'https://music.amazon.co.jp/albums/TOOSHORT',
+        'https://music.amazon.co.jp/artists/B008M6RBW4',
+        'https://user:pw@music.amazon.co.jp/albums/B0CY5SN6Y4',
+        'https://music.amazon.co.jp:8080/albums/B0CY5SN6Y4',
+        'https://amzn.to/example',
+    ]
+    invalid_json=json.dumps(invalid_amazon).replace('\\','\\\\').replace("'","\\'")
+    check('Amazon Musicの不正なID・似たドメイン・未対応URLは埋め込まない',php(site,"echo json_encode(array_map('nl_embed_detect',json_decode('"+invalid_json+"',true)));")==[None]*len(invalid_amazon))
+    invalid_soundcloud=[
+        'https://soundcloud.com.evil.example/user/track',
+        'https://evil.example/soundcloud.com/user/track',
+        'https://user:pw@soundcloud.com/user/track',
+        'https://soundcloud.com:8080/user/track',
+        'https://soundcloud.com/user',
+        'https://soundcloud.com/user/sets',
+        'https://soundcloud.com/user/tracks',
+        'https://soundcloud.com/user/likes',
+        'https://soundcloud.com/user/sets/list/extra',
+        'https://soundcloud.com/user/track%22onload%3Dalert(1)',
+        'https://soundcloud.com/user/../track',
+        'https://soundcloud.com/user/track?secret_token=s-private',
+        'https://soundcloud.com/user/track/s-private',
+        'https://on.soundcloud.com/example',
+    ]
+    invalid_soundcloud_json=json.dumps(invalid_soundcloud).replace('\\','\\\\').replace("'","\\'")
+    check('SoundCloudの似たドメイン・不正なパス・一覧・非公開・短縮リンクは埋め込まない',php(site,"echo json_encode(array_map('nl_embed_detect',json_decode('"+invalid_soundcloud_json+"',true)));")==[None]*len(invalid_soundcloud))
+    check('SoundCloudのwww付きや末尾スラッシュも同じ曲を表示',php(site,"echo json_encode(nl_embed_html('https://www.soundcloud.com/user-657615998/myuu_suffer_sick-rabbit-potion/'));").find(EMBEDS['soundcloud track'][1])>=0)
     check('動画ファイルのURLは動画プレーヤー','<video class="embeddedvideo" controls preload="metadata" playsinline><source src="https://cdn.example.com/movie.mp4">' in body_html)
     check('前後に空白があっても1行だけのURLなら埋め込む','embed/spacedXYZ12' in body_html)
     check('文の途中のURLは埋め込まず普通のリンク','embed/inlineABC12' not in body_html and '<a href="https://youtu.be/inlineABC12" rel="noopener noreferrer">' in body_html)
     check('てがろぐの書き方は特別扱いしない','embed/oldSyntax12' not in body_html and '[Umekomi]' in body_html)
     check('本文に<script>を書き出さない','<script' not in body_html)
     csp=res.getheader('Content-Security-Policy') or ''
+    check('Amazon Musicの枠は日本版の公式ドメインだけ許可','https://music.amazon.co.jp' in csp.split('frame-src ')[1].split(';')[0] and 'amazon.co.jp' not in csp.split('script-src ')[1].split(';')[0])
+    check('SoundCloudは公式プレーヤーの枠だけを許可','https://w.soundcloud.com' in csp.split('frame-src ')[1].split(';')[0] and 'soundcloud.com' not in csp.split('script-src ')[1].split(';')[0])
+    check('追加サービスは各公式の枠と同じサイトだけ許可し、任意のMastodonホストは親に加えない',all(origin in csp.split('frame-src ')[1].split(';')[0] for origin in ['https://bandcamp.com','https://www.tiktok.com','https://embed.bsky.app','https://www.threads.com','https://player-widget.mixcloud.com','https://audiomack.com','https://www.facebook.com','https://player.vimeo.com','https://player.twitch.tv','https://clips.twitch.tv',"'self'"]) and 'https://mastodon.social' not in csp and 'https:' not in csp.split('frame-src ')[1].split(';')[0].split())
     check('CSPは対応サービスのフレームと公式スクリプトだけ許可','frame-src https://www.youtube-nocookie.com' in csp and 'https://shonenjumpplus.com' in csp and "script-src 'self' https://platform.twitter.com https://www.instagram.com https://note.com" in csp and "media-src 'self' https:" in csp and "object-src 'none'" in csp and "img-src 'self' data: blob: https://i.ytimg.com;" in csp)
     check('埋め込み用JSをキャッシュバスター付きで読む',re.search(r'viewer/log-embed\.js\?v=[a-z0-9]+',page) and pub.get('/viewer/log-embed.js').status==200)
     evil=save('悪い入力\nhttps://www.youtube.com/watch?v=abc"onload="alert(1)\nhttps://evil.example/watch?v=dQw4w9WgXcQ\nhttps://youtube.com.evil.example/watch?v=dQw4w9WgXcQ\njavascript:alert(1)')
@@ -137,14 +239,33 @@ def run(site,other_site,c,csrf,other,ot):
     first=save('https://youtu.be/dQw4w9WgXcQ\n2行目の本文')
     fp=pub.get('/?id='+first).text
     check('1行目が埋め込みのURLならタイトルは「YouTubeの記録」で本文に表示','<title>YouTubeの記録｜' in fp and 'youtube-nocookie.com/embed/dQw4w9WgXcQ' in fp)
+    amazon_first=save(EMBEDS['amazon music track'][0]+'\n聴いていた曲')
+    amazon_page=pub.get('/?id='+amazon_first).text
+    check('Amazon MusicのURLだけでもサービス名をタイトルにして曲を本文に表示','<title>Amazon Musicの記録｜' in amazon_page and EMBEDS['amazon music track'][1] in amazon_page)
+    soundcloud_first=save(EMBEDS['soundcloud track'][0]+'\n聴いていた曲')
+    soundcloud_page=pub.get('/?id='+soundcloud_first).text
+    check('SoundCloudのURLが1行目でも曲を本文に表示','<title>SoundCloudの記録｜' in soundcloud_page and EMBEDS['soundcloud track'][1] in soundcloud_page)
     desc=pub.get('/?id='+eid).text.split('name="description" content="')[1].split('"')[0]
     check('説明文は文章だけで、埋め込みのURLもサービス名も入れない','（YouTube）' not in desc and 'http' not in desc)
     post({'do':'log_settings','title':'埋め込みLOG','name':'記録する人','description':'説明','theme':'dark-navy'})
     check('ダーク配色ではXの埋め込みもダーク','data-theme="dark"' in pub.get('/?id='+eid).text)
     preview=json.loads(post({**base.payload(body='プレビュー\nhttps://youtu.be/dQw4w9WgXcQ'),'do':'log_preview'}).text)['html']
     check('プレビューにも埋め込みを表示','youtube-nocookie.com/embed/dQw4w9WgXcQ' in preview)
+    amazon_preview=json.loads(post({**base.payload(body='Amazon Musicのプレビュー\n'+EMBEDS['amazon music track'][0]+'\n'+EMBEDS['amazon music playlist'][0]),'do':'log_preview'}).text)['html']
+    check('Amazon Musicの曲とプレイリストはプレビューにも表示',all(EMBEDS[name][1] in amazon_preview for name in ('amazon music track','amazon music playlist')))
+    soundcloud_preview=json.loads(post({**base.payload(body='SoundCloudのプレビュー\n'+EMBEDS['soundcloud track'][0]+'\n'+EMBEDS['soundcloud playlist'][0]),'do':'log_preview'}).text)['html']
+    check('SoundCloudの曲とプレイリストはプレビューにも表示',all(EMBEDS[name][1] in soundcloud_preview for name in ('soundcloud track','soundcloud playlist')))
+    extra_preview=json.loads(post({**base.payload(body='追加サービスのプレビュー\n'+'\n'.join(EMBEDS[name][0] for name in ['bandcamp album','bluesky','mastodon','tiktok','threads','mixcloud','audiomack playlist','facebook','vimeo','twitch live'])),'do':'log_preview'}).text)['html']
+    check('追加10サービスのプレビューにも埋め込みを表示',all(EMBEDS[name][1].replace('?theme=light','?theme=dark') in extra_preview for name in ['bandcamp album','bluesky','mastodon','tiktok','threads','mixcloud','audiomack playlist','facebook','vimeo','twitch live']) and '../embed.php?k=' in extra_preview)
+    inline_soundcloud=save('文中のリンク\nこの曲 '+EMBEDS['soundcloud track'][0]+' を聴いた')
+    check('文中のSoundCloud共有URLは通常リンクのまま','data-embed="soundcloud"' not in pub.get('/?id='+inline_soundcloud).text)
+    inline_amazon=save('文中のリンク\nこの曲 '+EMBEDS['amazon music track'][0]+' を聴いた')
+    check('文中のAmazon Music共有URLは通常リンクのまま','data-embed="amazonmusic"' not in pub.get('/?id='+inline_amazon).text)
     adm=c.get('/admin/index.php?p=log')
     check('管理画面のCSPでも埋め込みのフレームだけ許可','frame-src https://www.youtube-nocookie.com' in (adm.getheader('Content-Security-Policy') or '') and "script-src 'self';" in (adm.getheader('Content-Security-Policy') or ''))
+    check('管理画面のCSPでもAmazon Musicを表示できる','https://music.amazon.co.jp' in (adm.getheader('Content-Security-Policy') or '').split('frame-src ')[1].split(';')[0])
+    check('管理画面のCSPでもSoundCloudを表示できる','https://w.soundcloud.com' in (adm.getheader('Content-Security-Policy') or '').split('frame-src ')[1].split(';')[0])
+    check('管理画面は自己配信の表示調整だけを使い、外部スクリプトを読み込まない','data-embed-scripts="off"' in adm.text and '../viewer/log-embed.js?v=' in adm.text)
     compose=c.get('/').text
     check('投稿欄は埋め込みボタンなしで使い方を案内','data-embed title=' not in compose and 'URLだけを1行に貼ると' in compose)
 

@@ -177,7 +177,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
     }
     $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
     $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
-    echo '<!DOCTYPE html><html lang="ja"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '"' : '') . '><head><meta charset="UTF-8">'
+    echo '<!DOCTYPE html><html lang="ja"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h($title) . ' - NagiManga</title>'
@@ -185,7 +185,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi
-            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '">'
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage

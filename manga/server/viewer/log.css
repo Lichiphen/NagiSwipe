@@ -113,6 +113,17 @@ html[data-log-theme="light-paper"] .log-site-title > a { font-family:"Yu Mincho"
 .embeddedyoutube iframe,.embeddednicovideo iframe { position:absolute; inset:0; height:100%; border-radius:0; background:#000; }
 .embeddedspotify iframe { height:152px; border-radius:12px; }.embeddedspotify.log-embed-tall iframe { height:352px; }
 .embeddedapplemusic { max-width:660px; }.embeddedapplemusic iframe { height:450px; border-radius:10px; overflow:hidden; }.embeddedapplemusic.log-embed-song iframe { height:175px; }
+.embeddedamazonmusic { max-width:500px; }.embeddedamazonmusic iframe { height:352px; border-radius:20px; background:#000; }.embeddedamazonmusic.log-embed-tall iframe { height:500px; }
+.embeddedsoundcloud iframe { height:166px; }.embeddedsoundcloud.log-embed-tall iframe { height:450px; }
+.log-embed-source { display:block; width:fit-content; margin-top:6px; font-size:12px; line-height:1.7; }
+.embeddedbandcamp { max-width:500px; }.embeddedbandcamp iframe { height:120px; }.embeddedbandcamp.log-embed-tall iframe { height:472px; }
+.embeddedbluesky,.embeddedthreads,.embeddedmastodon,.embeddedfacebook { max-width:550px; }.embeddedbluesky iframe { height:450px; }.embeddedthreads iframe { height:550px; }.embeddedmastodon iframe { height:550px; }.embeddedfacebook iframe { height:650px; }
+.embeddedfacebook { overflow:hidden; }
+.embeddedtiktok { max-width:400px; }.embeddedtiktok iframe { aspect-ratio:9 / 16; height:auto; }
+.embeddedmixcloud iframe { height:180px; }.embeddedmixcloud.log-embed-tall iframe { height:400px; }
+.embeddedaudiomack iframe { height:252px; }.embeddedaudiomack.log-embed-tall iframe { height:400px; }
+.embeddedvimeo iframe { aspect-ratio:16 / 9; height:auto; }.embeddedtwitch iframe { aspect-ratio:16 / 9; height:auto; min-height:300px; }
+@media(max-width:446px) { .embeddedtwitch iframe { display:none; }.embeddedtwitch::before { content:"Twitchの動画は、リンク先で再生できます。"; display:block; font-size:13px; color:var(--log-muted); } }
 .embeddedcodepen iframe { height:300px; }
 .embeddednote { max-width:494px; }.embeddednote iframe { height:400px; border-radius:0; background:transparent; }
 .embeddedvoicy { max-width:500px; }.embeddedvoicy iframe { height:385px; overflow:hidden; }

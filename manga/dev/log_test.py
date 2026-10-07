@@ -409,11 +409,13 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
         if '<main' not in r.text: raise RuntimeError('no main: HTTP %s %s' % (r.status, r.text[:300]))
         return r.text.split('<main', 1)[1].split('</main>', 1)[0]
     r = found('最新の記録')
-    check("検索結果を見出しと件数で表示しnoindex", '「最新の記録」の検索結果' in r.text and all(x in r.text for x in newest) and r.getheader('X-Robots-Tag') == 'noindex,follow')
+    # Two IDs from the same second may share a prefix; compare complete links.
+    def contains_post(page, pid): return f'href="./?id={pid}"' in page
+    check("検索結果を見出しと件数で表示しnoindex", '「最新の記録」の検索結果' in r.text and all(contains_post(r.text,x) for x in newest) and r.getheader('X-Robots-Tag') == 'noindex,follow')
     page3 = main_of(found('最新の記録３'))
-    check("全角数字でも半角の本文を見つける", newest[3] in page3 and newest[2] not in page3)
+    check("全角数字でも半角の本文を見つける", contains_post(page3,newest[3]) and not contains_post(page3,newest[2]))
     both = main_of(found('最新　3'))
-    check("空白で区切った言葉はすべて含む記録だけ", newest[3] in both and newest[1] not in both)
+    check("空白で区切った言葉はすべて含む記録だけ", contains_post(both,newest[3]) and not contains_post(both,newest[1]))
     check("ひらがなでカタカナの本文を見つける", '一覧のページ送り' in main_of(found('ぺーじ')))
     check("カテゴリ名でも見つける", '分類のある記録' in main_of(found('日々の記録')))
     check("検索に下書きを出さない", 'バックアップでも非公開の下書き' not in found('非公開の下書き').text and '見つかりませんでした' in found('非公開の下書き').text)

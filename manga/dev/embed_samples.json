@@ -1,0 +1,16 @@
+[
+  {"name":"YouTube","url":"https://www.youtube.com/watch?v=pRrmQUm6Zvg","note":"YouTube公式チャンネルの公開動画です。","reference":"https://www.youtube.com/@YouTube"},
+  {"name":"YouTube Music","url":"https://music.youtube.com/watch?v=MZjf-NlpW3w","note":"YouTube Music公式チャンネルのトレーラーです。Musicの共有URLもYouTubeのプレーヤーで表示します。","reference":"https://www.youtube.com/@YouTubeMusic"},
+  {"name":"Bandcamp","url":"https://hammock.bandcamp.com/album/everything-and-nothing","note":"Hammockの公式アーティストページにある公開アルバムです。","reference":"https://hammock.bandcamp.com/album/everything-and-nothing"},
+  {"name":"TikTok","url":"https://www.tiktok.com/@scout2015/video/6718335390845095173","note":"TikTokの公式開発者資料が、埋め込み例として紹介している動画です。","reference":"https://developers.tiktok.com/docs/en/embed-player"},
+  {"name":"Bluesky","url":"https://bsky.app/profile/bsky.app/post/3mx5e63uvns2d","note":"Bluesky公式アカウントの公開投稿です。","reference":"https://bsky.app/profile/bsky.app"},
+  {"name":"X","url":"https://x.com/TwitterDev/status/1128357926823976960","note":"公式開発者アカウントの公開投稿です。Xの公式資料にも載っています。","reference":"https://developer.x.com/en/docs/twitter-api/v1/tweets/post-and-engage/api-reference/get-favorites-list"},
+  {"name":"Instagram","url":"https://www.instagram.com/p/DFFyRp-pINJ/","note":"Adam Mosseriの公開投稿です。Instagram側の閲覧条件によって表示が変わる場合があります。","reference":"https://www.instagram.com/p/DFFyRp-pINJ/"},
+  {"name":"Mastodon","url":"https://mastodon.social/@Mastodon/99730307203414093","note":"Mastodon公式アカウントの紹介動画についての投稿です。","reference":"https://mastodon.social/@Mastodon/99730307203414093"},
+  {"name":"Mixcloud","url":"https://www.mixcloud.com/mixcloud/what-you-need-to-know-about-music-copyright-aneesh-patel-music-lawyer-and-copyright-expert/","note":"Mixcloud公式アカウントの、音楽の著作権についての番組です。","reference":"https://www.mixcloud.com/mixcloud/"},
+  {"name":"Audiomack","url":"https://audiomack.com/audiomack/playlist/audiomacks-fine-tuned-series","note":"Audiomack公式アカウントのFine Tunedシリーズのプレイリストです。","reference":"https://audiomack.com/audiomack"},
+  {"name":"Facebook","url":"https://www.facebook.com/Engineering/posts/were-sharing-an-early-view-into-how-were-building-private-processing-a-new-techn/1091181673044313/","note":"Engineering at Metaの公開投稿です。Facebook側の閲覧条件によって表示が変わる場合があります。","reference":"https://www.facebook.com/Engineering/posts/were-sharing-an-early-view-into-how-were-building-private-processing-a-new-techn/1091181673044313/"},
+  {"name":"Threads","url":"https://www.threads.com/@threads/post/C--z-PKuPeh","note":"Metaの公式記事から案内されているThreads公式アカウントの投稿です。","reference":"https://about.fb.com/news/2025/03/new-threads-features-more-personalized-experience-you-control/"},
+  {"name":"Vimeo","url":"https://vimeo.com/76979871","note":"Vimeoの公式ヘルプが、埋め込み例として紹介している動画です。","reference":"https://help.vimeo.com/hc/en-us/articles/30021987305873-How-do-I-embed-parameters-to-a-Vimeo-com-URL"},
+  {"name":"Twitch","url":"https://www.twitch.tv/twitchdev","note":"Twitch公式開発者チャンネルです。配信がないときはオフラインの表示になります。小さいスマホ画面ではリンク先で再生できます。","reference":"https://dev.twitch.tv/docs/embed/video-and-clips/"}
+]

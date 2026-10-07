@@ -494,6 +494,19 @@ URLを貼ると埋め込まれる仕組みは、ほかのブログやCMSにも�
 | ニコニコ動画 | `https://www.nicovideo.jp/watch/sm9`、`https://nico.ms/sm9` |
 | Spotify（曲・アルバム・プレイリスト・アーティスト・ポッドキャスト） | `https://open.spotify.com/track/…` |
 | Apple Music（曲・アルバム・プレイリスト） | `https://music.apple.com/jp/album/…` |
+| Amazon Music 日本版（曲・アルバム・プレイリスト） | `https://music.amazon.co.jp/albums/…?trackAsin=…`、`https://music.amazon.co.jp/playlists/…` |
+| SoundCloud（公開曲・プレイリスト） | `https://soundcloud.com/ユーザー名/曲名`、`https://soundcloud.com/ユーザー名/sets/プレイリスト名` |
+| YouTube Music（曲・動画・プレイリスト） | `https://music.youtube.com/watch?v=…`、`https://music.youtube.com/playlist?list=…` |
+| Bandcamp（曲・アルバム） | `https://アーティスト名.bandcamp.com/track/…`、`/album/…` |
+| TikTok（動画・写真の投稿） | `https://www.tiktok.com/@ユーザー名/video/番号`、`/photo/番号` |
+| Blueskyの投稿 | `https://bsky.app/profile/アカウント名/post/投稿ID` |
+| Mastodonの公開投稿 | `https://サーバー名/@ユーザー名/投稿番号` |
+| Mixcloud（公開番組・プレイリスト） | `https://www.mixcloud.com/ユーザー名/番組名/`、`/playlists/名前/` |
+| Audiomack（曲・アルバム・プレイリスト） | `https://audiomack.com/ユーザー名/song/…`、`/album/…`、`/playlist/…` |
+| Facebook（公開投稿・動画・リール） | `https://www.facebook.com/ページ名/posts/投稿ID`、`/videos/動画ID`、`/reel/動画ID` |
+| Threadsの公開投稿 | `https://www.threads.com/@ユーザー名/post/投稿ID`（`threads.net`も対応） |
+| Vimeoの動画 | `https://vimeo.com/動画ID`（限定公開のハッシュ付きURLも対応） |
+| Twitch（配信・録画・クリップ） | `https://www.twitch.tv/チャンネル名`、`/videos/動画ID`、`https://clips.twitch.tv/クリップID` |
 | X（Twitter）のポスト | `https://x.com/ユーザー名/status/番号` |
 | Instagramの投稿・リール | `https://www.instagram.com/p/…`、`/reel/…` |
 | CodePen | `https://codepen.io/ユーザー名/pen/…` |
@@ -503,6 +516,36 @@ URLを貼ると埋め込まれる仕組みは、ほかのブログやCMSにも�
 
 1行目が埋め込みのURLだけの投稿は、「YouTubeの記録」のようなタイトルになります。説明文では「（YouTube）」と表示します。
 配色がダークのときは、Xの埋め込みもダーク表示にします。プレビューでも埋め込みを確認できます。
+
+Amazon Musicは、曲を聴いているときの「共有」からコピーしたリンクを、そのまま1行に貼れます。
+たとえば、`https://music.amazon.co.jp/albums/B0CY5SN6Y4?trackAsin=B0CY5ST1FH` は「ポッケ村のテーマ」のプレーヤーになります。
+曲の指定がないアルバムのリンクや、プレイリストのリンクは曲一覧を表示します。
+Amazon公式の試聴プレーヤーなので、フル再生を保証するものではありません。
+投稿の配色を変えても、プレーヤー内部はAmazonのデザインのままです。
+`music.amazon.co.jp` の通常の共有リンクに対応しています。短縮URLは、開いた先のURLを貼ってください。
+
+SoundCloudも「共有」でコピーした通常のリンクを、そのまま1行に貼れます。
+たとえば、`https://soundcloud.com/sei_peridot/sets/peritunematerial` は、曲一覧のあるプレイリストになります。
+曲は波形が見えるプレーヤーで表示し、ページを開いただけでは再生しません。
+文の途中のURLは普通のリンクのままです。短縮URLは、開いた先のURLを貼ってください。
+非公開リンクには対応していません。埋め込みを許可していない曲や削除された曲は、SoundCloud側の表示に従います。
+
+YouTube MusicのURLは、YouTubeのプレーヤーで表示します。
+Bandcamp、Bluesky、Mastodonは、保存やプレビューのときに曲や投稿の情報を確認します。
+確認できないときは、元のページを開くリンクを表示します。
+たとえばMastodonは、サーバーが返す公式の埋め込み先が、その投稿と一致するかを確認します。
+外部から受け取ったHTMLを、そのまま本文へ貼ることはありません。
+
+確認した情報は`data/log/embeds/`に保存します。1週間以内の再保存では取り直しません。
+取得に失敗した場合は、翌日以降に保存やプレビューを開くと再確認します。
+ブログカードと同じく、取得先の公開アドレス、時間、転送回数、容量を制限します。
+読者が投稿を見るときは、保存済みの情報を使います。引っ越し先では投稿を保存し直してください。
+
+追加したサービスの枠には、元の投稿を開くリンクも付けます。
+Facebook、Instagram、Threadsなどは、公開設定、ログイン状態、地域やCookieの設定で表示が変わることがあります。
+短縮URLや共有画面専用のURLは、通常の投稿URLに開き直してから貼ってください。
+Twitchは設置先のドメイン名を自動で指定します。公開サイトはHTTPSで開いてください。
+Twitchの枠は最小400×300pxです。小さいスマホ画面では、Twitchで開くリンクに切り替えます。
 
 埋め込みの枠は、URLから読み取ったIDを使って、このプログラムが組み立てます。
 本文に`<script>`を書き出すことはありません。X、Instagram、noteの公式スクリプトは、その埋め込みがあるページだけで`viewer/log-embed.js`が読み込みます。
@@ -1178,10 +1221,18 @@ python manga/dev/attack_test.py
 python manga/dev/log_management_test.py
 python manga/dev/log_sidebar_test.py
 python manga/dev/log_embed_test.py
+node manga/dev/log_embed_script_test.js
 python manga/dev/log_lscache_test.py
 python manga/dev/preview_test.py
 python manga/dev/build_release.py
 ```
+
+2026年10月7日の追加確認では、埋め込みのHTTPテストは124件、LOGの基本テストは204件とも通りました。
+表示調整のJavaScriptも、外部メッセージの確認とFacebookのスマホ幅を検証しています。
+ブラウザでは、公式アカウントや公式資料の公開URLを使い、14種類の表示を確認しました。
+確認用のURLは [埋め込みサンプル](dev/embed_samples.json) にまとめています。
+`dev/seed_embed_gallery.py` は、既に設置したローカルの確認用LOGに、これらのサンプルを作ります。
+`log-test-password` を使う開発用のサイトだけで使ってください。
 
 色のコントラスト（WCAG 2.2 AA）は、次で6つのテーマすべてを確かめます。PlaywrightとGoogle Chromeが必要です。
 40件の記事を作ってページ送りを11ページにし、3種類のページ送り、ミニブログとタイル、PCとスマホの幅、開いたメニューやダイアログ、ホバー、キーボードの枠まで測ります。
