@@ -64,7 +64,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.4.0（NagiManga v0.4.0に同梱） |
+| 版 | 0.5.0（NagiManga v0.5.0に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -192,7 +192,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. 配布ZIP（`nagimanga-v0.4.0.zip`）の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. 配布ZIP（`nagimanga-v0.5.0.zip`）の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、30分以内に管理者パスワードを決めます。
 3. 表示された管理用URLをブックマークします。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -545,7 +545,7 @@ Bandcamp、Bluesky、Mastodonは、保存やプレビューのときに曲や投
 Facebook、Instagram、Threadsなどは、公開設定、ログイン状態、地域やCookieの設定で表示が変わることがあります。
 短縮URLや共有画面専用のURLは、通常の投稿URLに開き直してから貼ってください。
 Twitchは設置先のドメイン名を自動で指定します。公開サイトはHTTPSで開いてください。
-Twitchの枠は最小400×300pxです。小さいスマホ画面では、Twitchで開くリンクに切り替えます。
+Twitchの枠は最小400×300pxです。縦向きの小さいスマホ画面ではプレーヤーを出さず、「横向きにすると表示されます」という案内とTwitchで開くリンクを表示します。
 
 埋め込みの枠は、URLから読み取ったIDを使って、このプログラムが組み立てます。
 本文に`<script>`を書き出すことはありません。X、Instagram、noteの公式スクリプトは、その埋め込みがあるページだけで`viewer/log-embed.js`が読み込みます。

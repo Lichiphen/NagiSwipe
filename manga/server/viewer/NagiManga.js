@@ -2,7 +2,7 @@
  * ============================================================================
  * NagiManga - manga reader for NagiSwipe
  *
- * NagiManga v0.4.0
+ * NagiManga v0.5.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * ============================================================================
@@ -24,7 +24,7 @@
 
     if (global.NagiManga) return;
 
-    const VERSION = '0.4.0';
+    const VERSION = '0.5.0';
     const SCRIPT = document.currentScript;
     const SCRIPT_URL = SCRIPT ? SCRIPT.src : '';
 
