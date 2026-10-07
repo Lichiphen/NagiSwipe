@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="NagiSwipe-main.css?v=1dd410256a">
 <link rel="stylesheet" href="site/site.css?v=66c59baafa">
 <script src="NagiSwipe-main.js?v=03e78f37a9" defer></script>
-<script src="site/site.js?v=6effaf50c2" data-index="site/search.json?v=27f701baf2" defer></script>
+<script src="site/site.js?v=6effaf50c2" data-index="site/search.json?v=4f93ce195e" defer></script>
 </head>
 <body class="page-nagimanga">
 <a class="skip" href="#main">本文へ移動</a>
@@ -111,7 +111,7 @@
 <p>「バックアップ」から、すべての作品を 1 つの ZIP にまとめてダウンロードできます。定期的にダウンロードしてパソコンなどに保存しておいてください。</p>
 <ul><li>作品（ページ画像・小容量版・並び順・タイトル・読む向き・読者向けパスワード）が入ります。作品の ID も変わらないので、ブログに貼ったタグはそのまま使えます。</li><li>管理者パスワード・ログイン URL・IP 制限などの設定と、秘密の鍵は入りません（引っ越し先ではセットアップし直します）。</li><li>復元は同じ画面から ZIP をアップロードします。ZIP の中身はすべて検査してから戻します。</li><li>サーバーの PHP に ZipArchive がない場合は、FTP で <code>data/works</code> フォルダをまるごとコピーしてください。</li></ul>
 <h3 id="更新v020-以降">更新（v0.2.0 以降）<a class="anchor" href="#更新v020-以降" aria-label="この見出しへのリンク">#</a></h3>
-<p>新しいバージョンが出ると、ログインしたときに作品一覧の上にお知らせが出ます（メニューの「更新」にも「新」の印が付きます）。「更新」画面のボタンを押すと、その場で更新できます。</p>
+<p>新しいバージョンが出ると、ログインしたときに作品一覧と「LOG・投稿」の上にお知らせが出ます（メニューの「更新」にも「新」の印が付きます）。「更新」画面のボタンを押すと、その場で更新できます。更新画面では、リリースの内容（見出し・箇条書き・太字・リンク）を整えて表示します。</p>
 <ul><li>GitHub の公式リリースから <code>nagimanga-vX.Y.Z.zip</code> をダウンロードし、GitHub が公開している確認用の値（SHA-256）と一致したときだけ使います。中身も 1 つずつ検査します。</li><li>入れ替えるのはプログラムのファイルだけです。作品・設定（<code>data</code> フォルダ）、プラグイン、<code>lib/paths.php</code> はそのままです。</li><li>入れ替える前のファイルは <code>data/update/</code> に保管され（実行できない <code>.bak</code> として）、「元に戻す」で戻せます。直近 3 回分を残します。</li><li>確認は 12 時間に 1 回までです。「更新」画面で、ログイン時の確認をオフにしたり、今すぐ確認したりできます。</li><li>サーバーから GitHub に接続できない（PHP の curl も allow_url_fopen も使えない）、ZipArchive がない、プログラムのファイルに書き込めない場合は自動で更新できません。画面の「手動で更新する」の手順（<code>data</code> フォルダ以外を上書きアップロード）で更新してください。</li><li>v0.1.0 から v0.2.0 へは、手動で更新してください（v0.1.0 には更新機能がありません）。</li></ul>
 <h3 id="設置用コード">設置用コード<a class="anchor" href="#設置用コード" aria-label="この見出しへのリンク">#</a></h3>
 <p>メニューの「設置用コード」に、ビューアーを読み込むためのコードがまとまっています。</p>
