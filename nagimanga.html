@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="NagiSwipe-main.css?v=1dd410256a">
 <link rel="stylesheet" href="site/site.css?v=66c59baafa">
 <script src="NagiSwipe-main.js?v=03e78f37a9" defer></script>
-<script src="site/site.js?v=6effaf50c2" data-index="site/search.json?v=565f030e04" defer></script>
+<script src="site/site.js?v=6effaf50c2" data-index="site/search.json?v=27f701baf2" defer></script>
 </head>
 <body class="page-nagimanga">
 <a class="skip" href="#main">本文へ移動</a>
@@ -159,6 +159,7 @@ python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html
 python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る</code></pre>
 <p>README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: <code>…/NagiSwipe@93db749/NagiSwipe-main.js</code>）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。<code>cp scripts/post-commit.sh .git/hooks/post-commit</code> でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、<a href="index.html">ドキュメントサイト</a> のページ（<code>python site/build.py</code>）も作り直してコミットします（手動なら <code>python scripts/cachebust.py README.md manga/README.md</code> のあと <code>python site/build.py</code>）。</p>
 <p>リリースするときは、<code>lib/bootstrap.php</code> の <code>NM_VERSION</code> と <code>viewer/NagiManga.js</code> の <code>VERSION</code> を同じ番号に上げてから <code>dev/build_release.py</code> で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの <code>nagimanga-vX.Y.Z.zip</code>（中身は <code>nagimanga/</code> フォルダ）を見て更新を知らせます。</p>
+<p>番号の上げ方: 小さな修正や追加は最後の数字を上げます（0.5.0 → 0.5.1 → … → 0.5.99）。大きな更新のときだけ真ん中の数字を上げます（0.6.0）。設置済みの NagiManga は今より大きい番号のときだけ更新を知らせるので、一度出した番号より小さい番号は使いません。</p>
 <h2 id="ライセンス">ライセンス<a class="anchor" href="#ライセンス" aria-label="この見出しへのリンク">#</a></h2>
 <p><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/LICENSE" class="ext">MIT License</a> (c) 2026 Lichiphen</p>
 </div>

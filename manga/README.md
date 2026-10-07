@@ -355,6 +355,8 @@ README の jsDelivr の URL は、そのファイルを最後に変更したコ�
 
 リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 
+番号の上げ方: 小さな修正や追加は最後の数字を上げます（0.5.0 → 0.5.1 → … → 0.5.99）。大きな更新のときだけ真ん中の数字を上げます（0.6.0）。設置済みの NagiManga は今より大きい番号のときだけ更新を知らせるので、一度出した番号より小さい番号は使いません。
+
 ## ライセンス
 
 [MIT License](../LICENSE) (c) 2026 Lichiphen
