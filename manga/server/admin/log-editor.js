@@ -732,6 +732,14 @@
         writeReturn({ ...back, active: true });
         return back.href;
     })();
+    // Opened from a public page: a way back to it next to 投稿一覧に戻る (the admin list needs none).
+    const crumb = $('.crumb-back');
+    if (origin && crumb) {
+        const toPublic = document.createElement('a');
+        toPublic.className = 'crumb-return'; toPublic.href = origin;
+        toPublic.textContent = new URL(origin).searchParams.has('id') ? '記事ページに戻る' : '公開ページに戻る';
+        crumb.prepend(toPublic);
+    }
     $('.log-close', panel).addEventListener('click', () => {
         if (panel.dataset.edit) { location.href = origin || 'index.php?p=log'; return; }
         setPanel(false);
@@ -902,7 +910,7 @@
         const editUrl = adminUrl('index.php?p=log_edit&id=' + encodeURIComponent(result.id));
         const view = published ? link('記事を見る', new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
         const actions = el('div', 'log-saved-dialog-actions');
-        actions.append(link('続けて編集する', editUrl, 'btn'), origin ? link('元のページに戻る', origin, published ? 'btn' : 'btn primary') : link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
+        actions.append(link('続けて編集する', editUrl, 'btn'), origin ? link(new URL(origin).searchParams.has('id') ? '記事ページに戻る' : '公開ページに戻る', origin, published ? 'btn' : 'btn primary') : link('一覧に戻る', adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
         if (view) actions.append(view);
         saved.append(heading, lead, actions);
         // Escape closes the dialog; the form holds the old revision, so reopen the editor.

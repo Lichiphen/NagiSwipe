@@ -51,7 +51,7 @@
 .log-att-head { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-size:12px; }
 .log-att-where { color:var(--log-muted); }
 .log-att-label { padding:2px 9px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 16%,var(--log-card)); color:var(--log-accent); font-weight:700; }
-.log-att-group.is-active .log-att-label { background:var(--log-accent); color:var(--log-card); }
+.log-att-group.is-active .log-att-label { background:var(--log-accent); color:var(--log-on-accent); }
 .log-att-action { margin-left:auto; padding:3px 10px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-accent); font:inherit; cursor:pointer; }
 .log-att-action:hover { border-color:var(--log-accent); }
 .log-att-row { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 4px; }
@@ -575,3 +575,10 @@ a.log-list-where:hover { text-decoration:underline; }
 @media(prefers-reduced-motion:reduce) {
     .log-panel-sheet[open],.log-panel-sheet::backdrop { animation:none; }
 }
+/* Back links above the editors: a chevron button; 記事ページに戻る appears only when the editor was opened from a public page. */
+.crumb-back { display:flex; flex-wrap:wrap; gap:8px; }
+.crumb-back a { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 16px 0 13px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-text); font-size:14px; font-weight:600; text-decoration:none; transition:border-color .15s ease,color .15s ease; }
+.crumb-back a::before { content:""; width:7px; height:7px; border-left:2px solid currentColor; border-bottom:2px solid currentColor; border-radius:1px; transform:translateX(2px) rotate(45deg); }
+.crumb-back a:hover,.crumb-back a:focus-visible { border-color:var(--log-accent); color:var(--log-accent); }
+.crumb-back a.crumb-return { border-color:var(--log-accent); color:var(--log-accent); }
+.crumb-back a.crumb-return:hover,.crumb-back a.crumb-return:focus-visible { background:var(--log-accent); color:var(--log-on-accent); }

@@ -374,7 +374,7 @@ function nl_view_page_edit(string $id): void
     foreach (NL_PAGE_LAYOUTS as $key => $label) $layouts .= '<label class="log-page-layout-choice"><input type="radio" name="layout" value="' . $key . '"' . ($p['layout'] === $key ? ' checked' : '') . '><span class="log-page-layout-figure is-' . $key . '" aria-hidden="true"><i></i><i></i></span><span><b>' . h($label) . '</b><small>' . h($notes[$key]) . '</small></span></label>';
     $tool = static fn(string $attrs, string $label, string $text) => '<button type="button" class="btn log-md-tool" ' . $attrs . ' title="' . h($label) . '" aria-label="' . h($label) . '">' . $text . '</button>';
     $public = $p['id'] !== '' && $p['status'] === 'published';
-    nm_layout($p['id'] !== '' ? '固定ページを編集' : '新しい固定ページ', '<p class="crumb"><a href="index.php?p=log_pages">固定ページの一覧へ戻る</a></p>'
+    nm_layout($p['id'] !== '' ? '固定ページを編集' : '新しい固定ページ', '<p class="crumb crumb-back"><a href="index.php?p=log_pages">固定ページの一覧へ戻る</a></p>'
         . '<section class="card log-page-editor"><h1>' . ($p['id'] !== '' ? '固定ページを編集' : '新しい固定ページ') . '</h1>'
         . '<form method="post" action="index.php" class="form" data-page-editor>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_save"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '">'
         . '<label>タイトル<input name="title" maxlength="' . NL_PAGE_TITLE_MAX . '" required value="' . h($p['title']) . '" placeholder="例：プライバシーポリシー"></label>'

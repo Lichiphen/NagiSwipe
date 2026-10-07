@@ -502,7 +502,7 @@ function nl_view_edit(string $id): void
 {
     $p = nl_load_post($id);
     if (!$p) nm_not_found();
-    nm_layout('投稿を編集', '<p class="crumb"><a href="index.php?p=log">LOGへ戻る</a></p>' . nl_editor($p) . nl_like_panel($p)
+    nm_layout('投稿を編集', '<p class="crumb crumb-back"><a href="index.php?p=log">投稿一覧に戻る</a></p>' . nl_editor($p) . nl_like_panel($p)
         . '<form method="post" action="index.php" class="js-confirm" data-confirm="この記事を削除しますか？この記事だけで使う画像も削除します。">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($id) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">投稿を削除</button></form>');
 }
 /** Likes of one post: see, change or delete the count. */
@@ -593,7 +593,7 @@ function nl_view_media(): void
         . '<p class="note">ここ（またはこの画面のどこか）へ画像をドロップすると、投稿を書かずに画像一覧へ追加します。サイドバー・固定ページ・タイトルロゴなどに使えます。JPEG・PNG・WebP・GIF・AVIF・BMP・SVGに対応しています。カードの上にドロップした場合は、その画像の差し替えです。</p>'
         . '<p class="note">追加した画像は、投稿・サイドバー・固定ページ・設定のどこかで使うまでは公開ページに出ません（ログイン中は見られます）。</p>'
         . '<label class="btn primary log-media-upload-pick">画像を選ぶ<input type="file" data-media-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden></label><p class="note log-media-upload-status" role="status" aria-live="polite" data-media-upload-status></p></div></section>';
-    nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">LOGへ戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p>'
+    nm_layout('画像一覧', '<div class="log-heading"><h1>画像一覧・差し替え</h1><a class="btn" href="index.php?p=log">投稿一覧に戻る</a></div><p>差し替えると、この画像を使うすべての投稿や設定に反映されます。</p>'
         . $upload . $search
         . '<div class="log-list-controls"><span>' . ($searching ? '' : count($all) . '枚の画像') . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log_media">' . $keep
         . '<label>1ページの表示件数<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">表示</button></form></div></div>'
