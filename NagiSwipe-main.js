@@ -1151,6 +1151,20 @@
             wrap.style.transition = 'none';
             this._setSlideSize(wrap, wrap._nsNatW, wrap._nsNatH);
             this.render();
+            this._redrawLayers(wrap);
+        }
+
+        /**
+         * Android's Chrome keeps the tiles of a will-change layer at the scale they were first drawn at.
+         * After the zoomed (full-size) layout went back to fit, some tiles were still the zoomed ones and the
+         * picture looked torn into blocks. Dropping the hint for a frame makes the whole picture draw again.
+         */
+        _redrawLayers(wrap) {
+            const imgs = Array.from(wrap.querySelectorAll('.ns-img'));
+            imgs.forEach(img => { img.style.willChange = 'auto'; });
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                imgs.forEach(img => { img.style.willChange = ''; });
+            }));
         }
 
         _getWrapBaseScale(wrap) {
