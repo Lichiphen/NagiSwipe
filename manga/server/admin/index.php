@@ -117,7 +117,7 @@ match ($page) {
     'log_media' => nm_is_guest() ? nm_view_guest_denied(nm_t('LOGの画像')) : nl_view_media(),
     'log_pages' => nm_is_guest() ? nm_view_guest_denied(nm_t('固定ページ')) : nl_view_pages(),
     'log_page' => nm_is_guest() ? nm_view_guest_denied(nm_t('固定ページ')) : nl_view_page_edit(nm_str($_GET, 'id', 14)),
-    'log_image' => nm_is_guest() ? nm_not_found() : nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), true),
+    'log_image' => nm_is_guest() ? nm_not_found() : nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), true, isset($_GET['cover'])),
     'log_media_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(false),
     'log_manga_json' => nm_is_guest() ? nm_not_found() : nl_admin_catalog(true),
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
@@ -136,7 +136,7 @@ exit;
 function nm_admin_headers(): void
 {
     // LOG previews show embedded players; provider scripts stay off in the admin.
-    $frames = function_exists('nl_embed_frame_src') ? '; frame-src ' . nl_embed_frame_src() . "; media-src 'self' https:" : '';
+    $frames = function_exists('nl_embed_frame_src') ? '; frame-src ' . nl_embed_frame_src() . "; media-src 'self' blob: https:" : '';
     header("Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'" . $frames);
     header('X-Frame-Options: DENY');
     nm_lscache_header(false);
@@ -188,11 +188,12 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi
-            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script>'
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage
             ? '<link rel="stylesheet" href="' . nm_asset('../viewer/NagiSwipe-main.css') . '">'
+              . '<script src="' . nm_asset('log-av.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-editor.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-manage.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-pages.js') . '" defer></script>'

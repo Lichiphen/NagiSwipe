@@ -419,6 +419,9 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-page > h1 { margin:0 0 22px; font-size:1.6rem; line-height:1.45; overflow-wrap:anywhere; }
 .log-page-body { line-height:1.95; overflow-wrap:anywhere; }
 .log-page-body > :first-child { margin-top:0; }.log-page-body > :last-child { margin-bottom:0; }
+.log-body .log-heading-2 { margin:1.6em 0 .6em; padding-bottom:.35em; border-bottom:2px solid var(--log-line); font-size:1.25rem; line-height:1.5; }
+.log-body .log-heading-3 { margin:1.4em 0 .5em; padding-left:.6em; border-left:4px solid var(--log-accent); font-size:1.08rem; line-height:1.5; }
+.log-body > .log-heading-2:first-child,.log-body > .log-heading-3:first-child { margin-top:.4em; }
 .log-page-body h2 { margin:2.1em 0 .8em; padding-bottom:.4em; border-bottom:2px solid var(--log-line); font-size:1.3rem; line-height:1.5; }
 .log-page-body h3 { margin:1.8em 0 .6em; padding-left:.65em; border-left:4px solid var(--log-accent); font-size:1.1rem; line-height:1.5; }
 .log-page-body h4 { margin:1.5em 0 .5em; font-size:1rem; }
@@ -472,3 +475,71 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 /* Phones: the compose box's panels (hashtags, categories, content warning, help) open as a sheet from the bottom. */
 @keyframes log-sheet-up { from { transform:translateY(100%); } }
 @keyframes log-sheet-fade { from { opacity:0; } }
+/* Video and audio players (log-player.js). Colours follow the LOG design. */
+.log-player { --player-played:var(--log-accent); --player-rest:color-mix(in srgb,var(--log-text) 20%,var(--log-card)); margin:14px 0 18px; }
+.log-player audio,.log-player video { display:block; width:100%; max-width:100%; }
+.log-audio { display:grid; grid-template-columns:minmax(0,1fr); gap:6px 14px; align-items:center; padding:14px 16px; border:1px solid var(--log-line); border-radius:calc(var(--log-radius) * .75); background:var(--log-card); }
+.log-audio.has-cover { grid-template-columns:72px minmax(0,1fr); }
+.log-audio.has-cover .log-player-cover { grid-row:1 / span 2; width:72px; height:72px; object-fit:cover; border-radius:10px; background:var(--log-bg); }
+.log-player-title { margin:0; font-weight:700; font-size:15px; line-height:1.5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.log-player-length { font-size:12px; color:var(--log-muted); }
+.log-player-row { display:flex; align-items:center; gap:12px; min-width:0; }
+.log-player-play { flex:none; display:grid; place-items:center; width:44px; height:44px; padding:0; border:0; border-radius:50%; background:var(--log-accent); color:var(--log-on-accent,#fff); cursor:pointer; transition:transform .15s ease, filter .15s ease; }
+.log-player-play svg { width:20px; height:20px; fill:currentColor; }
+.log-player-play:hover { filter:brightness(1.08); }
+.log-player-play:active { transform:scale(.94); }
+.log-player-play:focus-visible,.log-player-wave:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
+.log-player-wave { flex:1; min-width:0; height:44px; cursor:pointer; touch-action:none; border-radius:6px; }
+.log-player-wave.is-plain { height:24px; }
+.log-player-wave canvas { display:block; width:100%; height:100%; }
+.log-player-time { flex:none; min-width:7.5em; text-align:right; font-size:12px; font-variant-numeric:tabular-nums; color:var(--log-muted); }
+.log-player-loop { flex:none; display:grid; place-items:center; width:36px; height:36px; margin-left:-6px; padding:0; border:0; border-radius:50%; background:none; color:var(--log-muted); cursor:pointer; }
+.log-player-loop svg { width:20px; height:20px; }
+.log-player-loop:hover { color:var(--log-accent); }
+.log-player-loop[aria-pressed="true"] { background:color-mix(in srgb,var(--log-accent) 14%,transparent); color:var(--log-accent); }
+.log-player-loop:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-video { position:relative; }
+.log-video-unmute { position:absolute; top:10px; right:10px; z-index:2; display:none; align-items:center; gap:6px; padding:6px 12px 6px 9px; border:0; border-radius:999px; background:#000000a6; color:#fff; font:600 13px/1.2 system-ui,sans-serif; cursor:pointer; backdrop-filter:blur(4px); }
+.log-video-unmute svg { width:18px; height:18px; fill:currentColor; }
+.log-video-unmute svg .w { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+.log-video-unmute:hover { background:#000000d0; }
+.log-video-unmute:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+.is-auto .log-video-screen.is-muted.is-playing .log-video-unmute { display:inline-flex; }
+.log-player.is-preparing .log-player-loop { animation:log-player-wait 1s ease-in-out infinite; }
+@keyframes log-player-wait { 50% { opacity:.35; } }
+@media (prefers-reduced-motion:reduce) { .log-player.is-preparing .log-player-loop { animation:none; opacity:.5; } }
+.log-video-screen { position:relative; overflow:hidden; width:min(100%, calc(80vh * var(--player-w,16) / var(--player-h,9))); margin:0 auto; border-radius:calc(var(--log-radius) * .75); background:#000; color:#fff; outline:none; }
+.log-video-screen video { width:100%; height:auto; aspect-ratio:var(--player-w,16) / var(--player-h,9); background:#000; }
+.log-video-screen:fullscreen,.log-video-screen:-webkit-full-screen { border-radius:0; display:flex; align-items:center; }
+.log-video-screen:fullscreen { width:100%; }
+.log-video-screen:fullscreen video { width:auto; max-width:100%; height:100%; max-height:100vh; margin:auto; }
+.log-video-big { position:absolute; left:50%; top:50%; display:grid; place-items:center; width:68px; height:68px; margin:-34px 0 0 -34px; padding:0; border:0; border-radius:50%; background:#000000a0; color:#fff; cursor:pointer; backdrop-filter:blur(4px); transition:opacity .2s ease, transform .15s ease; }
+.log-video-big svg { width:30px; height:30px; fill:currentColor; margin-left:3px; }
+.log-video-big:hover { transform:scale(1.06); }
+.is-playing .log-video-big,.is-started:not(.is-playing) .log-video-big { opacity:0; pointer-events:none; }
+.is-started:not(.is-playing) .log-video-big { opacity:1; pointer-events:auto; }
+.log-video-bar { position:absolute; left:0; right:0; bottom:0; display:flex; align-items:center; gap:8px; padding:22px 10px 8px; background:linear-gradient(transparent,#000000b8); opacity:0; transform:translateY(6px); transition:opacity .2s ease, transform .2s ease; }
+.is-started.is-awake .log-video-bar,.is-started:not(.is-playing) .log-video-bar,.log-video-screen:focus-within .log-video-bar { opacity:1; transform:none; }
+.log-video-tool { flex:none; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:8px; background:transparent; color:#fff; cursor:pointer; }
+.log-video-tool svg { width:20px; height:20px; fill:currentColor; }
+.log-video-tool svg .w,.log-player svg .w { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.log-video-tool:hover,.log-video-tool:focus-visible { background:#ffffff26; outline:none; }
+.log-video-track { position:relative; flex:1; min-width:0; height:20px; cursor:pointer; touch-action:none; }
+.log-video-track::before,.log-video-loaded,.log-video-done { position:absolute; left:0; top:50%; height:4px; margin-top:-2px; border-radius:2px; content:""; }
+.log-video-track::before { right:0; background:#ffffff40; }
+.log-video-loaded { background:#ffffff66; width:0; }
+.log-video-done { background:var(--log-accent); width:0; }
+.log-video-done::after { position:absolute; right:-6px; top:-4px; width:12px; height:12px; border-radius:50%; background:#fff; content:""; }
+.log-video-track:focus-visible { outline:2px solid #fff; outline-offset:2px; border-radius:4px; }
+.log-video-bar .log-player-time { color:#fff; min-width:auto; font-size:12px; }
+.log-video-bar .log-video-volume { flex:0 0 72px; width:72px; min-width:0; margin:0; padding:0; accent-color:var(--log-accent); }
+.log-player-caption { margin-top:6px; font-size:13px; color:var(--log-muted); }
+@media (hover:none) { .log-video-bar .log-video-volume { display:none; } }
+/* The bar follows the player's own width (an upright video is narrow even on a PC). */
+.log-video-screen { container-type:inline-size; }
+@container (max-width:460px) { .log-video-bar .log-video-volume { display:none; } }
+@container (max-width:340px) { .log-video-bar .log-player-time { display:none; } }
+@media (max-width:480px) { .log-audio.has-cover { grid-template-columns:56px minmax(0,1fr); } .log-audio.has-cover .log-player-cover { width:56px; height:56px; } .log-player-time { min-width:auto; } }
+.log-veil-media:not([open]) > summary.log-veil-cover { position:relative; min-height:140px; display:grid; border-radius:calc(var(--log-radius) * .75); background:linear-gradient(135deg,#3b3f4a,#20232a); }
+.log-veil-media .log-veil-label { width:100%; background:none; }
+

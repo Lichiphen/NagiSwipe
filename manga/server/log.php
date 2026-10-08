@@ -34,7 +34,7 @@ if (!in_array($method, ['GET', 'HEAD'], true)) nm_not_found();
 if (!$s['search_engines'] && $file) header('X-Robots-Tag: noindex, nofollow');
 if (isset($_GET['card'])) nl_serve_card(nm_str($_GET, 'card', 20));
 if (isset($_GET['ogimage'])) nl_serve_og(nm_str($_GET, 'ogimage', 24));
-if (isset($_GET['media'])) nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), $owner);
+if (isset($_GET['media'])) nl_serve_media(nm_str($_GET, 'media', 16), isset($_GET['thumb']), $owner, isset($_GET['cover']));
 $id = nm_str($_GET, 'id', 24);
 $single = isset($_GET['id']);
 $post = $single ? nl_load_post($id) : null;
@@ -112,7 +112,7 @@ $here = ['pg' => $fixed['slug'] ?? null, 'category' => $filter['category'] !== '
 $topmenuHtml = nl_topmenu_html($here);
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js. A fixed page adds the hosts of its outside pictures.
-header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . ($fixed ? nl_md_image_origins($postsHtml) : '') . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . ($fixed ? nl_md_image_origins($postsHtml) : '') . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' blob: https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 // The site title (logo or icon and name) is the page's h1 on the lists; a post or a fixed page has its own title as h1.
 $logo = nl_load_media($s['logo']);
 $brand = $logo ? '<img class="log-site-logo" src="' . h(nl_media_url($logo)) . '" width="' . (int)$logo['w'] . '" height="' . (int)$logo['h'] . '" alt="' . h($s['title']) . '">'
@@ -145,10 +145,11 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if (str_contains($relatedHtml, 'data-related-random')): ?><script src="<?= nl_public_asset('viewer/log-related.js') ?>" defer></script><?php endif; ?>
 <?php if ($s['public']): ?><link rel="alternate" type="application/rss+xml" title="<?= h($s['title']) ?>" href="<?= h(nl_feed_url()) ?>"><?php if (!$single && ($filter['category'] !== '' || $filter['tag'] !== '')): ?><link rel="alternate" type="application/rss+xml" title="<?= h($title) ?>" href="<?= h(nl_feed_url($filter['query'])) ?>"><?php endif; ?><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
+<?php if ($owner || str_contains($postsHtml, 'data-player=')): ?><script src="<?= nl_public_asset('viewer/log-player.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner || $more || str_contains($postsHtml . $relatedHtml, 'data-veil=')): ?><script src="<?= nl_public_asset('viewer/log-veil.js') ?>" defer></script><?php endif; ?>
 <?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && !$fixed && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
-<?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
+<?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
 <?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>

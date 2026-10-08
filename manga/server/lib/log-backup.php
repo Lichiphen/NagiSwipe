@@ -21,7 +21,8 @@ function nl_backup_download(): never
             foreach (nl_list_media() as $m) {
                 $prefix = 'media/' . $m['id'] . '/';
                 $zip->addFromString($prefix . 'media.json', json_encode($m, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
-                foreach ([$m['f'], 't_' . $m['f']] as $file) {
+                $files = nl_is_av($m) ? array_merge([$m['f']], ($m['cover'] ?? '') !== '' ? [$m['cover'], 't_' . $m['cover']] : []) : [$m['f'], 't_' . $m['f']];
+                foreach ($files as $file) {
                     $path = nl_media_dir($m['id']) . '/' . $file;
                     if (!is_file($path)) throw new RuntimeException('missing image');
                     $zip->addFile($path, $prefix . $file); $zip->setCompressionName($prefix . $file, ZipArchive::CM_STORE);
@@ -66,10 +67,12 @@ function nl_restore_plan(ZipArchive $zip): array
         $name = $stat['name'];
         if (isset($entries[$name])) throw new UnexpectedValueException(nm_t('ZIPの項目が重複しています'));
         $entries[$name] = $i;
-        if ($stat['size'] > 60 * 1024 * 1024 || ($total += $stat['size']) > 1024 * 1024 * 1024) throw new UnexpectedValueException(nm_t('バックアップが大きすぎます'));
+        // Video and audio files may be large; pictures and data stay small.
+        $big = (bool)preg_match('~\Amedia/[a-f0-9]{16}/p[0-9]{4}_[a-f0-9]{8}\.(?:mp4|webm|mp3|m4a|ogg|wav|flac|weba)\z~', $name);
+        if ($stat['size'] > ($big ? NL_AV_MAX_MB * 1048576 : 60 * 1024 * 1024) || ($total += $stat['size']) > 16 * 1024 * 1024 * 1024) throw new UnexpectedValueException(nm_t('バックアップが大きすぎます'));
         if ($name === 'backup.json') continue;
         if (preg_match('~\Aposts/([0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\.json\z~', $name, $m)) $postEntries[$m[1]] = $i;
-        elseif (preg_match('~\Amedia/([a-f0-9]{16})/(media\.json|(?:t_)?p[0-9]{4}_[a-f0-9]{8}\.(?:jpg|webp|gif|svg))\z~', $name, $m)) $mediaEntries[$m[1]][$m[2]] = $i;
+        elseif (preg_match('~\Amedia/([a-f0-9]{16})/(media\.json|(?:t_)?p[0-9]{4}_[a-f0-9]{8}\.(?:jpg|webp|gif|svg)|p[0-9]{4}_[a-f0-9]{8}\.(?:mp4|webm|mp3|m4a|ogg|wav|flac|weba))\z~', $name, $m)) $mediaEntries[$m[1]][$m[2]] = $i;
         elseif (preg_match('~\Apages/(pg[a-f0-9]{12})\.json\z~', $name, $m)) $pageEntries[$m[1]] = $i;
         else throw new UnexpectedValueException(nm_t('LOG以外のファイルが入っています'));
     }
@@ -105,6 +108,8 @@ function nl_restore_plan(ZipArchive $zip): array
         if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
         $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
     }
+    if (array_key_exists('headings', $settings) && (!is_array($settings['headings']) || array_diff($settings['headings'], NL_HEADINGS))) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
+    $preferences['headings'] = array_values($settings['headings'] ?? nl_settings()['headings']);
     foreach (['layout' => NL_LAYOUTS, 'related_by' => NL_RELATED_BY, 'related_order' => NL_RELATED_ORDER] as $field => $choices) {
         if (array_key_exists($field, $settings) && (!is_string($settings[$field]) || !isset($choices[$settings[$field]]))) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
         $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
@@ -174,6 +179,7 @@ function nl_restore_image(ZipArchive $zip, string $stage, string $id, array $fil
 {
     $m = nl_restore_json($zip, $files['media.json']);
     if (($m['id'] ?? '') !== $id || !is_string($m['f'] ?? null) || !preg_match(NL_MEDIA_FILE_PATTERN, $m['f']) || !isset($files[$m['f']])) throw new UnexpectedValueException(nm_t('画像の設定が壊れています'));
+    if (isset(NL_AV_TYPES[pathinfo($m['f'], PATHINFO_EXTENSION)])) return nl_restore_av($zip, $stage, $id, $files, $m);
     $bytes = nm_zip_read($zip, $files[$m['f']], NM_RESTORE_MAX_ENTRY);
     if ($bytes === null) throw new UnexpectedValueException(nm_t('画像を読めませんでした'));
     $dir = $stage . '/media/' . $id;
@@ -187,6 +193,42 @@ function nl_restore_image(ZipArchive $zip, string $stage, string $id, array $fil
     }
     if (is_string($image)) throw new UnexpectedValueException($image);
     return array_merge($image, ['id' => $id, 'alt' => nl_restore_string($m, 'alt', 1500), 'rating' => nl_restore_rating($m), 'created' => max(0, (int)($m['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($m['revision'] ?? 1))]);
+}
+/** A video or audio file from a backup: copied as it is after its first bytes are checked; its cover is redrawn like a picture. */
+function nl_restore_av(ZipArchive $zip, string $stage, string $id, array $files, array $m): array
+{
+    $ext = pathinfo($m['f'], PATHINFO_EXTENSION);
+    $kind = NL_AV_TYPES[$ext][0];
+    $dir = $stage . '/media/' . $id;
+    if (is_dir($dir)) nm_rmdir_recursive($dir);
+    nm_ensure_dir($dir);
+    $in = $zip->getStream($zip->getNameIndex($files[$m['f']]));
+    $out = fopen($dir . '/' . $m['f'], 'wb');
+    if (!$in || !$out) throw new UnexpectedValueException(nm_t('画像を読めませんでした'));
+    try {
+        $copied = stream_copy_to_stream($in, $out, NL_AV_MAX_MB * 1048576 + 1);
+        if ($copied === false || $copied > NL_AV_MAX_MB * 1048576) throw new UnexpectedValueException(nm_t('バックアップが大きすぎます'));
+    } finally { fclose($in); fclose($out); }
+    if (nl_av_detect($dir . '/' . $m['f'], $kind === 'audio') !== $ext) throw new UnexpectedValueException(nm_t('画像の設定が壊れています'));
+    $cover = ['f' => '', 'w' => 0, 'h' => 0];
+    $name = (string)($m['cover'] ?? '');
+    if ($name !== '' && preg_match(NL_IMAGE_FILE_PATTERN, $name) && isset($files[$name])) {
+        $bytes = nm_zip_read($zip, $files[$name], NM_RESTORE_MAX_ENTRY);
+        if ($bytes !== null) {
+            $input = $stage . '/cover.tmp'; file_put_contents($input, $bytes);
+            $image = nm_import_image($input, $dir, 1, 90, NM_RESTORE_MAX_ENTRY, true, true, 2048);
+            @unlink($input);
+            if (is_array($image)) $cover = $image;
+        }
+    }
+    $peaks = [];
+    foreach (array_slice(is_array($m['peaks'] ?? null) ? $m['peaks'] : [], 0, NL_AV_PEAKS) as $v) $peaks[] = max(0, min(100, (int)$v));
+    $num = static fn(string $k, int $max) => max(0, min($max, (int)($m[$k] ?? 0)));
+    $duration = round(max(0.0, min(86400.0, (float)($m['duration'] ?? 0))), 2);
+    return ['id' => $id, 'kind' => $kind, 'f' => $m['f'], 'size' => (int)filesize($dir . '/' . $m['f']), 'duration' => $duration,
+        'w' => $cover['f'] !== '' ? (int)$cover['w'] : $num('vw', 16384), 'h' => $cover['f'] !== '' ? (int)$cover['h'] : $num('vh', 16384), 'vw' => $num('vw', 16384), 'vh' => $num('vh', 16384),
+        'cover' => $cover['f'], 'cw' => (int)$cover['w'], 'ch' => (int)$cover['h'], 'peaks' => $peaks, 'loop' => $kind === 'audio' ? nl_av_loop($m['loop'] ?? null, $duration) : null, 'play' => $kind === 'video' ? nl_av_play($m['play'] ?? null) : null,
+        'alt' => nl_restore_string($m, 'alt', 1500), 'rating' => nl_restore_rating($m), 'created' => max(0, (int)($m['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($m['revision'] ?? 1))];
 }
 /** Swap the converted images, posts and settings in, all or nothing. */
 function nl_restore_apply(string $stage, array $plan, array $media, bool $overwrite): array

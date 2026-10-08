@@ -18,6 +18,15 @@
 .log-mark-band b { margin-right:2px; }
 .log-mark-band img,.log-mark-band i { width:20px; height:20px; flex:none; border-radius:5px; object-fit:cover; background:color-mix(in srgb,var(--log-accent) 30%,var(--log-card)); }
 .log-mark-band.is-dragging { z-index:3; cursor:grabbing; box-shadow:0 6px 18px #00000040,0 0 0 2px var(--log-accent); }
+/* Just placed (an upload, a pick from the list): the band and its row under the text flash in the accent. */
+.log-mark-band.is-placed { animation:log-placed-band 1.6s ease-out 2; }
+.log-att-group.is-placed { border-radius:12px; animation:log-placed-row 1.6s ease-out 2; }
+@keyframes log-placed-band { 0%,40% { background:var(--log-accent); color:var(--log-on-accent); box-shadow:0 0 0 4px color-mix(in srgb,var(--log-accent) 40%,transparent); } }
+@keyframes log-placed-row { 0%,40% { background:color-mix(in srgb,var(--log-accent) 18%,transparent); box-shadow:0 0 0 6px color-mix(in srgb,var(--log-accent) 18%,transparent); } }
+@media(prefers-reduced-motion:reduce) {
+    .log-mark-band.is-placed { animation:none; box-shadow:0 0 0 2px var(--log-accent); }
+    .log-att-group.is-placed { animation:none; box-shadow:0 0 0 2px var(--log-accent); }
+}
 .log-mark-layer.is-probing { pointer-events:auto; }
 .log-mark-layer.is-probing .log-mark-band { pointer-events:none; }
 .log-mark-drop { position:absolute; z-index:2; height:0; border-top:3px solid var(--log-accent); border-radius:3px; margin-top:-1.5px; pointer-events:none; }
@@ -582,3 +591,80 @@ a.log-list-where:hover { text-decoration:underline; }
 .crumb-back a:hover,.crumb-back a:focus-visible { border-color:var(--log-accent); color:var(--log-accent); }
 .crumb-back a.crumb-return { border-color:var(--log-accent); color:var(--log-accent); }
 .crumb-back a.crumb-return:hover,.crumb-back a.crumb-return:focus-visible { background:var(--log-accent); color:var(--log-on-accent); }
+/* The H button's choice: one large button per heading level, with its mark. */
+.log-heading-dialog { width:min(420px,calc(100% - 24px)); color:var(--log-text); background:var(--log-card); border:1px solid var(--log-line); border-radius:16px; padding:20px; }
+.log-heading-dialog::backdrop { background:#10223880; }
+.log-heading-dialog .note { margin:0 0 14px; }
+.log-heading-choices { display:grid; gap:10px; }
+.log-heading-choice { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:0 18px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); color:var(--log-text); font:inherit; cursor:pointer; text-align:left; }
+.log-heading-choice b { font-size:17px; }
+.log-heading-choice[data-heading-level="3"] b { font-size:15px; }
+.log-heading-choice code { padding:2px 8px; border-radius:6px; background:var(--log-card); color:var(--log-accent); font-size:13px; }
+.log-heading-choice:hover,.log-heading-choice:focus-visible { border-color:var(--log-accent); outline:none; }
+/* A video or audio file without a cover, in the editor's rows and the picker: its kind instead of a picture. */
+.log-kind-mark { display:grid; place-items:center; gap:2px; width:100%; height:100%; color:var(--log-accent); font-size:11px; font-weight:700; }
+.log-kind-mark svg { width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-picker-kind { display:grid; place-items:center; width:100%; height:150px; border-radius:8px; background:var(--log-card); }
+.log-media-card .log-player { margin:0 0 10px; }
+/* In the narrow cards of メディア一覧: the cover on top, the play button and waveform below. */
+.log-media-card .log-audio { grid-template-columns:minmax(0,1fr); padding:10px; gap:8px; }
+.log-media-card .log-audio.has-cover .log-player-cover { grid-row:auto; width:100%; height:auto; aspect-ratio:1; }
+.log-media-card .log-player-row { gap:8px; }
+.log-media-card .log-player-play { width:38px; height:38px; }
+.log-media-card .log-player-time,.log-media-card .log-player-length { display:none; }
+
+/* Dialogs for one video or audio file (log-av.js): how a video plays, a song's cover and loop. */
+.log-av-dialog { width:min(720px,calc(100% - 24px)); max-height:90dvh; padding:0; color:var(--log-text); background:var(--log-card); border:1px solid var(--log-line); border-radius:16px; box-shadow:0 18px 50px #0000004d; }
+.log-av-dialog::backdrop { background:#10223880; }
+.log-av-dialog-body { display:grid; gap:14px; padding:22px 24px 20px; }
+.log-av-dialog-head { display:flex; align-items:center; gap:12px; }
+.log-av-dialog-head h2 { flex:1; margin:0; font-size:19px; }
+.log-av-dialog-x { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:none; color:var(--log-muted); cursor:pointer; }
+.log-av-dialog-x:hover { background:var(--log-bg); color:var(--log-text); }
+.log-av-dialog-x svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; }
+.log-av-dialog-lead,.log-av-note { margin:0; color:var(--log-muted); font-size:13px; line-height:1.6; }
+.log-av-dialog-status { min-height:1.5em; margin:0; font-size:13px; color:var(--log-muted); }
+.log-av-dialog-status.is-error { color:#c2410c; }
+.log-av-dialog-foot { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.log-av-play { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.9fr); gap:18px; align-items:start; }
+.log-av-play-side { display:grid; gap:12px; }
+.log-av-ways { display:grid; gap:8px; }
+.log-av-way { display:flex; gap:10px; align-items:flex-start; padding:11px 13px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); cursor:pointer; }
+.log-av-way:hover { border-color:var(--log-accent); }
+.log-av-way:has(input:checked) { border-color:var(--log-accent); box-shadow:0 0 0 1px var(--log-accent); background:color-mix(in srgb,var(--log-accent) 8%,var(--log-card)); }
+.log-av-way:has(input:focus-visible) { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-av-way input { margin:3px 0 0; accent-color:var(--log-accent); }
+.log-av-way-text { display:grid; gap:2px; }
+.log-av-way-text small { color:var(--log-muted); font-size:12.5px; line-height:1.5; }
+.log-av-check { display:flex; gap:8px; align-items:flex-start; font-size:14px; line-height:1.5; cursor:pointer; }
+.log-av-check input { margin:3px 0 0; accent-color:var(--log-accent); }
+.log-av-check.is-off { opacity:.55; cursor:default; }
+.log-av-preview { display:grid; gap:6px; position:sticky; top:0; }
+.log-av-preview video { width:100%; max-height:320px; border-radius:10px; background:#000; }
+.log-av-preview small { color:var(--log-muted); font-size:12px; text-align:center; }
+.log-av-section { display:grid; gap:10px; margin:0; padding:14px 16px; border:1px solid var(--log-line); border-radius:12px; }
+.log-av-section legend { padding:0 6px; font-weight:700; }
+.log-av-cover { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.log-av-cover img,.log-av-cover-none { width:88px; height:88px; border-radius:10px; object-fit:cover; background:var(--log-bg); }
+.log-av-cover-none { display:grid; place-items:center; color:var(--log-muted); font-size:13px; border:1px dashed var(--log-line); box-sizing:border-box; }
+.log-av-cover-none[hidden],.log-av-cover img[hidden] { display:none; }
+.log-av-cover-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+.log-av-times { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.log-av-times.is-off { opacity:.5; }
+.log-av-time { display:grid; gap:4px; font-size:13px; }
+.log-av-time-row { display:flex; gap:6px; }
+.log-av-time-row input { flex:1; min-width:0; padding:7px 10px; border:1px solid var(--log-field); border-radius:8px; background:var(--log-card); color:var(--log-text); font:inherit; font-variant-numeric:tabular-nums; }
+.log-av-listen { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.log-av-seek { flex:1; min-width:140px; accent-color:var(--log-accent); }
+.log-av-now { font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--log-muted); min-width:6.5em; text-align:right; }
+/* The button on a video or audio thumbnail in the editor: how it plays, or its cover and loop. */
+.log-att-av { position:absolute; right:4px; bottom:4px; display:grid; place-items:center; width:26px; height:26px; padding:0; border:0; border-radius:50%; background:#000000a6; color:#fff; cursor:pointer; }
+.log-att-av:hover { background:#000000d9; }
+.log-att-av svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:640px) {
+    .log-av-dialog-body { padding:18px 16px 16px; }
+    .log-av-play { grid-template-columns:minmax(0,1fr); }
+    .log-av-preview { position:static; order:-1; }
+    .log-av-times { grid-template-columns:minmax(0,1fr); }
+    .log-av-dialog-foot .btn { flex:1 1 auto; }
+}

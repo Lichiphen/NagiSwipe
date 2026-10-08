@@ -40,6 +40,15 @@
         catch { window.prompt(t('コピーしてください'), button.dataset.copyText); }
         if (label) setTimeout(() => { label.textContent = before; }, 1600);
     });
+    // メディア一覧: how a video plays, a song's cover and loop (dialogs of log-av.js); the list is read again after saving.
+    document.addEventListener('click', async event => {
+        const button = event.target.closest('[data-av-edit]');
+        if (!button || !window.NagiLogAV?.playDialog) return;
+        const m = JSON.parse(button.dataset.av);
+        const media = { ...m, url: new URL(m.url, endpoint).href, thumb: m.thumb ? new URL(m.thumb, endpoint).href : '' };
+        const open = button.dataset.avEdit === 'video' ? window.NagiLogAV.playDialog : window.NagiLogAV.tagDialog;
+        if (await open(media, { endpoint: endpoint.href, csrf })) location.reload();
+    });
     const box = $('[data-media-upload]');
     if (box) {
         const input = $('[data-media-upload-input]', box), status = $('[data-media-upload-status]', box);
@@ -47,20 +56,30 @@
         async function add(files) {
             const list = Array.from(files);
             if (!list.length || busy) return;
-            const bad = list.filter(f => !isImage(f));
-            const good = list.filter(isImage);
-            if (!good.length) { status.textContent = t('JPEG・PNG・WebP・GIF・AVIF・BMP・SVGの画像を選んでください。'); return; }
+            const av = f => !!window.NagiLogAV?.isAV(f);
+            const bad = list.filter(f => !isImage(f) && !av(f));
+            const good = list.filter(f => isImage(f) || av(f));
+            if (!good.length) { status.textContent = t('画像・動画・音声のファイルを選んでください。'); return; }
             busy = true; box.classList.add('is-busy');
-            const errors = bad.map(f => t('{name}：画像ではありません', { name: f.name }));
+            const errors = bad.map(f => t('{name}：対応していない形式です', { name: f.name }));
             let done = 0;
             for (const file of good) {
-                status.textContent = t('追加しています…（{i} / {n}）', { i: done + 1, n: good.length }); status.classList.add('log-busy');
-                try { await uploadOne(file); done++; }
+                const step = t('追加しています…（{i} / {n}）', { i: done + 1, n: good.length });
+                status.textContent = step; status.classList.add('log-busy');
+                try {
+                    if (av(file)) {
+                        const csrf = $('input[name="csrf"]').value;
+                        await window.NagiLogAV.upload(file, { endpoint: new URL('index.php', location.href).href, csrf, onProgress: (ratio, phase) => {
+                            status.textContent = step + ' ' + (phase === 'measure' ? t('{name} を調べています…', { name: file.name }) : t('{name} を送っています…（{p}%）', { name: file.name, p: Math.floor(ratio * 100) }));
+                        } });
+                    } else await uploadOne(file);
+                    done++;
+                }
                 catch (e) { errors.push(t('{name}：{message}', { name: file.name, message: e.message })); }
             }
             busy = false; box.classList.remove('is-busy'); input.value = ''; status.classList.remove('log-busy');
-            if (done && !errors.length) { status.textContent = t('{n}枚追加しました。一覧を読み込み直しています…', { n: done }); location.href = 'index.php?p=log_media'; return; }
-            status.textContent = (done ? t('{n}枚追加しました。', { n: done }) : '') + errors.join(' / ') + (done ? t('（一覧は読み込み直すと出ます）') : '');
+            if (done && !errors.length) { status.textContent = t('{n}件追加しました。一覧を読み込み直しています…', { n: done }); location.href = 'index.php?p=log_media'; return; }
+            status.textContent = (done ? t('{n}件追加しました。', { n: done }) : '') + errors.join(' / ') + (done ? t('（一覧は読み込み直すと出ます）') : '');
         }
         input.addEventListener('change', () => add(input.files));
         const files = e => [...(e.dataTransfer?.types || [])].includes('Files');
@@ -209,8 +228,9 @@
         pickStatus.textContent = t('読み込んでいます…'); pickStatus.classList.add('log-busy'); more.hidden = true;
         try {
             const url = new URL('index.php', location.href);
-            url.search = new URLSearchParams({ p: 'log_media_json', page: String(pickPage), q: pickQuery }).toString();
-            const r = await fetch(url, { credentials: 'same-origin' });
+            url.search = new URLSearchParams({ p: 'log_media_json', page: String(pickPage), q: pickQuery, images: '1' }).toString();
+            const r = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+            if (r.redirected || !(r.headers.get('Content-Type') || '').includes('application/json')) throw new Error('login');
             const data = await r.json();
             data.items.forEach(m => {
                 known[m.id] = m;

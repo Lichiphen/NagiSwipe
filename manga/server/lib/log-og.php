@@ -33,6 +33,8 @@ function nl_og_choice(array $p): ?array
         $m = nl_load_media($id);
         if (!$m) continue;
         $rating = nl_rating_max($own, nl_media_rating($p, $m));
+        // Video and audio share their cover when they have one; a covered card is made only from pictures.
+        if (nl_is_av($m)) { if ($rating === '' && ($m['cover'] ?? '') !== '' && !str_ends_with((string)$m['cover'], '.svg')) return ['media', $m]; continue; }
         if ($rating === '') { if (!nl_is_svg($m)) return ['media', $m]; continue; }
         // A bitmap blurs into colors; an SVG falls back to a plain background, so prefer a bitmap.
         if ($veil === null || (nl_is_svg($veil[1]) && !nl_is_svg($m))) $veil = ['veil', $m, $rating];
@@ -50,7 +52,7 @@ function nl_og_image(array $p): ?array
 {
     $choice = nl_og_choice($p);
     if (!$choice) return null;
-    if ($choice[0] === 'media') return [nl_public_url(nl_media_url($choice[1])), (int)$choice[1]['w'], (int)$choice[1]['h']];
+    if ($choice[0] === 'media') return [nl_public_url(nl_media_url($choice[1], false, false, nl_is_av($choice[1]))), (int)$choice[1]['w'], (int)$choice[1]['h']];
     if (!is_file(nl_og_label($choice[2]))) return null;
     return [nl_base_url() . '/?ogimage=' . rawurlencode($p['id']) . '&v=' . nl_og_key($choice[1], $choice[2]) . '&format=image.' . nl_og_ext(), NL_OG_W, NL_OG_H];
 }

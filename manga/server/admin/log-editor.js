@@ -130,11 +130,11 @@
     const mediaInfo = JSON.parse(attachments.dataset.media || '{}');
     let mediaRatings = {};
     // Pictures sit in rows under the text, not as tags in it. Each row is a group with a number; the text marks
-    // where a group goes with a 〔画像N〕 line. Groups without a mark go after the text. Numbers stay as they are
+    // where a group goes with a 〔メディアN〕 line. Groups without a mark go after the text. Numbers stay as they are
     // while writing (an undone deletion finds its group again); a post opened again is numbered from the top.
     // Saving and the preview put the tags back in place of the marks, so the server only ever sees tags.
-    const MARK_RE = /〔画像(\d+)〕/g;
-    const markOf = n => '〔画像' + n + '〕';
+    const MARK_RE = /〔(?:メディア|画像)(\d+)〕/g;
+    const markOf = n => '〔メディア' + n + '〕';
     const TAG = /\[Image:([a-f0-9]{16})\]/g;
     let groups = [], active = null;
     const tagsOf = ids => ids.map(id => '[Image:' + id + ']').join('\n');
@@ -145,11 +145,11 @@
             else runs.push([m]);
         });
         let text = '', from = 0;
+        // Every group keeps its line, the one after the text too: the text shows where each picture is.
         const list = runs.map((run, k) => {
             const start = run[0].index, end = run.at(-1).index + run.at(-1)[0].length;
-            const last = k === runs.length - 1 && value.slice(end).trim() === '';
-            text += value.slice(from, start) + (last ? '' : markOf(k + 1));
-            from = last ? value.length : end;
+            text += value.slice(from, start) + markOf(k + 1);
+            from = end;
             return { n: k + 1, ids: [...new Set(run.map(m => m[1]))] };
         });
         return { text: text + value.slice(from), groups: list };
@@ -168,7 +168,7 @@
     function compose(text = body.value) {
         const used = new Set(), { end } = view(text);
         // A mark that brings nothing (an empty group, an unknown number) goes with its line break.
-        const out = text.replace(/(\n)?〔画像(\d+)〕(\n)?/g, (m, lead = '', n, tail = '') => {
+        const out = text.replace(/(\n)?〔(?:メディア|画像)(\d+)〕(\n)?/g, (m, lead = '', n, tail = '') => {
             const g = groups.find(x => x.n === +n), ids = g && !used.has(g) ? g.ids : [];
             if (g) used.add(g);
             return ids.length ? lead + tagsOf(ids) + tail : (lead && tail ? '\n' : '');
@@ -211,7 +211,7 @@
             const band = document.createElement('span'); band.className = 'log-mark-band'; band.dataset.n = String(g.n);
             band.title = t('ドラッグで別の行へ動かす');
             band.innerHTML = grip;
-            const label = document.createElement('b'); label.textContent = t('画像{n}', { n: g.n }); band.append(label);
+            const label = document.createElement('b'); label.textContent = t('メディア{n}', { n: g.n }); band.append(label);
             g.ids.slice(0, 4).forEach(id => {
                 const thumb = mediaInfo[id]?.thumb;
                 const img = document.createElement(thumb ? 'img' : 'i');
@@ -380,6 +380,14 @@
     const LABEL = { '': t('なし'), sensitive: t('センシティブ'), r18: 'R-18', r18g: 'R-18G' };
     const bodyMedia = () => allImages();
     const mediaRating = id => mediaRatings[id] ?? mediaInfo[id]?.rating ?? '';
+    // A video or audio file without a cover: its kind instead of a picture.
+    const kindMark = kind => {
+        const mark = document.createElement('span'); mark.className = 'log-kind-mark';
+        mark.innerHTML = kind === 'audio' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg>'
+            : kind === 'video' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="13" height="13" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>' : '';
+        mark.append(kind === 'audio' ? t('音声') : kind === 'video' ? t('動画') : t('画像'));
+        return mark;
+    };
     const strongest = list => list.reduce((a, b) => RANK.indexOf(b) > RANK.indexOf(a) ? b : a, '');
     const veilIcon = '<svg class="log-veil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/></svg>';
     // Pictures from tags typed or pasted by hand: ask the server once for their thumbnails and ratings.
@@ -389,7 +397,7 @@
         try {
             const response = await fetch(adminUrl('index.php?p=log_media_json&ids=' + ids.join(',')), { credentials: 'same-origin', cache: 'no-store' });
             if (!response.ok) return;
-            (await response.json()).items.forEach(item => { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; });
+            (await response.json()).items.forEach(item => { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '', kind: item.kind || 'image' }; });
             renderAttachments(); renderChips(); drawMark();
         } catch { /* the strip keeps its placeholders */ }
     }
@@ -412,59 +420,80 @@
             const inText = marked.includes(g);
             const group = document.createElement('section'); group.className = 'log-att-group' + (g === active ? ' is-active' : ''); group.dataset.n = String(g.n);
             const head = document.createElement('div'); head.className = 'log-att-head';
-            const label = document.createElement('b'); label.className = 'log-att-label'; label.textContent = t('画像{n}', { n: g.n });
+            const label = document.createElement('b'); label.className = 'log-att-label'; label.textContent = t('メディア{n}', { n: g.n });
             const where = document.createElement('span'); where.className = 'log-att-where';
             where.textContent = inText ? t('本文の「{mark}」の行', { mark: markOf(g.n) }) : t('本文の最後');
             head.append(label, where);
             if (inText) head.append(button('log-att-action', g.ids.length ? t('本文の最後へ') : t('この場所を消す'), t(g.ids.length ? '「{mark}」の行を消して、本文の最後に並べます' : '「{mark}」の行を消します', { mark: markOf(g.n) }), () => {
                 body.value = removeMarkOf(body.value, g.n); rememberSelection(); changed();
-                say(g.ids.length ? t('画像{n}を本文の最後に並べます。', { n: g.n }) : t('「{mark}」を消しました。', { mark: markOf(g.n) }));
+                say(g.ids.length ? t('メディア{n}を本文の最後に並べます。', { n: g.n }) : t('「{mark}」を消しました。', { mark: markOf(g.n) }));
             }));
             else head.append(button('log-att-action', t('カーソルの位置へ'), t('本文のカーソル位置に「{mark}」の行を入れます', { mark: markOf(g.n) }), () => {
-                insertMark(g.n); say(t('「{mark}」の行に画像{n}を並べます。本文の中の帯をドラッグすると、行を動かせます。', { mark: markOf(g.n), n: g.n }));
+                insertMark(g.n); say(t('「{mark}」の行にメディア{n}を並べます。本文の中の帯をドラッグすると、行を動かせます。', { mark: markOf(g.n), n: g.n }));
             }));
             const row = document.createElement('div'); row.className = 'log-att-row';
             g.ids.forEach((id, i) => {
                 const info = mediaInfo[id] || {}, r = mediaRating(id);
                 const item = document.createElement('div'); item.className = 'log-att'; item.dataset.mediaId = id;
                 const thumb = document.createElement('button'); thumb.type = 'button'; thumb.className = 'log-att-thumb';
-                thumb.title = t('ドラッグで並べ替え・別のまとまりへ移動'); thumb.setAttribute('aria-label', t('画像{n}の{i}枚目（矢印キーで移動）', { n: g.n, i: i + 1 }));
+                thumb.title = t('ドラッグで並べ替え・別のまとまりへ移動'); thumb.setAttribute('aria-label', t('メディア{n}の{i}つ目（矢印キーで移動）', { n: g.n, i: i + 1 }));
                 // Never dragged by the browser itself: a dropped copy would be uploaded again.
                 if (info.thumb) { const img = document.createElement('img'); img.src = adminUrl(info.thumb); img.alt = ''; img.draggable = false; thumb.append(img); }
-                else thumb.append(t('画像'));
+                else thumb.append(kindMark(info.kind));
                 const rate = document.createElement('button'); rate.type = 'button'; rate.className = 'log-att-rating'; rate.dataset.veil = r;
                 rate.setAttribute('aria-haspopup', 'menu'); rate.setAttribute('aria-expanded', 'false');
-                rate.setAttribute('aria-label', t('この画像の閲覧注意：{label}', { label: LABEL[r] })); rate.title = t('閲覧注意：{label}', { label: LABEL[r] });
+                rate.setAttribute('aria-label', t('このメディアの閲覧注意：{label}', { label: LABEL[r] })); rate.title = t('閲覧注意：{label}', { label: LABEL[r] });
                 rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
                 rate.addEventListener('click', () => openMenu(rate, id));
-                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('この投稿から外す（画像一覧には残ります）'), () => {
+                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('この投稿から外す（メディア一覧には残ります）'), () => {
                     g.ids = g.ids.filter(other => other !== id); changed();
                     ($$('.log-att-group[data-n="' + g.n + '"] .log-att-thumb', attachments)[Math.min(i, g.ids.length - 1)] || body).focus();
-                    say(t('画像を外しました。画像そのものは画像一覧に残っています。'));
+                    say(t('外しました。ファイルそのものはメディア一覧に残っています。'));
                 });
-                remove.setAttribute('aria-label', t('画像{n}の{i}枚目を外す', { n: g.n, i: i + 1 }));
+                remove.setAttribute('aria-label', t('メディア{n}の{i}つ目を外す', { n: g.n, i: i + 1 }));
                 item.append(thumb, rate, remove);
+                // Video: how it plays. Audio: its cover and loop. Both open a dialog of log-av.js.
+                if ((info.kind === 'video' || info.kind === 'audio') && window.NagiLogAV?.playDialog) {
+                    const video = info.kind === 'video', label = video ? t('再生のしかた') : t('ジャケットとループ位置');
+                    const av = button('log-att-av', video ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3M20 12.5v1a4 4 0 0 1-4 4H4"/></svg>', label, () => openAV(id, video));
+                    av.setAttribute('aria-label', label + ' ' + t('メディア{n}の{i}つ目', { n: g.n, i: i + 1 }));
+                    item.append(av);
+                }
                 row.append(item);
             });
-            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', t('画像{n}に画像を追加', { n: g.n }), () => { active = g; uploadInput.click(); });
-            add.setAttribute('aria-label', t('画像{n}に画像を追加', { n: g.n }));
+            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', t('メディア{n}に追加', { n: g.n }), () => { active = pinned = g; uploadInput.click(); });
+            add.setAttribute('aria-label', t('メディア{n}に追加', { n: g.n }));
             row.append(add);
             group.append(head, row);
             return group;
         });
-        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>' + t('別の場所にも画像を置く') + '</span>', t('本文のカーソル位置に新しい「〔画像N〕」の行を入れます'), () => {
+        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>' + t('別の場所にもメディアを置く') + '</span>', t('本文のカーソル位置に新しい「〔メディアN〕」の行を入れます'), () => {
             const g = { n: nextNumber(), ids: [] };
             groups.push(g); active = g; insertMark(g.n);
-            say(t('「{mark}」の行を入れました。画像{n}の＋から画像を追加してください。', { mark: markOf(g.n), n: g.n }));
+            say(t('「{mark}」の行を入れました。メディア{n}の＋から追加してください。', { mark: markOf(g.n), n: g.n }));
         }));
         attachments.replaceChildren(...nodes);
         attachments.hidden = !rows.length;
     }
+    // The dialog for one video or audio file, with its full record read fresh (its revision may have moved on).
+    async function openAV(id, video) {
+        try {
+            const response = await fetch(adminUrl('index.php?p=log_media_json&ids=' + id), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+            const m = (await response.json()).items?.[0];
+            if (!m) throw new Error(t('メディアが見つかりません。'));
+            const media = { ...m, url: adminUrl(m.url), thumb: m.thumb ? adminUrl(m.thumb) : '' };
+            const saved = await (video ? window.NagiLogAV.playDialog : window.NagiLogAV.tagDialog)(media, { endpoint: endpoint.href, csrf });
+            if (!saved) return;
+            mediaInfo[id] = { thumb: saved.thumb, alt: saved.alt, rating: saved.rating || '', kind: saved.kind || 'image' };
+            attachments.dataset.key = ''; renderAttachments(); drawMark();
+            say(video ? t('再生のしかたを保存しました。') : t('ジャケットとループ位置を書き込んで、ファイルを差し替えました。'));
+        } catch (e) { say(e.message, true); }
+    }
     // The mark on its own line goes with its line break; anywhere else, just the mark.
-    const removeMarkOf = (text, n) => text.replace(new RegExp('(\\n)?〔画像' + n + '〕(\\n)?', 'g'), (m, lead, tail) => lead && tail ? '\n' : '');
-    function insertMark(n) {
-        const [start, end] = selection, before = body.value.slice(0, start);
-        insert((before === '' || before.endsWith('\n') ? '' : '\n') + markOf(n) + (body.value.slice(end).startsWith('\n') ? '' : '\n'));
+    const removeMarkOf = (text, n) => text.replace(new RegExp('(\\n)?〔(?:メディア|画像)' + n + '〕(\\n)?', 'g'), (m, lead, tail) => lead && tail ? '\n' : '');
+    function insertMark(n, range = selection) {
+        const [start, end] = range, before = body.value.slice(0, start);
+        insert((before === '' || before.endsWith('\n') ? '' : '\n') + markOf(n) + (body.value.slice(end).startsWith('\n') ? '' : '\n'), range);
     }
     let drag = null;
     const rowsNow = () => $$('.log-att-group', attachments);
@@ -521,41 +550,74 @@
             const to = i + (e.key === 'ArrowLeft' ? -1 : 1);
             if (to < 0 || to >= g.ids.length) return;
             g.ids.splice(i, 1); g.ids.splice(to, 0, id); changed();
-            say(t('画像{n}の{i}枚目に移しました。', { n: g.n, i: to + 1 }));
+            say(t('メディア{n}の{i}つ目に移しました。', { n: g.n, i: to + 1 }));
         } else {
             const other = rows[rows.indexOf(g) + (e.key === 'ArrowUp' ? -1 : 1)];
             if (!other) return;
             g.ids.splice(i, 1); other.ids.push(id); active = other; changed();
-            say(t('画像{n}の最後に移しました。', { n: other.n }));
+            say(t('メディア{n}の最後に移しました。', { n: other.n }));
         }
         $('.log-att-group[data-n="' + groups.find(x => x.ids.includes(id))?.n + '"] .log-att[data-media-id="' + id + '"] .log-att-thumb', attachments)?.focus();
     });
-    // New pictures go to the group last chosen (its +, a picture moved into it), otherwise after the text.
-    function addImage(id) {
-        if (allImages().includes(id)) { say(t('その画像はもう入っています。')); return; }
-        let g = groups.includes(active) ? active : view().end[0];
-        if (!g) { g = { n: nextNumber(), ids: [] }; groups.push(g); }
-        g.ids.push(id); active = g; changed();
+    // Where new pictures go: the group whose + was pressed; the group whose 〔メディアN〕 line holds the cursor (or sits
+    // just above it); else a 〔メディアN〕 line at the cursor, below its line when the cursor is mid-line so a sentence
+    // is never split. Wherever they go, the group's line is in the text, so its band shows where they are.
+    let pinned = null;
+    function target() {
+        const chosen = groups.includes(pinned) ? pinned : null;
+        pinned = null;
+        if (chosen) {
+            if (!view().at.has(chosen.n)) insertMark(chosen.n, [body.value.length, body.value.length]);
+            return { g: chosen, where: 'group' };
+        }
+        const text = body.value, caret = Math.min(selection[0], text.length), { at } = view();
+        const lineStart = text.lastIndexOf('\n', caret - 1) + 1;
+        let lineEnd = text.indexOf('\n', caret); if (lineEnd < 0) lineEnd = text.length;
+        const atLineStart = text.slice(lineStart, caret).trim() === '';
+        const lines = [text.slice(lineStart, lineEnd)];
+        if (atLineStart && lineStart) lines.push(text.slice(text.lastIndexOf('\n', lineStart - 2) + 1, lineStart - 1));
+        for (const line of lines) for (const m of line.matchAll(MARK_RE)) {
+            const g = groups.find(x => x.n === +m[1]);
+            if (g && at.has(g.n)) return { g, where: 'mark' };
+        }
+        const pos = atLineStart ? lineStart : lineEnd;
+        // At the end of the text, the group already shown after it takes its line there.
+        const last = text.slice(pos).trim() === '' ? view().end[0] : null;
+        const g = last || { n: nextNumber(), ids: [] };
+        if (!last) groups.push(g);
+        insertMark(g.n, [pos, pos]);
+        return { g, where: 'mark', created: !last };
     }
-    // Tags typed or pasted into the text move to the rows: a new group where text follows them, else after the text.
+    // Where they went: the place is said in words, and its band in the text and its row under it light up.
+    const placeText = ({ g, where }) => where === 'group' ? t('メディア{n}', { n: g.n }) : t('本文のカーソル位置（「{mark}」の行）', { mark: markOf(g.n) });
+    function showPlace(g) {
+        requestAnimationFrame(() => {
+            const band = $('.log-mark-band[data-n="' + g.n + '"]', markLayer), row = $('.log-att-group[data-n="' + g.n + '"]', attachments);
+            [band, row].forEach(el => { if (!el) return; el.classList.remove('is-placed'); void el.offsetWidth; el.classList.add('is-placed'); setTimeout(() => el.classList.remove('is-placed'), 3300); });
+            if (band) {
+                const top = band.parentElement.offsetTop;
+                if (top < body.scrollTop || top > body.scrollTop + body.clientHeight - 24) { body.scrollTop = Math.max(0, top - body.clientHeight / 2); markLayer.scrollTop = body.scrollTop; }
+            } else row?.scrollIntoView({ block: 'nearest' });
+        });
+    }
+    function addImage(id, place = target()) {
+        if (allImages().includes(id)) { say(t('そのメディアはもう入っています。')); return false; }
+        place.g.ids.push(id); active = place.g; changed();
+        return true;
+    }
+    // Tags typed or pasted into the text move to the rows: a new group, its line where the tags were.
     function absorb() {
         if (body.value.search(/\[Image:[a-f0-9]{16}\]/) < 0) return;
         const caret = body.selectionStart, found = [];
         let first = -1;
         let text = body.value.replace(/[ \t]*\[Image:([a-f0-9]{16})\][ \t]*\r?\n?/g, (m, id, offset) => { if (!found.includes(id) && !allImages().includes(id)) found.push(id); if (first < 0) first = offset; return ''; });
         if (found.length) {
-            if (text.slice(first).trim() !== '') {
-                const g = { n: nextNumber(), ids: found }; groups.push(g); active = g;
-                text = text.slice(0, first) + markOf(g.n) + '\n' + text.slice(first);
-            } else {
-                let g = view().end[0];
-                if (!g) { g = { n: nextNumber(), ids: [] }; groups.push(g); }
-                g.ids.push(...found); active = g;
-            }
+            const g = { n: nextNumber(), ids: found }; groups.push(g); active = g;
+            text = text.slice(0, first) + markOf(g.n) + (text.slice(first).trim() !== '' ? '\n' : '') + text.slice(first);
         }
         const at = Math.max(0, Math.min(text.length, caret - (body.value.length - text.length)));
         body.value = text; body.setSelectionRange(at, at); rememberSelection();
-        say(t('画像のタグを、本文の下の画像の列に移しました。'));
+        say(t('メディアのタグを、本文の下のメディアの列に移しました。'));
     }
     const menu = $('[data-att-menu]', form);
     let menuFor = null;
@@ -595,7 +657,7 @@
         if (shown) {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-rating'; b.dataset.open = 'rating'; b.dataset.veil = shown;
             b.innerHTML = veilIcon; const text = document.createElement('span');
-            text.textContent = LABEL[shown] + (shown !== own ? t('（画像）') : '') + (warning.value.trim() ? '・' + warning.value.trim() : '');
+            text.textContent = LABEL[shown] + (shown !== own ? t('（メディア）') : '') + (warning.value.trim() ? '・' + warning.value.trim() : '');
             b.append(text); out.push(b);
         }
         const names = categoryFields.filter(i => i.checked).map(i => i.nextElementSibling.textContent).concat(newCategories.value.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean));
@@ -699,6 +761,39 @@
         insert('**' + text + '**');
         body.focus(); body.setSelectionRange(start + 2, start + 2 + text.length); rememberSelection();
     });
+    // H: the selected lines, or the line at the cursor, become a heading (## or ###); the same level again turns it back.
+    // An empty line gets a sample heading, selected so it can be typed over.
+    const headingButton = $('[data-heading]', form), headingDialog = $('.log-heading-dialog');
+    function setHeading(level) {
+        const mark = '#'.repeat(level) + ' ', value = body.value;
+        const [selStart, selEnd] = [Math.min(selection[0], value.length), Math.min(selection[1], value.length)];
+        const start = value.lastIndexOf('\n', selStart - 1) + 1;
+        const last = selEnd > selStart && value[selEnd - 1] === '\n' ? selEnd - 1 : selEnd;
+        let end = value.indexOf('\n', last); if (end < 0) end = value.length;
+        const lines = value.slice(start, end).split('\n');
+        if (lines.every(line => line.trim() === '')) {
+            const sample = level === 2 ? t('見出し２') : t('見出し３');
+            insert(mark + sample, [start, end]);
+            body.focus(); body.setSelectionRange(start + mark.length, start + mark.length + sample.length); rememberSelection();
+            return;
+        }
+        const plain = line => line.replace(/^#{2,3}[ \t]+/, '');
+        const same = lines.every(line => line.trim() === '' || (line.startsWith(mark) && plain(line) === line.slice(mark.length)));
+        const next = lines.map(line => line.trim() === '' ? line : (same ? plain(line) : mark + plain(line).trimStart())).join('\n');
+        insert(next, [start, end]);
+        body.focus(); body.setSelectionRange(start, start + next.length); rememberSelection();
+    }
+    if (headingButton) {
+        const levels = headingButton.dataset.headingLevels.split(',').map(level => +level.slice(1));
+        headingButton.addEventListener('click', () => {
+            if (levels.length === 1) { setHeading(levels[0]); return; }
+            headingDialog.showModal();
+            $('.log-heading-choice', headingDialog)?.focus();
+        });
+        $$('[data-heading-level]', headingDialog).forEach(choice => choice.addEventListener('click', () => { headingDialog.close(); setHeading(+choice.dataset.headingLevel); }));
+        $('[data-heading-close]', headingDialog).addEventListener('click', () => headingDialog.close());
+        headingDialog.addEventListener('click', event => { if (event.target === headingDialog) headingDialog.close(); });
+    }
     let previousFocus = null;
     let inertNodes = [];
     function accessibility(open) {
@@ -790,22 +885,36 @@
         // One queue preserves the order across separate drops and selection changes.
         uploading++;
         uploadQueue = uploadQueue.then(async () => {
-            setPanel(true); say(t('画像をアップロードしています…'));
+            setPanel(true);
+            // The whole batch goes to one place, chosen now and shown (an empty band) while the files are sent.
+            const place = target(), where = placeText(place);
+            say(t('{where}に置きます。アップロードしています…', { where })); showPlace(place.g);
             const errors = [];
+            let added = 0;
             for (const file of list) {
                 try {
-                    const data = new FormData(); data.set('do', 'log_upload'); data.set('image', file);
-                    const { media } = await request(data);
-                    mediaInfo[media.id] = { thumb: media.thumb, alt: media.alt, rating: media.rating || '' };
-                    addImage(media.id);
+                    let media;
+                    // Video and audio go in pieces with their measurements (log-av.js); pictures in one request.
+                    if (window.NagiLogAV?.isAV(file)) {
+                        media = await window.NagiLogAV.upload(file, { endpoint: endpoint.href, csrf, onProgress: (ratio, phase) => say(phase === 'measure' ? t('{name} を調べています…', { name: file.name }) : t('{name} を送っています…（{p}%）', { name: file.name, p: Math.floor(ratio * 100) })) });
+                    } else {
+                        const data = new FormData(); data.set('do', 'log_upload'); data.set('image', file);
+                        ({ media } = await request(data));
+                    }
+                    mediaInfo[media.id] = { thumb: media.thumb, alt: media.alt, rating: media.rating || '', kind: media.kind || 'image' };
+                    if (addImage(media.id, place)) added++;
                 } catch (e) { errors.push(t('{name}：{message}', { name: file.name, message: e.message })); }
             }
-            say(errors.length ? errors.join(' / ') : t('画像を追加しました。サムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。'), errors.length > 0);
+            // Nothing arrived: the line made for this batch goes again.
+            if (place.created && !place.g.ids.length) { body.value = removeMarkOf(body.value, place.g.n); rememberSelection(); changed(); }
+            if (errors.length) say(errors.join(' / '), true);
+            else if (added) { say(t('{where}に置きました。サムネイルや本文の帯をドラッグすると、場所を変えられます。', { where })); showPlace(place.g); }
         }).finally(() => { uploading--; });
         await uploadQueue;
     }
     let uploadQueue = Promise.resolve();
     uploadInput.addEventListener('change', () => { upload(uploadInput.files); uploadInput.value = ''; });
+    uploadInput.addEventListener('cancel', () => { pinned = null; });
     // A picture dragged from this page (a thumbnail, an image in a post) is not a new file: never upload it again,
     // and keep the browser from writing its URL into the text.
     let pageDrag = false;
@@ -833,13 +942,17 @@
         if (reset) { catalogPage = 1; grid.replaceChildren(); }
         more.disabled = true; pickerStatus.textContent = t('読み込み中…');
         try {
-            const response = await fetch(adminUrl('index.php?p=log_' + kind + '_json&page=' + catalogPage + '&q=' + encodeURIComponent(search.value)), { credentials: 'same-origin', cache: 'no-store' });
+            const response = await fetch(adminUrl('index.php?p=log_' + kind + '_json&page=' + catalogPage + '&q=' + encodeURIComponent(search.value)), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+            // A login page instead of the list (the session ended in another tab, or it expired): say so instead of a JSON error.
+            if (response.redirected || !(response.headers.get('Content-Type') || '').includes('application/json')) throw Object.assign(new Error(t('ログインが切れた可能性があります。ログインし直してから、もう一度お試しください。')), { login: true });
             if (!response.ok) throw new Error(t('一覧を読めませんでした。ログインを確認してください。'));
             const result = await response.json();
             if (currentGeneration !== generation) return;
             result.items.forEach(item => {
                 const button = document.createElement('button'); button.type = 'button';
-                const img = document.createElement('img'); img.src = adminUrl(item.thumb); img.alt = ''; img.loading = 'lazy';
+                let img;
+                if (item.thumb) { img = document.createElement('img'); img.src = adminUrl(item.thumb); img.alt = ''; img.loading = 'lazy'; }
+                else { img = document.createElement('span'); img.className = 'log-picker-kind'; img.append(kindMark(item.kind)); }
                 const label = document.createElement('span'); label.textContent = item.title || item.alt || t('画像');
                 button.append(img, label);
                 if (item.locked) { const badge = document.createElement('small'); badge.textContent = t('パスワード付き'); button.append(badge); }
@@ -849,17 +962,25 @@
                         let tag = item.tag;
                         if (refs[tag] && refs[tag] !== item.id) tag = tag.slice(0, -1) + ' #' + item.id + ']';
                         refs[tag] = item.id; insert('\n' + tag + '\n');
-                    } else { mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '' }; addImage(item.id); }
+                    } else {
+                        mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '', kind: item.kind || 'image' };
+                        if (!allImages().includes(item.id)) { const place = target(); addImage(item.id, place); say(t('{where}に置きました。', { where: placeText(place) })); showPlace(place.g); }
+                        else say(t('そのメディアはもう入っています。'));
+                    }
                     picker.close(); body.focus();
                 });
                 grid.append(button);
             });
             more.hidden = !result.more; pickerStatus.textContent = grid.children.length ? t('選ぶと、本文のカーソル位置に入ります。') : t('見つかりませんでした。');
-        } catch (e) { if (currentGeneration === generation) pickerStatus.textContent = e.message; }
+        } catch (e) {
+            if (currentGeneration !== generation) return;
+            pickerStatus.textContent = e.message;
+            if (e.login) { const a = document.createElement('a'); a.href = adminUrl('login.php'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = t('ログイン画面を開く'); pickerStatus.append(' ', a); }
+        }
         finally { if (currentGeneration === generation) more.disabled = false; }
     }
     $$('[data-picker]', form).forEach(button => button.addEventListener('click', () => {
-        kind = button.dataset.picker; search.value = ''; $('#log-picker-title').textContent = kind === 'manga' ? t('漫画を選ぶ') : t('画像を選ぶ');
+        kind = button.dataset.picker; search.value = ''; $('#log-picker-title').textContent = kind === 'manga' ? t('漫画を選ぶ') : t('メディアを選ぶ');
         picker.showModal(); loadCatalog(true);
     }));
     $('[data-picker-close]', picker).addEventListener('click', () => picker.close());
@@ -885,7 +1006,7 @@
     form.addEventListener('submit', async e => {
         e.preventDefault();
         if (saving) return;
-        if (uploading) { say(t('画像の追加が終わってから保存してください。'), true); return; }
+        if (uploading) { say(t('メディアの追加が終わってから保存してください。'), true); return; }
         const data = new FormData(form); data.set('status', e.submitter?.value || 'published'); data.set('body', compose());
         saving = true; $$('button[type="submit"],button[name="status"]', form).forEach(b => { b.disabled = true; });
         say(t('保存しています…'));
