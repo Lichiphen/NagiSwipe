@@ -156,7 +156,7 @@ nagimanga/
    画像の拡大表示に NagiSwipe を使っている場合は、NagiSwipe の URL の **うしろに半角スペースを 1 つ入れて** 続けて書きます（1 行のまま続けます）。
 
    ```
-   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@e549a71/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
+   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
    ```
 
    ※ URL の `@` の後ろ（`@93db749` など）は、ファイルのバージョンを表す値です。NagiSwipe が更新されると、README の値も新しくなります。新しい版を使いたいときは、ここの URL を貼り直してください（貼り直すまでは、今の版のまま表示が変わりません）。 NagiManga を更新したときも、「設置用コード」の新しい 1 行に貼り替えてください。
