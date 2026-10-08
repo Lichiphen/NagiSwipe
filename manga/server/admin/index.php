@@ -21,7 +21,7 @@ nm_load_plugins();
 
 const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
 // The image-popup script most sites pair with NagiManga (for the Tegalog setting line)
-const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.4.0/NagiSwipe-main.js';
+const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.6.0/NagiSwipe-main.js';
 /** Blocks of the settings screen: their heading (for messages) and tab. */
 const NM_SETTINGS_SECTIONS = [
     'log_preferences' => ['公開範囲・表示件数・ページ送り', 'log'],

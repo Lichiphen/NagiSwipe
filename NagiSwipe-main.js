@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.3.1
+ * NagiSwipe v1.3.2
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -1147,16 +1147,7 @@
             if (!this.isOpen || this.isAnimating || !wrap || !wrap._nsNatW) return;
             const full = this.state.scale > 1.01;
             if (!!wrap._nsFull === full) return;
-            if (full) { this._applyLayout(wrap, true); return; }
-            // Back at fit: the smaller layout only after the last frame of the zoom-out has been shown, not in
-            // the same frame as the end of the animation (Android drew most of the picture missing for a frame
-            // when the end of the transition, the new size and the new transform all came together).
-            const token = this._animToken;
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                if (token !== this._animToken || this.slidePool.current !== wrap || this.isAnimating || !this.isOpen) return;
-                if (this.state.scale > 1.01 || !wrap._nsFull) return;
-                this._applyLayout(wrap, false);
-            }));
+            this._applyLayout(wrap, full);
         }
 
         _applyLayout(wrap, full) {
@@ -1621,9 +1612,11 @@
         animateTo(targetState) {
             this.isAnimating = true;
             if (targetState.scale <= 1.01) this.allowOverZoom = false;
-            this.state = targetState;
             const token = this._animToken = (this._animToken || 0) + 1;
             const wrap = this.slidePool.current;
+            // Back to fit from a zoom: drawn frame by frame like a pinch, not by a CSS transition.
+            if (targetState.scale <= 1.01 && this.state.scale > 1.01) { this._tweenTo(targetState, token); return; }
+            this.state = targetState;
 
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
                 if(el) el.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
@@ -1644,6 +1637,32 @@
             // No transition when nothing moves (already there): the timer ends it.
             const timer = setTimeout(finish, 400);
             this.render();
+        }
+
+        /**
+         * Back to fit, one frame at a time: the state moves from where it is to the target over 300 ms
+         * (ease-out) and each frame is drawn by render() with no CSS transition, the way a pinch is.
+         * On Android and iPhone, the transition back from a zoom left black or missing pieces for a frame.
+         */
+        _tweenTo(target, token) {
+            const from = { ...this.state }, started = performance.now(), duration = 300;
+            const wrap = this.slidePool.current;
+            [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
+                if (el) el.style.transition = 'none';
+            });
+            const ease = t => 1 - Math.pow(1 - t, 3);
+            const step = now => {
+                if (token !== this._animToken || !this.isOpen || this.slidePool.current !== wrap) return;
+                const k = Math.min(1, (now - started) / duration), e = ease(k);
+                this.state = k < 1
+                    ? { x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e, scale: from.scale + (target.scale - from.scale) * e }
+                    : { ...target };
+                this.render();
+                if (k < 1) { requestAnimationFrame(step); return; }
+                this._endAnimation();
+                this.updateUiVisibility();
+            };
+            requestAnimationFrame(step);
         }
 
         render() {
