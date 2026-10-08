@@ -160,7 +160,7 @@ Tegalog posts cannot use the HTML tag for blogs. Use the **"共有リンク" (sh
    If you use NagiSwipe for zooming pictures, write it **after NagiSwipe's URL and one space** (on one line).
 
    ```
-   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
+   https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js
    ```
 
    The part after `@` in the URL (such as `@93db749`) identifies the version of the file. When NagiSwipe is updated, the value in the README changes too. Paste the URL again when you want the new version (until then your site keeps the version you have). After updating NagiManga, paste the new line from "設置用コード" as well.

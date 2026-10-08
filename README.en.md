@@ -56,10 +56,10 @@ The files are served fast through [jsDelivr](https://www.jsdelivr.com/). Copy th
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js"></script>
 ```
 
 The part after `@` (such as `@93db749`) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as `@v1.6.0`. To always use the latest `main` branch, write `@main` (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).
@@ -108,15 +108,15 @@ It works without it, but if the link carries the picture's real width and height
 
 1. In Tegalog's admin panel, open **[設定] → [システム設定] → 【画像拡大スクリプトの選択】** (Settings → System settings → Image zoom script).
 2. Choose "**他のスクリプトを使う：URLを指定**" (use another script: give its URL), paste these two, and save.
-   - The "JavaScriptのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js`
-   - The "CSSのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css`
+   - The "JavaScriptのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js`
+   - The "CSSのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css`
 
 Now a click on a picture in a post shows it large with NagiSwipe.
 
 **To use the manga viewer (NagiManga) too**, write NagiManga's URL in the same "JavaScriptのURL" field, **after NagiSwipe's URL and one space** (keep it on one line; the CSS field stays as it is).
 
 ```
-https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js
 ```
 
 Also make manga open **in posts without pictures**: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under "▼画像URLを画像として埋め込む表示", check **"画像リンクに独自のclass属性値を追加する"** (add your own class to picture links), type `nagimanga` between `class="` and `"`, and save.

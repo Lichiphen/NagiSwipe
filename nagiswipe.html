@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="NagiSwipe-main.css?v=a40da4ccc5">
 <link rel="stylesheet" href="site/site.css?v=4749867e1b">
 <script src="NagiSwipe-main.js?v=876bf09da7" defer></script>
-<script src="site/site.js?v=8418041182" data-index="site/search.json?v=ee67f81e6c" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.json?v=6011a7b889" defer></script>
 </head>
 <body class="page-nagiswipe">
 <a class="skip" href="#main">本文へ移動</a>
@@ -54,10 +54,10 @@
 <h3 id="cdn経由-推奨">CDN経由 (推奨)<a class="anchor" href="#cdn経由-推奨" aria-label="この見出しへのリンク">#</a></h3>
 <p><a href="https://www.jsdelivr.com/" class="ext">jsDelivr</a> を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。</p>
 <pre><code class="language-html">&lt;!-- CSS --&gt;
-&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css&quot;&gt;
 
 &lt;!-- JavaScript --&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p>
 <h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3>
 <p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</p>
@@ -80,10 +80,10 @@
 <h2 id="てがろぐで使う">てがろぐで使う<a class="anchor" href="#てがろぐで使う" aria-label="この見出しへのリンク">#</a></h2>
 <p><a href="https://www.nishishi.com/cgi/tegalog/" class="ext">てがろぐ</a> では、スキンのファイルを書き換えなくても、管理画面で設定するだけで NagiSwipe を使えます。</p>
 <ol><li>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開きます。</li><li>「<strong>他のスクリプトを使う：URLを指定</strong>」を選び、次の 2 つをコピーして貼り付け、保存します。
-<ul><li>「JavaScriptのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js</code></li><li>「CSSのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css</code></li></ul></li></ol>
+<ul><li>「JavaScriptのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js</code></li><li>「CSSのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css</code></li></ul></li></ol>
 <p>これで、投稿の画像をクリックすると NagiSwipe で大きく表示されます。</p>
 <p><strong>漫画ビューアー（NagiManga）も使う場合</strong> は、同じ「JavaScriptのURL」欄で、NagiSwipe の URL の <strong>うしろに半角スペースを 1 つ入れて</strong>、NagiManga の URL を続けて書きます（1 行のまま続けます。「CSSのURL」欄はそのままで大丈夫です）。</p>
-<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js</code></pre>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js</code></pre>
 <p>あわせて、<strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p>
 <p>てがろぐに漫画を載せる方法は、<a href="nagimanga.html#てがろぐに載せる">manga/README.md の「てがろぐに載せる」</a> を見てください。</p>
 <p><a href="https://github.com/Lichiphen/NagiMemo" class="ext">NagiMemo</a>（てがろぐ用のスキン）でも同じ方法で使えます。</p>

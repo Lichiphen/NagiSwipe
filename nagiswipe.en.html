@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="NagiSwipe-main.css?v=a40da4ccc5">
 <link rel="stylesheet" href="site/site.css?v=4749867e1b">
 <script src="NagiSwipe-main.js?v=876bf09da7" defer></script>
-<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=97697d7559" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=a5d97ce722" defer></script>
 </head>
 <body class="page-nagiswipe">
 <a class="skip" href="#main">Skip to the content</a>
@@ -54,10 +54,10 @@
 <h3 id="via-cdn-recommended">Via CDN (recommended)<a class="anchor" href="#via-cdn-recommended" aria-label="Link to this heading">#</a></h3>
 <p>The files are served fast through <a href="https://www.jsdelivr.com/" class="ext">jsDelivr</a>. Copy these URLs (they are always the URLs of the latest version).</p>
 <pre><code class="language-html">&lt;!-- CSS --&gt;
-&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css&quot;&gt;
 
 &lt;!-- JavaScript --&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <p>The part after <code>@</code> (such as <code>@93db749</code>) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as <code>@v1.6.0</code>. To always use the latest <code>main</code> branch, write <code>@main</code> (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).</p>
 <h3 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this heading">#</a></h3>
 <p>Links on the page such as <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> are found automatically, and the gallery opens when one is clicked.</p>
@@ -80,10 +80,10 @@
 <h2 id="using-it-with-tegalog">Using it with Tegalog<a class="anchor" href="#using-it-with-tegalog" aria-label="Link to this heading">#</a></h2>
 <p><a href="https://www.nishishi.com/cgi/tegalog/" class="ext">Tegalog</a> (a Japanese micro-blog CGI) can use NagiSwipe through its admin settings alone, without editing the skin files. The menu names below are Tegalog&#x27;s Japanese ones.</p>
 <ol><li>In Tegalog&#x27;s admin panel, open <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> (Settings → System settings → Image zoom script).</li><li>Choose &quot;<strong>他のスクリプトを使う：URLを指定</strong>&quot; (use another script: give its URL), paste these two, and save.
-<ul><li>The &quot;JavaScriptのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js</code></li><li>The &quot;CSSのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css</code></li></ul></li></ol>
+<ul><li>The &quot;JavaScriptのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js</code></li><li>The &quot;CSSのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css</code></li></ul></li></ol>
 <p>Now a click on a picture in a post shows it large with NagiSwipe.</p>
 <p><strong>To use the manga viewer (NagiManga) too</strong>, write NagiManga&#x27;s URL in the same &quot;JavaScriptのURL&quot; field, <strong>after NagiSwipe&#x27;s URL and one space</strong> (keep it on one line; the CSS field stays as it is).</p>
-<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js</code></pre>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js</code></pre>
 <p>Also make manga open <strong>in posts without pictures</strong>: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under &quot;▼画像URLを画像として埋め込む表示&quot;, check <strong>&quot;画像リンクに独自のclass属性値を追加する&quot;</strong> (add your own class to picture links), type <code>nagimanga</code> between <code>class=&quot;</code> and <code>&quot;</code>, and save.</p>
 <p>How to put manga in Tegalog posts is in <a href="nagimanga.en.html#posting-to-tegalog">&quot;Posting to Tegalog&quot; in manga/README.en.md</a>.</p>
 <p>It works the same way with <a href="https://github.com/Lichiphen/NagiMemo" class="ext">NagiMemo</a> (a skin for Tegalog).</p>

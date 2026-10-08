@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="NagiSwipe-main.css?v=a40da4ccc5">
 <link rel="stylesheet" href="site/site.css?v=4749867e1b">
 <script src="NagiSwipe-main.js?v=876bf09da7" defer></script>
-<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=97697d7559" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=a5d97ce722" defer></script>
 </head>
 <body class="page-nagimanga">
 <a class="skip" href="#main">Skip to the content</a>
@@ -96,7 +96,7 @@
 <h3 id="posting-to-tegalog">Posting to Tegalog<a class="anchor" href="#posting-to-tegalog" aria-label="Link to this heading">#</a></h3>
 <p>Tegalog posts cannot use the HTML tag for blogs. Use the <strong>&quot;共有リンク&quot; (share link)</strong> at the top of the work&#x27;s page instead.</p>
 <ol><li><p>In Tegalog&#x27;s admin panel, open <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> and choose &quot;<strong>他のスクリプトを使う：URLを指定</strong>&quot;.</p></li><li><p>Write NagiManga&#x27;s URL in the &quot;JavaScriptのURL&quot; field and save. The <strong>&quot;設置用コード&quot; (embed code)</strong> screen of the admin panel has a line you can paste into this field as it is (NagiSwipe and NagiManga together, with cache busters). If you use NagiSwipe for zooming pictures, write it <strong>after NagiSwipe&#x27;s URL and one space</strong> (on one line).</p>
-<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js</code></pre>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js</code></pre>
 <p>The part after <code>@</code> in the URL (such as <code>@93db749</code>) identifies the version of the file. When NagiSwipe is updated, the value in the README changes too. Paste the URL again when you want the new version (until then your site keeps the version you have). After updating NagiManga, paste the new line from &quot;設置用コード&quot; as well.</p></li></ol>
 <ol start="3"><li><p>Make manga open <strong>in posts without pictures</strong>: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under &quot;▼画像URLを画像として埋め込む表示&quot;, check <strong>&quot;画像リンクに独自のclass属性値を追加する&quot;</strong>, type <code>nagimanga</code> between <code>class=&quot;</code> and <code>&quot;</code>, and save.</p></li><li><p>Open the work in NagiManga&#x27;s admin panel and press &quot;コピー&quot; next to &quot;共有リンク&quot;.</p></li><li><p>Post to Tegalog with the link text (in the example below, &quot;Read chapter 1&quot;).</p>
 <pre><code>[Read chapter 1]https://example.com/nagimanga/read.php?nagimanga=Ab3dE5gH7jK9&amp;dir=rtl</code></pre></li></ol>
