@@ -1147,24 +1147,23 @@
             if (!this.isOpen || this.isAnimating || !wrap || !wrap._nsNatW) return;
             const full = this.state.scale > 1.01;
             if (!!wrap._nsFull === full) return;
+            if (full) { this._applyLayout(wrap, true); return; }
+            // Back at fit: the smaller layout only after the last frame of the zoom-out has been shown, not in
+            // the same frame as the end of the animation (Android drew most of the picture missing for a frame
+            // when the end of the transition, the new size and the new transform all came together).
+            const token = this._animToken;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                if (token !== this._animToken || this.slidePool.current !== wrap || this.isAnimating || !this.isOpen) return;
+                if (this.state.scale > 1.01 || !wrap._nsFull) return;
+                this._applyLayout(wrap, false);
+            }));
+        }
+
+        _applyLayout(wrap, full) {
             wrap._nsFull = full;
             wrap.style.transition = 'none';
             this._setSlideSize(wrap, wrap._nsNatW, wrap._nsNatH);
             this.render();
-            this._redrawLayers(wrap);
-        }
-
-        /**
-         * Android's Chrome keeps the tiles of a will-change layer at the scale they were first drawn at.
-         * After the zoomed (full-size) layout went back to fit, some tiles were still the zoomed ones and the
-         * picture looked torn into blocks. Dropping the hint for a frame makes the whole picture draw again.
-         */
-        _redrawLayers(wrap) {
-            const imgs = Array.from(wrap.querySelectorAll('.ns-img'));
-            imgs.forEach(img => { img.style.willChange = 'auto'; });
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                imgs.forEach(img => { img.style.willChange = ''; });
-            }));
         }
 
         _getWrapBaseScale(wrap) {
@@ -1613,20 +1612,38 @@
             }, duration);
         }
 
+        /**
+         * Zoom or pan with a CSS transition. It ends when the current slide's transform transition ends
+         * (transitionend), with a timer only in case that never comes. Each call has its own token: a tap
+         * during the animation starts a new one, and the first one's end must not cut into it (it used to
+         * switch the layout in the middle of the second animation).
+         */
         animateTo(targetState) {
             this.isAnimating = true;
             if (targetState.scale <= 1.01) this.allowOverZoom = false;
             this.state = targetState;
-            
+            const token = this._animToken = (this._animToken || 0) + 1;
+            const wrap = this.slidePool.current;
+
             [this.slidePool.current, this.slidePool.prev, this.slidePool.next].forEach(el => {
                 if(el) el.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
             });
 
-            this.render();
-            setTimeout(() => {
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                wrap?.removeEventListener('transitionend', onEnd);
+                clearTimeout(timer);
+                if (token !== this._animToken) return;
                 this._endAnimation();
                 this.updateUiVisibility();
-            }, 300);
+            };
+            const onEnd = e => { if (e.target === wrap && e.propertyName === 'transform') finish(); };
+            wrap?.addEventListener('transitionend', onEnd);
+            // No transition when nothing moves (already there): the timer ends it.
+            const timer = setTimeout(finish, 400);
+            this.render();
         }
 
         render() {
