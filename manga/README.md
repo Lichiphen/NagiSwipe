@@ -1,6 +1,15 @@
+**日本語** | [English](README.en.md)
+
 # NagiManga（漫画ビューアー）
 
-日本語 | [English](README.en.md)
+[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#デモ)
+[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.md)
+[![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
+[![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
+[![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
+[![Documentation](https://img.shields.io/badge/docs-nagiswipe.pages.dev-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://nagiswipe.pages.dev/nagimanga.html)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](#2-つの使い方)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eab308?style=flat-square)](../LICENSE)
 
 NagiSeries（[NagiSwipe](../README.md#nagiswipe)・NagiManga・[NagiLog](README-LOG.md)）の漫画ビューアーです。
 
@@ -109,17 +118,22 @@ nagimanga/
 └── data/             作品の画像と設定（外からは見えません）
 ```
 
-- **`.htaccess` を忘れずに送ってください。** FTP ソフトによっては、`.` で始まるファイルが隠れていて送られないことがあります（「隠しファイルを表示」をオンにすると見えます）。`nagimanga/`・`admin/`・`lib/`・`data/`・`plugins/` の 5 か所にあります。
 - `data` フォルダは書き込みできるようにしてください（多くのサーバーでは 755 のままで大丈夫です）。
+
+> [!WARNING]
+> **`.htaccess` を忘れずに送ってください。** FTP ソフトによっては、`.` で始まるファイルが隠れていて送られないことがあります（「隠しファイルを表示」をオンにすると見えます）。`nagimanga/`・`admin/`・`lib/`・`data/`・`plugins/` の 5 か所にあります。
 
 ### 2. セットアップ（30 分以内に）
 
 ブラウザで `https://あなたのサイト/nagimanga/admin/` を開き、管理者パスワード（10 文字以上）を決めます。
 
-- この画面は、**最初に開いてから 30 分だけ** 表示されます（他人に先にセットアップされないようにするため）。過ぎてしまったら、FTP で `data/install.lock` を削除してから開き直してください。
 - 「今の IP アドレスからだけ管理画面を開けるようにする」は、できるだけオンにしてください。
 
-完了すると **ログイン用の URL** が表示されます。**必ずブックマークしてください。** 管理画面を直接開こうとすると「Not Found」になります。v0.4.0 からは、公開サイトの「ログイン」からもパスワード付きの入口へ進めます。IP制限と試行回数の制限は、この入口でも適用します。
+> [!IMPORTANT]
+> この画面は、**最初に開いてから 30 分だけ** 表示されます（他人に先にセットアップされないようにするため）。過ぎてしまったら、FTP で `data/install.lock` を削除してから開き直してください。
+
+> [!IMPORTANT]
+> 完了すると **ログイン用の URL** が表示されます。**必ずブックマークしてください。** 管理画面を直接開こうとすると「Not Found」になります。v0.4.0 からは、公開サイトの「ログイン」からもパスワード付きの入口へ進めます。IP制限と試行回数の制限は、この入口でも適用します。
 
 ### 3. 設置したら確認すること
 
@@ -309,7 +323,8 @@ CLIP STUDIO PAINT などで書き出した **漫画の EPUB**（固定レイア�
 
 2. nginx なら `location ~ /nagimanga/(data|lib|plugins)/ { deny all; }` を設定する
 
-保存フォルダの名前は秘密の鍵から作りますが、暗号化ではありません。`.htaccess` が効かず画像の実パスが判明した場合は、画像へ直接アクセスできてしまいます。保存先を公開フォルダの外へ移すか、サーバー側でアクセスを拒否してください。
+> [!CAUTION]
+> 保存フォルダの名前は秘密の鍵から作りますが、暗号化ではありません。`.htaccess` が効かず画像の実パスが判明した場合は、画像へ直接アクセスできてしまいます。保存先を公開フォルダの外へ移すか、サーバー側でアクセスを拒否してください。
 
 - 設定ファイルは PHP なので、中身は表示されません。
 - 作品フォルダの名前は秘密の鍵から作ってあり、公開 ID からは推測できません。
@@ -358,7 +373,11 @@ LOGの内部記録は直接開くと404になるPHP形式です。静的な画�
 python dev/attack_test.py
 ```
 
+<details><summary>攻撃テストで確かめていること</summary>
+
 主な内容: 画像に偽装した PHP、`.htaccess` / SVG / HTML のアップロード、ピクセル数の爆弾、`../` によるフォルダの抜け出し、ZIP スリップと ZIP 爆弾、悪意のある EPUB（XXE・DRM・本の外を指すパス）、CSRF、XSS、閲覧用の鍵の偽造・改ざん・期限切れ・使い回し、総当たり（`X-Forwarded-For` の偽装を含む）、IP 制限の回避、おかしな Host ヘッダー、ゲストによる変更（19 種類）、`.htaccess` が効かないサーバーでの情報漏れ。結果は `dev/results/attack-report.md` に書き出されます。
+
+</details>
 
 ## 開発
 
@@ -367,9 +386,12 @@ dev\serve.cmd              # http://127.0.0.1:5190 （データは dev/data）
 python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html を作る
 python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る
 python dev/i18n_test.py    # 管理画面の訳（server/lib/lang/*.json）に漏れがないか確かめる
+python ../site/build.py    # ドキュメントサイトを README から作り直す
 ```
 
-README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md` のあと `python site/build.py`）。
+[ドキュメントサイト](https://nagiswipe.pages.dev/) は、リポジトリ直下の README.md・manga/README.md・manga/README-LOG.md・manga/docs/overview.md と、それぞれの英語版（`.en.md`）から作ります。トップページの文章は `site/top.html` と `site/top.en.html`、見た目は `site/site.css` です。README を直したらページを作り直し、一緒にコミットしてください。サイトのファイルは、配布 ZIP や GitHub のソースコードの ZIP には含めません。
+
+README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md manga/README-LOG.md manga/README-LOG.en.md site/top.html site/top.en.html` のあと `python site/build.py`）。
 
 リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 

@@ -1,8 +1,17 @@
+**日本語** | [English](README.en.md)
+
 # NagiSeries
 
-日本語 | [English](README.en.md)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
+[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.md)
+[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.md)
+[![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
+[![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
+[![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
+[![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
+[![Documentation](https://img.shields.io/badge/docs-nagiswipe.pages.dev-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://nagiswipe.pages.dev/)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](manga/README.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eab308?style=flat-square)](LICENSE)
 
 個人サイトのための、小さな道具のシリーズです。どれもデータベースや外部サービスを使わず、自分のサイトに置くだけで動きます。
 
@@ -25,7 +34,6 @@
   - [てがろぐで使う](#てがろぐで使う)
 - [NagiManga](#nagimanga)
 - [NagiLog](#nagilog)
-- [ドキュメントサイト](#ドキュメントサイト)
 - [権利・免責事項：掲載画像について](#権利免責事項掲載画像について)
 - [ライセンス](#ライセンス)
 <!-- /TOC -->
@@ -60,7 +68,8 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 <script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js"></script>
 ```
 
-※ `@` の後ろ（`@93db749` など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。`@v1.4.0` のようにリリースの番号でも指定できます。常に最新の `main` ブランチを使いたい場合は `@main` にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。
+> [!NOTE]
+> ※ `@` の後ろ（`@93db749` など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。`@v1.4.0` のようにリリースの番号でも指定できます。常に最新の `main` ブランチを使いたい場合は `@main` にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。
 
 #### 使い方
 ページ内の `<a href="image.jpg">` のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。
@@ -117,7 +126,8 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js
 ```
 
-あわせて、**画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
+> [!IMPORTANT]
+> あわせて、**画像のない投稿でも** 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある **「画像リンクに独自のclass属性値を追加する」** にチェックを入れ、`class="` と `"` の間の欄に `nagimanga` と入力して保存します。
 
 てがろぐに漫画を載せる方法は、[manga/README.md の「てがろぐに載せる」](manga/README.md#てがろぐに載せる) を見てください。
 
@@ -146,16 +156,6 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https:
 ![NagiLogのトップ（パソコン）](manga/docs/images/log-pc.jpg)
 
 デモ: https://notebook.lichiphen.com/nagimanga/ ／ 説明: [manga/README-LOG.md](manga/README-LOG.md)
-
-## ドキュメントサイト
-
-https://nagiswipe.pages.dev/ は、この README・[manga/README.md](manga/README.md)・[manga/README-LOG.md](manga/README-LOG.md)・[manga/docs/overview.md](manga/docs/overview.md) から作っています。英語のページ（`nagilog.en.html` など）は、それぞれの `.en.md`（[README.en.md](README.en.md) など）から作ります。文章を直すときは README を編集し、次のコマンドでページを作り直してから、一緒にコミットしてください（Python 3 の標準ライブラリだけで動きます）。
-
-```bash
-python site/build.py
-```
-
-ページの元になるファイルは [`site/`](site/) にあります（トップページの文章は `site/top.html` と英語の `site/top.en.html`、見た目は `site/site.css`）。各ページの上の「English」「日本語」で、同じページのもう一方の言語へ移れます。サイトのファイルは、NagiManga の配布 ZIP や GitHub のソースコードの ZIP には含めません。
 
 ## 権利・免責事項：掲載画像について
 本プロジェクトのデモ（`demo.html`等）で使用されている画像について：

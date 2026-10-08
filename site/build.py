@@ -46,19 +46,19 @@ PAGES_JA = [
          desc="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。",
          ogp="img/ogp/nagiswipe-ogp.png"),
     dict(key="nagiswipe", out="nagiswipe.html", nav="NagiSwipe", sub="画像ポップアップ",
-         src="README.md", unwrap="NagiSwipe",
+         src="README.md", unwrap="NagiSwipe", hero="img/ogp/nagiswipe-ogp.svg", gallery=True,
          desc="JS と CSS を読み込むだけで動く、軽量な画像ポップアップギャラリー NagiSwipe の導入方法とオプション。",
          ogp="img/ogp/nagiswipe-ogp.png"),
     dict(key="nagimanga", out="nagimanga.html", nav="NagiManga", sub="漫画ビューアー",
-         src="manga/README.md",
+         src="manga/README.md", hero="img/ogp/nagimanga-ogp.svg", skip=["開発"],
          desc="タグを 1 つ貼るだけで開く漫画ビューアー NagiManga の設置・管理画面・機能の説明。",
          ogp="img/ogp/nagimanga-ogp.png"),
     dict(key="nagilog", out="nagilog.html", nav="NagiLog", sub="個人用LOG",
-         src="manga/README-LOG.md",
+         src="manga/README-LOG.md", hero="img/ogp/nagilog-ogp.svg", skip=["ローカルで続けて使う", "検証と残る確認", "参照元と文章"],
          desc="データベース不要で、文章・画像・漫画・動画・音声を自分のサイトへ投稿できる NagiLog の使い方と設定。",
          ogp="img/ogp/nagilog-ogp.png"),
     dict(key="guide", out="guide.html", nav="手引き", sub="開発者でない方へ",
-         src="manga/docs/overview.md",
+         src="manga/docs/overview.md", hero="img/ogp/nagimanga-ogp.svg",
          desc="NagiManga を使うかどうか決めたい人、長く使い続けたい人のための手引き。",
          ogp="img/ogp/nagimanga-ogp.png"),
 ]
@@ -68,19 +68,20 @@ PAGES_EN = [
          desc="Documentation of NagiSwipe, NagiManga and NagiLog: an image popup, a manga viewer and a log without a database, for personal websites.",
          ogp="img/ogp/nagiswipe-ogp.png"),
     dict(key="nagiswipe", out="nagiswipe.en.html", nav="NagiSwipe", sub="Image popup",
-         src="README.en.md", unwrap="NagiSwipe",
+         src="README.en.md", unwrap="NagiSwipe", hero="img/ogp/nagiswipe-ogp.svg", gallery=True,
          desc="How to start with NagiSwipe, a light image popup gallery that works by loading one JS and one CSS file, and its options.",
          ogp="img/ogp/nagiswipe-ogp.png"),
     dict(key="nagimanga", out="nagimanga.en.html", nav="NagiManga", sub="Manga viewer",
-         src="manga/README.en.md",
+         src="manga/README.en.md", hero="img/ogp/nagimanga-ogp.svg", skip=["Development"],
          desc="Installing NagiManga, a manga viewer that opens from a single tag, its admin panel and its features.",
          ogp="img/ogp/nagimanga-ogp.png"),
     dict(key="nagilog", out="nagilog.en.html", nav="NagiLog", sub="Personal log",
-         src="manga/README-LOG.en.md",
+         src="manga/README-LOG.en.md", hero="img/ogp/nagilog-ogp.svg",
+         skip=["Keep using it locally", "Tests and what remains to be checked", "Sources and writing"],
          desc="How to use and set up NagiLog, which posts text, pictures, manga, video and audio to your own site without a database.",
          ogp="img/ogp/nagilog-ogp.png"),
     dict(key="guide", out="guide.en.html", nav="Guide", sub="For non-developers",
-         src="manga/docs/overview.en.md",
+         src="manga/docs/overview.en.md", hero="img/ogp/nagimanga-ogp.svg",
          desc="A guide for people deciding whether to use NagiManga, or wanting to use it for years.",
          ogp="img/ogp/nagimanga-ogp.png"),
 ]
@@ -104,12 +105,18 @@ UI = {
                top_title="NagiSeries — 画像・漫画・LOG のツール集", prev="前へ", next="次へ", pager="ページ送り",
                toc="このページの目次", skip="本文へ移動", menu="目次", sidebar="サイドバー", docs="ドキュメント",
                demo="NagiSwipe デモ", source="このページの元の文書（GitHub）", close="閉じる",
-               other="English", other_label="このページを英語で読む", index="site/search.json"),
+               other="English", other_label="このページを英語で読む", index="site/search.json",
+               try_title="ここで試す", try_note="画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。",
+               cats=["きゅるるん（猫のイラスト）", "ふーん（猫のイラスト）", "しめしめ（猫のイラスト）"],
+               alerts=dict(note="補足", tip="ヒント", important="重要", warning="注意", caution="警告"), more="くわしく見る"),
     "en": dict(anchor="Link to this heading", search="Search the documentation", results="Search results",
                top_title="NagiSeries — tools for pictures, manga and logs", prev="Previous", next="Next", pager="Pages",
                toc="On this page", skip="Skip to the content", menu="Contents", sidebar="Sidebar", docs="Documentation",
                demo="NagiSwipe demo", source="The source of this page (GitHub)", close="Close",
-               other="日本語", other_label="このページを日本語で読む", index="site/search.en.json"),
+               other="日本語", other_label="このページを日本語で読む", index="site/search.en.json",
+               try_title="Try it here", try_note="Press a picture to open it in NagiSwipe. Swipe, pinch and double tap it.",
+               cats=["Kyururun (cat illustration)", "Fu-n (cat illustration)", "Shimeshime (cat illustration)"],
+               alerts=dict(note="Note", tip="Tip", important="Important", warning="Warning", caution="Caution"), more="Show more"),
 }
 
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif")
@@ -309,6 +316,26 @@ HEADING = re.compile(r'^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$')
 FENCE = re.compile(r'^( {0,3})(`{3,}|~{3,})\s*([\w+#.-]*)')
 LIST = re.compile(r'^( {0,3})([-*+]|\d{1,9}[.)])(?:[ \t]+|$)')
 HR = re.compile(r'^ {0,3}([-*_])(?:\s*\1){2,}\s*$')
+COLON_FENCE = re.compile(r'^\s*:::\s*(success|info|warning|danger|note|tip|spoiler)\b\s*(.*)$', re.I)
+# HackMD's box colors, in GitHub's alert kinds.
+HACKMD_KIND = {'success': 'success', 'info': 'note', 'note': 'note', 'tip': 'tip', 'warning': 'warning', 'danger': 'caution'}
+CALLOUT_ICON = {
+    'note': '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>',
+    'tip': '<path d="M9.2 18.2h5.6M10 21h4M12 3.5a6 6 0 0 0-3.6 10.8c.6.5.9 1.2.9 2V16h5.4v-.7c0-.8.3-1.5.9-2A6 6 0 0 0 12 3.5Z"/>',
+    'important': '<path d="M5 4.5h14v11H11l-4 4v-4H5Z"/><path d="M12 7.5v4M12 13.8v.1"/>',
+    'warning': '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>',
+    'caution': '<path d="M8.3 3.5h7.4l5.3 5.3v7.4l-5.3 5.3H8.3L3 16.2V8.8Z"/><path d="M12 8v4.6M12 15.8v.1"/>',
+    'success': '<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.6 2.6 5-5.4"/>',
+}
+
+
+def callout(kind, title_html, body_html, ctx):
+    """A colored box with an icon: GitHub's alerts and HackMD's ::: boxes look the same."""
+    icon = f'<svg viewBox="0 0 24 24" aria-hidden="true">{CALLOUT_ICON[kind]}</svg>'
+    title = f'<p class="callout-title">{icon}<span>{title_html}</span></p>' if title_html else ''
+    cls = f'callout callout-{kind}' + ('' if title_html else ' callout-plain')
+    lead = '' if title_html else icon
+    return f'<div class="{cls}" role="note">{title}{lead}<div class="callout-body">{body_html}</div></div>'
 HTML_START = re.compile(r'^ {0,3}<(?:!--|/?(?:table|div|p|details|summary|section|figure|picture|center|img|a|hr|h[1-6]|ul|ol|dl|pre)\b)', re.I)
 TABLE_SEP = re.compile(r'^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$')
 
@@ -325,7 +352,7 @@ def starts_block(lines, i):
     line = lines[i]
     return (not line.strip() or HEADING.match(line) or FENCE.match(line) or HR.match(line)
             or LIST.match(line) or HTML_START.match(line) or line.lstrip().startswith('>')
-            or is_table(lines, i))
+            or COLON_FENCE.match(line) or line.strip() == ':::' or is_table(lines, i))
 
 
 def is_cjk(ch):
@@ -423,12 +450,41 @@ def render(lines, ctx, tight=False):
             out.append(f'<div class="table-wrap"><table><thead><tr>{th}</tr></thead><tbody>{body}</tbody></table></div>')
             continue
 
+        m = COLON_FENCE.match(line)
+        if m:
+            # HackMD's :::success / :::info / :::warning / :::danger boxes and :::spoiler (folded).
+            kind, title = m.group(1).lower(), m.group(2).strip()
+            depth, inner = 1, []
+            i += 1
+            while i < n:
+                if COLON_FENCE.match(lines[i]):
+                    depth += 1
+                elif re.match(r'^\s*:::\s*$', lines[i]):
+                    depth -= 1
+                    if depth == 0:
+                        break
+                inner.append(lines[i])
+                i += 1
+            i += 1
+            if kind == 'spoiler':
+                summary = inline(title, ctx) if title else UI[ctx.lang]['more']
+                out.append(f'<details class="spoiler"><summary>{summary}</summary><div class="details-body">{render(inner, ctx)}</div></details>')
+            else:
+                out.append(callout(HACKMD_KIND.get(kind, 'note'), inline(title, ctx) if title else '', render(inner, ctx), ctx))
+            continue
+
         if line.lstrip().startswith('>'):
             quote = []
             while i < n and lines[i].strip() and (lines[i].lstrip().startswith('>') or quote):
                 quote.append(re.sub(r'^\s*> ?', '', lines[i]))
                 i += 1
-            out.append('<blockquote>' + render(quote, ctx) + '</blockquote>')
+            # GitHub's alerts: > [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION].
+            alert = re.match(r'^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$', quote[0], re.I) if quote else None
+            if alert:
+                kind = alert.group(1).lower()
+                out.append(callout(kind, esc(UI[ctx.lang]['alerts'][kind]), render(quote[1:], ctx), ctx))
+            else:
+                out.append('<blockquote>' + render(quote, ctx) + '</blockquote>')
             continue
 
         m = LIST.match(line)
@@ -539,9 +595,19 @@ def section(lines, title, heads):
     sys.exit(f"section not found: {title}")
 
 
+def drop_sections(lines, titles):
+    """The lines without the ## sections whose title starts with one of titles."""
+    for title in titles:
+        heads = heading_index(lines)
+        part = section(lines, title, heads)
+        start = next(k for k, level, text in heads if level == 2 and text.startswith(title))
+        lines = lines[:start] + lines[start + len(part):]
+    return lines
+
+
 def build_doc(page):
     """(h1 html, lead html, body html, ctx) from the page's Markdown."""
-    lines = md_lines(page['src'])
+    lines = drop_sections(md_lines(page['src']), page.get('skip', []))
     heads = heading_index(lines)
     if page.get('unwrap'):
         part = section(lines, page['unwrap'], heads)
@@ -559,6 +625,33 @@ def build_doc(page):
     lead = render(lines[(h1 + 1 if h1 is not None else 0):h2], ctx)
     body = render(lines[h2:], ctx)
     return title, lead, body, ctx
+
+
+FEATURE_UL = re.compile(r'<ul>((?:(?!</?ul>).)*)</ul>', re.S)
+
+
+def feature_lists(body):
+    """A list whose every item starts with a bold name (four or more) is shown as cards."""
+    def card(m):
+        items = re.findall(r'<li>(.*?)</li>', m.group(1), re.S)
+        if len(items) < 4 or not all(re.match(r'<strong>[^<]+</strong>\s*[:：]', i) for i in items):
+            return m.group(0)
+        def row(item):
+            name, rest = re.match(r'<strong>([^<]+)</strong>\s*[:：]\s*(.*)', item, re.S).groups()
+            # "**Drop-in**: load the JS…" reads as a sentence of its own under the name.
+            rest = rest[:1].upper() + rest[1:] if rest[:1].islower() else rest
+            return f'<li><strong class="feature-name">{name}</strong><span>{rest}</span></li>'
+        rows = ''.join(row(i) for i in items)
+        return f'<ul class="feature-list">{rows}</ul>'
+    return FEATURE_UL.sub(card, body)
+
+
+def gallery_html(ui):
+    """A few of the author's pictures to open with NagiSwipe on the page itself."""
+    cats = ['img/Kyururun.png', 'img/Fu-n.png', 'img/Shimeshime.png']
+    figs = ''.join(f'<li>{zoom_link(asset(c), img_tag(asset(c), alt))}</li>' for c, alt in zip(cats, ui['cats']))
+    return (f'<section class="try" aria-labelledby="try-title"><p class="try-title" id="try-title">{ui["try_title"]}</p>'
+            f'<ul class="try-gallery">{figs}</ul><p class="try-note">{ui["try_note"]}</p></section>')
 
 
 def build_top(page):
@@ -665,6 +758,13 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     alternates += f'<link rel="alternate" hreflang="x-default" href="{alt_urls["ja"]}">\n'
     brand = BRAND.replace('href="index.html"', f'href="{home}"')
     lead_html = f'<div class="lead">{lead}</div>' if lead.strip() else ''
+    if page.get('hero'):
+        size = image_size(page['hero'].replace('.svg', '.png')) or (1200, 630)
+        lead_html = (f'<figure class="doc-hero"><img src="{esc(asset(page["hero"]))}" alt="" width="{size[0]}" height="{size[1]}" decoding="async" fetchpriority="high"></figure>'
+                     + lead_html)
+    if page.get('gallery'):
+        lead_html += gallery_html(ui)
+    body = feature_lists(body)
     toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><p class="toc-title" id="toc-title-{page["key"]}">{ui["toc"]}</p>{toc}</nav>'
                  if len([h for h in ctx.headings if h[0] == 2]) >= 2 else '')
     return f'''<!DOCTYPE html>

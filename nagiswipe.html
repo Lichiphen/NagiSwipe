@@ -20,10 +20,10 @@
 <meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagiswipe-ogp.png?v=b4c2b1f265">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
-<link rel="stylesheet" href="NagiSwipe-main.css?v=a40da4ccc5">
-<link rel="stylesheet" href="site/site.css?v=4749867e1b">
-<script src="NagiSwipe-main.js?v=876bf09da7" defer></script>
-<script src="site/site.js?v=8418041182" data-index="site/search.json?v=6011a7b889" defer></script>
+<link rel="stylesheet" href="NagiSwipe-main.css?v=b57203b70e">
+<link rel="stylesheet" href="site/site.css?v=be8106c84c">
+<script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.json?v=eab2613009" defer></script>
 </head>
 <body class="page-nagiswipe">
 <a class="skip" href="#main">本文へ移動</a>
@@ -44,11 +44,11 @@
 <article class="doc">
 <p class="crumbs"><a href="index.html">NagiSeries</a><span aria-hidden="true">/</span>NagiSwipe</p>
 <h1 class="doc-title">NagiSwipe</h1>
-<div class="lead"><p>JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。モバイルファースト、タッチ操作の快適さを目指しています。<a href="demo.html">デモ</a>で、スワイプやズームを試せます。</p></div>
+<figure class="doc-hero"><img src="img/ogp/nagiswipe-ogp.svg?v=3118cf3638" alt="" width="1200" height="630" decoding="async" fetchpriority="high"></figure><div class="lead"><p>JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。モバイルファースト、タッチ操作の快適さを目指しています。<a href="demo.html">デモ</a>で、スワイプやズームを試せます。</p></div><section class="try" aria-labelledby="try-title"><p class="try-title" id="try-title">ここで試す</p><ul class="try-gallery"><li><a class="zoom" href="img/Kyururun.png?v=ace886fd9a" data-ns-width="489" data-ns-height="446"><img src="img/Kyururun.png?v=ace886fd9a" alt="きゅるるん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Fu-n.png?v=1041db46b9" data-ns-width="489" data-ns-height="446"><img src="img/Fu-n.png?v=1041db46b9" alt="ふーん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Shimeshime.png?v=023fcd6aff" data-ns-width="489" data-ns-height="446"><img src="img/Shimeshime.png?v=023fcd6aff" alt="しめしめ（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li></ul><p class="try-note">画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。</p></section>
 <nav class="toc-inline" aria-labelledby="toc-title-nagiswipe"><p class="toc-title" id="toc-title-nagiswipe">このページの目次</p><ol class="toc-list"><li><a href="#特徴" data-id="特徴">特徴</a></li><li><a href="#導入方法" data-id="導入方法">導入方法</a><ol><li><a href="#cdn経由-推奨" data-id="cdn経由-推奨">CDN経由 (推奨)</a></li><li><a href="#使い方" data-id="使い方">使い方</a></li><li><a href="#キャプションv110" data-id="キャプションv110">キャプション（v1.1.0〜）</a></li><li><a href="#オプション" data-id="オプション">オプション</a></li><li><a href="#画像サイズの指定任意" data-id="画像サイズの指定任意">画像サイズの指定（任意）</a></li></ol></li><li><a href="#てがろぐで使う" data-id="てがろぐで使う">てがろぐで使う</a></li></ol></nav>
 <div class="doc-body">
 <h2 id="特徴">特徴<a class="anchor" href="#特徴" aria-label="この見出しへのリンク">#</a></h2>
-<ul><li><strong>ドロップイン導入</strong>: JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。</li><li><strong>モバイル最適化</strong>: スワイプ、ピンチズーム、ダブルタップに対応。</li><li><strong>軽量・高速</strong>: 依存ライブラリなし。</li><li><strong>スムーズな操作感</strong>: サムネイルから拡大して開き、サムネイルへ縮んで閉じる。スワイプ中は前後の画像も指に追従。拡大した画像をタップでフィットへ戻す動きは、ピンチと同じく1コマずつ描くので、Android・iPhoneでも途中で欠けません（v1.3.2〜）。</li><li><strong>慣性スクロール</strong>: ズーム中は指を離しても滑り、画像の端で跳ね返る。素早く払えば短い距離でもページ送り。</li><li><strong>サムネイル先出し</strong>: 高画質版が届くまではページ上のサムネイルを表示。前後の画像も先に読み込み。</li><li><strong>キャプション標準搭載</strong>: 画像の <code>alt</code> などを画面下部に表示。</li><li><strong>安心設計</strong>: ブラウザの「戻る」（マウスの戻るボタンやスワイプバックを含む）でビューアーだけを閉じる。自動DOM生成。</li></ul>
+<ul class="feature-list"><li><strong class="feature-name">ドロップイン導入</strong><span>JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。</span></li><li><strong class="feature-name">モバイル最適化</strong><span>スワイプ、ピンチズーム、ダブルタップに対応。</span></li><li><strong class="feature-name">軽量・高速</strong><span>依存ライブラリなし。</span></li><li><strong class="feature-name">スムーズな操作感</strong><span>サムネイルから拡大して開き、サムネイルへ縮んで閉じる。スワイプ中は前後の画像も指に追従。拡大した画像をタップでフィットへ戻す動きは、ピンチと同じく1コマずつ描くので、Android・iPhoneでも途中で欠けません（v1.3.2〜）。</span></li><li><strong class="feature-name">慣性スクロール</strong><span>ズーム中は指を離しても滑り、画像の端で跳ね返る。素早く払えば短い距離でもページ送り。</span></li><li><strong class="feature-name">サムネイル先出し</strong><span>高画質版が届くまではページ上のサムネイルを表示。前後の画像も先に読み込み。</span></li><li><strong class="feature-name">キャプション標準搭載</strong><span>画像の <code>alt</code> などを画面下部に表示。</span></li><li><strong class="feature-name">安心設計</strong><span>ブラウザの「戻る」（マウスの戻るボタンやスワイプバックを含む）でビューアーだけを閉じる。自動DOM生成。</span></li></ul>
 <h2 id="導入方法">導入方法<a class="anchor" href="#導入方法" aria-label="この見出しへのリンク">#</a></h2>
 <p>HTMLの <code>&lt;head&gt;</code> 内で以下のファイルを読み込んでください。</p>
 <h3 id="cdn経由-推奨">CDN経由 (推奨)<a class="anchor" href="#cdn経由-推奨" aria-label="この見出しへのリンク">#</a></h3>
@@ -58,7 +58,7 @@
 
 &lt;!-- JavaScript --&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
-<p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p>
+<div class="callout callout-note" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg><span>補足</span></p><div class="callout-body"><p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p></div></div>
 <h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3>
 <p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</p>
 <h3 id="キャプションv110">キャプション（v1.1.0〜）<a class="anchor" href="#キャプションv110" aria-label="この見出しへのリンク">#</a></h3>
@@ -84,7 +84,7 @@
 <p>これで、投稿の画像をクリックすると NagiSwipe で大きく表示されます。</p>
 <p><strong>漫画ビューアー（NagiManga）も使う場合</strong> は、同じ「JavaScriptのURL」欄で、NagiSwipe の URL の <strong>うしろに半角スペースを 1 つ入れて</strong>、NagiManga の URL を続けて書きます（1 行のまま続けます。「CSSのURL」欄はそのままで大丈夫です）。</p>
 <pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js</code></pre>
-<p>あわせて、<strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p>
+<div class="callout callout-important" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14v11H11l-4 4v-4H5Z"/><path d="M12 7.5v4M12 13.8v.1"/></svg><span>重要</span></p><div class="callout-body"><p>あわせて、<strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p></div></div>
 <p>てがろぐに漫画を載せる方法は、<a href="nagimanga.html#てがろぐに載せる">manga/README.md の「てがろぐに載せる」</a> を見てください。</p>
 <p><a href="https://github.com/Lichiphen/NagiMemo" class="ext">NagiMemo</a>（てがろぐ用のスキン）でも同じ方法で使えます。</p>
 </div>

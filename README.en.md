@@ -1,8 +1,17 @@
+[日本語](README.md) | **English**
+
 # NagiSeries
 
-[日本語](README.md) | English
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
+[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
+[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
+[![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
+[![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
+[![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
+[![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
+[![Documentation](https://img.shields.io/badge/docs-nagiswipe.pages.dev-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://nagiswipe.pages.dev/index.en.html)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](manga/README.en.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eab308?style=flat-square)](LICENSE)
 
 A series of small tools for personal websites. None of them needs a database or an outside service: put them on your own site and they work.
 
@@ -27,7 +36,6 @@ The tools and their admin panels were written in Japanese first. The admin panel
   - [Using it with Tegalog](#using-it-with-tegalog)
 - [NagiManga](#nagimanga)
 - [NagiLog](#nagilog)
-- [Documentation site](#documentation-site)
 - [Rights and disclaimer: images in the demos](#rights-and-disclaimer-images-in-the-demos)
 - [License](#license)
 <!-- /TOC -->
@@ -62,7 +70,8 @@ The files are served fast through [jsDelivr](https://www.jsdelivr.com/). Copy th
 <script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js"></script>
 ```
 
-The part after `@` (such as `@93db749`) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as `@v1.6.0`. To always use the latest `main` branch, write `@main` (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).
+> [!NOTE]
+> The part after `@` (such as `@93db749`) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as `@v1.6.0`. To always use the latest `main` branch, write `@main` (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).
 
 #### Usage
 Links on the page such as `<a href="image.jpg">` are found automatically, and the gallery opens when one is clicked.
@@ -119,7 +128,8 @@ Now a click on a picture in a post shows it large with NagiSwipe.
 https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js
 ```
 
-Also make manga open **in posts without pictures**: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under "▼画像URLを画像として埋め込む表示", check **"画像リンクに独自のclass属性値を追加する"** (add your own class to picture links), type `nagimanga` between `class="` and `"`, and save.
+> [!IMPORTANT]
+> Also make manga open **in posts without pictures**: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under "▼画像URLを画像として埋め込む表示", check **"画像リンクに独自のclass属性値を追加する"** (add your own class to picture links), type `nagimanga` between `class="` and `"`, and save.
 
 How to put manga in Tegalog posts is in ["Posting to Tegalog" in manga/README.en.md](manga/README.en.md#posting-to-tegalog).
 
@@ -148,16 +158,6 @@ A personal log that needs no database, for posting text, pictures and manga to y
 ![The top of NagiLog on a computer](manga/docs/images/log-pc.jpg)
 
 Demo: https://notebook.lichiphen.com/nagimanga/ / Documentation: [manga/README-LOG.en.md](manga/README-LOG.en.md)
-
-## Documentation site
-
-https://nagiswipe.pages.dev/ is built from this README, [manga/README.md](manga/README.md), [manga/README-LOG.md](manga/README-LOG.md) and [manga/docs/overview.md](manga/docs/overview.md), and the English pages from their `.en.md` versions. "English" and "日本語" at the top of each page switch to the same page in the other language. To change the text, edit the READMEs, rebuild the pages with the command below, and commit them together (it needs only the Python 3 standard library).
-
-```bash
-python site/build.py
-```
-
-The sources of the pages are in [`site/`](site/) (the text of the top page is `site/top.html` and `site/top.en.html`, the look is `site/site.css`). The site files are not included in the NagiManga release ZIP or in GitHub's source code ZIP.
 
 ## Rights and disclaimer: images in the demos
 About the images used in the demos of this project (`demo.html` and others):

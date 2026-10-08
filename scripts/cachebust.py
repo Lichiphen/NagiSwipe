@@ -15,6 +15,10 @@ NagiManga.js lives on each user's own server: README examples of it carry no
 cache buster (the admin's 設置用コード page gives the real ?v= value), so a
 leftover ?<hash> after .../viewer/NagiManga.js is removed. ?v=... is left alone.
 
+The version badges (img.shields.io/badge/NagiSwipe-v1.3.2-..., NagiManga-, NagiLog-) are set
+to the versions in the source: the header of NagiSwipe-main.js and NM_VERSION (NagiLog ships
+with NagiManga, so it has the same number).
+
 scripts/post-commit.sh runs this after each commit and commits the README change.
 """
 import re
@@ -25,6 +29,14 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 CDN = re.compile(r"(https://cdn\.jsdelivr\.net/gh/Lichiphen/NagiSwipe@)[^/\s`\"'<>)]+/(NagiSwipe-main\.(?:js|css))(\?[0-9A-Za-z._=-]*)?(?![0-9A-Za-z./_=-])")
 SELF = re.compile(r"(viewer/NagiManga\.js)\?[0-9a-f]{7,40}(?![0-9A-Za-z./_=-])")
+BADGE = re.compile(r"(img\.shields\.io/badge/(NagiSwipe|NagiManga|NagiLog)-v)[0-9]+\.[0-9]+\.[0-9]+(-)")
+BADGE_ALT = re.compile(r"((?:\[!\[|alt=\")(NagiSwipe|NagiManga|NagiLog) v)[0-9]+\.[0-9]+\.[0-9]+([\]\"])")
+
+
+def versions():
+    swipe = re.search(r"NagiSwipe v([0-9]+\.[0-9]+\.[0-9]+)", (REPO / "NagiSwipe-main.js").read_text(encoding="utf-8")).group(1)
+    manga = re.search(r"const NM_VERSION = '([0-9.]+)';", (REPO / "manga/server/lib/bootstrap.php").read_text(encoding="utf-8")).group(1)
+    return {"NagiSwipe": swipe, "NagiManga": manga, "NagiLog": manga}
 
 
 def last_commit(path):
@@ -47,6 +59,9 @@ def main(files):
         bom = raw.startswith(b"\xef\xbb\xbf")
         text = raw.decode("utf-8-sig")
         new = SELF.sub(r"\1", CDN.sub(pin, text))
+        vers = versions()
+        new = BADGE.sub(lambda m: m.group(1) + vers[m.group(2)] + m.group(3), new)
+        new = BADGE_ALT.sub(lambda m: m.group(1) + vers[m.group(2)] + m.group(3), new)
         if new != text:
             p.write_bytes((b"\xef\xbb\xbf" if bom else b"") + new.encode("utf-8"))
             print(f"{f}: updated")

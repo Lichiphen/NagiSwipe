@@ -1,6 +1,15 @@
+[日本語](README.md) | **English**
+
 # NagiManga (manga viewer)
 
-[日本語](README.md) | English
+[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#demo)
+[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.en.md)
+[![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
+[![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
+[![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
+[![Documentation](https://img.shields.io/badge/docs-nagiswipe.pages.dev-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://nagiswipe.pages.dev/nagimanga.en.html)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](#two-ways-to-use-it)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eab308?style=flat-square)](../LICENSE)
 
 The manga viewer of NagiSeries ([NagiSwipe](../README.en.md#nagiswipe), NagiManga and [NagiLog](README-LOG.en.md)).
 
@@ -111,17 +120,22 @@ nagimanga/
 └── data/             pictures and settings of the works (not visible from outside)
 ```
 
-- **Do not forget to upload `.htaccess`.** Some FTP programs hide files starting with `.` and do not send them (turn on "show hidden files" to see them). There are five: in `nagimanga/`, `admin/`, `lib/`, `data/` and `plugins/`.
 - Make the `data` folder writable (on most servers the default 755 is fine).
+
+> [!WARNING]
+> **Do not forget to upload `.htaccess`.** Some FTP programs hide files starting with `.` and do not send them (turn on "show hidden files" to see them). There are five: in `nagimanga/`, `admin/`, `lib/`, `data/` and `plugins/`.
 
 ### 2. Setup (within 30 minutes)
 
 Open `https://your-site/nagimanga/admin/` in a browser and choose the administrator password (10 characters or more).
 
-- This screen is shown **only for 30 minutes after it is first opened** (so that nobody else sets it up first). If the time has passed, delete `data/install.lock` with FTP and open it again.
 - Turn on "allow the admin panel only from the current IP address" whenever you can.
 
-When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.4.0 you can also go through "ログイン" (Log in) on the public site to a password-only entrance. The IP restriction and the limit on attempts apply there too.
+> [!IMPORTANT]
+> This screen is shown **only for 30 minutes after it is first opened** (so that nobody else sets it up first). If the time has passed, delete `data/install.lock` with FTP and open it again.
+
+> [!IMPORTANT]
+> When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.4.0 you can also go through "ログイン" (Log in) on the public site to a password-only entrance. The IP restriction and the limit on attempts apply there too.
 
 ### 3. Checks after installing
 
@@ -311,7 +325,8 @@ The `data` folder is hidden from outside with `.htaccess`. On servers where `.ht
 
 2. On nginx, set `location ~ /nagimanga/(data|lib|plugins)/ { deny all; }`
 
-The storage folder names are made from the secret key, but that is not encryption. If `.htaccess` does not work and the real path of a picture becomes known, the picture can be opened directly. Move the storage outside the public folder or deny access in the server settings.
+> [!CAUTION]
+> The storage folder names are made from the secret key, but that is not encryption. If `.htaccess` does not work and the real path of a picture becomes known, the picture can be opened directly. Move the storage outside the public folder or deny access in the server settings.
 
 - The settings files are PHP, so their contents are not shown.
 - Work folder names are made from the secret key and cannot be guessed from public IDs.
@@ -360,7 +375,11 @@ Picture locations in `manifest.json` are relative to the place of `manifest.json
 python dev/attack_test.py
 ```
 
+<details><summary>What the attack tests check</summary>
+
 What it covers: PHP disguised as a picture, uploads of `.htaccess` / SVG / HTML, pixel bombs, escaping folders with `../`, ZIP slip and ZIP bombs, malicious EPUBs (XXE, DRM, paths pointing outside the book), CSRF, XSS, forged, tampered, expired and reused viewing keys, brute force (including forged `X-Forwarded-For`), getting around the IP restriction, odd Host headers, changes by guests (19 kinds) and information leaks on servers where `.htaccess` does not work. The results are written to `dev/results/attack-report.md`.
+
+</details>
 
 ## Development
 
@@ -369,9 +388,12 @@ dev\serve.cmd              # http://127.0.0.1:5190 (data in dev/data)
 python dev/seed.py         # registers sample works and makes dev/results/demo.html
 python dev/build_release.py  # the release ZIP (dev/results/nagimanga-vX.Y.Z.zip)
 python dev/i18n_test.py    # checks the admin panel translations (server/lib/lang/*.json) for gaps
+python ../site/build.py    # rebuilds the documentation site from the READMEs
 ```
 
-The jsDelivr URLs in the README are pinned to the commit that last changed the file (for example `…/NagiSwipe@93db749/NagiSwipe-main.js`). A commit URL never changes its contents, and the URL changes whenever the file does, so browsers and jsDelivr never keep an old file. Install the hook with `cp scripts/post-commit.sh .git/hooks/post-commit`, and after a commit that changes NagiSwipe-main.js / .css the README URLs are rewritten automatically and the pages of the [documentation site](https://nagiswipe.pages.dev/) (`python site/build.py`) are rebuilt and committed (by hand: `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md`, then `python site/build.py`).
+The [documentation site](https://nagiswipe.pages.dev/index.en.html) is built from README.md, manga/README.md, manga/README-LOG.md and manga/docs/overview.md at the root of the repository, and their English versions (`.en.md`). The text of the top page is `site/top.html` and `site/top.en.html`, the look `site/site.css`. After changing a README, rebuild the pages and commit them together. The site files are not part of the release ZIP or GitHub's source code ZIP.
+
+The jsDelivr URLs in the README are pinned to the commit that last changed the file (for example `…/NagiSwipe@93db749/NagiSwipe-main.js`). A commit URL never changes its contents, and the URL changes whenever the file does, so browsers and jsDelivr never keep an old file. Install the hook with `cp scripts/post-commit.sh .git/hooks/post-commit`, and after a commit that changes NagiSwipe-main.js / .css the README URLs are rewritten automatically and the pages of the [documentation site](https://nagiswipe.pages.dev/) (`python site/build.py`) are rebuilt and committed (by hand: `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md manga/README-LOG.md manga/README-LOG.en.md site/top.html site/top.en.html`, then `python site/build.py`).
 
 To release, raise `NM_VERSION` in `lib/bootstrap.php` and `VERSION` in `viewer/NagiManga.js` to the same number, make the ZIP with `dev/build_release.py` and attach it to a GitHub release. Installed copies of NagiManga look at the release's `nagimanga-vX.Y.Z.zip` (holding a `nagimanga/` folder) to announce updates.
 

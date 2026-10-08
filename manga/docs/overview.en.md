@@ -1,6 +1,6 @@
-# A guide to NagiManga (for non-developers)
+[日本語](overview.md) | **English**
 
-[日本語](overview.md) | English
+# A guide to NagiManga (for non-developers)
 
 This document is for people who want to decide whether to use NagiManga, and for people who already use it and want to know whether they can keep using it. It avoids technical terms where it can, and explains the ones it uses. It is written without relying on particular years or services, so that it still helps you decide when you read it again in a few years, or in ten.
 

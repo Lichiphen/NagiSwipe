@@ -1,6 +1,15 @@
+[日本語](README-LOG.md) | **English**
+
 # NagiLog (personal log)
 
-[日本語](README-LOG.md) | English
+[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
+[![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
+[![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
+[![Documentation](https://img.shields.io/badge/docs-nagiswipe.pages.dev-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://nagiswipe.pages.dev/nagilog.en.html)
+[![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777BB4?style=flat-square&logo=php&logoColor=white)](#installation-and-login)
+[![License: MIT](https://img.shields.io/badge/License-MIT-eab308?style=flat-square)](../LICENSE)
 
 A log for posting text, pictures, manga, video and audio to your own site, casually. It is one of NagiSeries ([NagiSwipe](../README.en.md#nagiswipe), [NagiManga](README.en.md) and NagiLog).
 It uses no database and shares NagiManga's manga management and login.
@@ -74,16 +83,19 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
-| Posts | The first line of the text is the title. Bold, URLs, hashtags, picture and manga tags and embeds can be used. Drafts, editing and replacing pictures are supported |
-| Video and audio | MP4, MOV and WebM; MP3, M4A, OGG, WAV and FLAC. A waveform player, gapless repeat, reading and writing covers and loop points, autoplay and repeat for videos |
-| Pictures | JPEG, PNG, GIF, WebP, AVIF and BMP are accepted, read again and saved as WebP or JPEG (pictures over 4096px are reduced; GIF animations stay GIF). The limit can be set from 1 to 200MB, 30MB by default. SVG can be imported after its contents are checked (up to 2MB) |
-| Content warnings | Posts and pictures can be marked sensitive, R-18 or R-18G |
-| Embeds | 17 patterns such as YouTube and X are embedded by pasting the URL on a line of its own. Other pages are shown as blog cards made from their OGP |
-| Lists and display | Microblog and tiles, 3 kinds of paging, related posts, likes, search, reorderable sidebar with HTML boxes. Six designs, all meeting the WCAG 2.2 AA color contrast |
-| Search engines and sharing | canonical, OGP, breadcrumbs (JSON-LD), sitemap, RSS, a setting that keeps every page out of search |
-| Speed | Works with LiteSpeed Cache. Versioned JS and CSS are kept by browsers for a year |
-| Safety | Password, IP restriction, limited login attempts, CSP, measures against image-scraping bots. Logins last 30 days (1 year in the settings) |
-| Backup | Saved and restored as a log ZIP. Restoring converts the pictures a little at a time and shows the progress |
+| Posts | The first line of the text is the title. Bold, headings (h2, h3), URLs, hashtags, manga cards and embeds can be used. Drafts, editing and automatic keeping of unfinished text. Works on phones too |
+| Placing media | Pictures, video and audio go at the cursor in the text, on a line such as 〔メディア1〕, and the band in the text can be dragged to move them. They can also be added by dropping or pasting |
+| Pictures | JPEG, PNG, GIF, WebP, AVIF and BMP are accepted, read again and saved as WebP or JPEG (pictures over 4096px are reduced; GIF animations stay GIF). The limit can be set from 1 to 200MB, 30MB by default. SVG can be imported after its contents are checked (up to 2MB). Pictures in a row become a gallery and zoom with NagiSwipe |
+| Video and audio | Video: MP4, MOV, WebM. Audio: MP3, M4A, OGG, WAV, FLAC (up to 1GB per file, sent in pieces). Audio has a waveform player with gapless repeat, and reads and writes covers and loop points (`LOOPSTART`). Videos play as chosen: normal, like a GIF, autoplay or repeat |
+| Content warnings | Posts and media can be marked sensitive, R-18 or R-18G. Shown blurred, folded and with an age check; share cards are blurred automatically |
+| Embeds | Paste a URL on a line of its own to embed 22 services such as YouTube, X, Instagram, Spotify, SoundCloud, Bluesky and TikTok, manga sites (19 GigaViewer sites such as Shonen Jump+) and video files. Other pages are shown as blog cards made from their OGP |
+| Lists and display | Microblog and tiles, 3 kinds of paging, a new mark, related posts, likes, sharing, search, a calendar. Six designs (3 light, 3 dark), all meeting the WCAG 2.2 AA color contrast |
+| Building the site | Fixed pages (Markdown), a top menu, footer links, a title logo, a reorderable sidebar with HTML boxes, profile and links, a black hole 404 |
+| Admin panel | Post list (search, bulk delete), media list (search, replace), renaming and reordering categories and hashtags. Shown in Japanese or English |
+| Search engines and sharing | canonical, OGP, breadcrumbs (JSON-LD), sitemap, RSS (all, per category, per tag), a setting that keeps every page out of search |
+| Speed | Works with LiteSpeed Cache. Versioned JS and CSS are kept by browsers for a year. Posts off screen are built later, and video and audio are served a little at a time |
+| Safety | Password, IP restriction, limited login attempts, CSP, redrawing pictures, checking SVG, measures against image-scraping bots. Logins last 30 days (1 year in the settings) |
+| Backup | A log ZIP saves and restores posts, media and settings. Restoring converts the pictures a little at a time and shows the progress |
 | Scale | For small sites used by one person |
 
 ## Screens
@@ -190,8 +202,9 @@ Posts that use the same picture tag all change when the picture is replaced.
 To change only some posts, add it as a new picture.
 There is no dedicated screen for deleting categories or hashtags. Renaming, and removing them from each post, are supported.
 
-Deleting a post cannot be undone. Pictures used only by that post are deleted too,
-so save a log backup first if you want to keep any of them.
+> [!CAUTION]
+> Deleting a post cannot be undone. Pictures used only by that post are deleted too,
+> so save a log backup first if you want to keep any of them.
 
 ## Installation and login
 
@@ -218,10 +231,11 @@ You stay logged in for 30 days from the last login, even after closing the brows
 
 ![The setting for how long to stay logged in. 30 days or 1 year](docs/images/log-login-days.jpg)
 
-Log out after using a shared computer. Changing the password logs out your other devices.
-Taking the same cookie into another browser does not log it in. A browser update that changes its version keeps you logged in.
-Guests (view only) end after 30 minutes without activity, or 12 hours after entering.
-When using the IP restriction from a phone, mind the difference between home Wi-Fi and the mobile network.
+> [!TIP]
+> Log out after using a shared computer. Changing the password logs out your other devices.
+> Taking the same cookie into another browser does not log it in. A browser update that changes its version keeps you logged in.
+> Guests (view only) end after 30 minutes without activity, or 12 hours after entering.
+> When using the IP restriction from a phone, mind the difference between home Wi-Fi and the mobile network.
 
 To install from the source, copy the contents of `manga/server/` plus the repository's
 `NagiSwipe-main.js` and `NagiSwipe-main.css` into `viewer/` of the installation.
@@ -266,10 +280,11 @@ Visitors who are not logged in, guests and expired sessions get 404 for lists, p
 Pages and pictures while logged in use `private, no-store`, and public pages `Vary: Cookie`.
 If you were already logged in before, open the admin panel once more and your cookie moves to the new scope.
 
-Switching a Memo to public publishes the saved posts and log pictures too. Drafts stay unpublished.
-Pictures someone saved after they were public, and caches already held by outside services, cannot be taken back.
-NagiMANGA's works have their own audience, separate from the log. Manage them with work passwords and the like.
-A Memo still needs direct access to the storage to be denied. See "Protecting the storage" below.
+> [!WARNING]
+> Switching a Memo to public publishes the saved posts and log pictures too. Drafts stay unpublished.
+> Pictures someone saved after they were public, and caches already held by outside services, cannot be taken back.
+> NagiMANGA's works have their own audience, separate from the log. Manage them with work passwords and the like.
+> A Memo still needs direct access to the storage to be denied. See "Protecting the storage" below.
 
 The site menu shows "ログイン" (Log in) to visitors and "管理ページ" (Admin page) to the administrator.
 Turning off the "Log in / Admin page" switch under "Settings → LOG → Sidebar and menu" hides this block.
@@ -504,9 +519,10 @@ The chip in the posting box shows a level that comes from pictures as "R-18（�
 | Tiles and related posts | Thumbnails are blurred with the level's label. |
 | Admin panel | Shown without blur, with the level's label and a note on how readers see it. The post list adds the level to titles too. |
 
-Content warnings are a sign so that readers can prepare before seeing. They are not access control.
-Opening a picture's URL directly shows it, and the age check is self-reported. Do not post pictures that must not be published at all.
-The title (the first line) is shown without folding. Do not put harsh words in titles.
+> [!WARNING]
+> Content warnings are a sign so that readers can prepare before seeing. They are not access control.
+> Opening a picture's URL directly shows it, and the age check is self-reported. Do not post pictures that must not be published at all.
+> The title (the first line) is shown without folding. Do not put harsh words in titles.
 
 ## Embedding social media and video
 
@@ -594,10 +610,14 @@ Card pictures are brought into this server, reduced, read again and saved. Visit
 
 Because it reads outside pages, it has these limits:
 
+<details><summary>Limits when fetching blog cards</summary>
+
 - Only ports 80 and 443 of `http` and `https` are read. URLs with a user name or password are not read.
 - If the name resolves to loopback, internal ranges, link-local (including cloud metadata), CGNAT or reserved ranges, it is not read. It connects only to the checked address, which also prevents swapping the name resolution.
 - Up to 3 redirects, each checked the same way. Pages up to 1MB, pictures up to 8MB, at most 10 per save and 20 seconds in total.
 - Shift_JIS and EUC-JP are handled. Card text is not interpreted as HTML but escaped.
+
+</details>
 
 Log backups do not include the stored cards. On the new server, saving the post again makes the card again.
 
@@ -627,6 +647,8 @@ In the media list, add pictures only from the box at the top and find the pictur
 
 SVG can be uploaded too (posts, the media list, the icon, the title logo). SVG is a document rather than a picture and can hold programs and references to other sites. So a simple virus check runs before importing, and SVG with any of the following is refused with the reason:
 
+<details><summary>SVG that is refused (with the reason)</summary>
+
 - `<script>`, `<foreignObject>` (embedded HTML), `<iframe>`, `<embed>`, `<object>`, HTML elements
 - attributes that run on events such as `onload` and `onclick` (in any letter case)
 - URLs such as `javascript:`, `vbscript:` and `data:text/html` (including ones broken up with spaces or character references)
@@ -635,6 +657,8 @@ SVG can be uploaded too (posts, the media list, the icon, the title logo). SVG i
 - DOCTYPE and ENTITY declarations (used for reading outside files and for attacks that swell on expansion), processing instructions such as `<?xml-stylesheet?>`
 - CSS escapes (ways of hiding the words above, such as `u\72l(`)
 - compressed SVG (SVGZ), files over 2MB, over 50,000 elements, or without a size (width and height, or viewBox)
+
+</details>
 
 SVG that passes is not saved as it is either. Only the elements and attributes used for drawing are written out again; Inkscape and Illustrator editing data, comments, `<metadata>` and unknown namespaces are thrown away. Links (`<a>`) are removed, keeping only the drawing inside. Gradients, filters (such as shadows), clips, masks, `<style>`, text and SMIL animation work as they are. A file named `.png` whose contents are SVG gets the same check, and a file named `.svg` whose contents are HTML is not imported.
 
@@ -649,7 +673,6 @@ Video and audio can be added too, with "Add pictures, video or audio" in the pos
 | Video | MP4 (including iPhone MOV), WebM |
 | Audio | MP3, M4A, OGG, WAV, FLAC |
 
-- Both video and audio are stored as they arrive. Rental servers have no way to convert them. Whether they play depends on the viewer's browser: iPhone videos shot in HEVC (H.265), for example, may not show on Android or computers. If unsure, use H.264 MP4.
 - The format is checked from the beginning of the file's contents, not its name. Files pretending to be video or audio are refused.
 - Large files are split by the browser into pieces smaller than the server's upload limit and joined on the server. A piece that did not arrive is sent again on its own. Up to 1GB per file.
 - The length, video size and audio waveform are measured once by the browser of the admin panel at upload and stored. Readers' browsers do not analyze the audio each time they open a post, so it shows lightly. Audio over 150MB is not measured for a waveform and is shown with a thin bar.
@@ -661,6 +684,9 @@ Video and audio can be added too, with "Add pictures, video or audio" in the pos
   - What is written: MP3 gets ID3v2 (APIC, TXXX), M4A iTunes items (covr, ----), FLAC PICTURE and VORBIS_COMMENT, OGG (Vorbis, Opus) `METADATA_BLOCK_PICTURE` and comments, WAV the `id3 ` and `smpl` chunks. After writing, it is read back and checked before sending.
 - Videos use an early frame as the cover. The cover is also used for tiles in lists and for the OGP picture.
 - The title of songs and videos is at first the file name (without the extension). Change it with "タイトル" (Title) in the media list.
+
+> [!TIP]
+> Both video and audio are stored as they arrive. Rental servers have no way to convert them. Whether they play depends on the viewer's browser: iPhone videos shot in HEVC (H.265), for example, may not show on Android or computers. If unsure, use H.264 MP4.
 
 Players in posts follow the colors of the site's design.
 
@@ -1166,10 +1192,12 @@ If it stays inside the public folder, deny HTTP access to `data/` with `.htacces
 Where `.htaccess` cannot be used, as on nginx, move the storage outside or deny access in the server settings.
 
 The log's internal records are PHP files that give 404 when opened directly, but picture files have no PHP processing.
-If the storage can be reached over HTTP, knowing a picture's real path gets around authentication and the bot measures.
-Storage folder names made from the secret key are no substitute for encryption.
-Check the warning in the admin panel, and that direct access from outside is denied, before publishing.
-Detailed server examples are in [NagiManga's installation guide](README.en.md#protecting-the-data-folder).
+
+> [!CAUTION]
+> If the storage can be reached over HTTP, knowing a picture's real path gets around authentication and the bot measures.
+> Storage folder names made from the secret key are no substitute for encryption.
+> Check the warning in the admin panel, and that direct access from outside is denied, before publishing.
+> Detailed server examples are in [NagiManga's installation guide](README.en.md#protecting-the-data-folder).
 
 ## Storage layout and backup
 

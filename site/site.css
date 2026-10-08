@@ -285,6 +285,37 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
 
+/* ---- a page's banner, the gallery to try, lists shown as cards ---- */
+.doc-hero {
+    margin: 0 0 22px; border-radius: 16px; overflow: hidden; line-height: 0;
+    background: var(--brand-bg); box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+.doc-hero img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; border-radius: 0; }
+
+.try {
+    margin: 22px 0 6px; padding: 16px 18px 14px;
+    border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow);
+}
+.try-title { margin: 0 0 10px; font-weight: 700; color: var(--accent); }
+.doc .try-gallery { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.doc .try-gallery li { margin: 0; }
+.try-gallery a { display: block; border-radius: 12px; overflow: hidden; line-height: 0; background: var(--brand-bg); border: 1px solid var(--line); transition: transform .18s ease, box-shadow .18s ease; }
+.try-gallery a:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.try-gallery img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 0; }
+.try-note { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
+
+.doc .feature-list {
+    list-style: none; padding: 0; margin: 18px 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;
+}
+.doc .feature-list li {
+    margin: 0; padding: 14px 16px 15px;
+    border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px;
+    background: var(--surface); line-height: 1.7; font-size: 15px;
+}
+.feature-name { display: block; margin-bottom: 3px; color: var(--accent); font-size: 15.5px; }
+@media (prefers-reduced-motion: reduce) { .try-gallery a { transition: none; } .try-gallery a:hover { transform: none; } }
+
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin: 20px 0; }
 .card {
     display: flex; flex-direction: column;
@@ -420,3 +451,55 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
     .sidebar, .topbar, .menu, .pager, .copy, .anchor { display: none !important; }
     .layout { display: block; }
 }
+/* A row of badges (versions, GitHub / GitLab, license) */
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 16px; line-height: 0; }
+.badges a { display: inline-block; line-height: 0; }
+.badges img { height: 20px; width: auto; border-radius: 0; }
+
+/* ---- callouts: GitHub's > [!NOTE] … [!CAUTION] and HackMD's :::success / info / warning / danger ---- */
+.callout {
+    --c: #2563eb;
+    position: relative; margin: 18px 0; padding: 12px 16px 12px 16px;
+    border: 1px solid color-mix(in srgb, var(--c) 30%, var(--line));
+    border-left: 4px solid var(--c); border-radius: 12px;
+    background: color-mix(in srgb, var(--c) 7%, var(--surface));
+}
+.callout-tip { --c: #16a34a; }
+.callout-success { --c: #059669; }
+.callout-important { --c: #7c3aed; }
+.callout-warning { --c: #d97706; }
+.callout-caution { --c: #dc2626; }
+.callout svg { width: 19px; height: 19px; flex: none; fill: none; stroke: var(--c); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.callout-title { display: flex; align-items: center; gap: 8px; margin: 0 0 4px !important; font-weight: 700; color: var(--c); }
+.callout-body > :first-child { margin-top: 0; }
+.callout-body > :last-child { margin-bottom: 0; }
+.callout-plain { display: flex; gap: 10px; align-items: flex-start; }
+.callout-plain > svg { margin-top: 4px; }
+.callout-plain .callout-body { flex: 1; min-width: 0; }
+@media (prefers-color-scheme: dark) {
+    .callout { background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
+    .callout-title { color: color-mix(in srgb, var(--c) 70%, #fff); }
+}
+
+/* ---- folded parts: <details> and HackMD's :::spoiler ---- */
+.doc details {
+    margin: 16px 0; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--surface); overflow: hidden;
+}
+.doc details > summary {
+    display: flex; align-items: center; gap: 8px; padding: 11px 16px;
+    cursor: pointer; font-weight: 650; list-style: none; user-select: none;
+}
+.doc details > summary::-webkit-details-marker { display: none; }
+.doc details > summary::before {
+    content: ""; width: 7px; height: 7px; flex: none; margin-right: 2px;
+    border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+    transform: rotate(-45deg); transition: transform .18s ease;
+}
+.doc details[open] > summary::before { transform: rotate(45deg); }
+.doc details > summary:hover { background: var(--accent-soft); }
+.doc details[open] > summary { border-bottom: 1px solid var(--line); }
+.doc details > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.doc details > .details-body { margin: 12px 16px 14px; }
+.doc details > .details-body > :first-child { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) { .doc details > summary::before { transition: none; } }

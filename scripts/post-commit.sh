@@ -9,7 +9,7 @@
 # Files with uncommitted edits of your own are left alone (run the scripts by hand).
 [ -n "$NAGI_CACHEBUST" ] && exit 0
 cd "$(git rev-parse --show-toplevel)" || exit 0
-FILES="README.md README.en.md manga/README.md manga/README.en.md"
+FILES="README.md README.en.md manga/README.md manga/README.en.md manga/README-LOG.md manga/README-LOG.en.md site/top.html site/top.en.html"
 SITE="index.html nagiswipe.html nagimanga.html nagilog.html guide.html index.en.html nagiswipe.en.html nagimanga.en.html nagilog.en.html guide.en.html demo.html sitemap.xml site/search.json site/search.en.json"
 git diff --quiet HEAD -- $FILES $SITE || { echo "cachebust: README かサイトのページに未コミットの変更があるため、jsDelivr の URL とサイトは更新しませんでした"; exit 0; }
 PY=""
