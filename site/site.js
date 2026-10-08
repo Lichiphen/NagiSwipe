@@ -79,22 +79,28 @@
     }, { passive: true });
     updateActive();
 
+    // Words of the page, in its language (the pages are Japanese or English).
+    const en = document.documentElement.lang === 'en';
+    const say = en
+        ? { copy: 'Copy', copied: 'Copied', failed: 'Could not copy', none: (q) => 'Nothing found for “' + q + '”.' }
+        : { copy: 'コピー', copied: 'コピーしました', failed: 'コピーできませんでした', none: (q) => '「' + q + '」は見つかりませんでした。' };
+
     // ---- copy buttons for code ----
     document.querySelectorAll('.doc pre').forEach((pre) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'copy';
-        btn.textContent = 'コピー';
+        btn.textContent = say.copy;
         btn.addEventListener('click', async () => {
             const text = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
             try {
                 await navigator.clipboard.writeText(text);
-                btn.textContent = 'コピーしました';
+                btn.textContent = say.copied;
             } catch (e) {
-                btn.textContent = 'コピーできませんでした';
+                btn.textContent = say.failed;
             }
             btn.classList.add('is-done');
-            setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('is-done'); }, 1600);
+            setTimeout(() => { btn.textContent = say.copy; btn.classList.remove('is-done'); }, 1600);
         });
         pre.appendChild(btn);
     });
@@ -166,7 +172,7 @@
                 selected = -1;
                 results.hidden = false;
                 if (!hits.length) {
-                    results.innerHTML = '<p class="search-empty">「' + escapeHtml(q) + '」は見つかりませんでした。</p>';
+                    results.innerHTML = '<p class="search-empty">' + say.none(escapeHtml(q)) + '</p>';
                     return;
                 }
                 results.innerHTML = hits.map(({ e, terms }) =>

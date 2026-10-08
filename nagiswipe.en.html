@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiSwipe | NagiSeries</title>
+<meta name="description" content="How to start with NagiSwipe, a light image popup gallery that works by loading one JS and one CSS file, and its options.">
+<link rel="canonical" href="https://nagiswipe.pages.dev/nagiswipe.en.html">
+<link rel="alternate" hreflang="en" href="https://nagiswipe.pages.dev/nagiswipe.en.html">
+<link rel="alternate" hreflang="ja" href="https://nagiswipe.pages.dev/nagiswipe.html">
+<link rel="alternate" hreflang="x-default" href="https://nagiswipe.pages.dev/nagiswipe.html">
+<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="NagiSeries">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="NagiSwipe | NagiSeries">
+<meta property="og:description" content="How to start with NagiSwipe, a light image popup gallery that works by loading one JS and one CSS file, and its options.">
+<meta property="og:url" content="https://nagiswipe.pages.dev/nagiswipe.en.html">
+<meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagiswipe-ogp.png?v=b4c2b1f265">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=1dd410256a">
+<link rel="stylesheet" href="site/site.css?v=4749867e1b">
+<script src="NagiSwipe-main.js?v=e1bf6a99c2" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=97697d7559" defer></script>
+</head>
+<body class="page-nagiswipe">
+<a class="skip" href="#main">Skip to the content</a>
+<header class="topbar">
+<a class="brand" href="index.en.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<span class="topbar-tools"><a class="topbar-btn topbar-lang" href="nagiswipe.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Contents</span></button></span>
+</header>
+<div class="layout">
+<aside class="sidebar" aria-label="Sidebar">
+<a class="brand" href="index.en.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<a class="side-lang" href="nagiswipe.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="Search the documentation" aria-label="Search the documentation" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="Search results" hidden></div></div>
+<nav class="nav" aria-label="Documentation"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.en.html"><span class="nav-name">Top</span><span class="nav-sub">About NagiSeries</span></a></li><li class="nav-item is-current"><a class="nav-link" href="nagiswipe.en.html" aria-current="page"><span class="nav-name">NagiSwipe</span><span class="nav-sub">Image popup</span></a><ol class="nav-toc"><li><a href="#features" data-id="features">Features</a></li><li><a href="#getting-started" data-id="getting-started">Getting started</a><ol><li><a href="#via-cdn-recommended" data-id="via-cdn-recommended">Via CDN (recommended)</a></li><li><a href="#usage" data-id="usage">Usage</a></li><li><a href="#captions-v110-and-later" data-id="captions-v110-and-later">Captions (v1.1.0 and later)</a></li><li><a href="#options" data-id="options">Options</a></li><li><a href="#image-size-optional" data-id="image-size-optional">Image size (optional)</a></li></ol></li><li><a href="#using-it-with-tegalog" data-id="using-it-with-tegalog">Using it with Tegalog</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagimanga.en.html"><span class="nav-name">NagiManga</span><span class="nav-sub">Manga viewer</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.en.html"><span class="nav-name">NagiLog</span><span class="nav-sub">Personal log</span></a></li><li class="nav-item"><a class="nav-link" href="guide.en.html"><span class="nav-name">Guide</span><span class="nav-sub">For non-developers</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe demo</a></p>
+</aside>
+<main id="main" class="main">
+<article class="doc">
+<p class="crumbs"><a href="index.en.html">NagiSeries</a><span aria-hidden="true">/</span>NagiSwipe</p>
+<h1 class="doc-title">NagiSwipe</h1>
+<div class="lead"><p>A light image popup gallery library that works by loading two files, one JS and one CSS. It is mobile first and aims to feel good under the finger. Try swiping and zooming in the <a href="demo.html">demo</a>.</p></div>
+<nav class="toc-inline" aria-labelledby="toc-title-nagiswipe"><p class="toc-title" id="toc-title-nagiswipe">On this page</p><ol class="toc-list"><li><a href="#features" data-id="features">Features</a></li><li><a href="#getting-started" data-id="getting-started">Getting started</a><ol><li><a href="#via-cdn-recommended" data-id="via-cdn-recommended">Via CDN (recommended)</a></li><li><a href="#usage" data-id="usage">Usage</a></li><li><a href="#captions-v110-and-later" data-id="captions-v110-and-later">Captions (v1.1.0 and later)</a></li><li><a href="#options" data-id="options">Options</a></li><li><a href="#image-size-optional" data-id="image-size-optional">Image size (optional)</a></li></ol></li><li><a href="#using-it-with-tegalog" data-id="using-it-with-tegalog">Using it with Tegalog</a></li></ol></nav>
+<div class="doc-body">
+<h2 id="features">Features<a class="anchor" href="#features" aria-label="Link to this heading">#</a></h2>
+<ul><li><strong>Drop-in</strong>: load the JS and the CSS, and the image links on the page become a gallery by themselves.</li><li><strong>Made for phones</strong>: swipe, pinch zoom and double tap.</li><li><strong>Light and fast</strong>: no dependencies.</li><li><strong>Smooth</strong>: opens by growing out of the thumbnail and closes by shrinking back into it. While you swipe, the previous and next pictures follow your finger. Tapping a zoomed picture back to fit is drawn frame by frame, the same way a pinch is, so it no longer breaks up halfway on Android or iPhone (v1.3.2 and later).</li><li><strong>Momentum</strong>: while zoomed, the picture keeps sliding after you lift your finger and bounces at its edges. A quick flick turns the page even over a short distance.</li><li><strong>Thumbnail first</strong>: the thumbnail on the page is shown until the full picture arrives. The previous and next pictures are loaded ahead.</li><li><strong>Captions built in</strong>: the image&#x27;s <code>alt</code> and similar text is shown at the bottom of the screen.</li><li><strong>Safe by design</strong>: the browser&#x27;s Back (including the mouse back button and the back swipe) closes only the viewer. The DOM it needs is created automatically.</li></ul>
+<h2 id="getting-started">Getting started<a class="anchor" href="#getting-started" aria-label="Link to this heading">#</a></h2>
+<p>Load the following files in the <code>&lt;head&gt;</code> of your HTML.</p>
+<h3 id="via-cdn-recommended">Via CDN (recommended)<a class="anchor" href="#via-cdn-recommended" aria-label="Link to this heading">#</a></h3>
+<p>The files are served fast through <a href="https://www.jsdelivr.com/" class="ext">jsDelivr</a>. Copy these URLs (they are always the URLs of the latest version).</p>
+<pre><code class="language-html">&lt;!-- CSS --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css&quot;&gt;
+
+&lt;!-- JavaScript --&gt;
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
+<p>The part after <code>@</code> (such as <code>@93db749</code>) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as <code>@v1.6.0</code>. To always use the latest <code>main</code> branch, write <code>@main</code> (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).</p>
+<h3 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this heading">#</a></h3>
+<p>Links on the page such as <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> are found automatically, and the gallery opens when one is clicked.</p>
+<h3 id="captions-v110-and-later">Captions (v1.1.0 and later)<a class="anchor" href="#captions-v110-and-later" aria-label="Link to this heading">#</a></h3>
+<p>When a picture opens, a caption is shown at the bottom of the screen. The first of these that is found is used:</p>
+<ol><li><code>data-ns-caption</code> on the link (an empty value means no caption)</li><li><code>data-caption</code> on the link</li><li><code>alt</code> of the thumbnail <code>&lt;img&gt;</code></li><li><code>title</code> of the link</li><li><code>title</code> of the thumbnail <code>&lt;img&gt;</code></li><li>the <code>&lt;figcaption&gt;</code> of the <code>&lt;figure&gt;</code> around the link</li></ol>
+<pre><code class="language-html">&lt;a href=&quot;photo.jpg&quot;&gt;&lt;img src=&quot;photo-thumb.jpg&quot; alt=&quot;The sea at dusk&quot;&gt;&lt;/a&gt;</code></pre>
+<p>It is shown as text, so HTML in an alt is not interpreted. The caption hides itself while you zoom.</p>
+<h3 id="options">Options<a class="anchor" href="#options" aria-label="Link to this heading">#</a></h3>
+<pre><code class="language-js">NagiSwipe.init({
+    caption: true,        // the caption at the bottom (false turns it off)
+    counter: true,        // &quot;3 / 12&quot; at the top left (false turns it off)
+    zoomAnimation: true,  // grow out of the thumbnail / shrink back into it (false fades instead)
+    history: true         // the browser&#x27;s Back closes the viewer (false turns it off)
+});</code></pre>
+<p>When the system setting &quot;Reduce motion&quot; (<code>prefers-reduced-motion</code>) is on, the viewer fades instead of growing and shrinking.</p>
+<h3 id="image-size-optional">Image size (optional)<a class="anchor" href="#image-size-optional" aria-label="Link to this heading">#</a></h3>
+<p>It works without it, but if the link carries the picture&#x27;s real width and height, the viewer shows it at the right size before it has loaded.</p>
+<pre><code class="language-html">&lt;a href=&quot;photo.jpg&quot; data-ns-width=&quot;3000&quot; data-ns-height=&quot;2000&quot;&gt;&lt;img src=&quot;photo-thumb.jpg&quot; alt=&quot;…&quot;&gt;&lt;/a&gt;</code></pre>
+<h2 id="using-it-with-tegalog">Using it with Tegalog<a class="anchor" href="#using-it-with-tegalog" aria-label="Link to this heading">#</a></h2>
+<p><a href="https://www.nishishi.com/cgi/tegalog/" class="ext">Tegalog</a> (a Japanese micro-blog CGI) can use NagiSwipe through its admin settings alone, without editing the skin files. The menu names below are Tegalog&#x27;s Japanese ones.</p>
+<ol><li>In Tegalog&#x27;s admin panel, open <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> (Settings → System settings → Image zoom script).</li><li>Choose &quot;<strong>他のスクリプトを使う：URLを指定</strong>&quot; (use another script: give its URL), paste these two, and save.
+<ul><li>The &quot;JavaScriptのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js</code></li><li>The &quot;CSSのURL&quot; field: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@ab44ada/NagiSwipe-main.css</code></li></ul></li></ol>
+<p>Now a click on a picture in a post shows it large with NagiSwipe.</p>
+<p><strong>To use the manga viewer (NagiManga) too</strong>, write NagiManga&#x27;s URL in the same &quot;JavaScriptのURL&quot; field, <strong>after NagiSwipe&#x27;s URL and one space</strong> (keep it on one line; the CSS field stays as it is).</p>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js</code></pre>
+<p>Also make manga open <strong>in posts without pictures</strong>: Tegalog does not load the files above on pages of posts without pictures. In [設定] → [ページの表示] → 【投稿本文の表示／URL処理】, under &quot;▼画像URLを画像として埋め込む表示&quot;, check <strong>&quot;画像リンクに独自のclass属性値を追加する&quot;</strong> (add your own class to picture links), type <code>nagimanga</code> between <code>class=&quot;</code> and <code>&quot;</code>, and save.</p>
+<p>How to put manga in Tegalog posts is in <a href="nagimanga.en.html#posting-to-tegalog">&quot;Posting to Tegalog&quot; in manga/README.en.md</a>.</p>
+<p>It works the same way with <a href="https://github.com/Lichiphen/NagiMemo" class="ext">NagiMemo</a> (a skin for Tegalog).</p>
+</div>
+</article>
+<nav class="pager" aria-label="Pages"><a class="pager-prev" href="index.en.html"><span>Previous</span>Top</a><a class="pager-next" href="nagimanga.en.html"><span>Next</span>NagiManga</a></nav>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/README.en.md">The source of this page (GitHub)</a></p></footer>
+</main>
+</div>
+<dialog class="menu" id="menu" aria-label="Contents">
+<div class="menu-head"><p class="menu-title">Contents</p><button class="menu-close" type="button" data-close-menu aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+<div class="menu-body">
+<a class="side-lang" href="nagiswipe.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="Search the documentation" aria-label="Search the documentation" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="Search results" hidden></div></div>
+<nav class="nav" aria-label="Documentation"><ul class="nav-list"><li class="nav-item"><a class="nav-link" href="index.en.html"><span class="nav-name">Top</span><span class="nav-sub">About NagiSeries</span></a></li><li class="nav-item is-current"><a class="nav-link" href="nagiswipe.en.html" aria-current="page"><span class="nav-name">NagiSwipe</span><span class="nav-sub">Image popup</span></a><ol class="nav-toc"><li><a href="#features" data-id="features">Features</a></li><li><a href="#getting-started" data-id="getting-started">Getting started</a><ol><li><a href="#via-cdn-recommended" data-id="via-cdn-recommended">Via CDN (recommended)</a></li><li><a href="#usage" data-id="usage">Usage</a></li><li><a href="#captions-v110-and-later" data-id="captions-v110-and-later">Captions (v1.1.0 and later)</a></li><li><a href="#options" data-id="options">Options</a></li><li><a href="#image-size-optional" data-id="image-size-optional">Image size (optional)</a></li></ol></li><li><a href="#using-it-with-tegalog" data-id="using-it-with-tegalog">Using it with Tegalog</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagimanga.en.html"><span class="nav-name">NagiManga</span><span class="nav-sub">Manga viewer</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.en.html"><span class="nav-name">NagiLog</span><span class="nav-sub">Personal log</span></a></li><li class="nav-item"><a class="nav-link" href="guide.en.html"><span class="nav-name">Guide</span><span class="nav-sub">For non-developers</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe demo</a></p>
+</div>
+</dialog>
+</body>
+</html>

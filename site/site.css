@@ -141,6 +141,17 @@ svg { display: block; }
 .side-foot a { color: var(--muted); text-decoration: none; }
 .side-foot a:hover { color: var(--accent); }
 
+/* ---- the same page in the other language ---- */
+.side-lang {
+    display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+    padding: 5px 12px 5px 9px; border: 1px solid var(--line-strong); border-radius: 999px;
+    color: var(--muted); text-decoration: none; font-size: 13px; line-height: 1.3;
+}
+.side-lang:hover { color: var(--accent); border-color: var(--accent); }
+.side-lang svg, .topbar-lang svg { width: 17px; height: 17px; flex: none; }
+.topbar-tools { display: inline-flex; align-items: center; gap: 2px; }
+.topbar-lang { text-decoration: none; }
+
 /* ---- search ---- */
 .search { position: relative; }
 .search-field {

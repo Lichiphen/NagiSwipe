@@ -34,7 +34,7 @@ README = """NagiManga v{version}
 
 個人用LOG（NagiLog）
 ・公開サイトは https://あなたのサイト/nagimanga/ です。
-・「LOG・投稿」で、文章、画像、漫画、カテゴリ、ハッシュタグを投稿できます。
+・「LOG・投稿」で、文章、画像、漫画、動画、音声、カテゴリ、ハッシュタグを投稿できます。
 ・既定パスワードはありません。初回に自分で設定します。
 ・メリット・デメリットと設置の注意点は、同梱の README-LOG.md にまとめています。
 ・.htaccess が使えない環境では、data を公開フォルダの外へ移すか、サーバー側でアクセスを拒否してください。
@@ -49,6 +49,31 @@ optional/guest-mode.php は、デモなどで管理画面を閲覧のみで見�
 
 詳しい説明: https://github.com/Lichiphen/NagiSwipe/blob/main/manga/README.md
 デモ: https://notebook.lichiphen.com/nagimanga/demo.html
+
+----------------------------------------------------------------
+English
+
+First installation
+1. Upload the contents of the nagimanga folder to any place on your server with FTP.
+   Send the .htaccess files (files starting with .) too.
+2. Open https://your-site/nagimanga/admin/ in a browser and set it up within 30 minutes.
+3. Bookmark the login URL that is shown.
+4. Log in and check that the work list does not warn that the data folder can be seen from the internet.
+5. Enter where it is installed as the "Public URL" in the settings (without log.php).
+The admin panel can be shown in English: Settings > Common and security > Admin panel language.
+
+Personal log (NagiLog)
+- The public site is https://your-site/nagimanga/
+- "Log and posts" posts text, pictures, manga, video, audio, categories and hashtags.
+- There is no default password. You set it the first time.
+- Strengths, weaknesses and cautions for installing are in README-LOG.en.md (included).
+
+Updating
+- From v0.2.0 on, update from "Update" in the admin panel (a notice appears at login when a new version is out).
+- To update by hand, upload the contents of the nagimanga folder over the old files.
+  Do not upload the data folder (your works and settings would be lost).
+
+Documentation: https://nagiswipe.pages.dev/index.en.html
 MIT License (c) 2026 Lichiphen
 """
 
@@ -77,7 +102,7 @@ def main():
         for name in ("NagiSwipe-main.js", "NagiSwipe-main.css"):
             z.write(MANGA.parent / name, "nagimanga/viewer/" + name)
         z.write(MANGA / "plugins" / "guest-mode.php", "optional/guest-mode.php")
-        for name in ("README.md", "README-LOG.md"):
+        for name in ("README.md", "README.en.md", "README-LOG.md", "README-LOG.en.md"):
             z.write(MANGA / name, name)
         for doc in sorted((MANGA / "docs").glob("*.md")):
             z.write(doc, "docs/" + doc.name)

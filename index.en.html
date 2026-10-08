@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NagiSeries — tools for pictures, manga and logs</title>
+<meta name="description" content="Documentation of NagiSwipe, NagiManga and NagiLog: an image popup, a manga viewer and a log without a database, for personal websites.">
+<link rel="canonical" href="https://nagiswipe.pages.dev/index.en.html">
+<link rel="alternate" hreflang="en" href="https://nagiswipe.pages.dev/index.en.html">
+<link rel="alternate" hreflang="ja" href="https://nagiswipe.pages.dev/">
+<link rel="alternate" hreflang="x-default" href="https://nagiswipe.pages.dev/">
+<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NagiSeries">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="NagiSeries — tools for pictures, manga and logs">
+<meta property="og:description" content="Documentation of NagiSwipe, NagiManga and NagiLog: an image popup, a manga viewer and a log without a database, for personal websites.">
+<meta property="og:url" content="https://nagiswipe.pages.dev/index.en.html">
+<meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagiswipe-ogp.png?v=b4c2b1f265">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=1dd410256a">
+<link rel="stylesheet" href="site/site.css?v=4749867e1b">
+<script src="NagiSwipe-main.js?v=e1bf6a99c2" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.en.json?v=97697d7559" defer></script>
+</head>
+<body class="page-top">
+<a class="skip" href="#main">Skip to the content</a>
+<header class="topbar">
+<a class="brand" href="index.en.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<span class="topbar-tools"><a class="topbar-btn topbar-lang" href="index.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Contents</span></button></span>
+</header>
+<div class="layout">
+<aside class="sidebar" aria-label="Sidebar">
+<a class="brand" href="index.en.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<a class="side-lang" href="index.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="Search the documentation" aria-label="Search the documentation" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="Search results" hidden></div></div>
+<nav class="nav" aria-label="Documentation"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.en.html" aria-current="page"><span class="nav-name">Top</span><span class="nav-sub">About NagiSeries</span></a><ol class="nav-toc"><li><a href="#the-three-tools" data-id="the-three-tools">The three tools</a></li><li><a href="#which-one-to-use" data-id="which-one-to-use">Which one to use?</a></li><li><a href="#how-they-fit-together" data-id="how-they-fit-together">How they fit together</a></li><li><a href="#demos" data-id="demos">Demos</a></li><li><a href="#get-it" data-id="get-it">Get it</a></li><li><a href="#rights-and-disclaimer-images-in-the-demos" data-id="rights-and-disclaimer-images-in-the-demos">Rights and disclaimer: images in the demos</a></li><li><a href="#license" data-id="license">License</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.en.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">Image popup</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.en.html"><span class="nav-name">NagiManga</span><span class="nav-sub">Manga viewer</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.en.html"><span class="nav-name">NagiLog</span><span class="nav-sub">Personal log</span></a></li><li class="nav-item"><a class="nav-link" href="guide.en.html"><span class="nav-name">Guide</span><span class="nav-sub">For non-developers</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe demo</a></p>
+</aside>
+<main id="main" class="main">
+<article class="doc">
+
+<h1 class="doc-title">NagiSeries</h1>
+<div class="lead"><p>NagiSeries is a series of small tools for personal websites: <strong>NagiSwipe</strong> shows pictures large, <strong>NagiManga</strong> lets people read your manga, and <strong>NagiLog</strong> posts text, pictures, manga, video and audio. None of them needs a database or an outside service: put them on your own site and they work.</p>
+<div class="hero-links">
+<a class="btn btn-primary" href="nagiswipe.en.html#getting-started">Use NagiSwipe</a>
+<a class="btn" href="nagimanga.en.html#with-the-admin-panel-php">Install NagiManga and NagiLog</a>
+<a class="btn ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a>
+</div></div>
+<nav class="toc-inline" aria-labelledby="toc-title-top"><p class="toc-title" id="toc-title-top">On this page</p><ol class="toc-list"><li><a href="#the-three-tools" data-id="the-three-tools">The three tools</a></li><li><a href="#which-one-to-use" data-id="which-one-to-use">Which one to use?</a></li><li><a href="#how-they-fit-together" data-id="how-they-fit-together">How they fit together</a></li><li><a href="#demos" data-id="demos">Demos</a></li><li><a href="#get-it" data-id="get-it">Get it</a></li><li><a href="#rights-and-disclaimer-images-in-the-demos" data-id="rights-and-disclaimer-images-in-the-demos">Rights and disclaimer: images in the demos</a></li><li><a href="#license" data-id="license">License</a></li></ol></nav>
+<div class="doc-body">
+<h2 id="the-three-tools">The three tools<a class="anchor" href="#the-three-tools" aria-label="Link to this heading">#</a></h2>
+
+<div class="cards">
+<section class="card">
+<a class="card-img" href="nagiswipe.en.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagiswipe-ogp.svg?v=3118cf3638" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiSwipe</h3>
+<p class="card-kind">Image popup gallery</p>
+<ul>
+<li>Load one JS and one CSS file, and the picture links on the page become a gallery</li>
+<li>Swipe, pinch zoom, double tap, captions</li>
+<li>Works with Tegalog through its admin settings alone</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagiswipe.en.html">Documentation</a><a class="btn" href="demo.html">Demo</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagimanga.en.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagimanga-ogp.svg?v=01d339b330" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiManga</h3>
+<p class="card-kind">Manga viewer and admin panel</p>
+<ul>
+<li>Paste a single tag, and a click opens the manga viewer</li>
+<li>Right to left, spreads, vertical reading (paged manga / webtoon)</li>
+<li>Import from EPUB, password-protected releases, backups as one ZIP</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagimanga.en.html">Documentation</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">Demo</a></div>
+</div>
+</section>
+<section class="card">
+<a class="card-img" href="nagilog.en.html" tabindex="-1" aria-hidden="true"><img src="img/ogp/nagilog-ogp.svg?v=d89b85e8eb" alt="" width="1200" height="630" loading="lazy" decoding="async"></a>
+<div class="card-body">
+<h3>NagiLog</h3>
+<p class="card-kind">Personal log (no database)</p>
+<ul>
+<li>Post text, pictures and manga to your own site, even from a phone</li>
+<li>Video and audio: a waveform player, gapless repeat, covers and loop points</li>
+<li>Categories, hashtags, search, six designs, RSS, content warnings</li>
+</ul>
+<div class="card-links"><a class="btn btn-primary" href="nagilog.en.html">Documentation</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/">Demo</a></div>
+</div>
+</section>
+</div>
+
+<h2 id="which-one-to-use">Which one to use?<a class="anchor" href="#which-one-to-use" aria-label="Link to this heading">#</a></h2>
+
+<div class="table-wrap"><table><thead><tr><th>You want to</th><th>Use</th><th>You need</th></tr></thead><tbody>
+<tr><td>Let people zoom the pictures of your blog or Tegalog comfortably, even on phones</td><td><a href="nagiswipe.en.html">NagiSwipe</a></td><td>Two files, JS and CSS (they can be loaded from jsDelivr)</td></tr>
+<tr><td>Have people read manga on your own site</td><td><a href="nagimanga.en.html">NagiManga</a></td><td>A server with PHP 8.1 or later. It can also be put up with FTP alone, without the admin panel</td></tr>
+<tr><td>Post text, art, manga, video and audio to your own site casually</td><td><a href="nagilog.en.html">NagiLog</a></td><td>The same installation as NagiManga (nothing else to prepare)</td></tr>
+<tr><td>Know whether you can keep using NagiManga</td><td><a href="guide.en.html">Guide</a></td><td>For non-developers: strengths and weaknesses, and how to take your data out</td></tr>
+</tbody></table></div>
+
+<h2 id="how-they-fit-together">How they fit together<a class="anchor" href="#how-they-fit-together" aria-label="Link to this heading">#</a></h2>
+
+<ol class="flow">
+<li><strong>NagiSwipe</strong> is a library that can be used on its own. NagiManga and NagiLog use it for zooming pictures too (it is included in the release ZIP).</li>
+<li>Installing <strong>NagiManga</strong> gives you the screen for managing works and the viewer for readers.</li>
+<li><strong>NagiLog</strong> is part of NagiManga. In the same <code>nagimanga</code> folder, with the same login, the public site of the log runs too.</li>
+</ol>
+
+<h2 id="demos">Demos<a class="anchor" href="#demos" aria-label="Link to this heading">#</a></h2>
+
+<ul>
+<li>NagiSwipe: <a href="demo.html">image gallery demo</a> (on this site)</li>
+<li>NagiManga: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/demo.html">https://notebook.lichiphen.com/nagimanga/demo.html</a> (the ways of reading, a password-protected sample, the admin panel as a guest)</li>
+<li>NagiLog: <a class="ext" href="https://notebook.lichiphen.com/nagimanga/">https://notebook.lichiphen.com/nagimanga/</a> (the log the author actually uses)</li>
+</ul>
+
+<h2 id="get-it">Get it<a class="anchor" href="#get-it" aria-label="Link to this heading">#</a></h2>
+
+<ul>
+<li><strong>NagiSwipe</strong>: just paste the jsDelivr URLs. <a href="nagiswipe.en.html#getting-started">Getting started</a> always has the URLs of the latest version.</li>
+<li><strong>NagiManga and NagiLog</strong>: download <code>nagimanga-vX.Y.Z.zip</code> from the <a class="ext" href="https://github.com/Lichiphen/NagiSwipe/releases">releases page</a> and upload it to your server. The steps are in <a href="nagimanga.en.html#with-the-admin-panel-php">With the admin panel (PHP)</a>.</li>
+<li><strong>Source code</strong>: <a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a> / <a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a> (the same contents)</li>
+</ul>
+<h2 id="rights-and-disclaimer-images-in-the-demos">Rights and disclaimer: images in the demos<a class="anchor" href="#rights-and-disclaimer-images-in-the-demos" aria-label="Link to this heading">#</a></h2>
+<p>About the images used in the demos of this project (<code>demo.html</code> and others):</p>
+<ul><li><p><strong>Cat illustrations (Kyururun.png, Fu-n.png, Shimeshime.png)</strong></p>
+<ul><li>These are <strong>digital art made by Lichiphen (the author)</strong>.</li><li>The copyright belongs to the author; they are included as demo material for this library.</li></ul></li></ul>
+<ul><li><p><strong>Other photographs (from Picsum and similar)</strong></p>
+<ul><li>These are samples fetched from outside services such as <a href="https://picsum.photos/" class="ext">Lorem Picsum</a>.</li><li><strong>Lichiphen does not hold the copyright of these photographs.</strong></li><li>The photographs are not covered by the MIT LICENSE of this software (NagiSwipe). Follow the terms of their providers (such as Unsplash) for each picture.</li></ul></li></ul>
+<ul><li><strong>Manga works shown in the NagiManga demo (&quot;送り日&quot;, &quot;ガーベラ&quot; and others)</strong>
+<ul><li>They are works of Lichiphen (the author). They are not in this repository and not covered by the MIT LICENSE. The copyright belongs to the author.</li><li>The pictures of the sample manga and sample webtoon in the demo were drawn automatically for the demo.</li></ul></li></ul>
+<h2 id="license">License<a class="anchor" href="#license" aria-label="Link to this heading">#</a></h2>
+<p><a href="https://github.com/Lichiphen/NagiSwipe/blob/main/LICENSE" class="ext">MIT License</a> (c) 2026 Lichiphen</p>
+</div>
+</article>
+<nav class="pager" aria-label="Pages"><span></span><a class="pager-next" href="nagiswipe.en.html"><span>Next</span>NagiSwipe</a></nav>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/site/top.en.html">The source of this page (GitHub)</a></p></footer>
+</main>
+</div>
+<dialog class="menu" id="menu" aria-label="Contents">
+<div class="menu-head"><p class="menu-title">Contents</p><button class="menu-close" type="button" data-close-menu aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+<div class="menu-body">
+<a class="side-lang" href="index.html" hreflang="ja" lang="ja" title="このページを日本語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>日本語</span></a>
+<div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="Search the documentation" aria-label="Search the documentation" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="Search results" hidden></div></div>
+<nav class="nav" aria-label="Documentation"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.en.html" aria-current="page"><span class="nav-name">Top</span><span class="nav-sub">About NagiSeries</span></a><ol class="nav-toc"><li><a href="#the-three-tools" data-id="the-three-tools">The three tools</a></li><li><a href="#which-one-to-use" data-id="which-one-to-use">Which one to use?</a></li><li><a href="#how-they-fit-together" data-id="how-they-fit-together">How they fit together</a></li><li><a href="#demos" data-id="demos">Demos</a></li><li><a href="#get-it" data-id="get-it">Get it</a></li><li><a href="#rights-and-disclaimer-images-in-the-demos" data-id="rights-and-disclaimer-images-in-the-demos">Rights and disclaimer: images in the demos</a></li><li><a href="#license" data-id="license">License</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.en.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">Image popup</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.en.html"><span class="nav-name">NagiManga</span><span class="nav-sub">Manga viewer</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.en.html"><span class="nav-name">NagiLog</span><span class="nav-sub">Personal log</span></a></li><li class="nav-item"><a class="nav-link" href="guide.en.html"><span class="nav-name">Guide</span><span class="nav-sub">For non-developers</span></a></li></ul></nav>
+<p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe demo</a></p>
+</div>
+</dialog>
+</body>
+</html>

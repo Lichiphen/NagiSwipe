@@ -10,6 +10,9 @@ Build the NagiSeries documentation site from the READMEs (standard library only)
   manga/docs/overview.md         -> guide.html
   site/top.html + README.md      -> index.html (the rights and license sections)
   everything                     -> site/search.json, sitemap.xml
+The English pages come the same way from the .en.md files and site/top.en.html:
+  README.en.md -> nagiswipe.en.html, ..., site/top.en.html -> index.en.html, site/search.en.json.
+Each page links to the same page in the other language (hreflang).
 
 The READMEs are the only source of the text: edit them, then run this script and
 commit the generated pages too (Cloudflare Pages / GitLab Pages serve them as they are).
@@ -37,9 +40,9 @@ REPO_URL = "https://github.com/Lichiphen/NagiSwipe"
 GITLAB_URL = "https://gitlab.com/lichiphen/nagiswipe"
 BRANCH = "main"
 
-PAGES = [
+PAGES_JA = [
     dict(key="top", out="index.html", nav="トップ", sub="NagiSeries について",
-         title="NagiSeries", src="README.md", sections=["権利・免責事項", "ライセンス"],
+         title="NagiSeries", src="README.md", top="site/top.html", sections=["権利・免責事項", "ライセンス"],
          desc="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。",
          ogp="img/ogp/nagiswipe-ogp.png"),
     dict(key="nagiswipe", out="nagiswipe.html", nav="NagiSwipe", sub="画像ポップアップ",
@@ -52,16 +55,62 @@ PAGES = [
          ogp="img/ogp/nagimanga-ogp.png"),
     dict(key="nagilog", out="nagilog.html", nav="NagiLog", sub="個人用LOG",
          src="manga/README-LOG.md",
-         desc="データベース不要で、文章・画像・漫画を自分のサイトへ投稿できる NagiLog の使い方と設定。",
+         desc="データベース不要で、文章・画像・漫画・動画・音声を自分のサイトへ投稿できる NagiLog の使い方と設定。",
          ogp="img/ogp/nagilog-ogp.png"),
     dict(key="guide", out="guide.html", nav="手引き", sub="開発者でない方へ",
          src="manga/docs/overview.md",
          desc="NagiManga を使うかどうか決めたい人、長く使い続けたい人のための手引き。",
          ogp="img/ogp/nagimanga-ogp.png"),
 ]
+PAGES_EN = [
+    dict(key="top", out="index.en.html", nav="Top", sub="About NagiSeries",
+         title="NagiSeries", src="README.en.md", top="site/top.en.html", sections=["Rights and disclaimer", "License"],
+         desc="Documentation of NagiSwipe, NagiManga and NagiLog: an image popup, a manga viewer and a log without a database, for personal websites.",
+         ogp="img/ogp/nagiswipe-ogp.png"),
+    dict(key="nagiswipe", out="nagiswipe.en.html", nav="NagiSwipe", sub="Image popup",
+         src="README.en.md", unwrap="NagiSwipe",
+         desc="How to start with NagiSwipe, a light image popup gallery that works by loading one JS and one CSS file, and its options.",
+         ogp="img/ogp/nagiswipe-ogp.png"),
+    dict(key="nagimanga", out="nagimanga.en.html", nav="NagiManga", sub="Manga viewer",
+         src="manga/README.en.md",
+         desc="Installing NagiManga, a manga viewer that opens from a single tag, its admin panel and its features.",
+         ogp="img/ogp/nagimanga-ogp.png"),
+    dict(key="nagilog", out="nagilog.en.html", nav="NagiLog", sub="Personal log",
+         src="manga/README-LOG.en.md",
+         desc="How to use and set up NagiLog, which posts text, pictures, manga, video and audio to your own site without a database.",
+         ogp="img/ogp/nagilog-ogp.png"),
+    dict(key="guide", out="guide.en.html", nav="Guide", sub="For non-developers",
+         src="manga/docs/overview.en.md",
+         desc="A guide for people deciding whether to use NagiManga, or wanting to use it for years.",
+         ogp="img/ogp/nagimanga-ogp.png"),
+]
+LANGS = {"ja": PAGES_JA, "en": PAGES_EN}
+PAGES = PAGES_JA + PAGES_EN
+for _lang, _pages in LANGS.items():
+    for _p in _pages:
+        _p["lang"] = _lang
+# The same page in the other language.
+OTHER = {p["out"]: q["out"] for p, q in zip(PAGES_JA, PAGES_EN)}
+OTHER.update({q: p for p, q in OTHER.items()})
 # Links between the READMEs become links between the pages.
 PAGE_OF_SRC = {"README.md": "nagiswipe.html", "manga/README.md": "nagimanga.html",
-               "manga/README-LOG.md": "nagilog.html", "manga/docs/overview.md": "guide.html"}
+               "manga/README-LOG.md": "nagilog.html", "manga/docs/overview.md": "guide.html",
+               "README.en.md": "nagiswipe.en.html", "manga/README.en.md": "nagimanga.en.html",
+               "manga/README-LOG.en.md": "nagilog.en.html", "manga/docs/overview.en.md": "guide.en.html"}
+
+# Words of the page frame.
+UI = {
+    "ja": dict(anchor="この見出しへのリンク", search="ドキュメントを検索", results="検索結果",
+               top_title="NagiSeries — 画像・漫画・LOG のツール集", prev="前へ", next="次へ", pager="ページ送り",
+               toc="このページの目次", skip="本文へ移動", menu="目次", sidebar="サイドバー", docs="ドキュメント",
+               demo="NagiSwipe デモ", source="このページの元の文書（GitHub）", close="閉じる",
+               other="English", other_label="このページを英語で読む", index="site/search.json"),
+    "en": dict(anchor="Link to this heading", search="Search the documentation", results="Search results",
+               top_title="NagiSeries — tools for pictures, manga and logs", prev="Previous", next="Next", pager="Pages",
+               toc="On this page", skip="Skip to the content", menu="Contents", sidebar="Sidebar", docs="Documentation",
+               demo="NagiSwipe demo", source="The source of this page (GitHub)", close="Close",
+               other="日本語", other_label="このページを日本語で読む", index="site/search.en.json"),
+}
 
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif")
 _hashes = {}
@@ -131,9 +180,10 @@ def slug(text, seen):
 # --- links and images -----------------------------------------------------------
 
 class Ctx:
-    def __init__(self, src, shift=0):
+    def __init__(self, src, shift=0, lang='ja'):
         self.src = src            # repo-relative path of the Markdown file
         self.shift = shift        # heading levels to lift (### -> ## when 1)
+        self.lang = lang
         self.seen = {}
         self.headings = []        # (level, id, inner html, plain text)
 
@@ -334,7 +384,7 @@ def render(lines, ctx, tight=False):
             hid = slug(text, ctx.seen)
             inner = inline(m.group(2), ctx)
             ctx.headings.append((level, hid, inner, text))
-            out.append(f'<h{level} id="{esc(hid)}">{inner}<a class="anchor" href="#{esc(hid)}" aria-label="この見出しへのリンク">#</a></h{level}>')
+            out.append(f'<h{level} id="{esc(hid)}">{inner}<a class="anchor" href="#{esc(hid)}" aria-label="{UI[ctx.lang]['anchor']}">#</a></h{level}>')
             i += 1
             continue
 
@@ -495,14 +545,14 @@ def build_doc(page):
     heads = heading_index(lines)
     if page.get('unwrap'):
         part = section(lines, page['unwrap'], heads)
-        ctx = Ctx(page['src'], shift=1)
+        ctx = Ctx(page['src'], shift=1, lang=page['lang'])
         sub = heading_index(part)
         first = sub[1][0] if len(sub) > 1 else len(part)
         ctx.seen = {}
         lead = render(part[1:first], ctx)
         body = render(part[first:], ctx)
         return esc(page['nav']), lead, body, ctx
-    ctx = Ctx(page['src'])
+    ctx = Ctx(page['src'], lang=page['lang'])
     h1 = next((k for k, level, _ in heads if level == 1), None)
     h2 = next((k for k, level, _ in heads if level == 2), len(lines))
     title = inline(HEADING.match(lines[h1]).group(2), ctx) if h1 is not None else esc(page['nav'])
@@ -512,9 +562,9 @@ def build_doc(page):
 
 
 def build_top(page):
-    """index.html: site/top.html plus sections of README.md."""
-    ctx = Ctx(page['src'])
-    top = (SITE / 'top.html').read_text(encoding='utf-8')
+    """index.html: site/top.html plus sections of README.md (index.en.html: the English ones)."""
+    ctx = Ctx(page['src'], lang=page['lang'])
+    top = (ROOT / page['top']).read_text(encoding='utf-8')
     top = re.sub(r'\{\{asset:([^}]+)\}\}', lambda m: esc(asset(m.group(1))), top)
     top = re.sub(r'\{\{size:([^}]+)\}\}', lambda m: 'width="{}" height="{}"'.format(*image_size(m.group(1))), top)
     for m in re.finditer(r'<h([23]) id="([^"]+)">(.*?)<a class="anchor"', top):
@@ -555,9 +605,9 @@ def toc_html(headings, cls):
     return f'<ol class="{cls}">' + ''.join(items) + '</ol>'
 
 
-def nav_html(current, headings):
+def nav_html(current, headings, lang):
     rows = []
-    for p in PAGES:
+    for p in LANGS[lang]:
         cur = p['key'] == current
         aria = ' aria-current="page"' if cur else ''
         sub = toc_html(headings, 'nav-toc') if cur else ''
@@ -576,41 +626,60 @@ BRAND = ('<a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 
          '</svg><span class="brand-name">NagiSeries</span></a>')
 
 
-def search_box(where):
+def search_box(where, ui):
     return (f'<div class="search" data-search-box><label class="search-field">{ICON_SEARCH}'
-            f'<input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search">'
+            f'<input type="search" placeholder="{ui["search"]}" aria-label="{ui["search"]}" autocomplete="off" enterkeyhint="search">'
             f'<kbd class="search-key" aria-hidden="true">/</kbd></label>'
-            f'<div class="search-results" role="list" aria-label="検索結果" hidden></div></div>')
+            f'<div class="search-results" role="list" aria-label="{ui["results"]}" hidden></div></div>')
+
+
+ICON_LANG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>'
+
+
+def lang_link(page, cls):
+    """The same page in the other language."""
+    ui = UI[page['lang']]
+    other = 'en' if page['lang'] == 'ja' else 'ja'
+    return (f'<a class="{cls}" href="{OTHER[page["out"]]}" hreflang="{other}" lang="{other}" '
+            f'title="{ui["other_label"]}">{ICON_LANG}<span>{ui["other"]}</span></a>')
 
 
 def layout(page, title_html, lead, body, ctx, prev_page, next_page):
+    ui = UI[page['lang']]
     title_text = plain(re.sub(r'<[^>]+>', '', title_html))
-    full_title = 'NagiSeries — 画像・漫画・LOG のツール集' if page['key'] == 'top' else f'{title_text} | NagiSeries'
-    nav = nav_html(page['key'], ctx.headings)
+    full_title = ui['top_title'] if page['key'] == 'top' else f'{title_text} | NagiSeries'
+    nav = nav_html(page['key'], ctx.headings, page['lang'])
+    home = LANGS[page['lang']][0]['out']
     toc = toc_html(ctx.headings, 'toc-list')
-    crumbs = '' if page['key'] == 'top' else f'<p class="crumbs"><a href="index.html">NagiSeries</a><span aria-hidden="true">/</span>{esc(page["nav"])}</p>'
+    crumbs = '' if page['key'] == 'top' else f'<p class="crumbs"><a href="{home}">NagiSeries</a><span aria-hidden="true">/</span>{esc(page["nav"])}</p>'
     pager = ''
     if prev_page or next_page:
-        a = f'<a class="pager-prev" href="{prev_page["out"]}"><span>前へ</span>{esc(prev_page["nav"])}</a>' if prev_page else '<span></span>'
-        b = f'<a class="pager-next" href="{next_page["out"]}"><span>次へ</span>{esc(next_page["nav"])}</a>' if next_page else '<span></span>'
-        pager = f'<nav class="pager" aria-label="ページ送り">{a}{b}</nav>'
-    edit = f'{REPO_URL}/blob/{BRANCH}/{page["src"]}' if page['key'] != 'top' else f'{REPO_URL}/blob/{BRANCH}/site/top.html'
+        a = f'<a class="pager-prev" href="{prev_page["out"]}"><span>{ui["prev"]}</span>{esc(prev_page["nav"])}</a>' if prev_page else '<span></span>'
+        b = f'<a class="pager-next" href="{next_page["out"]}"><span>{ui["next"]}</span>{esc(next_page["nav"])}</a>' if next_page else '<span></span>'
+        pager = f'<nav class="pager" aria-label="{ui["pager"]}">{a}{b}</nav>'
+    edit = f'{REPO_URL}/blob/{BRANCH}/{page["src"]}' if page['key'] != 'top' else f'{REPO_URL}/blob/{BRANCH}/{page["top"]}'
     url = SITE_URL + ('' if page['out'] == 'index.html' else page['out'])
+    other_out = OTHER[page['out']]
+    alt_urls = {page['lang']: url, ('en' if page['lang'] == 'ja' else 'ja'): SITE_URL + ('' if other_out == 'index.html' else other_out)}
+    alternates = ''.join(f'<link rel="alternate" hreflang="{k}" href="{v}">\n' for k, v in sorted(alt_urls.items()))
+    alternates += f'<link rel="alternate" hreflang="x-default" href="{alt_urls["ja"]}">\n'
+    brand = BRAND.replace('href="index.html"', f'href="{home}"')
     lead_html = f'<div class="lead">{lead}</div>' if lead.strip() else ''
-    toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><p class="toc-title" id="toc-title-{page["key"]}">このページの目次</p>{toc}</nav>'
+    toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><p class="toc-title" id="toc-title-{page["key"]}">{ui["toc"]}</p>{toc}</nav>'
                  if len([h for h in ctx.headings if h[0] == 2]) >= 2 else '')
     return f'''<!DOCTYPE html>
-<html lang="ja">
+<html lang="{page['lang']}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(full_title)}</title>
 <meta name="description" content="{esc(page['desc'])}">
 <link rel="canonical" href="{url}">
-<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
+{alternates}<meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="{'website' if page['key'] == 'top' else 'article'}">
 <meta property="og:site_name" content="NagiSeries">
+<meta property="og:locale" content="{'ja_JP' if page['lang'] == 'ja' else 'en_US'}">
 <meta property="og:title" content="{esc(full_title)}">
 <meta property="og:description" content="{esc(page['desc'])}">
 <meta property="og:url" content="{url}">
@@ -620,20 +689,22 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 <link rel="stylesheet" href="{asset('NagiSwipe-main.css')}">
 <link rel="stylesheet" href="{asset('site/site.css')}">
 <script src="{asset('NagiSwipe-main.js')}" defer></script>
-<script src="{asset('site/site.js')}" data-index="{asset('site/search.json')}" defer></script>
+<script src="{asset('site/site.js')}" data-index="{asset(ui['index'])}" defer></script>
 </head>
 <body class="page-{page['key']}">
-<a class="skip" href="#main">本文へ移動</a>
+<a class="skip" href="#main">{ui["skip"]}</a>
 <header class="topbar">
-{BRAND}
-<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu">{ICON_MENU}<span>目次</span></button>
+{brand}
+<span class="topbar-tools">{lang_link(page, 'topbar-btn topbar-lang')}
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu">{ICON_MENU}<span>{ui["menu"]}</span></button></span>
 </header>
 <div class="layout">
-<aside class="sidebar" aria-label="サイドバー">
-{BRAND}
-{search_box('side')}
-<nav class="nav" aria-label="ドキュメント">{nav}</nav>
-<p class="side-foot"><a class="ext" href="{REPO_URL}">GitHub</a><a class="ext" href="{GITLAB_URL}">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+<aside class="sidebar" aria-label="{ui["sidebar"]}">
+{brand}
+{lang_link(page, 'side-lang')}
+{search_box('side', ui)}
+<nav class="nav" aria-label="{ui["docs"]}">{nav}</nav>
+<p class="side-foot"><a class="ext" href="{REPO_URL}">GitHub</a><a class="ext" href="{GITLAB_URL}">GitLab</a><a href="demo.html">{ui["demo"]}</a></p>
 </aside>
 <main id="main" class="main">
 <article class="doc">
@@ -646,15 +717,16 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 </div>
 </article>
 {pager}
-<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="{edit}">このページの元の文書（GitHub）</a></p></footer>
+<footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="{edit}">{ui["source"]}</a></p></footer>
 </main>
 </div>
-<dialog class="menu" id="menu" aria-label="目次">
-<div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる">{ICON_CLOSE}</button></div>
+<dialog class="menu" id="menu" aria-label="{ui["menu"]}">
+<div class="menu-head"><p class="menu-title">{ui["menu"]}</p><button class="menu-close" type="button" data-close-menu aria-label="{ui["close"]}">{ICON_CLOSE}</button></div>
 <div class="menu-body">
-{search_box('menu')}
-<nav class="nav" aria-label="ドキュメント">{nav}</nav>
-<p class="side-foot"><a class="ext" href="{REPO_URL}">GitHub</a><a class="ext" href="{GITLAB_URL}">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
+{lang_link(page, 'side-lang')}
+{search_box('menu', ui)}
+<nav class="nav" aria-label="{ui["docs"]}">{nav}</nav>
+<p class="side-foot"><a class="ext" href="{REPO_URL}">GitHub</a><a class="ext" href="{GITLAB_URL}">GitLab</a><a href="demo.html">{ui["demo"]}</a></p>
 </div>
 </dialog>
 </body>
@@ -695,20 +767,21 @@ def write(rel, text):
 
 
 def main():
-    index = []
-    built = []
-    for page in PAGES:
-        title, lead, body, ctx = build_top(page) if page['key'] == 'top' else build_doc(page)
-        built.append((page, title, lead, body, ctx))
-        index += search_entries(page, title, (lead + '\n' if page['key'] != 'top' else '') + body, ctx)
-    write('site/search.json', json.dumps(index, ensure_ascii=False, separators=(',', ':')))
-    _hashes.pop('site/search.json', None)
     pages = {}
-    for k, (page, title, lead, body, ctx) in enumerate(built):
-        prev_page = PAGES[k - 1] if k > 0 else None
-        next_page = PAGES[k + 1] if k + 1 < len(PAGES) else None
-        pages[page['out']] = layout(page, title, lead, body, ctx, prev_page, next_page)
-        write(page['out'], pages[page['out']])
+    for lang, lang_pages in LANGS.items():
+        index = []
+        built = []
+        for page in lang_pages:
+            title, lead, body, ctx = build_top(page) if page['key'] == 'top' else build_doc(page)
+            built.append((page, title, lead, body, ctx))
+            index += search_entries(page, title, (lead + '\n' if page['key'] != 'top' else '') + body, ctx)
+        write(UI[lang]['index'], json.dumps(index, ensure_ascii=False, separators=(',', ':')))
+        _hashes.pop(UI[lang]['index'], None)
+        for k, (page, title, lead, body, ctx) in enumerate(built):
+            prev_page = lang_pages[k - 1] if k > 0 else None
+            next_page = lang_pages[k + 1] if k + 1 < len(lang_pages) else None
+            pages[page['out']] = layout(page, title, lead, body, ctx, prev_page, next_page)
+            write(page['out'], pages[page['out']])
     # Links to a heading that is not there (renamed in a README) are reported, not fixed.
     ids = {out: set(html.unescape(i) for i in re.findall(r'\bid="([^"]+)"', h)) for out, h in pages.items()}
     broken = 0

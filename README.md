@@ -1,5 +1,7 @@
 # NagiSeries
 
+日本語 | [English](README.en.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 個人サイトのための、小さな道具のシリーズです。どれもデータベースや外部サービスを使わず、自分のサイトに置くだけで動きます。
@@ -10,7 +12,7 @@
 | **NagiManga** | タグを 1 つ貼るだけで開く漫画ビューアーと、データベースのいらない管理画面 | PHP 8.1 以上（FTP だけで置くこともできます） | [manga/README.md](manga/README.md) |
 | **NagiLog** | 文章・画像・漫画を、自分のサイトへ投稿できる個人用LOG | NagiManga と同じ設置 | [manga/README-LOG.md](manga/README-LOG.md) |
 
-[**ドキュメントサイト（Cloudflare Pages）**](https://nagiswipe.pages.dev/) — 3 つの説明をまとめて、目次と検索つきで読めます。
+[**ドキュメントサイト（Cloudflare Pages）**](https://nagiswipe.pages.dev/) — 3 つの説明をまとめて、目次と検索つきで読めます（[英語版](https://nagiswipe.pages.dev/index.en.html)もあります）。
 
 デモ: [NagiSwipe](https://nagiswipe.pages.dev/demo.html) ／ [NagiManga](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る） ／ [NagiLog](https://notebook.lichiphen.com/nagimanga/)（作者が実際に使っている LOG）
 
@@ -37,7 +39,7 @@ JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポ
 - **ドロップイン導入**: JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。
 - **モバイル最適化**: スワイプ、ピンチズーム、ダブルタップに対応。
 - **軽量・高速**: 依存ライブラリなし。
-- **スムーズな操作感**: サムネイルから拡大して開き、サムネイルへ縮んで閉じる。スワイプ中は前後の画像も指に追従。
+- **スムーズな操作感**: サムネイルから拡大して開き、サムネイルへ縮んで閉じる。スワイプ中は前後の画像も指に追従。拡大した画像をタップでフィットへ戻す動きは、ピンチと同じく1コマずつ描くので、Android・iPhoneでも途中で欠けません（v1.3.2〜）。
 - **慣性スクロール**: ズーム中は指を離しても滑り、画像の端で跳ね返る。素早く払えば短い距離でもページ送り。
 - **サムネイル先出し**: 高画質版が届くまではページ上のサムネイルを表示。前後の画像も先に読み込み。
 - **キャプション標準搭載**: 画像の `alt` などを画面下部に表示。
@@ -139,6 +141,7 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https:
 - スマホからの投稿、下書き、画像の差し替え、漫画カード
 - カテゴリ、ハッシュタグ、検索、関連記事、いいね、RSS・サイトマップ
 - 閲覧注意（センシティブ・R-18・R-18G）、ライト 3 種類・ダーク 3 種類のデザイン
+- 動画と音声（波形のプレーヤー、つなぎ目のないループ再生、曲へのジャケットとループ位置の書き込み、動画の自動再生・くり返しの設定）
 
 ![NagiLogのトップ（パソコン）](manga/docs/images/log-pc.jpg)
 
@@ -146,13 +149,13 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@bbce2be/NagiSwipe-main.js https:
 
 ## ドキュメントサイト
 
-https://nagiswipe.pages.dev/ は、この README・[manga/README.md](manga/README.md)・[manga/README-LOG.md](manga/README-LOG.md)・[manga/docs/overview.md](manga/docs/overview.md) から作っています。文章を直すときは README を編集し、次のコマンドでページを作り直してから、一緒にコミットしてください（Python 3 の標準ライブラリだけで動きます）。
+https://nagiswipe.pages.dev/ は、この README・[manga/README.md](manga/README.md)・[manga/README-LOG.md](manga/README-LOG.md)・[manga/docs/overview.md](manga/docs/overview.md) から作っています。英語のページ（`nagilog.en.html` など）は、それぞれの `.en.md`（[README.en.md](README.en.md) など）から作ります。文章を直すときは README を編集し、次のコマンドでページを作り直してから、一緒にコミットしてください（Python 3 の標準ライブラリだけで動きます）。
 
 ```bash
 python site/build.py
 ```
 
-ページの元になるファイルは [`site/`](site/) にあります（トップページの文章は `site/top.html`、見た目は `site/site.css`）。サイトのファイルは、NagiManga の配布 ZIP や GitHub のソースコードの ZIP には含めません。
+ページの元になるファイルは [`site/`](site/) にあります（トップページの文章は `site/top.html` と英語の `site/top.en.html`、見た目は `site/site.css`）。各ページの上の「English」「日本語」で、同じページのもう一方の言語へ移れます。サイトのファイルは、NagiManga の配布 ZIP や GitHub のソースコードの ZIP には含めません。
 
 ## 権利・免責事項：掲載画像について
 本プロジェクトのデモ（`demo.html`等）で使用されている画像について：

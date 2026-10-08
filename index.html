@@ -6,10 +6,14 @@
 <title>NagiSeries — 画像・漫画・LOG のツール集</title>
 <meta name="description" content="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。">
 <link rel="canonical" href="https://nagiswipe.pages.dev/">
+<link rel="alternate" hreflang="en" href="https://nagiswipe.pages.dev/index.en.html">
+<link rel="alternate" hreflang="ja" href="https://nagiswipe.pages.dev/">
+<link rel="alternate" hreflang="x-default" href="https://nagiswipe.pages.dev/">
 <meta name="theme-color" content="#fbfcfc" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0e1316" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="NagiSeries">
+<meta property="og:locale" content="ja_JP">
 <meta property="og:title" content="NagiSeries — 画像・漫画・LOG のツール集">
 <meta property="og:description" content="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。">
 <meta property="og:url" content="https://nagiswipe.pages.dev/">
@@ -17,19 +21,21 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
 <link rel="stylesheet" href="NagiSwipe-main.css?v=1dd410256a">
-<link rel="stylesheet" href="site/site.css?v=66c59baafa">
-<script src="NagiSwipe-main.js?v=4a8e71b0b1" defer></script>
-<script src="site/site.js?v=6effaf50c2" data-index="site/search.json?v=5d9b480b35" defer></script>
+<link rel="stylesheet" href="site/site.css?v=4749867e1b">
+<script src="NagiSwipe-main.js?v=e1bf6a99c2" defer></script>
+<script src="site/site.js?v=8418041182" data-index="site/search.json?v=ee67f81e6c" defer></script>
 </head>
 <body class="page-top">
 <a class="skip" href="#main">本文へ移動</a>
 <header class="topbar">
 <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
-<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>目次</span></button>
+<span class="topbar-tools"><a class="topbar-btn topbar-lang" href="index.en.html" hreflang="en" lang="en" title="このページを英語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>English</span></a>
+<button class="topbar-btn" type="button" data-open-menu aria-haspopup="dialog" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>目次</span></button></span>
 </header>
 <div class="layout">
 <aside class="sidebar" aria-label="サイドバー">
 <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
+<a class="side-lang" href="index.en.html" hreflang="en" lang="en" title="このページを英語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>English</span></a>
 <div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
 <nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.html" aria-current="page"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a><ol class="nav-toc"><li><a href="#3-つのツール" data-id="3-つのツール">3 つのツール</a></li><li><a href="#どれを使えばいい" data-id="どれを使えばいい">どれを使えばいい？</a></li><li><a href="#3-つの関係" data-id="3-つの関係">3 つの関係</a></li><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#入手する" data-id="入手する">入手する</a></li><li><a href="#権利免責事項掲載画像について" data-id="権利免責事項掲載画像について">権利・免責事項：掲載画像について</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
 <p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>
@@ -82,8 +88,8 @@
 <p class="card-kind">個人用LOG（データベース不要）</p>
 <ul>
 <li>文章・画像・漫画を、自分のサイトへスマホからでも投稿できます</li>
-<li>カテゴリ、ハッシュタグ、検索、6 種類のデザイン、RSS</li>
-<li>閲覧注意（センシティブ・R-18・R-18G）の設定</li>
+<li>動画と音声：波形のプレーヤー、つなぎ目のないループ、ジャケットとループ位置</li>
+<li>カテゴリ、ハッシュタグ、検索、6 種類のデザイン、RSS、閲覧注意</li>
 </ul>
 <div class="card-links"><a class="btn btn-primary" href="nagilog.html">ドキュメント</a><a class="btn ext" href="https://notebook.lichiphen.com/nagimanga/">デモ</a></div>
 </div>
@@ -141,6 +147,7 @@
 <dialog class="menu" id="menu" aria-label="目次">
 <div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
 <div class="menu-body">
+<a class="side-lang" href="index.en.html" hreflang="en" lang="en" title="このページを英語で読む"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>English</span></a>
 <div class="search" data-search-box><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="search" placeholder="ドキュメントを検索" aria-label="ドキュメントを検索" autocomplete="off" enterkeyhint="search"><kbd class="search-key" aria-hidden="true">/</kbd></label><div class="search-results" role="list" aria-label="検索結果" hidden></div></div>
 <nav class="nav" aria-label="ドキュメント"><ul class="nav-list"><li class="nav-item is-current"><a class="nav-link" href="index.html" aria-current="page"><span class="nav-name">トップ</span><span class="nav-sub">NagiSeries について</span></a><ol class="nav-toc"><li><a href="#3-つのツール" data-id="3-つのツール">3 つのツール</a></li><li><a href="#どれを使えばいい" data-id="どれを使えばいい">どれを使えばいい？</a></li><li><a href="#3-つの関係" data-id="3-つの関係">3 つの関係</a></li><li><a href="#デモ" data-id="デモ">デモ</a></li><li><a href="#入手する" data-id="入手する">入手する</a></li><li><a href="#権利免責事項掲載画像について" data-id="権利免責事項掲載画像について">権利・免責事項：掲載画像について</a></li><li><a href="#ライセンス" data-id="ライセンス">ライセンス</a></li></ol></li><li class="nav-item"><a class="nav-link" href="nagiswipe.html"><span class="nav-name">NagiSwipe</span><span class="nav-sub">画像ポップアップ</span></a></li><li class="nav-item"><a class="nav-link" href="nagimanga.html"><span class="nav-name">NagiManga</span><span class="nav-sub">漫画ビューアー</span></a></li><li class="nav-item"><a class="nav-link" href="nagilog.html"><span class="nav-name">NagiLog</span><span class="nav-sub">個人用LOG</span></a></li><li class="nav-item"><a class="nav-link" href="guide.html"><span class="nav-name">手引き</span><span class="nav-sub">開発者でない方へ</span></a></li></ul></nav>
 <p class="side-foot"><a class="ext" href="https://github.com/Lichiphen/NagiSwipe">GitHub</a><a class="ext" href="https://gitlab.com/lichiphen/nagiswipe">GitLab</a><a href="demo.html">NagiSwipe デモ</a></p>

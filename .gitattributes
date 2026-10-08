@@ -6,6 +6,11 @@
 /nagimanga.html export-ignore
 /nagilog.html export-ignore
 /guide.html export-ignore
+/index.en.html export-ignore
+/nagiswipe.en.html export-ignore
+/nagimanga.en.html export-ignore
+/nagilog.en.html export-ignore
+/guide.en.html export-ignore
 /sitemap.xml export-ignore
 /_headers export-ignore
 /.gitlab-ci.yml export-ignore

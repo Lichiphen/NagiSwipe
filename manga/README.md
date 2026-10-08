@@ -1,11 +1,13 @@
 # NagiManga（漫画ビューアー）
 
+日本語 | [English](README.en.md)
+
 NagiSeries（[NagiSwipe](../README.md#nagiswipe)・NagiManga・[NagiLog](README-LOG.md)）の漫画ビューアーです。
 
 ブログやサイトに **タグを 1 つ貼るだけ** で、クリックしたときに漫画ビューアーが開きます。作品の管理は、データベースのいらない小さな管理画面（PHP）で行います。
 
 v0.4.0 から、文章・画像・漫画を投稿できる個人用LOG「NagiLog」を同梱しています。
-スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。
+スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。v0.6.0 からは、動画と音声も投稿できます。
 使い方、メリット・デメリット、設置と検証結果は [NagiLog の README](README-LOG.md) にまとめています。
 
 <!-- TOC -->
@@ -367,7 +369,7 @@ python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip�
 python dev/i18n_test.py    # 管理画面の訳（server/lib/lang/*.json）に漏れがないか確かめる
 ```
 
-README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md manga/README.md` のあと `python site/build.py`）。
+README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md` のあと `python site/build.py`）。
 
 リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
 
