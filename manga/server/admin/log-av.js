@@ -755,16 +755,28 @@
                 if (!(a >= 0) || !(b > a) || b > audio.duration + 0.001) return null;
                 return [a, Math.min(b, audio.duration)];
             };
-            const position = () => { if (!source) return from; const at = from + ctx.currentTime - startedAt; const r = on.checked && source.loop ? [source.loopStart, source.loopEnd] : null; return r && at >= r[1] ? r[0] + (at - r[1]) % (r[1] - r[0]) : Math.min(at, audio.duration); };
-            const tick = () => { now.textContent = clock(position()); bar.value = String(position()); frame = source ? requestAnimationFrame(tick) : 0; };
+            // The sound plays the loop only once it is inside it: started after the loop's end (the bar moved
+            // past it), it plays the rest of the song first and then goes to the loop's start. Web Audio would
+            // otherwise wrap a start past the loop back into it at once, and the bar would show another place.
+            let looped = null, tail = false, scrubbing = false;
+            const position = () => {
+                if (!source) return from;
+                const at = from + ctx.currentTime - startedAt;
+                if (looped && !tail && at >= looped[1]) return looped[0] + (at - looped[1]) % (looped[1] - looped[0]);
+                return Math.min(at, audio.duration);
+            };
+            // The bar follows the sound, except while a finger or the mouse holds it.
+            const tick = () => { now.textContent = clock(position()); if (!scrubbing) bar.value = String(position()); frame = source ? requestAnimationFrame(tick) : 0; };
             const stopSound = () => { if (source) { source.onended = null; try { source.stop(); } catch { /* not started */ } source = null; } cancelAnimationFrame(frame); frame = 0; playButton.textContent = t('再生'); };
             const startSound = at => {
                 stopSound();
-                source = ctx.createBufferSource(); source.buffer = audio; source.connect(ctx.destination);
-                const r = on.checked ? range() : null;
-                if (r) { source.loop = true; source.loopStart = r[0]; source.loopEnd = r[1]; }
-                source.onended = () => { from = 0; stopSound(); tick(); };
-                ctx.resume?.(); source.start(0, at); startedAt = ctx.currentTime; from = at;
+                const node = ctx.createBufferSource(); node.buffer = audio; node.connect(ctx.destination);
+                looped = on.checked ? range() : null;
+                tail = !!looped && at >= looped[1];
+                if (looped && !tail) { node.loop = true; node.loopStart = looped[0]; node.loopEnd = looped[1]; }
+                node.onended = () => { if (source !== node) return; if (tail) startSound(looped[0]); else { from = 0; stopSound(); tick(); } };
+                source = node;
+                ctx.resume?.(); node.start(0, at); startedAt = ctx.currentTime; from = at;
                 playButton.textContent = t('一時停止'); tick();
             };
             playButton.addEventListener('click', async () => { await ready; if (source) { from = position(); stopSound(); } else startSound(from >= audio.duration ? 0 : from); });
@@ -775,7 +787,10 @@
                 shell.say('');
                 startSound(Math.max(r[0], r[1] - 3));
             });
-            bar.addEventListener('input', async () => { await ready; const at = +bar.value; if (source) startSound(at); else { from = at; tick(); } });
+            // Moving the bar shows the time; the sound moves there when it is let go (no stutter while dragging).
+            bar.addEventListener('pointerdown', () => { scrubbing = true; });
+            bar.addEventListener('input', () => { now.textContent = clock(+bar.value); });
+            bar.addEventListener('change', async () => { scrubbing = false; await ready; const at = +bar.value; if (source) startSound(at); else { from = at; tick(); } });
             startHere.addEventListener('click', () => { if (audio) startBox.value = clock(position()); });
             endHere.addEventListener('click', () => { if (audio) endBox.value = clock(position()); });
             [startBox, endBox].forEach(box => box.addEventListener('change', () => { if (source && source.loop) startSound(position()); }));

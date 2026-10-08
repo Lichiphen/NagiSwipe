@@ -109,10 +109,14 @@
             if (a >= b - 0.01) { a = 0; b = length; }
             return [a, b];
         };
+        // Started after a marked loop's end (a seek into the outro): the rest of the song once, then the loop.
+        // Web Audio would wrap such a start back into the loop at once, away from where the reader seeked.
+        let tail = false;
         const position = () => {
             if (!playing) return offset;
             const [a, b] = span();
             const at = offset + context.currentTime - startedAt;
+            if (tail) return Math.min(at, buffer.duration);
             return at < b ? at : a + (at - b) % (b - a);
         };
         const stop = () => {
@@ -122,11 +126,14 @@
         function start(at) {
             stop();
             const [a, b] = span();
-            if (at >= b || at < 0) at = a;
-            source = context.createBufferSource();
-            source.buffer = buffer; source.loop = true; source.loopStart = a; source.loopEnd = b;
-            source.connect(context.destination);
-            source.start(0, at);
+            if (at >= buffer.duration - 0.01 || at < 0) at = a;
+            tail = at >= b;
+            const node = context.createBufferSource();
+            node.buffer = buffer; node.loop = !tail; node.loopStart = a; node.loopEnd = b;
+            if (tail) node.onended = () => { if (source === node && playing) start(a); };
+            node.connect(context.destination);
+            source = node;
+            node.start(0, at);
             startedAt = context.currentTime; offset = at; playing = true;
             ticker = setInterval(() => emit('timeupdate'), 100);
         }
