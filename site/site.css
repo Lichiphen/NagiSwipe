@@ -190,7 +190,7 @@ svg { display: block; }
 /* ---- document ---- */
 /* Breadcrumb: one soft pill, house icon > this page (same look as NagiLog). */
 .breadcrumb { display: flex; margin: 0 0 14px; font-size: 12.5px; line-height: 1.4; }
-.breadcrumb ol { display: flex; align-items: center; min-width: 0; max-width: 100%; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); box-shadow: var(--shadow); }
+.doc .breadcrumb ol { display: flex; align-items: center; min-width: 0; max-width: 100%; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); box-shadow: var(--shadow); }
 .breadcrumb li { display: flex; align-items: center; flex: none; min-width: 0; }
 .breadcrumb li:last-child { flex: 0 1 auto; }
 .crumb { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 11px; border-radius: 999px; color: var(--muted); font-weight: 600; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
