@@ -1,3 +1,5 @@
+![NagiManga — タグ 1 つで、ブログに漫画ビューアー](../img/ogp/nagimanga-ogp.png)
+
 **日本語** | [English](README.en.md)
 
 # NagiManga（漫画ビューアー）

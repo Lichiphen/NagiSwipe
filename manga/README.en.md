@@ -1,3 +1,5 @@
+![NagiManga — a manga viewer for your blog, from a single tag](../img/ogp/nagimanga-ogp.en.png)
+
 [日本語](README.md) | **English**
 
 # NagiManga (manga viewer)

@@ -1,3 +1,5 @@
+![NagiSeries — 個人サイトのための、画像・漫画・LOG のツール集](img/ogp/nagiseries-ogp.png)
+
 **日本語** | [English](README.en.md)
 
 # NagiSeries

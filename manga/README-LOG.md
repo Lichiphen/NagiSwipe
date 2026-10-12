@@ -1,3 +1,5 @@
+![NagiLog — 書いて、貼って、ゆるっと公開。](../img/ogp/nagilog-ogp.png)
+
 **日本語** | [English](README-LOG.en.md)
 
 # NagiLog（個人用LOG）

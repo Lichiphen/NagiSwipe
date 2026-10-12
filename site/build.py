@@ -44,7 +44,7 @@ PAGES_JA = [
     dict(key="top", out="index.html", nav="トップ", sub="NagiSeries について",
          title="NagiSeries", src="README.md", top="site/top.html", sections=["権利・免責事項", "ライセンス"],
          desc="NagiSwipe・NagiManga・NagiLog のドキュメント。個人サイトのための、画像ポップアップ・漫画ビューアー・データベース不要の LOG。",
-         ogp="img/ogp/nagiswipe-ogp.png"),
+         ogp="img/ogp/nagiseries-ogp.png"),
     dict(key="nagiswipe", out="nagiswipe.html", nav="NagiSwipe", sub="画像ポップアップ",
          src="README.md", unwrap="NagiSwipe", hero="img/ogp/nagiswipe-ogp.svg", gallery=True,
          desc="JS と CSS を読み込むだけで動く、軽量な画像ポップアップギャラリー NagiSwipe の導入方法とオプション。",
@@ -66,24 +66,24 @@ PAGES_EN = [
     dict(key="top", out="index.en.html", nav="Top", sub="About NagiSeries",
          title="NagiSeries", src="README.en.md", top="site/top.en.html", sections=["Rights and disclaimer", "License"],
          desc="Documentation of NagiSwipe, NagiManga and NagiLog: an image popup, a manga viewer and a log without a database, for personal websites.",
-         ogp="img/ogp/nagiswipe-ogp.png"),
+         ogp="img/ogp/nagiseries-ogp.en.png"),
     dict(key="nagiswipe", out="nagiswipe.en.html", nav="NagiSwipe", sub="Image popup",
-         src="README.en.md", unwrap="NagiSwipe", hero="img/ogp/nagiswipe-ogp.svg", gallery=True,
+         src="README.en.md", unwrap="NagiSwipe", hero="img/ogp/nagiswipe-ogp.en.svg", gallery=True,
          desc="How to start with NagiSwipe, a light image popup gallery that works by loading one JS and one CSS file, and its options.",
-         ogp="img/ogp/nagiswipe-ogp.png"),
+         ogp="img/ogp/nagiswipe-ogp.en.png"),
     dict(key="nagimanga", out="nagimanga.en.html", nav="NagiManga", sub="Manga viewer",
-         src="manga/README.en.md", hero="img/ogp/nagimanga-ogp.svg", skip=["Development"],
+         src="manga/README.en.md", hero="img/ogp/nagimanga-ogp.en.svg", skip=["Development"],
          desc="Installing NagiManga, a manga viewer that opens from a single tag, its admin panel and its features.",
-         ogp="img/ogp/nagimanga-ogp.png"),
+         ogp="img/ogp/nagimanga-ogp.en.png"),
     dict(key="nagilog", out="nagilog.en.html", nav="NagiLog", sub="Personal log",
-         src="manga/README-LOG.en.md", hero="img/ogp/nagilog-ogp.svg",
+         src="manga/README-LOG.en.md", hero="img/ogp/nagilog-ogp.en.svg",
          skip=["Keep using it locally", "Tests and what remains to be checked", "Sources and writing"],
          desc="How to use and set up NagiLog, which posts text, pictures, manga, video and audio to your own site without a database.",
-         ogp="img/ogp/nagilog-ogp.png"),
+         ogp="img/ogp/nagilog-ogp.en.png"),
     dict(key="guide", out="guide.en.html", nav="Guide", sub="For non-developers",
-         src="manga/docs/overview.en.md", hero="img/ogp/nagimanga-ogp.svg",
+         src="manga/docs/overview.en.md", hero="img/ogp/nagimanga-ogp.en.svg",
          desc="A guide for people deciding whether to use NagiManga, or wanting to use it for years.",
-         ogp="img/ogp/nagimanga-ogp.png"),
+         ogp="img/ogp/nagimanga-ogp.en.png"),
 ]
 LANGS = {"ja": PAGES_JA, "en": PAGES_EN}
 PAGES = PAGES_JA + PAGES_EN
@@ -744,7 +744,7 @@ ICON_CRUMB_SEP = ('<svg class="crumb-sep" viewBox="0 0 24 24" aria-hidden="true"
 
 def breadcrumb(page, home, url, ui):
     """The breadcrumb (house icon + NagiSeries > this page, as in NagiLog) and the same steps as schema.org BreadcrumbList JSON-LD."""
-    steps = [('NagiSeries', home, SITE_URL), (page['nav'], None, url)]
+    steps = [('NagiSeries', home, SITE_URL + ('' if home == 'index.html' else home)), (page['nav'], None, url)]
     items = ''
     for i, (name, href, _) in enumerate(steps):
         label = (ICON_CRUMB_HOME if i == 0 else '') + f'<span>{esc(name)}</span>'

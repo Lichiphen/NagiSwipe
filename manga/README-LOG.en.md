@@ -1,3 +1,5 @@
+![NagiLog — write it, paste it, post it.](../img/ogp/nagilog-ogp.en.png)
+
 [日本語](README-LOG.md) | **English**
 
 # NagiLog (personal log)
