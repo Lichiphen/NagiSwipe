@@ -103,7 +103,7 @@ PAGE_OF_SRC = {"README.md": "nagiswipe.html", "manga/README.md": "nagimanga.html
 UI = {
     "ja": dict(anchor="この見出しへのリンク", search="ドキュメントを検索", results="検索結果",
                top_title="NagiSeries — 画像・漫画・LOG のツール集", prev="前へ", next="次へ", pager="ページ送り",
-               toc="このページの目次", skip="本文へ移動", menu="目次", sidebar="サイドバー", docs="ドキュメント",
+               toc="このページの目次", crumbs="パンくずリスト", skip="本文へ移動", menu="目次", sidebar="サイドバー", docs="ドキュメント",
                demo="NagiSwipe デモ", source="このページの元の文書（GitHub）", close="閉じる",
                other="English", other_label="このページを英語で読む", index="site/search.json",
                try_title="ここで試す", try_note="画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。",
@@ -111,7 +111,7 @@ UI = {
                alerts=dict(note="補足", tip="ヒント", important="重要", warning="注意", caution="警告"), more="くわしく見る"),
     "en": dict(anchor="Link to this heading", search="Search the documentation", results="Search results",
                top_title="NagiSeries — tools for pictures, manga and logs", prev="Previous", next="Next", pager="Pages",
-               toc="On this page", skip="Skip to the content", menu="Contents", sidebar="Sidebar", docs="Documentation",
+               toc="On this page", crumbs="Breadcrumb", skip="Skip to the content", menu="Contents", sidebar="Sidebar", docs="Documentation",
                demo="NagiSwipe demo", source="The source of this page (GitHub)", close="Close",
                other="日本語", other_label="このページを日本語で読む", index="site/search.en.json",
                try_title="Try it here", try_note="Press a picture to open it in NagiSwipe. Swipe, pinch and double tap it.",
@@ -737,6 +737,26 @@ def lang_link(page, cls):
             f'title="{ui["other_label"]}">{ICON_LANG}<span>{ui["other"]}</span></a>')
 
 
+ICON_CRUMB_HOME = ('<svg class="crumb-home" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+                   '<path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg>')
+ICON_CRUMB_SEP = ('<svg class="crumb-sep" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6"/></svg>')
+
+
+def breadcrumb(page, home, url, ui):
+    """The breadcrumb (house icon + NagiSeries > this page, as in NagiLog) and the same steps as schema.org BreadcrumbList JSON-LD."""
+    steps = [('NagiSeries', home, SITE_URL), (page['nav'], None, url)]
+    items = ''
+    for i, (name, href, _) in enumerate(steps):
+        label = (ICON_CRUMB_HOME if i == 0 else '') + f'<span>{esc(name)}</span>'
+        inner = f'<a class="crumb" href="{href}">{label}</a>' if href else f'<span class="crumb">{label}</span>'
+        items += f'<li{"" if href else " aria-current=\"page\""}>{ICON_CRUMB_SEP if i else ""}{inner}</li>'
+    data = {'@context': 'https://schema.org', '@type': 'BreadcrumbList',
+            'itemListElement': [{'@type': 'ListItem', 'position': i + 1, 'name': n, 'item': u} for i, (n, _, u) in enumerate(steps)]}
+    js = json.dumps(data, ensure_ascii=False).replace('<', '\\u003c')
+    return (f'<nav class="breadcrumb" aria-label="{ui["crumbs"]}"><ol>{items}</ol></nav>',
+            f'<script type="application/ld+json">{js}</script>\n')
+
+
 def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     ui = UI[page['lang']]
     title_text = plain(re.sub(r'<[^>]+>', '', title_html))
@@ -744,14 +764,14 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     nav = nav_html(page['key'], ctx.headings, page['lang'])
     home = LANGS[page['lang']][0]['out']
     toc = toc_html(ctx.headings, 'toc-list')
-    crumbs = '' if page['key'] == 'top' else f'<p class="crumbs"><a href="{home}">NagiSeries</a><span aria-hidden="true">/</span>{esc(page["nav"])}</p>'
+    url = SITE_URL + ('' if page['out'] == 'index.html' else page['out'])
+    crumbs, crumbs_json = ('', '') if page['key'] == 'top' else breadcrumb(page, home, url, ui)
     pager = ''
     if prev_page or next_page:
         a = f'<a class="pager-prev" href="{prev_page["out"]}"><span>{ui["prev"]}</span>{esc(prev_page["nav"])}</a>' if prev_page else '<span></span>'
         b = f'<a class="pager-next" href="{next_page["out"]}"><span>{ui["next"]}</span>{esc(next_page["nav"])}</a>' if next_page else '<span></span>'
         pager = f'<nav class="pager" aria-label="{ui["pager"]}">{a}{b}</nav>'
     edit = f'{REPO_URL}/blob/{BRANCH}/{page["src"]}' if page['key'] != 'top' else f'{REPO_URL}/blob/{BRANCH}/{page["top"]}'
-    url = SITE_URL + ('' if page['out'] == 'index.html' else page['out'])
     other_out = OTHER[page['out']]
     alt_urls = {page['lang']: url, ('en' if page['lang'] == 'ja' else 'ja'): SITE_URL + ('' if other_out == 'index.html' else other_out)}
     alternates = ''.join(f'<link rel="alternate" hreflang="{k}" href="{v}">\n' for k, v in sorted(alt_urls.items()))
@@ -788,7 +808,7 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 <link rel="icon" href="{asset('site/favicon.svg')}" type="image/svg+xml">
 <link rel="stylesheet" href="{asset('NagiSwipe-main.css')}">
 <link rel="stylesheet" href="{asset('site/site.css')}">
-<script src="{asset('NagiSwipe-main.js')}" defer></script>
+{crumbs_json}<script src="{asset('NagiSwipe-main.js')}" defer></script>
 <script src="{asset('site/site.js')}" data-index="{asset(ui['index'])}" defer></script>
 </head>
 <body class="page-{page['key']}">

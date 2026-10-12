@@ -188,9 +188,21 @@ svg { display: block; }
 .search-empty { padding: 10px; font-size: 13.5px; color: var(--muted); }
 
 /* ---- document ---- */
-.crumbs { margin: 0 0 6px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; }
-.crumbs a { color: var(--muted); text-decoration: none; }
-.crumbs a:hover { color: var(--accent); }
+/* Breadcrumb: one soft pill, house icon > this page (same look as NagiLog). */
+.breadcrumb { display: flex; margin: 0 0 14px; font-size: 12.5px; line-height: 1.4; }
+.breadcrumb ol { display: flex; align-items: center; min-width: 0; max-width: 100%; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); box-shadow: var(--shadow); }
+.breadcrumb li { display: flex; align-items: center; flex: none; min-width: 0; }
+.breadcrumb li:last-child { flex: 0 1 auto; }
+.crumb { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 11px; border-radius: 999px; color: var(--muted); font-weight: 600; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
+.crumb > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.crumb { color: var(--accent); }
+a.crumb:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+a.crumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.breadcrumb li:first-child .crumb { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.breadcrumb [aria-current] .crumb { color: var(--text); }
+.crumb-home { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.crumb-sep { width: 14px; height: 14px; flex: none; margin: 0 1px; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .6; }
+@media (max-width: 600px) { .breadcrumb { font-size: 12px; } .crumb { padding: 5px 9px; gap: 5px; } }
 .doc-title { margin: 0 0 18px; font-size: clamp(26px, 4vw, 34px); line-height: 1.35; letter-spacing: .01em; }
 .lead { font-size: 16.5px; color: var(--text); }
 .lead > p:first-child { margin-top: 0; }
