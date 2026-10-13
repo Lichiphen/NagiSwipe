@@ -714,7 +714,7 @@ def chapters(body, lang):
             inner = inner[lead.end():] if lead else inner
             out.append(f'<h2 {attr}><span class="ch-num" aria-hidden="true">{num:02d}</span>{inner}</h2>')
         else:
-            out.append(f'<details class="sec"><summary><h3 {attr}>{inner}</h3>')
+            out.append(f'<details class="sec" open><summary><h3 {attr}>{inner}</h3>')
             folded = True
     if folded:
         out.append('</summary><div class="sec-body"></div></details>')
@@ -863,9 +863,10 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     body = feature_lists(body)
     if page['key'] != 'top':
         body = chapters(body, page['lang'])
-    folds = '<details class="sec">' in body
+    # The sections start open; the button closes them all first.
+    folds = '<details class="sec"' in body
     fold_btn = (f'<button class="fold-all" type="button" data-fold-all data-open="{ui["open_all"]}" data-close="{ui["close_all"]}">'
-                f'{ui["open_all"]}</button>' if folds else '')
+                f'{ui["close_all"]}</button>' if folds else '')
     many = len([h for h in ctx.headings if h[0] == 2]) >= 2
     toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><div class="toc-head">'
                  f'<p class="toc-title" id="toc-title-{page["key"]}">{ui["toc"]}</p>{fold_btn}</div>{toc}</nav>'

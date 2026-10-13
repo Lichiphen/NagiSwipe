@@ -65,6 +65,7 @@
         syncFoldButtons();
     }));
     folds.forEach((d) => d.addEventListener('toggle', syncFoldButtons));
+    syncFoldButtons();
     // Paper shows everything.
     let printOpened = [];
     window.addEventListener('beforeprint', () => {
