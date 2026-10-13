@@ -21,12 +21,13 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
 <link rel="stylesheet" href="NagiSwipe-main.css?v=b57203b70e">
-<link rel="stylesheet" href="site/site.css?v=0d2facf781">
+<link rel="stylesheet" href="site/site.css?v=fc4ad2bf5f">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiSwipe", "item": "https://nagiswipe.pages.dev/nagiswipe.html"}]}</script>
 <script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=8418041182" data-index="site/search.json?v=3df2807cb7" defer></script>
+<script src="site/site.js?v=da97647d85" data-index="site/search.json?v=3df2807cb7" defer></script>
 </head>
-<body class="page-nagiswipe">
+<body class="page-nagiswipe has-rail">
+<div class="read-progress" aria-hidden="true"><span data-progress></span></div>
 <a class="skip" href="#main">本文へ移動</a>
 <header class="topbar">
 <a class="brand" href="index.html"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--brand-bg)"/><path d="M6 19c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round"/><path d="M6 13c3.3-3.6 6.7-3.6 10 0s6.7 3.6 10 0" fill="none" stroke="var(--brand-wave)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/></svg><span class="brand-name">NagiSeries</span></a>
@@ -46,13 +47,13 @@
 <nav class="breadcrumb" aria-label="パンくずリスト"><ol><li><a class="crumb" href="index.html"><svg class="crumb-home" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg><span>NagiSeries</span></a></li><li aria-current="page"><svg class="crumb-sep" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6"/></svg><span class="crumb"><span>NagiSwipe</span></span></li></ol></nav>
 <h1 class="doc-title">NagiSwipe</h1>
 <figure class="doc-hero"><img src="img/ogp/nagiswipe-ogp.svg?v=3118cf3638" alt="" width="1200" height="630" decoding="async" fetchpriority="high"></figure><div class="lead"><p>JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。モバイルファースト、タッチ操作の快適さを目指しています。<a href="demo.html">デモ</a>で、スワイプやズームを試せます。</p></div><section class="try" aria-labelledby="try-title"><p class="try-title" id="try-title">ここで試す</p><ul class="try-gallery"><li><a class="zoom" href="img/Kyururun.png?v=ace886fd9a" data-ns-width="489" data-ns-height="446"><img src="img/Kyururun.png?v=ace886fd9a" alt="きゅるるん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Fu-n.png?v=1041db46b9" data-ns-width="489" data-ns-height="446"><img src="img/Fu-n.png?v=1041db46b9" alt="ふーん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Shimeshime.png?v=023fcd6aff" data-ns-width="489" data-ns-height="446"><img src="img/Shimeshime.png?v=023fcd6aff" alt="しめしめ（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li></ul><p class="try-note">画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。</p></section>
-<nav class="toc-inline" aria-labelledby="toc-title-nagiswipe"><p class="toc-title" id="toc-title-nagiswipe">このページの目次</p><ol class="toc-list"><li><a href="#特徴" data-id="特徴">特徴</a></li><li><a href="#導入方法" data-id="導入方法">導入方法</a><ol><li><a href="#cdn経由-推奨" data-id="cdn経由-推奨">CDN経由 (推奨)</a></li><li><a href="#使い方" data-id="使い方">使い方</a></li><li><a href="#キャプションv110" data-id="キャプションv110">キャプション（v1.1.0〜）</a></li><li><a href="#オプション" data-id="オプション">オプション</a></li><li><a href="#画像サイズの指定任意" data-id="画像サイズの指定任意">画像サイズの指定（任意）</a></li></ol></li><li><a href="#てがろぐで使う" data-id="てがろぐで使う">てがろぐで使う</a></li></ol></nav>
+<nav class="toc-inline" aria-labelledby="toc-title-nagiswipe"><div class="toc-head"><p class="toc-title" id="toc-title-nagiswipe">このページの目次</p><button class="fold-all" type="button" data-fold-all data-open="すべて開く" data-close="すべて閉じる">すべて開く</button></div><ol class="toc-list"><li><a href="#特徴" data-id="特徴">特徴</a></li><li><a href="#導入方法" data-id="導入方法">導入方法</a><ol><li><a href="#cdn経由-推奨" data-id="cdn経由-推奨">CDN経由 (推奨)</a></li><li><a href="#使い方" data-id="使い方">使い方</a></li><li><a href="#キャプションv110" data-id="キャプションv110">キャプション（v1.1.0〜）</a></li><li><a href="#オプション" data-id="オプション">オプション</a></li><li><a href="#画像サイズの指定任意" data-id="画像サイズの指定任意">画像サイズの指定（任意）</a></li></ol></li><li><a href="#てがろぐで使う" data-id="てがろぐで使う">てがろぐで使う</a></li></ol></nav>
 <div class="doc-body">
-<h2 id="特徴">特徴<a class="anchor" href="#特徴" aria-label="この見出しへのリンク">#</a></h2>
+<h2 id="特徴"><span class="ch-num" aria-hidden="true">01</span>特徴<a class="anchor" href="#特徴" aria-label="この見出しへのリンク">#</a></h2>
 <ul class="feature-list"><li><strong class="feature-name">ドロップイン導入</strong><span>JSとCSSを読み込むだけで、ページ内の画像リンクを自動的にギャラリー化します。</span></li><li><strong class="feature-name">モバイル最適化</strong><span>スワイプ、ピンチズーム、ダブルタップに対応。</span></li><li><strong class="feature-name">軽量・高速</strong><span>依存ライブラリなし。</span></li><li><strong class="feature-name">スムーズな操作感</strong><span>サムネイルから拡大して開き、サムネイルへ縮んで閉じる。スワイプ中は前後の画像も指に追従。拡大した画像をタップでフィットへ戻す動きは、ピンチと同じく1コマずつ描くので、Android・iPhoneでも途中で欠けません（v1.3.2〜）。</span></li><li><strong class="feature-name">慣性スクロール</strong><span>ズーム中は指を離しても滑り、画像の端で跳ね返る。素早く払えば短い距離でもページ送り。</span></li><li><strong class="feature-name">サムネイル先出し</strong><span>高画質版が届くまではページ上のサムネイルを表示。前後の画像も先に読み込み。</span></li><li><strong class="feature-name">キャプション標準搭載</strong><span>画像の <code>alt</code> などを画面下部に表示。</span></li><li><strong class="feature-name">安心設計</strong><span>ブラウザの「戻る」（マウスの戻るボタンやスワイプバックを含む）でビューアーだけを閉じる。自動DOM生成。</span></li></ul>
-<h2 id="導入方法">導入方法<a class="anchor" href="#導入方法" aria-label="この見出しへのリンク">#</a></h2>
+<h2 id="導入方法"><span class="ch-num" aria-hidden="true">02</span>導入方法<a class="anchor" href="#導入方法" aria-label="この見出しへのリンク">#</a></h2>
 <p>HTMLの <code>&lt;head&gt;</code> 内で以下のファイルを読み込んでください。</p>
-<h3 id="cdn経由-推奨">CDN経由 (推奨)<a class="anchor" href="#cdn経由-推奨" aria-label="この見出しへのリンク">#</a></h3>
+<details class="sec"><summary><h3 id="cdn経由-推奨">CDN経由 (推奨)<a class="anchor" href="#cdn経由-推奨" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">jsDelivr を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。</span></summary><div class="sec-body">
 <p><a href="https://www.jsdelivr.com/" class="ext">jsDelivr</a> を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。</p>
 <pre><code class="language-html">&lt;!-- CSS --&gt;
 &lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css&quot;&gt;
@@ -60,14 +61,14 @@
 &lt;!-- JavaScript --&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <div class="callout callout-note" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg><span>補足</span></p><div class="callout-body"><p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p></div></div>
-<h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3>
+</div></details><details class="sec"><summary><h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">ページ内の &lt;a href=&quot;image.jpg&quot;&gt; のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</span></summary><div class="sec-body">
 <p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</p>
-<h3 id="キャプションv110">キャプション（v1.1.0〜）<a class="anchor" href="#キャプションv110" aria-label="この見出しへのリンク">#</a></h3>
+</div></details><details class="sec"><summary><h3 id="キャプションv110">キャプション（v1.1.0〜）<a class="anchor" href="#キャプションv110" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</span></summary><div class="sec-body">
 <p>画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</p>
 <ol><li>リンクの <code>data-ns-caption</code>（空文字を指定するとキャプションなし）</li><li>リンクの <code>data-caption</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>alt</code></li><li>リンクの <code>title</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>title</code></li><li>リンクを含む <code>&lt;figure&gt;</code> の <code>&lt;figcaption&gt;</code></li></ol>
 <pre><code class="language-html">&lt;a href=&quot;photo.jpg&quot;&gt;&lt;img src=&quot;photo-thumb.jpg&quot; alt=&quot;夕暮れの海&quot;&gt;&lt;/a&gt;</code></pre>
 <p>テキストとして表示するので、alt に HTML が含まれていても解釈されません。ズーム中は自動で隠れます。</p>
-<h3 id="オプション">オプション<a class="anchor" href="#オプション" aria-label="この見出しへのリンク">#</a></h3>
+</div></details><details class="sec"><summary><h3 id="オプション">オプション<a class="anchor" href="#オプション" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">OS の「視差効果を減らす」設定（prefers-reduced-motion）が有効な場合は、拡大アニメーションの代わりにフェードになりま…</span></summary><div class="sec-body">
 <pre><code class="language-js">NagiSwipe.init({
     caption: true,        // 下部キャプションを表示（false で無効）
     counter: true,        // 左上の「3 / 12」表示（false で無効）
@@ -75,10 +76,10 @@
     history: true         // ブラウザの「戻る」でビューアーを閉じる（false で無効）
 });</code></pre>
 <p>OS の「視差効果を減らす」設定（<code>prefers-reduced-motion</code>）が有効な場合は、拡大アニメーションの代わりにフェードになります。</p>
-<h3 id="画像サイズの指定任意">画像サイズの指定（任意）<a class="anchor" href="#画像サイズの指定任意" aria-label="この見出しへのリンク">#</a></h3>
+</div></details><details class="sec"><summary><h3 id="画像サイズの指定任意">画像サイズの指定（任意）<a class="anchor" href="#画像サイズの指定任意" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">指定しなくても動きますが、リンクに実画像の幅と高さを書いておくと、読み込み前から正しい大きさで表示できます。</span></summary><div class="sec-body">
 <p>指定しなくても動きますが、リンクに実画像の幅と高さを書いておくと、読み込み前から正しい大きさで表示できます。</p>
 <pre><code class="language-html">&lt;a href=&quot;photo.jpg&quot; data-ns-width=&quot;3000&quot; data-ns-height=&quot;2000&quot;&gt;&lt;img src=&quot;photo-thumb.jpg&quot; alt=&quot;…&quot;&gt;&lt;/a&gt;</code></pre>
-<h2 id="てがろぐで使う">てがろぐで使う<a class="anchor" href="#てがろぐで使う" aria-label="この見出しへのリンク">#</a></h2>
+</div></details><h2 id="てがろぐで使う"><span class="ch-num" aria-hidden="true">03</span>てがろぐで使う<a class="anchor" href="#てがろぐで使う" aria-label="この見出しへのリンク">#</a></h2>
 <p><a href="https://www.nishishi.com/cgi/tegalog/" class="ext">てがろぐ</a> では、スキンのファイルを書き換えなくても、管理画面で設定するだけで NagiSwipe を使えます。</p>
 <ol><li>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開きます。</li><li>「<strong>他のスクリプトを使う：URLを指定</strong>」を選び、次の 2 つをコピーして貼り付け、保存します。
 <ul><li>「JavaScriptのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js</code></li><li>「CSSのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css</code></li></ul></li></ol>
@@ -93,6 +94,7 @@
 <nav class="pager" aria-label="ページ送り"><a class="pager-prev" href="index.html"><span>前へ</span>トップ</a><a class="pager-next" href="nagimanga.html"><span>次へ</span>NagiManga</a></nav>
 <footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="https://github.com/Lichiphen/NagiSwipe/blob/main/README.md">このページの元の文書（GitHub）</a></p></footer>
 </main>
+<aside class="rail" aria-labelledby="rail-title"><div class="rail-inner"><p class="rail-title" id="rail-title">このページの目次</p><div class="rail-progress" aria-hidden="true"><span data-progress></span></div><nav aria-labelledby="rail-title"><ol class="rail-toc"><li><a href="#特徴" data-id="特徴">特徴</a></li><li><a href="#導入方法" data-id="導入方法">導入方法</a><ol><li><a href="#cdn経由-推奨" data-id="cdn経由-推奨">CDN経由 (推奨)</a></li><li><a href="#使い方" data-id="使い方">使い方</a></li><li><a href="#キャプションv110" data-id="キャプションv110">キャプション（v1.1.0〜）</a></li><li><a href="#オプション" data-id="オプション">オプション</a></li><li><a href="#画像サイズの指定任意" data-id="画像サイズの指定任意">画像サイズの指定（任意）</a></li></ol></li><li><a href="#てがろぐで使う" data-id="てがろぐで使う">てがろぐで使う</a></li></ol></nav><p class="rail-tools"><button class="fold-all" type="button" data-fold-all data-open="すべて開く" data-close="すべて閉じる">すべて開く</button><a class="rail-top" href="#main">ページの先頭へ</a></p></div></aside>
 </div>
 <dialog class="menu" id="menu" aria-label="目次">
 <div class="menu-head"><p class="menu-title">目次</p><button class="menu-close" type="button" data-close-menu aria-label="閉じる"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>

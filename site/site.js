@@ -1,4 +1,4 @@
-/* NagiSeries documentation site: menu dialog, current heading, search, copy buttons. */
+/* NagiSeries documentation site: menu dialog, folded sections, current heading, reading progress, search, copy buttons. */
 (function () {
     'use strict';
 
@@ -31,11 +31,54 @@
     const onWide = () => { if (wide.matches) closeMenu(); };
     if (wide.addEventListener) wide.addEventListener('change', onWide);
 
-    // ---- current heading in the sidebar ----
+    // ---- folded ### sections ----
+    const folds = Array.from(document.querySelectorAll('details.sec'));
+    // Whatever a link points at (a search hit, a heading in the contents) is opened first.
+    function reveal(id) {
+        const el = id && document.getElementById(id);
+        if (!el) return;
+        let d = el.closest('details');
+        while (d) { d.open = true; d = d.parentElement.closest('details'); }
+    }
+    function revealHash() {
+        if (!location.hash) return;
+        const id = decodeURIComponent(location.hash.slice(1));
+        reveal(id);
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView();
+    }
+    window.addEventListener('hashchange', revealHash);
+    revealHash();
+    // A second click on the same heading link does not fire hashchange.
+    document.addEventListener('click', (e) => {
+        const a = e.target.closest('a[href^="#"]');
+        if (a) reveal(decodeURIComponent(a.getAttribute('href').slice(1)));
+    });
+    const foldButtons = document.querySelectorAll('[data-fold-all]');
+    function syncFoldButtons() {
+        const allOpen = folds.length && folds.every((d) => d.open);
+        foldButtons.forEach((b) => { b.textContent = b.getAttribute(allOpen ? 'data-close' : 'data-open'); });
+    }
+    foldButtons.forEach((b) => b.addEventListener('click', () => {
+        const open = !folds.every((d) => d.open);
+        folds.forEach((d) => { d.open = open; });
+        syncFoldButtons();
+    }));
+    folds.forEach((d) => d.addEventListener('toggle', syncFoldButtons));
+    // Paper shows everything.
+    let printOpened = [];
+    window.addEventListener('beforeprint', () => {
+        printOpened = folds.filter((d) => !d.open);
+        printOpened.forEach((d) => { d.open = true; });
+    });
+    window.addEventListener('afterprint', () => { printOpened.forEach((d) => { d.open = false; }); printOpened = []; });
+
+    // ---- current heading in the sidebar and the rail ----
     const headings = Array.from(document.querySelectorAll('.doc-body h2[id], .doc-body h3[id]'));
     const sidebar = document.querySelector('.sidebar');
+    const rail = document.querySelector('.rail-inner');
     const links = new Map();
-    document.querySelectorAll('.nav-toc a[data-id]').forEach((a) => {
+    document.querySelectorAll('.nav-toc a[data-id], .rail-toc a[data-id]').forEach((a) => {
         const id = a.getAttribute('data-id');
         if (!links.has(id)) links.set(id, []);
         links.get(id).push(a);
@@ -44,12 +87,16 @@
     function setActive(id) {
         if (id === activeId) return;
         activeId = id;
-        document.querySelectorAll('.nav-toc a.is-active').forEach((a) => a.classList.remove('is-active'));
+        document.querySelectorAll('.nav-toc a.is-active, .rail-toc a.is-active').forEach((a) => a.classList.remove('is-active'));
+        // The rail shows the ### of the current chapter only.
+        document.querySelectorAll('.rail-toc > li.is-open').forEach((li) => li.classList.remove('is-open'));
         (links.get(id) || []).forEach((a) => {
             a.classList.add('is-active');
-            // Keep it in view inside the sidebar only (never scroll the page).
-            const box = a.closest('.sidebar');
-            if (box && box === sidebar) {
+            const chapter = a.closest('.rail-toc > li');
+            if (chapter) chapter.classList.add('is-open');
+            // Keep it in view inside the sidebar or the rail only (never scroll the page).
+            const box = a.closest('.sidebar, .rail-inner');
+            if (box && (box === sidebar || box === rail)) {
                 const top = a.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
                 if (top < box.scrollTop + 80 || top > box.scrollTop + box.clientHeight - 80) {
                     box.scrollTop = top - box.clientHeight / 2;
@@ -71,13 +118,24 @@
         }
         setActive(current ? current.id : null);
     }
+    // How far the page has been read.
+    const bars = document.querySelectorAll('[data-progress]');
+    function updateProgress() {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 1;
+        bars.forEach((b) => { b.style.width = (p * 100).toFixed(1) + '%'; });
+    }
     let ticking = false;
     window.addEventListener('scroll', () => {
         if (ticking) return;
         ticking = true;
-        requestAnimationFrame(() => { ticking = false; updateActive(); });
+        requestAnimationFrame(() => { ticking = false; updateActive(); updateProgress(); });
     }, { passive: true });
+    // Opening or closing a section changes the page's height.
+    folds.forEach((d) => d.addEventListener('toggle', () => { updateActive(); updateProgress(); }));
+    window.addEventListener('resize', updateProgress, { passive: true });
     updateActive();
+    updateProgress();
 
     // Words of the page, in its language (the pages are Japanese or English).
     const en = document.documentElement.lang === 'en';

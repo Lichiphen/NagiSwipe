@@ -207,7 +207,40 @@ a.crumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .lead { font-size: 16.5px; color: var(--text); }
 .lead > p:first-child { margin-top: 0; }
 
-.toc-inline { display: none; }
+/* This page's chapters: numbered cards on wide screens, a plain list on narrow ones. */
+.toc-inline {
+    margin: 28px 0 8px; padding: 16px 18px 18px;
+    background: var(--side); border: 1px solid var(--line); border-radius: 14px;
+}
+.toc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.toc-title { margin: 0; font-weight: 700; font-size: 15px; }
+.toc-list, .toc-list ol { list-style: none; margin: 0; padding: 0; }
+.toc-list { counter-reset: toc; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.toc-list > li {
+    counter-increment: toc; margin: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.toc-list a { display: block; color: var(--text); text-decoration: none; line-height: 1.5; }
+.toc-list > li > a { display: flex; align-items: baseline; gap: 8px; height: 100%; padding: 9px 12px; font-size: 14.5px; font-weight: 600; border-radius: 10px; }
+.toc-list > li > a:hover { background: var(--accent-soft); color: var(--text); }
+.toc-list > li > a::before {
+    content: counter(toc, decimal-leading-zero); flex: none;
+    font: 700 11.5px/1.9 var(--mono); color: var(--accent);
+    padding: 0 6px; border-radius: 6px; background: var(--accent-soft);
+}
+.toc-list ol { display: none; }
+.toc-list code { font-family: var(--mono); font-size: .9em; }
+
+.fold-all {
+    flex: none; padding: 4px 12px; font: inherit; font-size: 13px; line-height: 1.6;
+    color: var(--accent); background: var(--surface);
+    border: 1px solid var(--line-strong); border-radius: 999px; cursor: pointer;
+}
+.fold-all:hover { border-color: var(--accent); }
+
+/* Reading progress: a thin line on the top edge (the rail has its own on wide screens). */
+.read-progress { position: fixed; inset: 0 0 auto; height: 3px; z-index: 40; pointer-events: none; }
+.read-progress span, .rail-progress span { display: block; height: 100%; width: 0; background: var(--accent); }
 
 .doc-body h2, .doc-body h3, .doc-body h4 {
     position: relative; line-height: 1.45; scroll-margin-top: 16px;
@@ -429,26 +462,14 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
     .doc-body h2, .doc-body h3, .doc-body h4 { scroll-margin-top: calc(var(--topbar-h) + 12px); }
     .main { padding: 24px 16px 32px; }
 
-    .toc-inline {
-        display: block; margin: 24px 0 8px; padding: 14px 16px 12px;
-        background: var(--side); border: 1px solid var(--line); border-radius: 14px;
-    }
-    .toc-title { margin: 0 0 6px; font-weight: 700; font-size: 15px; }
-    .toc-list, .toc-list ol { list-style: none; margin: 0; padding: 0; }
-    .toc-list { counter-reset: toc; }
-    .toc-list > li { counter-increment: toc; border-top: 1px solid var(--line); margin: 0; }
+    .toc-inline { margin: 24px 0 8px; padding: 14px 16px 12px; }
+    .toc-list { display: block; }
+    .toc-list > li { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
     .toc-list > li:first-child { border-top: 0; }
-    .toc-list a {
-        display: block; padding: 9px 2px; color: var(--text); text-decoration: none;
-        line-height: 1.5; font-size: 15px;
-    }
-    .toc-list > li > a::before {
-        content: counter(toc) "."; display: inline-block; min-width: 2em;
-        color: var(--muted); font-variant-numeric: tabular-nums;
-    }
-    .toc-list ol { margin: -4px 0 6px 2em; }
+    .toc-list > li > a { padding: 9px 2px; font-weight: 400; font-size: 15px; }
+    .toc-list > li > a::before { min-width: 2.4em; background: none; color: var(--muted); padding: 0; }
+    .toc-list ol { display: block; margin: -4px 0 6px 2.4em; }
     .toc-list ol a { padding: 5px 0 5px 12px; font-size: 14px; color: var(--muted); border-left: 1px solid var(--line-strong); }
-    .toc-list code { font-family: var(--mono); font-size: .9em; }
 
     .doc-body h2 { margin-top: 44px; font-size: 21px; }
     .doc-body h3 { font-size: 17.5px; }
@@ -518,3 +539,69 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
 .doc details > .details-body { margin: 12px 16px 14px; }
 .doc details > .details-body > :first-child { margin-top: 0; }
 @media (prefers-reduced-motion: reduce) { .doc details > summary::before { transition: none; } }
+
+/* ---- lessons: numbered ## chapters, ### sections folded under them ---- */
+.ch-num {
+    display: inline-block; min-width: 2.2em; margin-right: .5em; padding: .2em .45em;
+    font: 700 .6em/1.2 var(--mono); letter-spacing: .04em; text-align: center; vertical-align: .3em;
+    color: var(--accent); background: var(--accent-soft); border-radius: 7px;
+}
+.doc details.sec { margin: 10px 0; border-radius: 12px; }
+.doc details.sec + details.sec { margin-top: 8px; }
+.doc details.sec > summary {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 12px;
+    padding: 13px 18px; font-weight: 400;
+}
+.doc details.sec > summary::before { align-self: center; margin: 0 2px 0 0; }
+.doc-body details.sec h3 { margin: 0; font-size: 18px; scroll-margin-top: 16px; }
+.sec-hint { grid-column: 2; margin-top: 2px; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+.doc details.sec[open] .sec-hint { display: none; }
+.doc details.sec > .sec-body { margin: 0; padding: 2px 20px 16px 39px; }
+.doc details.sec > .sec-body > :first-child { margin-top: 12px; }
+.doc details.sec > .sec-body > :last-child { margin-bottom: 4px; }
+
+/* ---- the right rail: this page's contents and progress (wide screens only) ---- */
+.rail { display: none; }
+.rail-inner {
+    position: sticky; top: 0; max-height: 100vh; max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain;
+    padding: 40px 20px 24px 4px; scrollbar-width: thin;
+}
+.rail-title { margin: 0 0 10px; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.rail-progress { height: 4px; margin: 0 0 14px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.rail-toc, .rail-toc ol { list-style: none; margin: 0; padding: 0; }
+.rail-toc { counter-reset: rtoc; border-left: 1px solid var(--line-strong); }
+.rail-toc > li { counter-increment: rtoc; }
+.rail-toc a {
+    display: flex; gap: 8px; margin-left: -1px; padding: 5px 8px 5px 12px;
+    border-left: 2px solid transparent; color: var(--muted); text-decoration: none; font-size: 13.5px; line-height: 1.5;
+}
+.rail-toc > li > a::before { content: counter(rtoc, decimal-leading-zero); flex: none; font: 600 11.5px/1.9 var(--mono); opacity: .7; }
+.rail-toc ol { display: none; }
+.rail-toc li.is-open > ol { display: block; }
+.rail-toc ol a { padding-left: 38px; font-size: 13px; }
+.rail-toc a:hover { color: var(--text); }
+.rail-toc a.is-active { color: var(--accent); border-left-color: var(--accent); font-weight: 650; }
+.rail-toc code { font-size: .92em; background: none; padding: 0; }
+.rail-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 18px 0 0; font-size: 13px; }
+.rail-top { color: var(--muted); text-decoration: none; }
+.rail-top:hover { color: var(--accent); }
+
+@media (min-width: 1240px) {
+    .has-rail { --side-w: 264px; --rail-w: 260px; }
+    .has-rail .layout { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--rail-w); }
+    .has-rail .rail { display: block; }
+    .has-rail .sidebar .nav-toc { display: none; }
+    .has-rail .read-progress { display: none; }
+    .has-rail .main { padding: 40px clamp(28px, 3vw, 56px); }
+    .has-rail .doc, .has-rail .pager, .has-rail .foot { max-width: 800px; }
+    .has-rail .doc { font-size: 16.5px; }
+}
+@media (max-width: 960px) {
+    .doc details.sec > summary { padding: 12px 14px; }
+    .doc details.sec > .sec-body { padding: 2px 14px 14px; }
+    .doc details.sec pre { margin-left: 0; margin-right: 0; border-radius: 10px; }
+    .doc-body details.sec h3 { font-size: 16.5px; scroll-margin-top: calc(var(--topbar-h) + 12px); }
+}
+@media print {
+    .rail, .read-progress, .fold-all, .sec-hint { display: none !important; }
+}

@@ -108,7 +108,8 @@ UI = {
                other="English", other_label="このページを英語で読む", index="site/search.json",
                try_title="ここで試す", try_note="画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。",
                cats=["きゅるるん（猫のイラスト）", "ふーん（猫のイラスト）", "しめしめ（猫のイラスト）"],
-               alerts=dict(note="補足", tip="ヒント", important="重要", warning="注意", caution="警告"), more="くわしく見る"),
+               alerts=dict(note="補足", tip="ヒント", important="重要", warning="注意", caution="警告"), more="くわしく見る",
+               open_all="すべて開く", close_all="すべて閉じる", to_top="ページの先頭へ"),
     "en": dict(anchor="Link to this heading", search="Search the documentation", results="Search results",
                top_title="NagiSeries — tools for pictures, manga and logs", prev="Previous", next="Next", pager="Pages",
                toc="On this page", crumbs="Breadcrumb", skip="Skip to the content", menu="Contents", sidebar="Sidebar", docs="Documentation",
@@ -116,7 +117,8 @@ UI = {
                other="日本語", other_label="このページを日本語で読む", index="site/search.en.json",
                try_title="Try it here", try_note="Press a picture to open it in NagiSwipe. Swipe, pinch and double tap it.",
                cats=["Kyururun (cat illustration)", "Fu-n (cat illustration)", "Shimeshime (cat illustration)"],
-               alerts=dict(note="Note", tip="Tip", important="Important", warning="Warning", caution="Caution"), more="Show more"),
+               alerts=dict(note="Note", tip="Tip", important="Important", warning="Warning", caution="Caution"), more="Show more",
+               open_all="Open all", close_all="Close all", to_top="Back to top"),
 }
 
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif")
@@ -672,6 +674,53 @@ def feature_lists(body):
     return FEATURE_UL.sub(card, body)
 
 
+SECTION_HEAD = re.compile(r'(<h[23] id="[^"]+">.*?</h[23]>)', re.S)
+LEADING_NUM = re.compile(r'^(\d+)\.\s+')
+
+
+def hint_of(part, lang):
+    """The first sentence or so of a section, shown under its folded heading."""
+    m = re.search(r'<(?:p|li)>(.*?)</(?:p|li)>', part, re.S)
+    if not m:
+        return ''
+    text = re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', m.group(1)))).strip()
+    limit = 70 if lang == 'ja' else 110
+    return esc(text if len(text) <= limit else text[:limit].rstrip() + '…')
+
+
+def chapters(body, lang):
+    """Lesson-like body: each ## gets a chapter number, each ### folds with the text up to the next heading.
+    README's own "1. " in a ## title becomes that number; the heading ids stay as they are."""
+    parts = SECTION_HEAD.split(body)
+    out, num, folded = [], 0, False
+    for part in parts:
+        h = re.match(r'<h([23]) (id="[^"]+")>(.*)</h[23]>$', part, re.S)
+        if not h:
+            if folded:
+                hint = hint_of(part, lang)
+                out.append((f'<span class="sec-hint">{hint}</span>' if hint else '')
+                           + f'</summary><div class="sec-body">{part}</div></details>')
+                folded = False
+            else:
+                out.append(part)
+            continue
+        if folded:      # a ### right after a ###: nothing to fold
+            out.append('</summary><div class="sec-body"></div></details>')
+            folded = False
+        level, attr, inner = h.groups()
+        if level == '2':
+            lead = LEADING_NUM.match(inner)
+            num = int(lead.group(1)) if lead else num + 1
+            inner = inner[lead.end():] if lead else inner
+            out.append(f'<h2 {attr}><span class="ch-num" aria-hidden="true">{num:02d}</span>{inner}</h2>')
+        else:
+            out.append(f'<details class="sec"><summary><h3 {attr}>{inner}</h3>')
+            folded = True
+    if folded:
+        out.append('</summary><div class="sec-body"></div></details>')
+    return ''.join(out)
+
+
 def gallery_html(ui):
     """A few of the author's pictures to open with NagiSwipe on the page itself."""
     cats = ['img/Kyururun.png', 'img/Fu-n.png', 'img/Shimeshime.png']
@@ -706,6 +755,7 @@ def toc_html(headings, cls):
         label = re.sub(r'<a class="anchor".*?</a>', '', inner)
         label = re.sub(r'</?a\b[^>]*>', '', label)
         if level == 2:
+            label = LEADING_NUM.sub('', label)      # the list numbers the chapters itself
             if open_sub:
                 items.append('</ol></li>')
                 open_sub = False
@@ -811,8 +861,21 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     if page.get('gallery'):
         lead_html += gallery_html(ui)
     body = feature_lists(body)
-    toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><p class="toc-title" id="toc-title-{page["key"]}">{ui["toc"]}</p>{toc}</nav>'
-                 if len([h for h in ctx.headings if h[0] == 2]) >= 2 else '')
+    if page['key'] != 'top':
+        body = chapters(body, page['lang'])
+    folds = '<details class="sec">' in body
+    fold_btn = (f'<button class="fold-all" type="button" data-fold-all data-open="{ui["open_all"]}" data-close="{ui["close_all"]}">'
+                f'{ui["open_all"]}</button>' if folds else '')
+    many = len([h for h in ctx.headings if h[0] == 2]) >= 2
+    toc_block = (f'<nav class="toc-inline" aria-labelledby="toc-title-{page["key"]}"><div class="toc-head">'
+                 f'<p class="toc-title" id="toc-title-{page["key"]}">{ui["toc"]}</p>{fold_btn}</div>{toc}</nav>'
+                 if many else '')
+    rail = (f'<aside class="rail" aria-labelledby="rail-title"><div class="rail-inner">'
+            f'<p class="rail-title" id="rail-title">{ui["toc"]}</p>'
+            f'<div class="rail-progress" aria-hidden="true"><span data-progress></span></div>'
+            f'<nav aria-labelledby="rail-title">{toc_html(ctx.headings, "rail-toc")}</nav>'
+            f'<p class="rail-tools">{fold_btn}<a class="rail-top" href="#main">{ui["to_top"]}</a></p></div></aside>'
+            if many else '')
     return f'''<!DOCTYPE html>
 <html lang="{page['lang']}">
 <head>
@@ -837,7 +900,8 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 {crumbs_json}<script src="{asset('NagiSwipe-main.js')}" defer></script>
 <script src="{asset('site/site.js')}" data-index="{asset(ui['index'])}" defer></script>
 </head>
-<body class="page-{page['key']}">
+<body class="page-{page['key']}{' has-rail' if rail else ''}">
+<div class="read-progress" aria-hidden="true"><span data-progress></span></div>
 <a class="skip" href="#main">{ui["skip"]}</a>
 <header class="topbar">
 {brand}
@@ -865,6 +929,7 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 {pager}
 <footer class="foot"><p>MIT License © 2026 Lichiphen</p><p><a class="ext" href="{edit}">{ui["source"]}</a></p></footer>
 </main>
+{rail}
 </div>
 <dialog class="menu" id="menu" aria-label="{ui["menu"]}">
 <div class="menu-head"><p class="menu-title">{ui["menu"]}</p><button class="menu-close" type="button" data-close-menu aria-label="{ui["close"]}">{ICON_CLOSE}</button></div>
