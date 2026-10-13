@@ -23,7 +23,10 @@ A series of small tools for personal websites. None of them needs a database or 
 | **NagiManga** | A manga viewer that opens from a single tag, and an admin panel that needs no database | PHP 8.1 or later (it can also be used with FTP alone) | [manga/README.en.md](manga/README.en.md) |
 | **NagiLog** | A personal log for posting text, pictures, manga, video and audio to your own site | The same installation as NagiManga | [manga/README-LOG.en.md](manga/README-LOG.en.md) |
 
-[**Documentation site (Cloudflare Pages)**](https://nagiswipe.pages.dev/index.en.html) — the three documents together, with a table of contents and search.
+[![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![Documentation](https://img.shields.io/badge/Documentation-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/index.en.html)
+
+Get the latest ZIP of NagiManga and NagiLog with the **Download** button above (both are in the same ZIP). The [**documentation site**](https://nagiswipe.pages.dev/index.en.html) has the three documents together, with a table of contents and search.
 
 Demos: [NagiSwipe](https://nagiswipe.pages.dev/demo.html) / [NagiManga](https://notebook.lichiphen.com/nagimanga/demo.html) (right to left, spreads, vertical reading, a password-protected work, a work imported from EPUB, and the admin panel as a guest) / [NagiLog](https://notebook.lichiphen.com/nagimanga/) (the log the author actually uses)
 
@@ -146,6 +149,9 @@ Paste **a single tag** into your blog or site, and a manga viewer opens when it 
 - Light pictures for phones and full ones for computers and zooming, chosen automatically
 - Password-protected works, share tags, backups as one ZIP
 
+[![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![Documentation](https://img.shields.io/badge/Documentation-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagimanga.en.html)
+
 Demo: https://notebook.lichiphen.com/nagimanga/demo.html / Installation: [manga/README.en.md](manga/README.en.md) / A guide for non-developers: [manga/docs/overview.en.md](manga/docs/overview.en.md)
 
 ## NagiLog
@@ -158,6 +164,9 @@ A personal log that needs no database, for posting text, pictures and manga to y
 - Video and audio (a waveform player, gapless repeat, writing the cover and loop points into songs, autoplay and repeat settings for videos)
 
 ![The top of NagiLog on a computer](manga/docs/images/log-pc.jpg)
+
+[![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![Documentation](https://img.shields.io/badge/Documentation-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagilog.en.html)
 
 Demo: https://notebook.lichiphen.com/nagimanga/ / Documentation: [manga/README-LOG.en.md](manga/README-LOG.en.md)
 

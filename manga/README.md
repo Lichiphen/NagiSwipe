@@ -21,6 +21,9 @@ v0.4.0 から、文章・画像・漫画を投稿できる個人用LOG「NagiLog
 スマホの投稿画面、太字、画像の差し替え、漫画カード、分類、6種類のデザイン、日時から作るURLに対応します。v0.6.0 からは、動画と音声も投稿できます。
 使い方、メリット・デメリット、設置と検証結果は [NagiLog の README](README-LOG.md) にまとめています。
 
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![ドキュメントサイト](https://img.shields.io/badge/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E3%82%B5%E3%82%A4%E3%83%88-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagimanga.html)
+
 <!-- TOC -->
 ## 目次
 
@@ -105,7 +108,9 @@ v0.4.0 から、文章・画像・漫画を投稿できる個人用LOG「NagiLog
 
 ### 1. 設置
 
-[リリースページ](https://github.com/Lichiphen/NagiSwipe/releases) の `nagimanga-*.zip`（または、このリポジトリの `manga/server` フォルダの中身）を、サーバーの好きな場所に `nagimanga` などの名前でアップロードします。
+下の **ダウンロード** ボタンから、最新版の ZIP（`nagimanga-vX.Y.Z.zip`）をダウンロードします。ZIP を展開した中身（または、このリポジトリの `manga/server` フォルダの中身）を、サーバーの好きな場所に `nagimanga` などの名前でアップロードします。
+
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
 
 ```
 nagimanga/

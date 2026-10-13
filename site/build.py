@@ -382,6 +382,27 @@ def split_row(line):
     return [c.strip().replace('\\|', '|') for c in re.split(r'(?<!\\)\|', line)]
 
 
+BUTTON_BADGE = re.compile(r'\[!\[([^\]]+)\]\((https://img\.shields\.io/[^)\s]*style=for-the-badge[^)\s]*)\)\]\(<?([^)\s>]+)>?\)')
+ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-6-5 6 6 6-6M4 20h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+
+
+def badge_buttons(para, ctx):
+    """A paragraph of large README badges ([![label](…for-the-badge…)](url)) only, as real buttons.
+    Buttons to this site itself are dropped (the reader is already here). None when the paragraph is something else."""
+    items = [BUTTON_BADGE.fullmatch(line.strip()) for line in para]
+    if not items or not all(items):
+        return None
+    out = []
+    for m in items:
+        label, url = m.group(1), resolve(m.group(3), ctx)
+        if url.startswith(SITE_URL):
+            continue
+        down = re.search(r'ダウンロード|download', label, re.I)
+        cls = 'btn btn-primary btn-download' if down else 'btn' + (' ext' if link_attrs(url) else '')
+        out.append(f'<a class="{cls}" href="{esc(url)}">{ICON_DOWNLOAD if down else ""}{esc(label)}</a>')
+    return f'<div class="hero-links">{"".join(out)}</div>' if out else ''
+
+
 def render(lines, ctx, tight=False):
     out = []
     i, n = 0, len(lines)
@@ -508,6 +529,11 @@ def render(lines, ctx, tight=False):
         while i < n and not starts_block(lines, i):
             para.append(lines[i])
             i += 1
+        buttons = badge_buttons(para, ctx)
+        if buttons is not None and not tight:
+            if buttons:
+                out.append(buttons)
+            continue
         text = inline(join_lines(para), ctx)
         only_img = re.fullmatch(r'<img src="([^"]+)"[^>]*>', text)
         if only_img and not tight:

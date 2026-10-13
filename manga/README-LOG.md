@@ -19,6 +19,9 @@
 
 NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![ドキュメントサイト](https://img.shields.io/badge/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E3%82%B5%E3%82%A4%E3%83%88-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagilog.html)
+
 <!-- TOC -->
 ## 目次
 
@@ -212,7 +215,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. 配布ZIP（`nagimanga-v0.6.0.zip`）の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.6.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、30分以内に管理者パスワードを決めます。
 3. 表示された管理用URLをブックマークします。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。

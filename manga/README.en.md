@@ -21,6 +21,9 @@ Since v0.4.0, NagiManga includes NagiLog, a personal log for posting text, pictu
 It has a posting screen for phones, bold text, picture replacement, manga cards, categories, six designs and URLs made from the date and time. Since v0.6.0 it can also post video and audio.
 How to use it, its strengths and weaknesses, installation and test results are in the [NagiLog README](README-LOG.en.md).
 
+[![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![Documentation](https://img.shields.io/badge/Documentation-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagimanga.en.html)
+
 The admin panel can be shown in Japanese or English (see [Admin panel language](#admin-panel-language)). Some names of buttons and menus below are given in Japanese too, as they appear in the Japanese panel.
 
 <!-- TOC -->
@@ -107,7 +110,9 @@ It uses no database and no outside libraries (only the standard features of PHP 
 
 ### 1. Upload
 
-Upload `nagimanga-*.zip` from the [releases page](https://github.com/Lichiphen/NagiSwipe/releases) (or the contents of `manga/server` in this repository) to any place on your server, under a name such as `nagimanga`.
+Download the latest ZIP (`nagimanga-vX.Y.Z.zip`) with the **Download** button below. Upload what is inside the ZIP (or the contents of `manga/server` in this repository) to any place on your server, under a name such as `nagimanga`.
+
+[![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
 
 ```
 nagimanga/

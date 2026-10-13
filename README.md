@@ -23,7 +23,10 @@
 | **NagiManga** | タグを 1 つ貼るだけで開く漫画ビューアーと、データベースのいらない管理画面 | PHP 8.1 以上（FTP だけで置くこともできます） | [manga/README.md](manga/README.md) |
 | **NagiLog** | 文章・画像・漫画を、自分のサイトへ投稿できる個人用LOG | NagiManga と同じ設置 | [manga/README-LOG.md](manga/README-LOG.md) |
 
-[**ドキュメントサイト（Cloudflare Pages）**](https://nagiswipe.pages.dev/) — 3 つの説明をまとめて、目次と検索つきで読めます（[英語版](https://nagiswipe.pages.dev/index.en.html)もあります）。
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![ドキュメントサイト](https://img.shields.io/badge/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E3%82%B5%E3%82%A4%E3%83%88-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/)
+
+NagiManga と NagiLog は、上の **ダウンロード** ボタンから最新版の ZIP を入手できます（2 つは同じ ZIP に入っています）。[**ドキュメントサイト**](https://nagiswipe.pages.dev/) では、3 つの説明をまとめて、目次と検索つきで読めます（[英語版](https://nagiswipe.pages.dev/index.en.html)もあります）。
 
 デモ: [NagiSwipe](https://nagiswipe.pages.dev/demo.html) ／ [NagiManga](https://notebook.lichiphen.com/nagimanga/demo.html)（右から左・見開き・縦読み・パスワード付き・EPUB から取り込んだ作品、管理画面をゲストで見る） ／ [NagiLog](https://notebook.lichiphen.com/nagimanga/)（作者が実際に使っている LOG）
 
@@ -144,6 +147,9 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https:
 - スマホ用の小容量版と、パソコン・拡大用の通常版を自動で読み分けます
 - パスワード付きの限定公開、共有タグの発行、ZIP でのバックアップ
 
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![ドキュメントサイト](https://img.shields.io/badge/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E3%82%B5%E3%82%A4%E3%83%88-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagimanga.html)
+
 デモ: https://notebook.lichiphen.com/nagimanga/demo.html ／ 導入方法: [manga/README.md](manga/README.md) ／ 開発者でない方向けの手引き: [manga/docs/overview.md](manga/docs/overview.md)
 
 ## NagiLog
@@ -156,6 +162,9 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https:
 - 動画と音声（波形のプレーヤー、つなぎ目のないループ再生、曲へのジャケットとループ位置の書き込み、動画の自動再生・くり返しの設定）
 
 ![NagiLogのトップ（パソコン）](manga/docs/images/log-pc.jpg)
+
+[![NagiManga・NagiLog をダウンロード（ZIP）](https://img.shields.io/badge/%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89-NagiManga%E3%83%BBNagiLog%EF%BC%88ZIP%EF%BC%89-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
+[![ドキュメントサイト](https://img.shields.io/badge/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E3%82%B5%E3%82%A4%E3%83%88-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagilog.html)
 
 デモ: https://notebook.lichiphen.com/nagimanga/ ／ 説明: [manga/README-LOG.md](manga/README-LOG.md)
 

@@ -296,6 +296,9 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn-download { padding: 11px 22px; font-size: 15.5px; box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 30%, transparent); }
+.doc .hero-links { margin: 16px 0 20px; }
 
 /* ---- a page's banner, the gallery to try, lists shown as cards ---- */
 .doc-hero {
