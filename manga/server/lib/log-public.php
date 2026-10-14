@@ -38,7 +38,8 @@ function nl_archive_filter(array $src): array
 function nl_has_image_links(string $html): bool
 {
     if (str_contains($html, 'class="imagelink"')) return true;
-    preg_match_all('/\bhref="([^"]+)"/', $html, $m);
+    // Only links (<a>): an icon's <use href> points at the icon sprite, not at a picture.
+    preg_match_all('/<a\b[^>]*?\bhref="([^"]+)"/', $html, $m);
     foreach ($m[1] as $href) {
         $url = html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
@@ -84,8 +85,8 @@ function nl_breadcrumb(array $trail, string $canonical): array
 {
     if (!$trail) return ['', ''];
     $base = nl_base_url();
-    $home = '<svg class="log-crumb-home" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg>';
-    $sep = '<svg class="log-crumb-sep" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6"/></svg>';
+    $home = nm_icon('home', 'log-crumb-home');
+    $sep = nm_icon('crumb-sep', 'log-crumb-sep');
     $items = ''; $list = [];
     foreach ($trail as $i => [$name, $query]) {
         $current = $query === null;
@@ -105,7 +106,7 @@ function nl_page_url(string $query, int $page, string $base = './'): string
 }
 function nl_pager_arrow(bool $older): string
 {
-    return '<span class="log-pager-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' . ($older ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6') . '"/></svg></span>';
+    return '<span class="log-pager-arrow" aria-hidden="true">' . nm_icon($older ? 'next' : 'prev') . '</span>';
 }
 /** Page numbers to show: first, last, the current page and its neighbours; a gap hiding one page shows that page instead. */
 function nl_pager_numbers(int $page, int $pages): array
@@ -175,21 +176,16 @@ function nl_post_nav(array $summaries, array $post): string
     if ($i === false) return '';
     $link = static function (?array $p, bool $older): string {
         if (!$p) return '<span class="log-post-nav-link is-empty" aria-hidden="true"></span>';
-        $tab = '<span class="log-post-nav-tab" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' . ($older ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6') . '"/></svg></span>';
+        $tab = '<span class="log-post-nav-tab" aria-hidden="true">' . nm_icon($older ? 'next' : 'prev') . '</span>';
         return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="' . h(nl_post_url($p['id'])) . '">' . $tab . '<span class="log-post-nav-body"><span class="log-post-nav-kicker">' . nm_t($older ? '過去の投稿' : '新しい投稿') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : nm_t('画像の記録')) . '</span></span></a>';
     };
     return '<nav class="log-post-nav" aria-label="' . nm_t('前後の投稿') . '">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
         . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>' . nm_t('すべての投稿') . '</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
 }
-/** Our own share UI icons from viewer/link-icons (original artwork, no service logos). */
+/** Our own share UI icons from viewer/link-icons (original artwork, no service logos), through the sprite viewer/icons/ui.svg. */
 function nl_share_icon(string $name, string $extra = ''): string
 {
-    static $cache = [];
-    if (!isset($cache[$name])) {
-        $svg = (string)file_get_contents(__DIR__ . '/../viewer/link-icons/' . $name . '.svg');
-        $cache[$name] = (string)preg_replace('/\A.*?(<svg )/s', '$1', $svg);
-    }
-    return str_replace('<svg ', '<svg class="log-share-icon' . ($extra !== '' ? ' ' . $extra : '') . '" aria-hidden="true" focusable="false" ', $cache[$name]);
+    return nm_icon('link-' . $name, 'log-share-icon' . ($extra !== '' ? ' ' . $extra : ''));
 }
 /**
  * Like (when turned on), Share and Copy under a post; Share and Copy both with "title\nURL". viewer/log-share.js sends Share to the phone's share sheet,
@@ -220,7 +216,7 @@ function nl_share_dialog(): string
 }
 function nl_search_form(string $q): string
 {
-    return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">' . nm_t('LOGを検索') . '</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('ことば・#タグで探す') . '" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="' . nm_t('検索する') . '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
+    return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">' . nm_t('LOGを検索') . '</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('ことば・#タグで探す') . '" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="' . nm_t('検索する') . '">' . nm_icon('search') . '</button></form>';
 }
 /**
  * Site titles of 8 characters or more shrink on phones to stay on one line.
@@ -236,7 +232,7 @@ function nl_title_fit(string $title): string
 }
 function nl_all_icon(): string
 {
-    return '<svg class="log-all-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>';
+    return nm_icon('all', 'log-all-icon');
 }
 function nl_icon_html(array $s, string $prefix = '', string $class = 'log-avatar'): string
 {
@@ -247,29 +243,13 @@ function nl_icon_html(array $s, string $prefix = '', string $class = 'log-avatar
 }
 function nl_login_icon(): string
 {
-    return '<svg class="log-login-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/></svg>';
+    return nm_icon('login', 'log-login-icon');
 }
+/** The names nl_ui_icon() knows (symbols ui-* in viewer/icons/ui.svg). */
+const NL_UI_ICONS = ['pen', 'time', 'title', 'delete', 'view', 'wrench', 'list', 'tag', 'settings', 'globe', 'lock', 'images', 'page', 'copy'];
 function nl_ui_icon(string $name = 'pen'): string
 {
-    $paths = [
-        'pen' => '<path d="m15 4 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16l-1 4Z"/>',
-        'time' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-        'title' => '<path d="M5 4h14M12 4v16M8 20h8"/>',
-        'delete' => '<path d="M4 6h16M9 6V3h6v3M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
-        'view' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-        'wrench' => '<path d="M14.7 6.3a4.5 4.5 0 0 0-5.9 5.9L3.5 17.5a2.1 2.1 0 0 0 3 3l5.3-5.3a4.5 4.5 0 0 0 5.9-5.9l-2.8 2.8-2.4-.6-.6-2.4 2.8-2.8Z"/>',
-        // The LOG admin tabs and toolbar: the post list, categories and tags, settings, the public page / private Memo.
-        'list' => '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
-        'tag' => '<path d="M3.5 12.6V5a1.5 1.5 0 0 1 1.5-1.5h7.6a1.5 1.5 0 0 1 1.06.44l7.4 7.4a1.5 1.5 0 0 1 0 2.12l-7.6 7.6a1.5 1.5 0 0 1-2.12 0l-7.4-7.4A1.5 1.5 0 0 1 3.5 12.6Z"/><circle cx="8.5" cy="8.5" r="1.6"/>',
-        'settings' => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1Z"/>',
-        'globe' => '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/>',
-        'lock' => '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
-        'images' => '<rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/><circle cx="11.5" cy="8" r="1.4"/><path d="m7 15 3.6-3.4a1.4 1.4 0 0 1 1.9 0L17 16"/>',
-        // Fixed pages: a sheet with a folded corner.
-        'page' => '<path d="M14 3.5H7A2 2 0 0 0 5 5.5v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-10Z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5"/>',
-        'copy' => '<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/>',
-    ];
-    return '<svg class="log-ui-icon" viewBox="0 0 24 24" aria-hidden="true">' . ($paths[$name] ?? $paths['pen']) . '</svg>';
+    return nm_icon(in_array($name, NL_UI_ICONS, true) ? 'ui-' . $name : 'ui-pen', 'log-ui-icon');
 }
 function nl_calendar(array $summaries, array $filter): string
 {

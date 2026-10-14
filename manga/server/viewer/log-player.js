@@ -10,16 +10,9 @@
     'use strict';
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const t = text => i18n[text] ?? text;
-    const svg = path => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${path}</svg>`;
-    const ICON = {
-        play: svg('<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/>'),
-        pause: svg('<rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/>'),
-        sound: svg('<path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5Z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
-        mute: svg('<path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5Z"/><path class="w" d="m16 9.5 5 5m0-5-5 5"/>'),
-        full: svg('<path class="w" d="M4.5 9V4.5H9M15 4.5h4.5V9M19.5 15v4.5H15M9 19.5H4.5V15"/>'),
-        exit: svg('<path class="w" d="M9 4.5V9H4.5M19.5 9H15V4.5M15 19.5V15h4.5M4.5 15H9v4.5"/>'),
-        loop: svg('<path class="w" d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3M20 12.5v1a4 4 0 0 1-4 4H4"/>'),
-    };
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const svg = id => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="${document.documentElement.dataset.icons}#p-${id}"/></svg>`;
+    const ICON = Object.fromEntries(['play', 'pause', 'sound', 'mute', 'full', 'exit', 'loop'].map(id => [id, svg(id)]));
     const time = s => {
         if (!Number.isFinite(s) || s < 0) s = 0;
         s = Math.floor(s);

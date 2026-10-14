@@ -214,9 +214,7 @@ function nl_sidebar_templates(): array
 /** Small stroke icons for the editor controls; they follow the text color. */
 function nl_sidebar_ui_icon(string $name): string
 {
-    $paths = ['grip' => '<circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>',
-        'up' => '<path d="m6 15 6-6 6 6"/>', 'down' => '<path d="m6 9 6 6 6-6"/>', 'remove' => '<path d="M5 7h14M10 11v6M14 11v6M7 7l1 12h8l1-12M9 7V5h6v2"/>', 'add' => '<path d="M12 5v14M5 12h14"/>'];
-    return '<svg class="log-ui-icon log-ui-icon-' . $name . '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+    return nm_icon('sb-' . $name, 'log-ui-icon log-ui-icon-' . $name);
 }
 function nl_sidebar_edit_row(array $item, bool $loginShown = true): string
 {

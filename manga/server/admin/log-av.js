@@ -8,6 +8,8 @@
  */
 (() => {
     'use strict';
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const icon = (id, cls = '') => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' + document.documentElement.dataset.icons + '#' + id + '"/></svg>';
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const PEAKS = 200;
@@ -571,7 +573,7 @@
         const head = make('div', 'log-av-dialog-head');
         const h = make('h2', '', title); h.id = 'log-av-dialog-title';
         const close = make('button', 'log-av-dialog-x'); close.type = 'button'; close.setAttribute('aria-label', t('閉じる'));
-        close.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        close.innerHTML = icon('close');
         head.append(h, close);
         form.append(head, make('p', 'log-av-dialog-lead', lead));
         const status = make('p', 'log-av-dialog-status'); status.setAttribute('role', 'status');

@@ -6,6 +6,8 @@
  */
 (() => {
     'use strict';
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const icon = (id, cls = '') => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' + document.documentElement.dataset.icons + '#' + id + '"/></svg>';
     // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
@@ -184,7 +186,7 @@
             const show = tile('log-page-image-thumb', t('本文のこの画像の行を選ぶ'), '');
             if (m) { const img = document.createElement('img'); img.src = m.thumb; img.alt = ''; show.append(img); } else show.textContent = '?';
             show.addEventListener('click', () => { body.focus(); body.setSelectionRange(f.at, f.at + f.text.length); scrollToCaret(); });
-            const remove = tile('log-page-image-remove', t('この画像を本文から外す'), '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>');
+            const remove = tile('log-page-image-remove', t('この画像を本文から外す'), icon('close'));
             remove.addEventListener('click', () => {
                 const v = body.value, at = v.indexOf(f.text);
                 if (at < 0) return;
@@ -195,9 +197,9 @@
             });
             item.append(show, remove); strip.append(item);
         });
-        const add = tile('log-page-image-add', t('画像を追加'), '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>');
+        const add = tile('log-page-image-add', t('画像を追加'), icon('plus'));
         add.addEventListener('click', () => picker.click());
-        const pick = tile('log-page-image-add', t('画像一覧から選ぶ'), '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/></svg>');
+        const pick = tile('log-page-image-add', t('画像一覧から選ぶ'), icon('stack'));
         pick.addEventListener('click', openPicker);
         strip.append(add, pick);
     }

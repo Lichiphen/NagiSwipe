@@ -146,7 +146,7 @@ function nl_unlock_request(): never
 }
 function nl_lock_icon(string $class = 'log-lock-icon'): string
 {
-    return '<svg class="' . $class . '" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.2"/></svg>';
+    return nm_icon('lock-key', $class);
 }
 /** The form in place of a locked post's or page's content. $state: '' / 'wrong' / 'wait' (from ?locked=). */
 function nl_lock_form(array $item, bool $page, string $state = ''): string

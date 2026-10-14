@@ -88,7 +88,7 @@ function nl_post_categories(array $input, array &$taxonomy): array
 /** The folder mark used for categories everywhere (post footers and the sidebar). */
 function nl_category_icon(): string
 {
-    return '<svg class="log-cat-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+    return nm_icon('folder', 'log-cat-icon');
 }
 /** "カテゴリ  [folder]日記, [folder]制作" under a post. */
 function nl_category_links(array $p, bool $admin = false): string

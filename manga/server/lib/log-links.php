@@ -62,16 +62,10 @@ function nl_link_edit_url(string $url): string
 {
     return str_starts_with($url, 'mailto:') ? substr($url, 7) : $url;
 }
-/** Inline only our own bundled SVGs; user HTML cannot supply SVG markup. */
+/** Our own bundled icons (viewer/link-icons, also in the sprite viewer/icons/ui.svg); user HTML cannot supply SVG markup. */
 function nl_link_icon(string $icon): string
 {
-    static $cache = [];
-    if (!isset(NL_LINK_ICONS[$icon])) $icon = 'link';
-    if (!isset($cache[$icon])) {
-        $svg = file_get_contents(__DIR__ . '/../viewer/link-icons/' . $icon . '.svg');
-        $cache[$icon] = str_replace('<svg ', '<svg class="log-link-icon" aria-hidden="true" focusable="false" ', $svg ?: '');
-    }
-    return $cache[$icon];
+    return nm_icon('link-' . (isset(NL_LINK_ICONS[$icon]) ? $icon : 'link'), 'log-link-icon');
 }
 function nl_links_html(array $item, array $s): string
 {

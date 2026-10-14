@@ -418,23 +418,7 @@ function nl_guard_input(array $cfg): array
 /** Line icons for the editor's tool row (24px grid, drawn with the current colour). */
 function nl_compose_icon(string $name): string
 {
-    $paths = [
-        'upload' => '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m3.5 16 4.6-4.6a1.5 1.5 0 0 1 2.1 0L15 16"/><path d="M18 2.5v5M15.5 5h5"/>',
-        'media' => '<rect x="7" y="3.5" width="13.5" height="13.5" rx="2.2"/><path d="M4 7.5v10.3A2.7 2.7 0 0 0 6.7 20.5H17"/><circle cx="11.5" cy="8" r="1.4"/><path d="m7 15 3.6-3.4a1.4 1.4 0 0 1 1.9 0L17 16"/>',
-        'manga' => '<path d="M4 5.5c2.8-1.2 5.5-1 8 .8 2.5-1.8 5.2-2 8-.8v13c-2.8-1.2-5.5-1-8 .8-2.5-1.8-5.2-2-8-.8Z"/><path d="M12 6.3v13"/>',
-        'bold' => '<path d="M7 4.5h5.8a3.6 3.6 0 0 1 0 7.2H7Zm0 7.2h6.6a3.9 3.9 0 0 1 0 7.8H7Z"/>',
-        'heading' => '<path d="M6 4.5v15M17 4.5v15M6 12h11"/>',
-        'italic' => '<path d="M10.5 4.5H18M6 19.5h7.5M14.3 4.5l-4.6 15"/>',
-        'link' => '<path d="M10.2 13.8a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.1 1.1"/><path d="M13.8 10.2a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.1-1.1"/>',
-        'format' => '<path d="M3.5 19 8.5 5h1l5 14M5.4 14h7.2"/><path d="M16.5 9.5h4M16.5 14h4M16.5 18.5h4"/>',
-        'tags' => '<path d="M9.5 4 7.5 20M16.5 4l-2 16M4.5 9h15M3.5 15.5h15"/>',
-        'categories' => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
-        'rating' => '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>',
-        'help' => '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.6M12 16.9v.1"/>',
-        'preview' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-        'lock' => '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.2"/>',
-    ];
-    return '<svg class="log-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+    return nm_icon('tool-' . $name, 'log-tool-icon');
 }
 /**
  * The editor: the text, the pictures in it, chips for what is set, and one row of tools.
@@ -533,7 +517,7 @@ function nl_view_log(): void
         if ($thumb === '') foreach ($p['manga'] ?? [] as $wid) if (($w = nm_load_work($wid)) && !empty($w['pages'])) { $thumb = '<img src="' . h(nm_thumb_url($w)) . '" alt="" loading="lazy">'; break; }
         $pinned = isset($pins[$p['id']]);
         $cards .= '<li class="log-list-row' . ($pinned ? ' is-pinned' : '') . '"><span class="log-list-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></span>'
-            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($pinned ? nl_pin_badge('badge log-pin-badge') : '') . ($p['status'] === 'draft' ? '<small class="badge">' . nm_t('下書き') . '</small>' : '') . (nl_is_locked($p) ? nl_lock_badge() : '') . nl_veil_badge(nl_rating($summary['rating'] ?? '')) . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="' . nm_t('いいね{n}', ['n' => $likes]) . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
+            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($pinned ? nl_pin_badge('badge log-pin-badge') : '') . ($p['status'] === 'draft' ? '<small class="badge">' . nm_t('下書き') . '</small>' : '') . (nl_is_locked($p) ? nl_lock_badge() : '') . nl_veil_badge(nl_rating($summary['rating'] ?? '')) . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="' . nm_t('いいね{n}', ['n' => $likes]) . '">' . nm_icon('heart') . number_format($likes) . '</small>' : '') . '</a>'
             . ($searching ? nl_admin_search_where($p, $terms, $publicIds, $publicPer) : '')
             . '<span class="log-list-thumb">' . $thumb . '</span>' . nl_pin_form($p['id'], $pinned) . ($p['status'] === 'published' ? '<a class="btn log-list-view" href="' . h(nl_post_url($p['id'], '../')) . '">' . nl_ui_icon('view') . '<span>' . nm_t('記事を見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('下書き') . '</span>') . '<a class="btn log-list-edit" href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a>'
             . '<form method="post" action="index.php" class="js-confirm log-list-delete" data-confirm="' . nm_t('この記事を削除しますか？この記事だけで使う画像も削除します。') . '">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button></form><label class="log-bulk-choice" hidden><input type="checkbox" data-bulk-item value="' . h($p['id']) . '" data-revision="' . $p['revision'] . '" aria-label="' . nm_t('{title}を削除対象に選ぶ', ['title' => h(nl_post_title($p))]) . '"></label></li>';
@@ -549,7 +533,7 @@ function nl_view_log(): void
     if ($taxonomy) { nm_layout(nm_t('LOGの分類'), $header . $tabs . nl_taxonomy_panel()); return; }
     $pagerQuery = 'p=log' . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '');
     $search = '<form class="log-admin-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log">'
-        . '<label class="log-admin-search-box"><span class="sr-only">' . nm_t('投稿を検索') . '</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('タイトル・本文・#タグ・カテゴリで探す') . '" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
+        . '<label class="log-admin-search-box"><span class="sr-only">' . nm_t('投稿を検索') . '</span>' . nm_icon('search') . '<input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('タイトル・本文・#タグ・カテゴリで探す') . '" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
         . '<label class="log-admin-search-status"><span class="sr-only">' . nm_t('公開状態') . '</span><select name="status"><option value="">' . nm_t('すべて') . '</option><option value="published"' . ($status === 'published' ? ' selected' : '') . '>' . nm_t('公開') . '</option><option value="draft"' . ($status === 'draft' ? ' selected' : '') . '>' . nm_t('下書き') . '</option></select></label>'
         . '<button class="btn primary">' . nm_t('探す') . '</button></form>'
         . ($searching ? '<p class="log-admin-search-result" role="status"><span>' . ($q !== '' ? nm_t('「{q}」で', ['q' => h($q)]) : '') . ($status !== '' ? nm_t($status === 'published' ? '公開の記録' : '下書きの記録') : '') . '<b>' . nm_t('{n}件', ['n' => count($posts)]) . '</b></span><a class="btn" href="index.php?p=log">' . nm_t('検索をやめる') . '</a></p>' : '');
@@ -619,7 +603,7 @@ function nl_like_panel(array $p): string
     $s = nl_settings();
     $n = nl_like_count($p['id']);
     $state = !$s['public'] ? nm_t('自分専用のMemoのため、ボタンは表示していません。') : (!$s['likes'] ? nm_t('いいねボタンは「設定 › LOG › 一覧の見せ方・記事の下」でオフになっています。数は残しています。') : ($p['status'] !== 'published' ? nm_t('下書きのため、ボタンは表示していません。') : nm_t('公開ページの記事の下に表示しています。')));
-    return '<section class="card log-like-panel" id="log-likes"><h2><svg class="log-like-panel-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . nm_t('いいね') . ' <b>' . number_format($n) . '</b></h2><p class="note">' . $state . '</p>'
+    return '<section class="card log-like-panel" id="log-likes"><h2>' . nm_icon('heart', 'log-like-panel-heart') . nm_t('いいね') . ' <b>' . number_format($n) . '</b></h2><p class="note">' . $state . '</p>'
         . '<form method="post" action="index.php" class="form log-like-form">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_like_set"><input type="hidden" name="post_id" value="' . h($p['id']) . '">'
         . '<label>' . nm_t('いいねの数') . '<input type="number" name="count" min="0" max="' . NL_LIKE_MAX . '" required value="' . $n . '" inputmode="numeric"></label><div class="log-like-actions"><button class="btn primary">' . nm_t('数を保存') . '</button><button class="btn danger" name="reset" value="1"' . ($n === 0 ? ' disabled' : '') . ' formnovalidate data-confirm-click="' . nm_t('この記事のいいねを削除して0にしますか？') . '">' . nm_t('いいねを削除') . '</button></div></form></section>';
 }
@@ -689,7 +673,7 @@ function nl_view_media(): void
     }
     $option = static fn($value, $current, $label) => '<option value="' . $value . '"' . ($value === $current ? ' selected' : '') . '>' . $label . '</option>';
     $search = '<form class="log-admin-search log-media-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log_media">'
-        . '<label class="log-admin-search-box"><span class="sr-only">' . nm_t('画像を検索') . '</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg><input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('画像の説明・使っている記事・日付で探す') . '" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
+        . '<label class="log-admin-search-box"><span class="sr-only">' . nm_t('画像を検索') . '</span>' . nm_icon('search') . '<input type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('画像の説明・使っている記事・日付で探す') . '" enterkeyhint="search" autocomplete="off" data-log-search><kbd aria-hidden="true">/</kbd></label>'
         . '<label class="log-admin-search-status"><span class="sr-only">' . nm_t('使っているか') . '</span><select name="use">' . $option('', $use, nm_t('使用：すべて')) . $option('used', $use, nm_t('使用中')) . $option('unused', $use, nm_t('未使用')) . '</select></label>'
         . '<label class="log-admin-search-status"><span class="sr-only">' . nm_t('閲覧注意') . '</span><select name="rating">' . $option('', $rating, nm_t('注意：問わない')) . $option('set', $rating, nm_t('注意あり')) . $option('none', $rating, nm_t('注意なし')) . '</select></label>'
         . '<button class="btn primary">' . nm_t('探す') . '</button></form>'

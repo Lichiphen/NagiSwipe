@@ -465,7 +465,6 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-toc-rail.is-ready .log-toc-rail-card { opacity:1; transform:none; }
 .log-toc-rail-title { display:flex; align-items:center; gap:7px; margin:0 0 10px; color:var(--log-accent); font-size:12.5px; font-weight:800; letter-spacing:.12em; }
 .log-toc-rail-title svg,.log-toc-fab-icon { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-.log-toc-rail-title svg circle,.log-toc-fab-icon circle { fill:currentColor; stroke:none; }
 .log-toc-progress { height:5px; margin:0 2px 12px; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--log-line) 70%,transparent); }
 .log-toc-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--log-accent),var(--log-cyan,var(--log-accent))); transform:scaleX(var(--toc-progress,0)); transform-origin:left; transition:transform .25s ease-out; }
 .log-toc-rail .log-toc-list,.log-toc-sheet .log-toc-list { position:relative; isolation:isolate; margin:0; padding:0 0 0 12px; list-style:none; }
@@ -604,7 +603,6 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-video { position:relative; }
 .log-video-unmute { position:absolute; top:10px; right:10px; z-index:2; display:none; align-items:center; gap:6px; padding:6px 12px 6px 9px; border:0; border-radius:999px; background:#000000a6; color:#fff; font:600 13px/1.2 system-ui,sans-serif; cursor:pointer; backdrop-filter:blur(4px); }
 .log-video-unmute svg { width:18px; height:18px; fill:currentColor; }
-.log-video-unmute svg .w { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 .log-video-unmute:hover { background:#000000d0; }
 .log-video-unmute:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 .is-auto .log-video-screen.is-muted.is-playing .log-video-unmute { display:inline-flex; }
@@ -625,7 +623,6 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .is-started.is-awake .log-video-bar,.is-started:not(.is-playing) .log-video-bar,.log-video-screen:focus-within .log-video-bar { opacity:1; transform:none; }
 .log-video-tool { flex:none; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:8px; background:transparent; color:#fff; cursor:pointer; }
 .log-video-tool svg { width:20px; height:20px; fill:currentColor; }
-.log-video-tool svg .w,.log-player svg .w { fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .log-video-tool:hover,.log-video-tool:focus-visible { background:#ffffff26; outline:none; }
 .log-video-track { position:relative; flex:1; min-width:0; height:20px; cursor:pointer; touch-action:none; }
 .log-video-track::before,.log-video-loaded,.log-video-done { position:absolute; left:0; top:50%; height:4px; margin-top:-2px; border-radius:2px; content:""; }

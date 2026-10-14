@@ -5,6 +5,8 @@
  */
 (function () {
     'use strict';
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const icon = (id, cls = '') => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' + document.documentElement.dataset.icons + '#' + id + '"/></svg>';
     // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
@@ -124,8 +126,8 @@
             const exits = () => {
                 const box = document.createElement('div');
                 box.className = 'settings-toc-exits';
-                box.innerHTML = '<a class="settings-toc-exit" href="index.php?p=log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 6-6 6 6 6M5 12h14"/></svg><span>' + t('管理画面に戻る') + '</span></a>'
-                    + '<a class="settings-toc-exit" href="../" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></svg><span>' + t('公開ページを見る') + '</span></a>';
+                box.innerHTML = '<a class="settings-toc-exit" href="index.php?p=log">' + icon('back') + '<span>' + t('管理画面に戻る') + '</span></a>'
+                    + '<a class="settings-toc-exit" href="../" target="_blank" rel="noopener">' + icon('globe') + '<span>' + t('公開ページを見る') + '</span></a>';
                 return box;
             };
             toc.append(exits(), list()); toc.hidden = false;
@@ -133,7 +135,7 @@
             // Phones: a button floating at the bottom right opens the same list in a dialog.
             const fab = document.createElement('button');
             fab.type = 'button'; fab.className = 'settings-toc-fab'; fab.setAttribute('aria-haspopup', 'dialog');
-            fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg><span>' + t('目次') + '</span>';
+            fab.innerHTML = icon('list-dots') + '<span>' + t('目次') + '</span>';
             const dialog = document.createElement('dialog');
             dialog.className = 'settings-toc-dialog'; dialog.setAttribute('aria-labelledby', 'settings-toc-title');
             dialog.innerHTML = '<div class="settings-toc-dialog-head"><h2 id="settings-toc-title">' + t('設定の目次') + '</h2><button type="button" class="btn" data-toc-close>' + t('閉じる') + '</button></div>';

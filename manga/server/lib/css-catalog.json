@@ -1098,8 +1098,7 @@
   "log-video-volume",
   "note",
   "sr-only",
-  "twitter-tweet",
-  "w"
+  "twitter-tweet"
  ],
  "dynamic": [
   "is-center",

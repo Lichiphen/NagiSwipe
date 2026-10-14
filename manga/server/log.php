@@ -155,11 +155,11 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 // The table of contents again, beside the article on wide screens (viewer/log-toc.js adds the floating button on narrower ones).
 // A folded post (R-18 / R-18G) keeps its headings behind the fold.
 $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && preg_match('~<details class="log-toc"[^>]*><summary>[^<]*</summary>(<ol class="log-toc-list">.*?</ol>)</details>~s', $postsHtml, $tocMatch)
-    ? '<aside class="log-toc-rail" aria-labelledby="log-toc-rail-title" data-toc-rail><div class="log-toc-rail-card"><p class="log-toc-rail-title" id="log-toc-rail-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="17.5" r="1.2"/></svg><span>' . nm_t('目次') . '</span></p>'
+    ? '<aside class="log-toc-rail" aria-labelledby="log-toc-rail-title" data-toc-rail><div class="log-toc-rail-card"><p class="log-toc-rail-title" id="log-toc-rail-title">' . nm_icon('toc') . '<span>' . nm_t('目次') . '</span></p>'
         . '<div class="log-toc-progress" aria-hidden="true"><i></i></div>' . $tocMatch[1] . '</div></aside>'
     : '';
 ?><!DOCTYPE html>
-<html lang="<?= nm_lang() ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="<?= nm_lang() ?>" data-icons="<?= h(nm_icon_url()) ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($single || $fixed ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
 <meta name="description" content="<?= h($desc) ?>"><meta name="robots" content="<?= $robots ?>">
 <link rel="canonical" href="<?= h($canonical) ?>"><meta property="og:url" content="<?= h($canonical) ?>">
@@ -189,7 +189,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?= nm_t_script(NM_FRONT_TEXTS) ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
-<?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
+<?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><?= nm_icon('menu') ?><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><?= $tocRail ?><main class="log-site-main" id="log-main">
 <?= $breadcrumbHtml ?>
 <?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= nm_t('{n}件', ['n' => count($all)]) ?></span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span><?= nm_t('すべての投稿') ?></span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>

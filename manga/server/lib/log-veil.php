@@ -96,7 +96,7 @@ function nl_media_ratings_apply(array $ratings): array
 /** A small warning-sign icon. */
 function nl_veil_icon(): string
 {
-    return '<svg class="log-veil-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/></svg>';
+    return nm_icon('warning', 'log-veil-icon');
 }
 function nl_veil_badge(string $rating, string $class = 'log-veil-badge'): string
 {

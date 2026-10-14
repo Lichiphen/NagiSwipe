@@ -183,7 +183,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
     }
     $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
     $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
-    echo '<!DOCTYPE html><html lang="' . nm_lang() . '"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
+    echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h(nm_t($title)) . ' - NagiManga</title>' . nm_t_script()

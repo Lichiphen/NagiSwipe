@@ -19,8 +19,8 @@
     --err-bg: #fce8e6;
     --warn-bg: #fff4d6;
     /* Down chevrons: one SVG for selects (drawn in a fixed colour, 3:1 on every field) and a mask for the rest. */
-    --chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f5761' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --chevron-mask: url("../viewer/icons/chevron-down.svg?v=a448278a");
+    --select-chevron: url("../viewer/icons/select-chevron-light.svg?v=d70bc268");
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -37,7 +37,7 @@
         --ok-bg: #1e3326;
         --err-bg: #3b1f1d;
         --warn-bg: #3a3016;
-        --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c3c8cf' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        --select-chevron: url("../viewer/icons/select-chevron-dark.svg?v=22cd0b2b");
     }
 }
 
@@ -96,8 +96,8 @@ input, select, textarea {
 }
 ::placeholder { color: var(--muted); opacity: 1; }
 input[type="checkbox"], input[type="radio"] { width: auto; margin-top: .35em; }
-html[data-log-theme^="light"] { --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f5761' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
-html[data-log-theme^="dark"] { --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c3c8cf' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+html[data-log-theme^="light"] { --select-chevron: url("../viewer/icons/select-chevron-light.svg?v=d70bc268"); }
+html[data-log-theme^="dark"] { --select-chevron: url("../viewer/icons/select-chevron-dark.svg?v=22cd0b2b"); }
 select:not([multiple]):not([size]) { -webkit-appearance: none; appearance: none; padding-right: 34px; background-image: var(--select-chevron); background-repeat: no-repeat; background-position: right 11px center; background-size: 14px 14px; }
 textarea { resize: vertical; }
 .wide { max-width: 100%; }
@@ -299,8 +299,8 @@ details.more[open] > summary { margin-bottom: 12px; }
 .log-restore-fill { position:absolute; inset:0 auto 0 0; width:0; overflow:hidden; transition:width .5s ease; }
 /* Two wave crests drift at different speeds over the water; the mask draws the crest, the background its color. */
 .log-restore-wave { position:absolute; inset:0; background:var(--accent);
-    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48' preserveAspectRatio='none'%3E%3Cpath d='M0 13Q30 3 60 13T120 13V48H0Z'/%3E%3C/svg%3E") 0 0/120px 100% repeat-x;
-    mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 48' preserveAspectRatio='none'%3E%3Cpath d='M0 13Q30 3 60 13T120 13V48H0Z'/%3E%3C/svg%3E") 0 0/120px 100% repeat-x;
+    -webkit-mask:url("../viewer/icons/wave.svg?v=351b9d58") 0 0/120px 100% repeat-x;
+    mask:url("../viewer/icons/wave.svg?v=351b9d58") 0 0/120px 100% repeat-x;
     animation:log-restore-wave 2.4s linear infinite; }
 .log-restore-wave.is-back { opacity:.4; top:-5px; -webkit-mask-size:160px 100%; mask-size:160px 100%; animation:log-restore-wave-back 3.8s linear infinite reverse; }
 @keyframes log-restore-wave { to { -webkit-mask-position:120px 0; mask-position:120px 0; } }

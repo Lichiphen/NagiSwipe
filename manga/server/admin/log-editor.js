@@ -189,6 +189,8 @@ window.NagiLogFormat = (() => {
 })();
 (() => {
     'use strict';
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const icon = (id, cls = '') => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' + document.documentElement.dataset.icons + '#' + id + '"/></svg>';
     // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
@@ -380,7 +382,7 @@ window.NagiLogFormat = (() => {
     markLayer.className = 'log-mark-layer'; markLayer.setAttribute('aria-hidden', 'true'); markLayer.hidden = true;
     body.after(markLayer);
     const COPIED = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'wordSpacing', 'textIndent', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
-    const grip = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>';
+    const grip = icon('grip');
     function drawMark() {
         const { at } = view();
         markLayer.hidden = !at.size;
@@ -572,13 +574,13 @@ window.NagiLogFormat = (() => {
     // A video or audio file without a cover: its kind instead of a picture.
     const kindMark = kind => {
         const mark = document.createElement('span'); mark.className = 'log-kind-mark';
-        mark.innerHTML = kind === 'audio' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg>'
-            : kind === 'video' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="13" height="13" rx="2.5"/><path d="m16 10 5-3v10l-5-3"/></svg>' : '';
+        mark.innerHTML = kind === 'audio' ? icon('audio')
+            : kind === 'video' ? icon('video') : '';
         mark.append(kind === 'audio' ? t('音声') : kind === 'video' ? t('動画') : t('画像'));
         return mark;
     };
     const strongest = list => list.reduce((a, b) => RANK.indexOf(b) > RANK.indexOf(a) ? b : a, '');
-    const veilIcon = '<svg class="log-veil-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/></svg>';
+    const veilIcon = icon('warning', 'log-veil-icon');
     // Pictures from tags typed or pasted by hand: ask the server once for their thumbnails and ratings.
     const asked = new Set();
     async function lookup(ids) {
@@ -634,7 +636,7 @@ window.NagiLogFormat = (() => {
                 rate.setAttribute('aria-label', t('このメディアの閲覧注意：{label}', { label: LABEL[r] })); rate.title = t('閲覧注意：{label}', { label: LABEL[r] });
                 rate.innerHTML = veilIcon + (r ? '<span>' + LABEL[r] + '</span>' : '');
                 rate.addEventListener('click', () => openMenu(rate, id));
-                const remove = button('log-att-remove', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>', t('この投稿から外す（メディア一覧には残ります）'), () => {
+                const remove = button('log-att-remove', icon('close'), t('この投稿から外す（メディア一覧には残ります）'), () => {
                     g.ids = g.ids.filter(other => other !== id); changed();
                     ($$('.log-att-group[data-n="' + g.n + '"] .log-att-thumb', attachments)[Math.min(i, g.ids.length - 1)] || body).focus();
                     say(t('外しました。ファイルそのものはメディア一覧に残っています。'));
@@ -644,19 +646,19 @@ window.NagiLogFormat = (() => {
                 // Video: how it plays. Audio: its cover and loop. Both open a dialog of log-av.js.
                 if ((info.kind === 'video' || info.kind === 'audio') && window.NagiLogAV?.playDialog) {
                     const video = info.kind === 'video', label = video ? t('再生のしかた') : t('ジャケットとループ位置');
-                    const av = button('log-att-av', video ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3.5 20 6.5l-3 3M4 11.5v-1a4 4 0 0 1 4-4h12M7 20.5l-3-3 3-3M20 12.5v1a4 4 0 0 1-4 4H4"/></svg>', label, () => openAV(id, video));
+                    const av = button('log-att-av', video ? icon('sliders') : icon('loop'), label, () => openAV(id, video));
                     av.setAttribute('aria-label', label + ' ' + t('メディア{n}の{i}つ目', { n: g.n, i: i + 1 }));
                     item.append(av);
                 }
                 row.append(item);
             });
-            const add = button('log-att-add', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>', t('メディア{n}に追加', { n: g.n }), () => { active = pinned = g; uploadInput.click(); });
+            const add = button('log-att-add', icon('plus'), t('メディア{n}に追加', { n: g.n }), () => { active = pinned = g; uploadInput.click(); });
             add.setAttribute('aria-label', t('メディア{n}に追加', { n: g.n }));
             row.append(add);
             group.append(head, row);
             return group;
         });
-        if (ids.length || rows.length) nodes.push(button('log-att-new', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>' + t('別の場所にもメディアを置く') + '</span>', t('本文のカーソル位置に新しい「〔メディアN〕」の行を入れます'), () => {
+        if (ids.length || rows.length) nodes.push(button('log-att-new', icon('plus') + '<span>' + t('別の場所にもメディアを置く') + '</span>', t('本文のカーソル位置に新しい「〔メディアN〕」の行を入れます'), () => {
             const g = { n: nextNumber(), ids: [] };
             groups.push(g); active = g; insertMark(g.n);
             say(t('「{mark}」の行を入れました。メディア{n}の＋から追加してください。', { mark: markOf(g.n), n: g.n }));
@@ -852,13 +854,13 @@ window.NagiLogFormat = (() => {
         const names = categoryFields.filter(i => i.checked).map(i => i.nextElementSibling.textContent).concat(newCategories.value.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean));
         names.forEach(name => {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-category'; b.dataset.open = 'categories';
-            b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+            b.innerHTML = icon('folder');
             const text = document.createElement('span'); text.textContent = name; b.append(text); out.push(b);
         });
         const lockOn = $('[data-lock-toggle]', form)?.checked;
         if (lockOn) {
             const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-lock'; b.dataset.open = 'lock';
-            b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>';
+            b.innerHTML = icon('lock');
             const text = document.createElement('span'); text.textContent = t('パスワードあり'); b.append(text); out.push(b);
         }
         $('[data-panel="lock"]', form)?.classList.toggle('is-set', !!lockOn);

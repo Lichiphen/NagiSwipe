@@ -84,7 +84,7 @@ function nl_pinned_first(array $summaries): array
 /** The pin mark on a post or a tile. */
 function nl_pin_icon(): string
 {
-    return '<svg class="log-pin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3.5h6l-1 5.2 3.2 3.3v1.8H6.8V12L10 8.7Z"/><path d="M12 13.8V20.5"/></svg>';
+    return nm_icon('pin', 'log-pin-icon');
 }
 function nl_pin_badge(string $class = 'log-pin-badge'): string
 {

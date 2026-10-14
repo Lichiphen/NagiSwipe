@@ -153,14 +153,14 @@ function nl_topmenu_html(array $here): string
 {
     $list = nl_menu_items('top', $here);
     if ($list === '') return '';
-    $arrow = static fn(string $dir, string $label, string $path) => '<button class="log-topmenu-arrow is-' . $dir . '" type="button" tabindex="-1" aria-hidden="true" title="' . $label . '" hidden><svg viewBox="0 0 24 24"><path d="' . $path . '"/></svg></button>';
+    $arrow = static fn(string $dir, string $label) => '<button class="log-topmenu-arrow is-' . $dir . '" type="button" tabindex="-1" aria-hidden="true" title="' . $label . '" hidden>' . nm_icon($dir) . '</button>';
     return '<nav class="log-topmenu" aria-label="' . nm_t('サイトのメニュー') . '"><div class="log-topmenu-inner"><div class="log-topmenu-scroller" data-topmenu-scroller><ul class="log-topmenu-links">' . $list . '</ul></div>'
-        . $arrow('prev', nm_t('前の項目'), 'm14 6-6 6 6 6') . $arrow('next', nm_t('続きの項目'), 'm10 6 6 6-6 6') . '</div></nav>';
+        . $arrow('prev', nm_t('前の項目')) . $arrow('next', nm_t('続きの項目')) . '</div></nav>';
 }
 /** The footer: HOME with the house icon, the footer links, then the footer text. Empty when there is nothing to show. */
 function nl_footer_html(array $s, array $here): string
 {
-    $home = $s['footer_home'] ? '<li><a class="log-footer-home" href="./"' . (!empty($here['top']) ? ' aria-current="page"' : '') . '><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg><span>' . h(nl_crumb_home($s)) . '</span></a></li>' : '';
+    $home = $s['footer_home'] ? '<li><a class="log-footer-home" href="./"' . (!empty($here['top']) ? ' aria-current="page"' : '') . '>' . nm_icon('home') . '<span>' . h(nl_crumb_home($s)) . '</span></a></li>' : '';
     $links = $home . nl_menu_items('foot', $here + ['top' => false]);
     $text = $s['show_footer'] && $s['footer_text'] !== '' ? '<p class="log-footer-text">' . h(nm_t($s['footer_text'])) . '</p>' : '';
     if ($links === '' && $text === '') return '';

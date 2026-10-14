@@ -144,6 +144,22 @@ function nm_json(array $data, int $status = 200): never
     exit;
 }
 
+/** The address of viewer/icons/ui.svg, the icons every page shares (from the site root, so it works on any page). */
+function nm_icon_url(): string
+{
+    static $url = null;
+    if ($url === null) {
+        $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'))), '/');
+        if (str_ends_with($dir, '/admin')) $dir = substr($dir, 0, -6);
+        $url = ($dir === '.' ? '' : $dir) . '/viewer/icons/ui.svg?v=' . nm_asset_version(NM_ROOT . '/viewer/icons/ui.svg');
+    }
+    return $url;
+}
+/** One icon of viewer/icons/ui.svg; like an inline one, it takes its colour and line width from CSS. */
+function nm_icon(string $id, string $class = ''): string
+{
+    return '<svg' . ($class !== '' ? ' class="' . h($class) . '"' : '') . ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' . h(nm_icon_url() . '#' . $id) . '"/></svg>';
+}
 function h(?string $s): string
 {
     return htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

@@ -5,6 +5,8 @@
  */
 (() => {
     'use strict';
+    // Icons come from viewer/icons/ui.svg (its address is on <html data-icons>).
+    const icon = (id, cls = '') => '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="' + document.documentElement.dataset.icons + '#' + id + '"/></svg>';
     const rail = document.querySelector('[data-toc-rail]');
     if (!rail) return;
     const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
@@ -26,7 +28,7 @@
     fab.type = 'button'; fab.className = 'log-toc-fab';
     fab.setAttribute('aria-label', t('目次を開く')); fab.setAttribute('aria-haspopup', 'dialog');
     fab.innerHTML = '<svg class="log-toc-fab-ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="27"/><circle class="log-toc-fab-done" cx="30" cy="30" r="27" pathLength="100"/></svg>'
-        + '<svg class="log-toc-fab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="17.5" r="1.2"/></svg>';
+        + icon('toc', 'log-toc-fab-icon');
     const label = document.createElement('span'); label.className = 'log-toc-fab-label'; label.textContent = t('目次');
     fab.append(label);
     // The owner's 書く and 管理 buttons sit in the corner: the button goes above them.

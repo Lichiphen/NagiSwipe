@@ -62,7 +62,7 @@ def run(site,other_site,c,csrf,other,ot):
     check('標準9項目を既定順で公開',re.findall(r'data-sidebar-id="([^"]+)"',pub.get('/').text)==names)
     links=block(pub.get('/').text,'links')
     check('リンク集は枠なし・中央アイコン・5本の横長ボタン','log-widget' not in links and 'log-profile-icon' in links and links.count('class="log-link-button"')==5)
-    check('5サービスは用途を表す線画とテキストで表示',all('<span>'+x+'</span>' in links for x in ('X','Instagram','Bluesky','GitHub','YouTube')) and links.count('class="log-link-icon" aria-hidden="true" focusable="false"')==5)
+    check('5サービスは用途を表す線画とテキストで表示',all('<span>'+x+'</span>' in links for x in ('X','Instagram','Bluesky','GitHub','YouTube')) and links.count('<svg class="log-link-icon"')==5 and '#link-sky-network"/>' in links)
     check('SVG7点とMIT全文を配信',all(pub.get('/viewer/link-icons/'+name+'.svg').status==200 for name in ('conversation','pictures','sky-network','code-branch','film','mail','link')) and 'Permission is hereby granted' in pub.get('/viewer/link-icons/LICENSE.txt').text)
     panel=c.get('/admin/index.php?p=settings&section=log').text
     check('LOG設定へ並び替え・3テンプレート・保存操作を用意','data-sidebar-manager' in panel and all('data-sidebar-template="'+x+'"' in panel for x in ('grid','banner','blank')) and 'data-sidebar-step="-1"' in panel and 'data-sidebar-step="1"' in panel)
@@ -99,7 +99,7 @@ def run(site,other_site,c,csrf,other,ot):
     check('任意リンクの追加・削除・順番・用途アイコンを保存',side(site)['items'][0]['links']==edited[0]['links'] and view.count('class="log-link-button"')==2 and view.index('My site')<view.index('コード'))
     check('表示名・URLをエスケープし別窓を保護','&lt;b&gt;My site&lt;/b&gt;' in view and 'a=1&amp;b=2' in view and 'target="_blank" rel="noopener noreferrer"' in view)
     mail=copy.deepcopy(edited); mail[0]['links'].append({'label':'メール','url':'  mailto:me%40example.com ','icon':'mail'}); ok_sidebar(mail); mview=block(pub.get('/').text,'links')
-    check('メールアイコンとmailtoリンクを別タブにせず表示',side(site)['items'][0]['links'][-1]=={'label':'メール','url':'mailto:me@example.com','icon':'mail'} and '<a class="log-link-button" href="mailto:me@example.com" data-mail="me@example.com">' in mview and 'm4.5 7.5 6.3 5' in mview and pub.get('/viewer/link-icons/mail.svg').status==200)
+    check('メールアイコンとmailtoリンクを別タブにせず表示',side(site)['items'][0]['links'][-1]=={'label':'メール','url':'mailto:me@example.com','icon':'mail'} and '<a class="log-link-button" href="mailto:me@example.com" data-mail="me@example.com">' in mview and '#link-mail"/>' in mview and pub.get('/viewer/link-icons/mail.svg').status==200)
     bare=copy.deepcopy(mail); bare[0]['links'][-1]['url']=' you@example.com '; ok_sidebar(bare); bview=pub.get('/').text
     check('アドレスだけのメールを受け付けてダイアログ用に表示',side(site)['items'][0]['links'][-1]['url']=='mailto:you@example.com' and 'href="mailto:you@example.com" data-mail="you@example.com"' in block(bview,'links') and 'viewer/log-mail.js?v=' in bview and pub.get('/viewer/log-mail.js').status==200)
     for name,url in [('アドレスだけの件名','you@example.com?subject=x'),('mailtoの件名',"mailto:me@example.com?subject=x"),('mailtoの複数宛先','mailto:a@example.com,b@example.com'),('mailtoの空','mailto:'),('不正アドレス','mailto:not-an-address')]:
