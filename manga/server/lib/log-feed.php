@@ -25,7 +25,7 @@ function nl_xml(string $s): string { return htmlspecialchars($s, ENT_XML1 | ENT_
 /** Feeds and the sitemap answer 304 while nothing in them changed (readers and crawlers poll often). */
 function nl_xml_headers(string $type, int $last, string $tag): void
 {
-    $etag = '"' . substr(hash('sha256', $tag . '|' . $last . '|' . NM_VERSION), 0, 20) . '"';
+    $etag = '"' . substr(hash('sha256', $tag . '|' . $last . '|' . NM_VERSION . (nl_pretty() ? '|clean' : '')), 0, 20) . '"';
     header('Content-Type: ' . $type . '; charset=UTF-8');
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: no-cache');
@@ -47,22 +47,22 @@ function nl_serve_feed(array $s, array $summaries): never
     nl_xml_headers('application/rss+xml', $last, 'feed|' . $filter['query'] . '|' . implode(',', array_column($posts, 'id')));
     $base = nl_base_url();
     $categories = nl_taxonomy()['categories'];
-    $title = $s['title'] . ($filter['label'] !== '' ? '｜' . $filter['label'] : '');
+    $title = $s['title'] . ($filter['label'] !== '' ? nm_t('｜') . $filter['label'] : '');
     $items = '';
     foreach ($posts as $summary) {
         $p = nl_load_post($summary['id']);
         if (!$p || $p['status'] !== 'published') continue;
-        $link = $base . '/?id=' . rawurlencode($p['id']);
+        $link = nl_post_abs($p['id']);
         $cats = '';
         foreach ($p['categories'] ?? [] as $id) if (isset($categories[$id])) $cats .= '<category>' . nl_xml($categories[$id]) . '</category>';
-        $desc = nl_veil_description($p) ?: nl_excerpt($p);
+        $desc = nl_is_locked($p) ? nl_lock_description() : (nl_veil_description($p) ?: nl_excerpt($p));
         $items .= '<item><title>' . nl_xml(nl_post_title($p, 0)) . '</title><link>' . nl_xml($link) . '</link><guid isPermaLink="true">' . nl_xml($link) . '</guid>'
             . '<pubDate>' . nl_date((int)$p['created'], DATE_RSS) . '</pubDate>' . $cats . ($desc !== '' ? '<description>' . nl_xml($desc) . '</description>' : '') . "</item>\n";
     }
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'
         . '<title>' . nl_xml($title) . '</title><link>' . nl_xml($base . '/' . ($filter['query'] !== '' ? '?' . $filter['query'] : '')) . '</link>'
         . '<atom:link href="' . nl_xml(nl_feed_url($filter['query'])) . '" rel="self" type="application/rss+xml"/>'
-        . '<description>' . nl_xml($s['description']) . '</description><language>ja</language>'
+        . '<description>' . nl_xml($s['description']) . '</description><language>' . nm_lang() . '</language>'
         . ($last > 0 ? '<lastBuildDate>' . nl_date($last, DATE_RSS) . '</lastBuildDate>' : '') . "<generator>NagiLog</generator>\n" . $items . '</channel></rss>';
     exit;
 }
@@ -83,13 +83,13 @@ function nl_serve_sitemap(array $s, array $summaries): never
     foreach ($pages as $p) $last = max($last, (int)$p['updated']);
     $grid = $s['layout'] === 'grid';
     header('X-Robots-Tag: noindex');
-    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries) . '|' . implode(',', array_column($pages, 'slug')) . '|' . implode(',', array_column(array_filter($summaries, static fn($p) => ($p['rating'] ?? '') === 'r18'), 'id')));
+    nl_xml_headers('application/xml', $last, 'sitemap|' . $s['layout'] . '|' . count($summaries) . '|' . implode(',', array_column($pages, 'slug')) . '|' . implode(',', array_column(array_filter($summaries, static fn($p) => ($p['rating'] ?? '') === 'r18' || !empty($p['locked'])), 'id')) . '|' . implode(',', array_column(array_filter($pages, 'nl_is_locked'), 'slug')));
     $url = static fn(string $loc, int $time, string $priority): string => '<url><loc>' . nl_xml($loc) . '</loc>' . ($time > 0 ? '<lastmod>' . nl_date($time, 'c') . '</lastmod>' : '') . '<priority>' . $priority . "</priority></url>\n";
     $out = $url($base . '/', $last, '1.0');
     foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($byCategory[$id])) $out .= $url($base . '/?category=' . rawurlencode((string)$id), $byCategory[$id], '0.5');
-    foreach ($pages as $p) $out .= $url($base . '/?pg=' . rawurlencode($p['slug']), (int)$p['updated'], '0.5');
-    // R-18 posts answer noindex, so they are not listed.
-    if ($grid) foreach ($summaries as $p) if (($p['rating'] ?? '') !== 'r18') $out .= $url($base . '/?id=' . rawurlencode($p['id']), (int)$p['updated'], '0.7');
+    // Locked pages and posts answer noindex, like R-18 posts, so they are not listed.
+    foreach ($pages as $p) if (!nl_is_locked($p)) $out .= $url($base . '/' . nl_fixed_path($p['slug']), (int)$p['updated'], '0.5');
+    if ($grid) foreach ($summaries as $p) if (($p['rating'] ?? '') !== 'r18' && empty($p['locked'])) $out .= $url(nl_post_abs($p['id']), (int)$p['updated'], '0.7');
     echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n" . $out . '</urlset>';
     exit;
 }

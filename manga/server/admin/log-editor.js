@@ -324,7 +324,7 @@
     markLayer.addEventListener('pointerup', e => { if (bandDrag && e.pointerId === bandDrag.pointer) endBand(true); });
     markLayer.addEventListener('pointercancel', () => endBand(false));
     const rating = () => ratingFields.find(i => i.checked)?.value || '';
-    const current = () => ({ body: compose(), title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value, rating: rating(), warning: warning.value, mediaRatings });
+    const current = () => ({ body: compose(), title: title.value, refs, categories: categoryFields.filter(i => i.checked).map(i => i.value), newCategories: newCategories.value, rating: rating(), warning: warning.value, mediaRatings, lock: !!$('[data-lock-toggle]', form)?.checked });
     const initial = JSON.stringify(current());
     const snapshot = () => JSON.stringify(current());
     function restore(saved) {
@@ -333,6 +333,7 @@
         newCategories.value = saved.newCategories || '';
         if (typeof saved.rating === 'string') ratingFields.forEach(i => { i.checked = i.value === saved.rating; });
         warning.value = saved.warning || '';
+        if (typeof saved.lock === 'boolean' && $('[data-lock-toggle]', form)) $('[data-lock-toggle]', form).checked = saved.lock;
         mediaRatings = saved.mediaRatings && typeof saved.mediaRatings === 'object' ? saved.mediaRatings : {};
     }
     // A message still at work ends with "…": it gets the small wave (log.css .log-busy).
@@ -666,6 +667,13 @@
             b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
             const text = document.createElement('span'); text.textContent = name; b.append(text); out.push(b);
         });
+        const lockOn = $('[data-lock-toggle]', form)?.checked;
+        if (lockOn) {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'log-chip-lock'; b.dataset.open = 'lock';
+            b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>';
+            const text = document.createElement('span'); text.textContent = t('パスワードあり'); b.append(text); out.push(b);
+        }
+        $('[data-panel="lock"]', form)?.classList.toggle('is-set', !!lockOn);
         out.forEach(b => b.addEventListener('click', () => togglePanel(b.dataset.open, true)));
         chips.replaceChildren(...out); chips.hidden = !out.length;
         const tool = $('[data-panel="rating"]', form);
@@ -721,6 +729,10 @@
         changed();
     }));
     warning.addEventListener('input', changed);
+    // The lock: typing a password turns the switch on; the switch is part of the draft, the password is not kept in the tab.
+    const lockToggle = $('[data-lock-toggle]', form), lockField = $('[data-lock-field]', form);
+    lockToggle?.addEventListener('change', () => { if (lockToggle.checked && !lockField.value && !lockField.placeholder) lockField.focus(); changed(); });
+    lockField?.addEventListener('input', () => { if (lockField.value.trim() && !lockToggle.checked) lockToggle.checked = true; changed(); });
     // A preset fills the note and leaves the caret at its end, ready to edit.
     $$('[data-warning-preset]', form).forEach(b => b.addEventListener('click', () => {
         warning.value = b.dataset.warningPreset; changed();
@@ -821,6 +833,8 @@
     }
     fab.addEventListener('click', () => setPanel(true));
     $('[data-compose-open]')?.addEventListener('click', () => setPanel(true));
+    // A post's own page: ./?id=… or the clean ./20261014123456.
+    const isPostPage = href => { try { const u = new URL(href); return u.searchParams.has('id') || /\/[0-9]{14}(?:-[0-9]{2,6})?$/.test(u.pathname); } catch { return false; } };
     // The public page this edit was opened from, kept while the editor reloads for 続けて編集する.
     const origin = (() => {
         const id = $('input[name="post_id"]', form)?.value, from = document.referrer.split('#')[0];
@@ -835,7 +849,7 @@
     if (origin && crumb) {
         const toPublic = document.createElement('a');
         toPublic.className = 'crumb-return'; toPublic.href = origin;
-        toPublic.textContent = new URL(origin).searchParams.has('id') ? t('記事ページに戻る') : t('公開ページに戻る');
+        toPublic.textContent = isPostPage(origin) ? t('記事ページに戻る') : t('公開ページに戻る');
         crumb.prepend(toPublic);
     }
     $('.log-close', panel).addEventListener('click', () => {
@@ -1016,7 +1030,7 @@
             dirty = false;
             // Editing an existing post in the admin: ask where to go instead of always returning to the list.
             if (panel.dataset.edit && !publicEditor) { savedDialog(result, data.get('status') === 'published'); return; }
-            location.href = publicEditor && !result.id.startsWith('d') ? new URL('../?id=' + encodeURIComponent(result.id), endpoint).href : adminUrl(result.redirect);
+            location.href = publicEditor && !result.id.startsWith('d') ? new URL(result.url, endpoint).href : adminUrl(result.redirect);
         } catch (err) {
             saving = false; say(err.message, true);
             $$('button[type="submit"],button[name="status"]', form).forEach(b => { b.disabled = false; });
@@ -1032,9 +1046,9 @@
         const heading = el('h2', '', published ? t('保存しました。記事を見ますか？') : t('下書きを保存しました')); heading.id = 'log-saved-title';
         const lead = el('p', '', published ? t('公開ページで、編集した記事を確認できます。') : t('下書きは公開ページに出ないため、続けて編集するか一覧に戻ってください。'));
         const editUrl = adminUrl('index.php?p=log_edit&id=' + encodeURIComponent(result.id));
-        const view = published ? link(t('記事を見る'), new URL('../?id=' + encodeURIComponent(result.id), endpoint).href, 'btn primary') : null;
+        const view = published ? link(t('記事を見る'), new URL(result.url, endpoint).href, 'btn primary') : null;
         const actions = el('div', 'log-saved-dialog-actions');
-        actions.append(link(t('続けて編集する'), editUrl, 'btn'), origin ? link(new URL(origin).searchParams.has('id') ? t('記事ページに戻る') : t('公開ページに戻る'), origin, published ? 'btn' : 'btn primary') : link(t('一覧に戻る'), adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
+        actions.append(link(t('続けて編集する'), editUrl, 'btn'), origin ? link(isPostPage(origin) ? t('記事ページに戻る') : t('公開ページに戻る'), origin, published ? 'btn' : 'btn primary') : link(t('一覧に戻る'), adminUrl(result.redirect), published ? 'btn' : 'btn primary'));
         if (view) actions.append(view);
         saved.append(heading, lead, actions);
         // Escape closes the dialog; the form holds the old revision, so reopen the editor.

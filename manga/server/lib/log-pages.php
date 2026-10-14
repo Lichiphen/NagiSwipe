@@ -1,7 +1,7 @@
 <?php
 /*
  * Fixed pages (privacy policy, terms, about…) written in Markdown. MIT License (c) 2026 Lichiphen.
- * Each page is one guarded PHP record in data/log/pages/; the public URL is ./?pg=<URL name>.
+ * Each page is one guarded PHP record in data/log/pages/; the public URL is ./<URL name> (./?pg=<URL name> without clean URLs).
  * Markdown is turned into HTML here from escaped text only: raw HTML in the source is shown as text.
  */
 declare(strict_types=1);
@@ -42,7 +42,7 @@ function nl_find_page(string $slug): ?array
     foreach (nl_pages() as $p) if ($p['slug'] === $slug) return $p;
     return null;
 }
-function nl_fixed_url(array $p): string { return './?pg=' . rawurlencode($p['slug']); }
+function nl_fixed_url(array $p): string { return './' . nl_fixed_path($p['slug']); }
 /** LOG pictures a page shows (written as ./?media=<id>… in its Markdown). */
 function nl_page_media_refs(string $body): array
 {
@@ -72,10 +72,10 @@ function nl_page_input(array $in): array
     if (!in_array($status, ['published', 'draft'], true)) throw new UnexpectedValueException(nm_t('公開か下書きを選んでください'));
     return ['title' => $title, 'slug' => $slug, 'body' => $body, 'layout' => $layout, 'status' => $status];
 }
-/** Save under the LOG lock; the revision stops two tabs overwriting each other. */
-function nl_page_save(string $id, int $revision, array $fields): array
+/** Save under the LOG lock; the revision stops two tabs overwriting each other. $lock: [switch, typed password], or null to keep the lock. */
+function nl_page_save(string $id, int $revision, array $fields, ?array $lock = null): array
 {
-    return nm_with_lock('personal-log', static function () use ($id, $revision, $fields) {
+    return nm_with_lock('personal-log', static function () use ($id, $revision, $fields, $lock) {
         $old = $id !== '' ? nl_load_page($id) : null;
         if ($id !== '' && !$old) throw new UnexpectedValueException(nm_t('固定ページが見つかりません。一覧を開き直してください'));
         if ($old && $old['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で更新されています。本文をコピーしてから開き直してください'));
@@ -83,6 +83,10 @@ function nl_page_save(string $id, int $revision, array $fields): array
         foreach (nl_pages() as $p) if ($p['slug'] === $fields['slug'] && $p['id'] !== $id) throw new UnexpectedValueException(nm_t('URL名「{slug}」はほかの固定ページで使っています', ['slug' => $fields['slug']]));
         $now = time();
         $page = $fields + ['id' => $old['id'] ?? 'pg' . bin2hex(random_bytes(6)), 'media' => nl_page_media_refs($fields['body']), 'created' => $old['created'] ?? $now, 'updated' => $now, 'revision' => ($old['revision'] ?? 0) + 1];
+        // A new URL name may not be a folder of the LOG or look like a post (older pages keep theirs).
+        if ((!$old || $old['slug'] !== $fields['slug']) && !nl_slug_free($fields['slug'])) throw new UnexpectedValueException(nm_t('URL名「{slug}」はLOGのフォルダー名や記事の番号と重なるため使えません', ['slug' => $fields['slug']]));
+        $locked = $lock !== null ? nl_lock_input($lock[0], $lock[1], $old) : ($old['lock'] ?? null);
+        if ($locked !== null) $page['lock'] = $locked;
         nl_write_record(nl_page_file($page['id']), $page);
         nm_log('log_page_saved', $page['id']);
         return $page;
@@ -335,8 +339,8 @@ function nl_view_pages(): void
     $rows = '';
     foreach (nl_pages() as $p) {
         $published = $p['status'] === 'published';
-        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">' . nm_t('下書き') . '</small>') . '</a>'
-            . '<code class="log-page-row-url">?pg=' . h($p['slug']) . '</code><span class="log-page-row-layout">' . h(nm_t(NL_PAGE_LAYOUTS[$p['layout']] ?? '')) . '</span><span class="log-page-row-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['updated'], 'c')) . '">' . h(nl_date($p['updated'])) . '</time></span>'
+        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">' . nm_t('下書き') . '</small>') . (nl_is_locked($p) ? nl_lock_badge() : '') . '</a>'
+            . '<code class="log-page-row-url">' . h(nl_fixed_path($p['slug'])) . '</code><span class="log-page-row-layout">' . h(nm_t(NL_PAGE_LAYOUTS[$p['layout']] ?? '')) . '</span><span class="log-page-row-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['updated'], 'c')) . '">' . h(nl_date($p['updated'])) . '</time></span>'
             . ($published ? '<a class="btn log-list-view" href="../' . h(nl_fixed_url($p)) . '">' . nl_ui_icon('view') . '<span>' . nm_t('ページを見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('非公開') . '</span>')
             . '<a class="btn log-list-edit" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a></li>';
     }
@@ -353,7 +357,7 @@ function nl_page_help(): string
         [nm_t('## 見出し'), nm_t('大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく')],
         [nm_t('**太字** *斜体* ~~取り消し線~~'), nm_t('文字の強調')],
         [nm_t('- 項目 / 1. 項目'), nm_t('箇条書きと番号付きリスト。行頭に空白2つで入れ子')],
-        [nm_t('[文字](https://example.com/)'), nm_t('リンク。./?pg=privacy のようなサイト内のURLも使えます')],
+        [nm_t('[文字](https://example.com/)'), nm_t('リンク。./privacy や ./?pg=privacy のようなサイト内のURLも使えます')],
         [nm_t('![説明](./?media=…)'), nm_t('画像。「画像を追加」かドロップで入ります')],
         ['> ' . nm_t('引用'), nm_t('引用')],
         [nm_t('| 項目 | 内容 |<br>|---|---|<br>| a | b |'), nm_t('表（2行目は区切り）')],
@@ -369,6 +373,8 @@ function nl_view_page_edit(string $id): void
     $p = $id !== '' ? nl_load_page($id) : null;
     if ($id !== '' && !$p) nm_not_found();
     $p ??= ['id' => '', 'title' => '', 'slug' => '', 'body' => '', 'layout' => 'narrow', 'status' => 'draft', 'revision' => 0];
+    $locked = nl_is_locked($p);
+    $plain = $locked ? nl_lock_plain($p) : null;
     $layouts = '';
     $notes = ['sidebar' => nm_t('投稿のページと同じ、右にサイドバーのある形です。'), 'wide' => nm_t('サイドバーを出さず、本文を全幅で表示します。表の多いページに。'), 'narrow' => nm_t('サイドバーを出さず、本文の列だけを中央に寄せます。規約やポリシーの読みやすい幅です。')];
     foreach (NL_PAGE_LAYOUTS as $key => $label) $layouts .= '<label class="log-page-layout-choice"><input type="radio" name="layout" value="' . $key . '"' . ($p['layout'] === $key ? ' checked' : '') . '><span class="log-page-layout-figure is-' . $key . '" aria-hidden="true"><i></i><i></i></span><span><b>' . h(nm_t($label)) . '</b><small>' . h($notes[$key]) . '</small></span></label>';
@@ -378,8 +384,12 @@ function nl_view_page_edit(string $id): void
         . '<section class="card log-page-editor"><h1>' . ($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ')) . '</h1>'
         . '<form method="post" action="index.php" class="form" data-page-editor>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_save"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '">'
         . '<label>' . nm_t('タイトル') . '<input name="title" maxlength="' . NL_PAGE_TITLE_MAX . '" required value="' . h($p['title']) . '" placeholder="' . nm_t('例：プライバシーポリシー') . '"></label>'
-        . '<label>' . nm_t('URL名（半角英小文字・数字・ハイフン）') . '<span class="log-page-slug"><span aria-hidden="true">./?pg=</span><input name="slug" maxlength="40" pattern="[a-z0-9](?:[a-z0-9\-]{0,38}[a-z0-9])?" value="' . h($p['slug']) . '" placeholder="privacy" autocapitalize="off" spellcheck="false"></span></label>'
+        . '<label>' . nm_t('URL名（半角英小文字・数字・ハイフン）') . '<span class="log-page-slug"><span aria-hidden="true">' . (nl_pretty() ? './' : './?pg=') . '</span><input name="slug" maxlength="40" pattern="[a-z0-9](?:[a-z0-9\-]{0,38}[a-z0-9])?" value="' . h($p['slug']) . '" placeholder="privacy" autocapitalize="off" spellcheck="false"></span></label>'
         . '<p class="note">' . nm_t('空欄なら自動で付けます。変えると以前のURLは404になるので、公開後はなるべく変えないでください。') . '</p>'
+        . '<fieldset class="log-page-lock"><legend>' . nl_ui_icon('lock') . '<span>' . nm_t('パスワード（鍵）') . '</span></legend><input type="hidden" name="lock_form" value="1">'
+        . '<label class="check"><input type="checkbox" name="lock" value="1"' . ($locked ? ' checked' : '') . '>' . nm_t('このページにパスワードをかける') . '</label>'
+        . '<label>' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"></label>'
+        . '<p class="note">' . nm_t('読者にはタイトルとパスワードの入力欄だけを見せ、正しいパスワードを入れた人にだけ本文を表示します。開いた人のブラウザーには、パスワードではなく、このページを読める印をクッキーで{days}日間残します。', ['days' => NL_LOCK_DAYS]) . '</p></fieldset>'
         . '<fieldset class="log-page-layouts"><legend>' . nm_t('ページの幅（PC）') . '</legend>' . $layouts . '<p class="note">' . nm_t('スマホでは、どの形でもサイドバーを「MENU」の中に出します。') . '</p></fieldset>'
         . '<div class="log-md-toolbar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '">' . $tool('data-md="heading"', nm_t('見出し'), 'H') . $tool('data-md="bold"', nm_t('太字'), '<b>B</b>') . $tool('data-md="link"', nm_t('リンク'), nm_t('リンク')) . $tool('data-md="list"', nm_t('箇条書き'), nm_t('・')) . $tool('data-md="ordered"', nm_t('番号付きリスト'), '1.') . $tool('data-md="table"', nm_t('表'), nm_t('表')) . $tool('data-md="rule"', nm_t('区切り線'), '―')
         . '<button type="button" class="btn log-md-tool" data-md-upload>' . nl_compose_icon('upload') . '<span>' . nm_t('画像を追加') . '</span></button><button type="button" class="btn log-md-tool" data-md-pick aria-haspopup="dialog">' . nl_ui_icon('images') . '<span>' . nm_t('画像一覧から選ぶ') . '</span></button><input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'

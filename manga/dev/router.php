@@ -52,6 +52,19 @@ if (is_dir($file) && !is_file(rtrim($file, '/') . '/index.php') && !is_file(rtri
     return true;
 }
 
+// Clean URLs (the rewrite rules of the shipped .htaccess), when started with NAGIMANGA_PRETTY=1.
+if (getenv('NAGIMANGA_PRETTY') === '1') {
+    putenv('NL_PRETTY=1');
+    if (!is_file($file) && !is_dir($file) && preg_match('~^(/nagimanga)?/(?:([0-9]{14}(?:-[0-9]{2,6})?)|([a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?))/?$~', $path, $m)) {
+        if (($m[2] ?? '') !== '') $_GET = ['id' => $m[2]] + $_GET; else $_GET = ['pg' => $m[3]] + $_GET;
+        $_SERVER['SCRIPT_NAME'] = $m[1] . '/index.php';
+        $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'] . $m[1] . '/index.php';
+        chdir(dirname($_SERVER['SCRIPT_FILENAME']));
+        require $_SERVER['SCRIPT_FILENAME'];
+        return true;
+    }
+}
+
 if (!is_file($file) && !is_dir($file)) {
     $_SERVER['SCRIPT_NAME'] = '/404.php';
     require $_SERVER['DOCUMENT_ROOT'] . '/404.php';

@@ -8,12 +8,21 @@ DirectoryIndex index.php
     CacheLookup on
 </IfModule>
 
-# Use the animated 404 page for missing paths, at any installation depth.
+# Clean URLs for posts and fixed pages, and the animated 404 page for missing paths, at any installation depth.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     # Scripts, styles and pictures requested with ?v=<content hash> never change under that URL.
     RewriteCond %{QUERY_STRING} (^|&)v=[0-9a-f.]+(&|$)
     RewriteRule \.(js|css|svg|png)$ - [E=NM_VERSIONED:1]
+    # Clean URLs: ./20261014123456 is a post, ./privacy a fixed page. NL_PRETTY tells the LOG they work here,
+    # so it writes them (without it, the LOG keeps ./?id= and ./?pg=, which always work).
+    RewriteRule ^ - [E=NL_PRETTY:1]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([0-9]{14}(?:-[0-9]{2,6})?)/?$ index.php?id=$1 [QSA,L,E=NL_PRETTY:1]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?)/?$ index.php?pg=$1 [QSA,L,E=NL_PRETTY:1]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ 404.php [L]

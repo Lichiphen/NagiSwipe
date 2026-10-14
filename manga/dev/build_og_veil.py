@@ -21,7 +21,19 @@ LABELS = {
     'sensitive': ('センシティブ', 'センシティブな内容を含みます', '#f6b04f'),
     'r18': ('R-18', '18歳未満の方は閲覧できません', '#ff6f8e'),
     'r18g': ('R-18G', '刺激の強い表現を含みます', '#b98bff'),
+    # Locked posts: their first picture, blurred, under a lock instead of a warning.
+    'lock': ('鍵付き', 'パスワードで保護された記事です', '#6fa8ff'),
 }
+# The same labels in English (<rating>.en.png), used when the admin language is set to English.
+LABELS_EN = {
+    'sensitive': ('Sensitive', 'Contains sensitive content', '#f6b04f'),
+    'r18': ('R-18', 'Not for readers under 18', '#ff6f8e'),
+    'r18g': ('R-18G', 'Contains graphic content', '#b98bff'),
+    'lock': ('Locked', 'This post is protected by a password', '#6fa8ff'),
+}
+PILLS_EN = {'lock': ('PASSWORD', 176)}
+ICONS = {'lock': '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.2"/>'}
+PILLS = {'lock': ('パスワード', 172)}
 
 
 def font(name):
@@ -32,13 +44,14 @@ def font(name):
     return path
 
 
-def svg(rating, name, note, accent, embed=True):
+def svg(rating, name, note, accent, embed=True, en=False):
     faces = ''
     if embed:
         for weight, file in ((700, 'MPLUSRounded1c-Bold.ttf'), (800, 'MPLUSRounded1c-ExtraBold.ttf')):
             data = base64.b64encode(font(file).read_bytes()).decode()
             faces += f"@font-face{{font-family:'M PLUS Rounded 1c';font-weight:{weight};src:url(data:font/ttf;base64,{data}) format('truetype');}}"
     size = 92 if len(name) <= 5 else 78
+    pill, pill_w = (PILLS_EN.get(rating, ('CAUTION', 156)) if en else PILLS.get(rating, ('閲覧注意', 144)))
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <style>{faces} text {{ font-family:'M PLUS Rounded 1c',sans-serif; fill:#fff; text-anchor:middle; }}</style>
@@ -55,12 +68,12 @@ def svg(rating, name, note, accent, embed=True):
   <circle cx="600" cy="232" r="46" fill="{accent}"/>
   <circle cx="600" cy="232" r="56" fill="none" stroke="{accent}" stroke-opacity=".4" stroke-width="4"/>
   <g transform="translate(572 204) scale(2.333)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>
+    {ICONS.get(rating, '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>')}
   </g>
   <text x="600" y="{360 if size == 92 else 352}" font-size="{size}" font-weight="800" letter-spacing="3" filter="url(#ink)">{name}</text>
   <text x="600" y="430" font-size="31" font-weight="700" fill-opacity=".92" letter-spacing="1" filter="url(#ink)">{note}</text>
-  <rect x="528" y="500" width="144" height="40" rx="20" fill="#0b1424" fill-opacity=".38" stroke="#fff" stroke-opacity=".3"/>
-  <text x="600" y="528" font-size="20" font-weight="700" letter-spacing="4" fill-opacity=".9">閲覧注意</text>
+  <rect x="{600 - pill_w // 2}" y="500" width="{pill_w}" height="40" rx="20" fill="#0b1424" fill-opacity=".38" stroke="#fff" stroke-opacity=".3"/>
+  <text x="600" y="528" font-size="20" font-weight="700" letter-spacing="4" fill-opacity=".9">{pill}</text>
 </svg>'''
 
 
@@ -69,15 +82,17 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={'width': 1200, 'height': 630})
-        for rating, (name, note, accent) in LABELS.items():
-            # The kept source names the font instead of carrying it (the label PNG is what ships).
-            (SOURCE / f'{rating}.svg').write_text(svg(rating, name, note, accent, embed=False), encoding='utf-8')
-            page.set_content('<!doctype html><html><body style="margin:0;background:transparent"><style>.shade{display:none}</style>' + svg(rating, name, note, accent) + '</body></html>')
-            page.evaluate('document.fonts.ready')
-            page.wait_for_timeout(200)
-            # Only the card and its shadow: x 230-970, y 110-560 of the 1200x630 image (CARD in lib/log-og.php).
-            page.screenshot(path=str(OUT / f'{rating}.png'), omit_background=True, clip={'x': 230, 'y': 110, 'width': 740, 'height': 450})
-            print('wrote', OUT / f'{rating}.png')
+        for suffix, labels in (('', LABELS), ('.en', LABELS_EN)):
+            for rating, (name, note, accent) in labels.items():
+                en = suffix == '.en'
+                # The kept source names the font instead of carrying it (the label PNG is what ships).
+                (SOURCE / f'{rating}{suffix}.svg').write_text(svg(rating, name, note, accent, embed=False, en=en), encoding='utf-8')
+                page.set_content('<!doctype html><html><body style="margin:0;background:transparent"><style>.shade{display:none}</style>' + svg(rating, name, note, accent, en=en) + '</body></html>')
+                page.evaluate('document.fonts.ready')
+                page.wait_for_timeout(200)
+                # Only the card and its shadow: x 230-970, y 110-560 of the 1200x630 image (CARD in lib/log-og.php).
+                page.screenshot(path=str(OUT / f'{rating}{suffix}.png'), omit_background=True, clip={'x': 230, 'y': 110, 'width': 740, 'height': 450})
+                print('wrote', OUT / f'{rating}{suffix}.png')
         browser.close()
     # Credit for the glyphs drawn into the labels.
     license = (FONTS / 'base-ofl.txt')

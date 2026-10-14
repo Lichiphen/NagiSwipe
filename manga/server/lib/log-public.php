@@ -10,27 +10,27 @@ function nl_archive_filter(array $src): array
         $q = trim((string)preg_replace('/[\s　]+/u', ' ', nm_str($src, 'q', 400)));
         if (mb_strlen($q) > 100) $q = mb_substr($q, 0, 100);
         $terms = nl_search_terms($q);
-        if ($terms) return ['search' => $q, 'terms' => $terms, 'query' => 'q=' . rawurlencode($q), 'label' => '「' . $q . '」の検索結果'] + $base;
+        if ($terms) return ['search' => $q, 'terms' => $terms, 'query' => 'q=' . rawurlencode($q), 'label' => nm_t('「{q}」の検索結果', ['q' => $q])] + $base;
     }
     if (isset($src['category'])) {
         $id = nm_str($src, 'category', 12); $tax = nl_taxonomy();
         if (!isset($tax['categories'][$id])) nm_not_found();
-        return ['category' => $id, 'query' => 'category=' . $id, 'label' => $tax['categories'][$id] . 'の記録'] + $base;
+        return ['category' => $id, 'query' => 'category=' . $id, 'label' => nm_t('{name}の記録', ['name' => $tax['categories'][$id]])] + $base;
     }
     if (isset($src['tag'])) {
         $tag = nm_str($src, 'tag', 250);
         if (!preg_match('/\A[\p{L}\p{M}\p{N}_]{1,60}\z/u', $tag)) nm_not_found();
-        return ['tag' => $tag, 'query' => 'tag=' . rawurlencode($tag), 'label' => '#' . $tag . 'の記録'] + $base;
+        return ['tag' => $tag, 'query' => 'tag=' . rawurlencode($tag), 'label' => nm_t('{name}の記録', ['name' => '#' . $tag])] + $base;
     }
     $day = nm_str($src, 'date', 10);
     $month = nm_str($src, 'month', 7);
     if (isset($src['date'])) {
         if (!preg_match('/\A([0-9]{4})-([0-9]{2})-([0-9]{2})\z/', $day, $m) || !checkdate((int)$m[2], (int)$m[3], (int)$m[1])) nm_not_found();
-        return ['date' => $day, 'month' => substr($day, 0, 7), 'query' => 'date=' . $day, 'label' => $day . 'の記録'] + $base;
+        return ['date' => $day, 'month' => substr($day, 0, 7), 'query' => 'date=' . $day, 'label' => nm_t('{name}の記録', ['name' => $day])] + $base;
     }
     if (isset($src['month'])) {
         if (!preg_match('/\A([0-9]{4})-([0-9]{2})\z/', $month, $m) || !checkdate((int)$m[2], 1, (int)$m[1])) nm_not_found();
-        return ['month' => $month, 'query' => 'month=' . $month, 'label' => $month . 'の記録'] + $base;
+        return ['month' => $month, 'query' => 'month=' . $month, 'label' => nm_t('{name}の記録', ['name' => $month])] + $base;
     }
     return $base;
 }
@@ -61,16 +61,16 @@ function nl_breadcrumb_trail(array $s, array $filter, int $page, ?array $post = 
     }
     if ($filter['category'] !== '') $trail[] = [nl_taxonomy()['categories'][$filter['category']], $filter['query']];
     elseif ($filter['tag'] !== '') $trail[] = ['#' . $filter['tag'], $filter['query']];
-    elseif ($filter['search'] !== '') $trail[] = ['「' . $filter['search'] . '」の検索結果', $filter['query']];
+    elseif ($filter['search'] !== '') $trail[] = [nm_t('「{q}」の検索結果', ['q' => $filter['search']]), $filter['query']];
     elseif ($filter['date'] !== '') {
         [$y, $m, $d] = array_map('intval', explode('-', $filter['date']));
-        $trail[] = [$y . '年' . $m . '月', 'month=' . $filter['month']];
-        $trail[] = [$m . '月' . $d . '日', $filter['query']];
+        $trail[] = [nm_t('{y}年{m}月', ['y' => $y, 'm' => $m]), 'month=' . $filter['month']];
+        $trail[] = [nm_t('{m}月{d}日', ['m' => $m, 'd' => $d]), $filter['query']];
     } elseif ($filter['query'] !== '') {
         [$y, $m] = array_map('intval', explode('-', $filter['month']));
-        $trail[] = [$y . '年' . $m . '月', $filter['query']];
+        $trail[] = [nm_t('{y}年{m}月', ['y' => $y, 'm' => $m]), $filter['query']];
     }
-    if ($page > 1) $trail[] = [$page . 'ページ目', null];
+    if ($page > 1) $trail[] = [nm_t('{n}ページ目', ['n' => $page]), null];
     if (count($trail) === 1) return [];
     $last = count($trail) - 1;
     $trail[$last][1] = null;
@@ -92,11 +92,11 @@ function nl_breadcrumb(array $trail, string $canonical): array
         $url = $current ? $canonical : $base . '/' . ($query !== '' ? '?' . $query : '');
         $label = ($i === 0 ? $home : '') . '<span>' . h($name) . '</span>';
         $items .= '<li' . ($current ? ' aria-current="page"' : '') . '>' . ($i > 0 ? $sep : '')
-            . ($current ? '<span class="log-crumb">' . $label . '</span>' : '<a class="log-crumb" href="./' . ($query !== '' ? '?' . h($query) : '') . '"' . ($i === 0 ? ' title="' . h(nl_settings()['title']) . 'のトップ"' : '') . '>' . $label . '</a>') . '</li>';
+            . ($current ? '<span class="log-crumb">' . $label . '</span>' : '<a class="log-crumb" href="./' . ($query !== '' ? '?' . h($query) : '') . '"' . ($i === 0 ? ' title="' . h(nm_t('{title}のトップ', ['title' => nl_settings()['title']])) . '"' : '') . '>' . $label . '</a>') . '</li>';
         $list[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $name, 'item' => $url];
     }
     $json = json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    return ['<nav class="log-breadcrumb" aria-label="パンくずリスト"><ol>' . $items . '</ol></nav>', (string)$json];
+    return ['<nav class="log-breadcrumb" aria-label="' . nm_t('パンくずリスト') . '"><ol>' . $items . '</ol></nav>', (string)$json];
 }
 function nl_page_url(string $query, int $page, string $base = './'): string
 {
@@ -176,10 +176,10 @@ function nl_post_nav(array $summaries, array $post): string
     $link = static function (?array $p, bool $older): string {
         if (!$p) return '<span class="log-post-nav-link is-empty" aria-hidden="true"></span>';
         $tab = '<span class="log-post-nav-tab" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="' . ($older ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6') . '"/></svg></span>';
-        return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="./?id=' . h($p['id']) . '">' . $tab . '<span class="log-post-nav-body"><span class="log-post-nav-kicker">' . ($older ? '過去の投稿' : '新しい投稿') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : '画像の記録') . '</span></span></a>';
+        return '<a class="log-post-nav-link ' . ($older ? 'is-older" rel="next"' : 'is-newer" rel="prev"') . ' href="' . h(nl_post_url($p['id'])) . '">' . $tab . '<span class="log-post-nav-body"><span class="log-post-nav-kicker">' . nm_t($older ? '過去の投稿' : '新しい投稿') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></span><span class="log-post-nav-title">' . h($p['title'] !== '' ? $p['title'] : nm_t('画像の記録')) . '</span></span></a>';
     };
-    return '<nav class="log-post-nav" aria-label="前後の投稿">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
-        . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
+    return '<nav class="log-post-nav" aria-label="' . nm_t('前後の投稿') . '">' . $link($summaries[$i - 1] ?? null, false) . $link($summaries[$i + 1] ?? null, true)
+        . '<a class="log-all-chip" href="./">' . nl_all_icon() . '<span>' . nm_t('すべての投稿') . '</span><span class="log-all-count">' . count($summaries) . '</span></a></nav>';
 }
 /** Our own share UI icons from viewer/link-icons (original artwork, no service logos). */
 function nl_share_icon(string $name, string $extra = ''): string
@@ -198,29 +198,29 @@ function nl_share_icon(string $name, string $extra = ''): string
 function nl_share_row(array $p): string
 {
     $title = nl_post_title($p, 120);
-    $text = ($title !== '' ? $title : '画像の記録') . "\n" . nl_base_url() . '/?id=' . rawurlencode($p['id']);
+    $text = ($title !== '' ? $title : nm_t('画像の記録')) . "\n" . nl_post_abs($p['id']);
     return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">' . (nl_settings()['likes'] ? nl_like_button($p) : '')
         . '<a class="log-share-btn log-share-open" href="https://x.com/intent/tweet?text=' . rawurlencode($text) . '" target="_blank" rel="noopener noreferrer" aria-haspopup="dialog">' . nl_share_icon('share') . '<span>Share</span></a>'
-        . '<button class="log-share-btn log-share-copy" type="button" aria-label="タイトルとURLをコピー">' . nl_share_icon('copy', 'log-share-icon-copy') . nl_share_icon('check', 'log-share-icon-done') . '<span class="log-share-label" aria-live="polite">Copy</span></button></div>';
+        . '<button class="log-share-btn log-share-copy" type="button" aria-label="' . nm_t('タイトルとURLをコピー') . '">' . nl_share_icon('copy', 'log-share-icon-copy') . nl_share_icon('check', 'log-share-icon-done') . '<span class="log-share-label" aria-live="polite">Copy</span></button></div>';
 }
 /** One dialog per page for PCs: X, はてなブックマーク, LINE, Instagram. The script fills in the post's text. */
 function nl_share_dialog(): string
 {
     $services = [
         'x' => ['conversation', 'X'],
-        'hatena' => ['bookmark-save', 'はてな|ブックマーク'],
+        'hatena' => ['bookmark-save', nm_t('はてな|ブックマーク')],
         'line' => ['chat-bubbles', 'LINE'],
         'instagram' => ['pictures', 'Instagram'],
     ];
     $items = '';
     foreach ($services as $key => [$icon, $label]) $items .= '<button class="log-share-service" type="button" data-share-service="' . $key . '">' . nl_share_icon($icon) . '<span>' . str_replace('|', '<wbr>', h($label)) . '</span></button>';
-    return '<dialog class="log-share-dialog" aria-labelledby="log-share-title"><div class="log-share-dialog-body"><h2 id="log-share-title">シェア</h2>'
+    return '<dialog class="log-share-dialog" aria-labelledby="log-share-title"><div class="log-share-dialog-body"><h2 id="log-share-title">' . nm_t('シェア') . '</h2>'
         . '<p class="log-share-preview"></p><div class="log-share-services">' . $items . '</div>'
-        . '<p class="log-share-status" role="status"></p><button class="log-share-close" type="button">閉じる</button></div></dialog>';
+        . '<p class="log-share-status" role="status"></p><button class="log-share-close" type="button">' . nm_t('閉じる') . '</button></div></dialog>';
 }
 function nl_search_form(string $q): string
 {
-    return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">LOGを検索</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="ことば・#タグで探す" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="検索する"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
+    return '<form class="log-search" role="search" method="get" action="./"><label class="sr-only" for="log-search-q">' . nm_t('LOGを検索') . '</label><input id="log-search-q" type="search" name="q" value="' . h($q) . '" maxlength="100" placeholder="' . nm_t('ことば・#タグで探す') . '" enterkeyhint="search" autocomplete="off"><button type="submit" aria-label="' . nm_t('検索する') . '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg></button></form>';
 }
 /**
  * Site titles of 8 characters or more shrink on phones to stay on one line.
@@ -242,7 +242,7 @@ function nl_icon_html(array $s, string $prefix = '', string $class = 'log-avatar
 {
     $m = nl_load_media($s['icon']);
     if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER) && !(function_exists('nm_is_logged_in') && nm_is_logged_in() && !nm_is_guest())) $m = null;
-    return $m ? '<img class="' . h($class) . '" src="' . h($prefix . nl_media_url($m, true)) . '" alt="' . h($s['name'] . 'のアイコン') . '">'
+    return $m ? '<img class="' . h($class) . '" src="' . h($prefix . nl_media_url($m, true)) . '" alt="' . h(nm_t('{name}のアイコン', ['name' => $s['name']])) . '">'
         : '<span class="' . h($class) . '" aria-hidden="true">' . h(mb_substr($s['name'], 0, 1)) . '</span>';
 }
 function nl_login_icon(): string
@@ -281,9 +281,9 @@ function nl_calendar(array $summaries, array $filter): string
         $date = nl_date($p['created'], 'Y-m-d');
         $counts[$date] = ($counts[$date] ?? 0) + 1;
     }
-    $html = '<section class="log-widget"><h2>カレンダー</h2><nav class="log-calendar-nav" aria-label="カレンダーの月"><a href="./?month=' . $prev . '" aria-label="前の月">‹</a><a href="./?month=' . h($filter['month']) . '">' . $first->format('Y年n月') . '</a><a href="./?month=' . $next . '" aria-label="次の月">›</a></nav>'
+    $html = '<section class="log-widget"><h2>' . nm_t('カレンダー') . '</h2><nav class="log-calendar-nav" aria-label="' . nm_t('カレンダーの月') . '"><a href="./?month=' . $prev . '" aria-label="' . nm_t('前の月') . '">‹</a><a href="./?month=' . h($filter['month']) . '">' . nm_t('{y}年{m}月', ['y' => $first->format('Y'), 'm' => $first->format('n')]) . '</a><a href="./?month=' . $next . '" aria-label="' . nm_t('次の月') . '">›</a></nav>'
         . '<table class="log-calendar"><thead><tr>';
-    foreach (['日', '月', '火', '水', '木', '金', '土'] as $d) $html .= '<th scope="col">' . $d . '</th>';
+    foreach (explode(',', nm_t('日,月,火,水,木,金,土')) as $d) $html .= '<th scope="col">' . $d . '</th>';
     $html .= '</tr></thead><tbody><tr>';
     $offset = (int)$first->format('w');
     for ($i = 0; $i < $offset; $i++) $html .= '<td></td>';
@@ -294,7 +294,7 @@ function nl_calendar(array $summaries, array $filter): string
         $date = $filter['month'] . '-' . str_pad((string)$day, 2, '0', STR_PAD_LEFT);
         $class = ($date === $today ? ' today' : '') . ($date === $filter['date'] ? ' selected' : '');
         $html .= '<td class="' . trim($class) . '">';
-        $html .= isset($counts[$date]) ? '<a href="./?date=' . $date . '" aria-label="' . $date . '・' . $counts[$date] . '件の投稿"' . ($date === $filter['date'] ? ' aria-current="date"' : '') . '>' . $day . '</a>' : '<span>' . $day . '</span>';
+        $html .= isset($counts[$date]) ? '<a href="./?date=' . $date . '" aria-label="' . h(nm_t('{date}・{n}件の投稿', ['date' => $date, 'n' => $counts[$date]])) . '"' . ($date === $filter['date'] ? ' aria-current="date"' : '') . '>' . $day . '</a>' : '<span>' . $day . '</span>';
         $html .= '</td>';
     }
     $remaining = (7 - ($offset + $days) % 7) % 7;
@@ -304,7 +304,7 @@ function nl_calendar(array $summaries, array $filter): string
 function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = false): string
 {
     $latest = '';
-    foreach (array_slice($summaries, 0, 3) as $p) $latest .= '<li><a href="./?id=' . h($p['id']) . '">' . h($p['title']) . '</a><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></li>';
+    foreach (array_slice($summaries, 0, 3) as $p) $latest .= '<li><a href="' . h(nl_post_url($p['id'])) . '">' . h($p['title']) . '</a><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></li>';
     $sidebar = nl_sidebar_settings();
     $last = max((int)$s['updated'], (int)nl_taxonomy()['updated'], (int)$sidebar['updated']);
     $media = []; $works = [];
@@ -323,14 +323,14 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
         foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
     }
     $blocks = [
-        'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . ($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
+        'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . nm_t($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
         'search' => nl_search_form($filter['search']),
         'calendar' => nl_calendar($summaries, $filter),
-        'latest' => '<section class="log-widget"><h2>最新ポスト</h2><ol class="log-latest">' . ($latest ?: '<li>まだ記録はありません。</li>') . '</ol></section>',
+        'latest' => '<section class="log-widget"><h2>' . nm_t('最新ポスト') . '</h2><ol class="log-latest">' . ($latest ?: '<li>' . nm_t('まだ記録はありません。') . '</li>') . '</ol></section>',
         'categories' => nl_taxonomy_sidebar($summaries, 'categories'),
         'hashtags' => nl_taxonomy_sidebar($summaries, 'hashtags'),
-        'updated' => '<section class="log-widget"><h2>最終更新日</h2>' . ($last > 0 ? '<time datetime="' . h(nl_date($last, 'c')) . '">' . h(nl_date($last)) . '</time>' : '<p>まだ更新はありません。</p>') . '</section>',
-        'all' => '<a class="log-all-link" href="./">' . nl_all_icon() . '<span>すべての投稿</span><span class="log-all-count">' . count($summaries) . '</span></a>',
+        'updated' => '<section class="log-widget"><h2>' . nm_t('最終更新日') . '</h2>' . ($last > 0 ? '<time datetime="' . h(nl_date($last, 'c')) . '">' . h(nl_date($last)) . '</time>' : '<p>' . nm_t('まだ更新はありません。') . '</p>') . '</section>',
+        'all' => '<a class="log-all-link" href="./">' . nl_all_icon() . '<span>' . nm_t('すべての投稿') . '</span><span class="log-all-count">' . count($summaries) . '</span></a>',
     ];
     $html = '';
     foreach ($sidebar['items'] as $item) {
@@ -344,7 +344,7 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
             : ($blocks[$item['kind']] ?? '');
         if ($block !== '') $html .= '<div class="log-sidebar-block" data-sidebar-id="' . h($item['id']) . '">' . $block . '</div>';
     }
-    return '<aside class="log-sidebar" id="log-sidebar" aria-labelledby="log-menu-title"><div class="log-sidebar-head"><h2 id="log-menu-title">メニュー</h2><button class="log-menu-close" type="button" aria-label="メニューを閉じる">×</button></div>' . $html . '</aside>';
+    return '<aside class="log-sidebar" id="log-sidebar" aria-labelledby="log-menu-title"><div class="log-sidebar-head"><h2 id="log-menu-title">' . nm_t('メニュー') . '</h2><button class="log-menu-close" type="button" aria-label="' . nm_t('メニューを閉じる') . '">×</button></div>' . $html . '</aside>';
 }
 function nl_taxonomy_sidebar(array $summaries, string $kind = ''): string
 {
@@ -352,7 +352,7 @@ function nl_taxonomy_sidebar(array $summaries, string $kind = ''): string
     foreach ($summaries as $p) foreach ($p['categories'] ?? [] as $id) $counts[$id] = ($counts[$id] ?? 0) + 1;
     // Categories read as a folder list with counts; hashtags as a cloud of small "#" labels, so the two never look alike.
     $folder = nl_category_icon();
-    foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($counts[$id])) $catLinks .= '<li><a href="./?category=' . h((string)$id) . '">' . $folder . '<span>' . h($name) . '</span><small aria-label="' . $counts[$id] . '件">' . $counts[$id] . '</small></a></li>';
+    foreach (nl_taxonomy()['categories'] as $id => $name) if (isset($counts[$id])) $catLinks .= '<li><a href="./?category=' . h((string)$id) . '">' . $folder . '<span>' . h($name) . '</span><small aria-label="' . nm_t('{n}件', ['n' => $counts[$id]]) . '">' . $counts[$id] . '</small></a></li>';
     foreach (array_slice(nl_ordered_hashtags(true), 0, 8) as $name) $tagLinks .= '<a href="./?tag=' . h(rawurlencode($name)) . '">#' . h($name) . '</a>';
-    return ($kind !== 'hashtags' && $catLinks !== '' ? '<section class="log-widget log-widget-categories"><h2>カテゴリ</h2><ul class="log-cat-list">' . $catLinks . '</ul></section>' : '') . ($kind !== 'categories' && $tagLinks !== '' ? '<section class="log-widget log-widget-tags"><h2>ハッシュタグ</h2><div class="log-tag-cloud">' . $tagLinks . '</div></section>' : '');
+    return ($kind !== 'hashtags' && $catLinks !== '' ? '<section class="log-widget log-widget-categories"><h2>' . nm_t('カテゴリ') . '</h2><ul class="log-cat-list">' . $catLinks . '</ul></section>' : '') . ($kind !== 'categories' && $tagLinks !== '' ? '<section class="log-widget log-widget-tags"><h2>' . nm_t('ハッシュタグ') . '</h2><div class="log-tag-cloud">' . $tagLinks . '</div></section>' : '');
 }

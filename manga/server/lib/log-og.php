@@ -27,6 +27,17 @@ function nl_public_url(string $relative): string
  */
 function nl_og_choice(array $p): ?array
 {
+    // A locked post shares its first picture blurred under a lock, whatever its rating: the card hints at the post, the picture stays closed.
+    if (nl_is_locked($p)) {
+        $svg = null;
+        foreach (nl_media_refs((string)$p['body']) as $id) {
+            $m = nl_load_media($id);
+            if (!$m || nl_is_av($m)) continue;
+            if (!nl_is_svg($m)) return ['veil', $m, 'lock'];
+            $svg ??= $m;
+        }
+        return $svg ? ['veil', $svg, 'lock'] : null;
+    }
     $own = nl_rating($p['rating'] ?? '');
     $veil = null;
     foreach (nl_media_refs((string)$p['body']) as $id) {
@@ -41,7 +52,13 @@ function nl_og_choice(array $p): ?array
     }
     return $veil;
 }
-function nl_og_label(string $rating): string { return dirname(__DIR__) . '/viewer/og-veil/' . $rating . '.png'; }
+/** The label laid over a blurred card, in the language of the public pages (nm_site_lang). */
+function nl_og_label(string $rating): string
+{
+    $dir = dirname(__DIR__) . '/viewer/og-veil/';
+    if (nm_site_lang() === 'en' && is_file($dir . $rating . '.en.png')) return $dir . $rating . '.en.png';
+    return $dir . $rating . '.png';
+}
 function nl_og_key(array $m, string $rating): string
 {
     return substr(hash('sha256', implode('|', [NL_OG_VERSION, $m['id'], $m['revision'], $m['f'], $rating, nm_asset_version(nl_og_label($rating))])), 0, 16);
@@ -86,7 +103,7 @@ function nl_og_render(array $m, string $rating): string
         imagedestroy($from);
     } else {
         // No bitmap (SVG): a quiet two-color background in the label's tone.
-        [$top, $bottom] = ['sensitive' => [[86, 70, 48], [40, 34, 30]], 'r18' => [[92, 44, 62], [38, 24, 34]], 'r18g' => [[66, 48, 98], [30, 24, 44]]][$rating] ?? [[40, 56, 80], [20, 28, 40]];
+        [$top, $bottom] = ['sensitive' => [[86, 70, 48], [40, 34, 30]], 'r18' => [[92, 44, 62], [38, 24, 34]], 'r18g' => [[66, 48, 98], [30, 24, 44]], 'lock' => [[44, 64, 104], [22, 30, 48]]][$rating] ?? [[40, 56, 80], [20, 28, 40]];
         for ($y = 0; $y < NL_OG_H; $y++) {
             $k = $y / (NL_OG_H - 1);
             imageline($canvas, 0, $y, NL_OG_W - 1, $y, imagecolorallocate($canvas, ...array_map(static fn($a, $b) => (int)round($a + ($b - $a) * $k), $top, $bottom)));

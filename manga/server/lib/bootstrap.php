@@ -106,7 +106,7 @@ function nm_not_found(): never
         $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/404.php'))), '/');
         if (str_ends_with($dir, '/admin')) $dir = substr($dir, 0, -6);
         $base = $dir === '.' ? '' : $dir;
-        echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404｜見つかりません</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void">' . nm_blackhole_scene() . '<main><p class="nm-error-number">404</p><h1>このページは、ブラックホールの中へ。</h1><p>探していたページは見つかりませんでした。</p><a href="' . h($base . '/') . '">LOGへ戻る <span aria-hidden="true">↗</span></a><small>Not Found</small></main></body></html>';
+        echo '<!DOCTYPE html><html lang="' . nm_lang() . '"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>404' . nm_t('｜') . nm_t('見つかりません') . '</title><link rel="stylesheet" href="' . h($base . '/viewer/404.css?v=' . nm_asset_version(NM_ROOT . '/viewer/404.css')) . '"></head><body class="nm-void">' . nm_blackhole_scene() . '<main><p class="nm-error-number">404</p><h1>' . nm_t('このページは、ブラックホールの中へ。') . '</h1><p>' . nm_t('探していたページは見つかりませんでした。') . '</p><a href="' . h($base . '/') . '">' . nm_t('LOGへ戻る') . ' <span aria-hidden="true">↗</span></a><small>Not Found</small></main></body></html>';
         exit;
     }
     echo 'Not Found';
@@ -359,7 +359,8 @@ function nm_lscache_header(bool $public, bool $page = true): void
     if (headers_sent() || !nm_lscache_active()) return;
     if ($page && nm_lscache_code_changed()) header('X-LiteSpeed-Purge: tag=' . NM_LSCACHE_TAG);
     // Anyone holding the login cookie is looked up separately, so a cached visitor page is never shown to the owner.
-    header('X-LiteSpeed-Vary: cookie=nm_admin');
+    // Readers who opened locked posts (nl_keys) get their own copies too.
+    header('X-LiteSpeed-Vary: cookie=nm_admin,cookie=nl_keys');
     if ($public) {
         header('X-LiteSpeed-Cache-Control: public,max-age=' . NM_LSCACHE_TTL);
         header('X-LiteSpeed-Tag: ' . NM_LSCACHE_TAG);

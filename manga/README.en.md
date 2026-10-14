@@ -262,7 +262,8 @@ When a new version comes out, a notice appears above the work list and above "LO
 The admin panel can be shown in Japanese or English: the work list, work pages, Log and posts, categories, fixed pages, the media list, settings, backup, updates, the login screen and the messages shown when saving.
 
 - Choose under "設定 › 共通・安全 › 管理画面の言語" (Settings › Common and security › Admin panel language). It starts as "自動" (Auto): the browser's language if it is supported, Japanese otherwise.
-- The language of public pages (the log, work pages) does not change. Your own text, such as posts and category names, is not translated.
+- With “English” chosen, the public pages (the log, work pages, the 404 page, the lock and content warning screens and the text on share cards) are in English too. With “自動” (Auto) the language would differ per browser, so the public pages, which are the same for everyone, stay in Japanese.
+- Your own text, such as posts and category names, is not translated. The footer text and the ready-made warnings are shown in English while they are still the defaults.
 
 **Adding a language**: put a JSON file such as `fr.json` in `server/lib/lang/` and it appears in the settings (with a region, such as `zh-CN.json` for Chinese, it works too).
 

@@ -92,10 +92,21 @@ function nm_t(string $text, array $vars = []): string
     return strtr($out, $pairs);
 }
 
+/** The texts the public page scripts (viewer/*.js) translate: sent with an English LOG or work page as #nm-i18n. dev/i18n_test.py keeps this list complete. */
+const NM_FRONT_TEXTS = ['いいね（{n}）。今日はこの記事にもう押せません', 'いいね（{n}）', '今日はここまで。また明日どうぞ', 'タップで+1・長押しで+10ずつ', '読み込んでいます', 'メールアドレス', 'アドレスをコピー', 'メールアプリで送信', '閉じる', 'コピーしました。', 'コピーできませんでした。アドレスを選んでコピーしてください。', '{n}件中', '{start}〜{end}件目', '再生位置', '再生', '一時停止', 'ループ再生（曲の中のループ位置で）', 'ループ再生', 'ミュート', '音量', '全画面', 'ミュートを解除', '全画面を終了', '音を出す', '{name}を開く', '投稿やストーリーズに貼り付けてください。', '新しいポストに貼り付けてください。', 'シェア文をコピーしました。', 'コピーできませんでした。上の文を選んでコピーしてください。', 'センシティブ', 'このブラウザでは、次から{label}を確認せずに表示しますか？', '確認せずに表示する', '毎回確認する', '次から{label}を最初から表示します。', '性的な表現を含みます。', '強い流血・暴力・グロテスクな表現を含みます。', '18歳未満の方は閲覧できません。', '18歳以上ですか？', 'このブラウザでは次から確認しない', '18歳以上なので表示する', '表示しない', '{label}の内容です', '閲覧注意を毎回確認する', '{label}を確認せずに表示しています。', '・', '縮小（-）', '元の大きさ（0）', '拡大（+）', '読む', 'この作品を読むにはパスワードが必要です', '読み込めませんでした。時間をおいて、もう一度お試しください。', 'ページがありません。', '何度も間違えたため、しばらく入力できません。時間をおいてお試しください。', 'パスワードが違います', '通信できませんでした', '前回の続き（{n} ページ目）から開きました', '最初から読む', 'おわり', '次のページ', '前のページ'];
+
 /** The table for scripts (log-editor.js and others read #nm-i18n); nothing in Japanese. */
-function nm_t_script(): string
+function nm_t_script(array $only = []): string
 {
     if (nm_lang() === 'ja') return '';
+    // Public pages send only the texts their scripts use ($only), not the whole admin table.
+    $table = $only ? array_intersect_key(nm_lang_table(), array_flip($only)) : nm_lang_table();
     return '<script type="application/json" id="nm-i18n">'
-        . json_encode(nm_lang_table(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>';
+        . json_encode($table, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>';
+}
+/** The language of the public pages: the admin language when one is chosen (English…), otherwise Japanese ("auto" follows each browser, which a shared, cached page cannot). */
+function nm_site_lang(): string
+{
+    $pick = (string)((nm_config() ?? [])['admin_lang'] ?? 'auto');
+    return isset(nm_langs()[$pick]) ? $pick : 'ja';
 }

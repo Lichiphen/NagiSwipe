@@ -22,7 +22,7 @@ NagiLog has been in the NagiManga release ZIP since NagiManga v0.4.0.
 [![Download NagiManga and NagiLog (ZIP)](https://img.shields.io/badge/Download-NagiManga%20%26%20NagiLog%20%28ZIP%29-c2410c?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTIiLz48cGF0aCBkPSJtNiAxMCA2IDYgNi02Ii8%2BPHBhdGggZD0iTTQgMjBoMTYiLz48L3N2Zz4%3D&logoColor=white&labelColor=9a3412)](https://lichiphen.com/tool/link/r/NagiManga)
 [![Documentation](https://img.shields.io/badge/Documentation-nagiswipe.pages.dev-F38020?style=for-the-badge&logo=cloudflarepages&logoColor=white&labelColor=b45309)](https://nagiswipe.pages.dev/nagilog.en.html)
 
-The admin panel can be shown in Japanese or English ([Admin panel language](README.en.md#admin-panel-language)). The public pages are shown in Japanese. Names of screens and buttons below are the English ones, sometimes with the Japanese name of the Japanese panel in quotes.
+The admin panel can be shown in Japanese or English ([Admin panel language](README.en.md#admin-panel-language)). The public pages are shown in Japanese, or in English when the admin language is set to English. Names of screens and buttons below are the English ones, sometimes with the Japanese name of the Japanese panel in quotes.
 
 <!-- TOC -->
 ## Contents
@@ -54,9 +54,12 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
   - [Loading indicators](#loading-indicators)
 - [Search](#search)
 - [List styles and related posts](#list-styles-and-related-posts)
+- [Pinned posts](#pinned-posts)
+- [Password locks](#password-locks)
 - [Likes](#likes)
 - [Reordering the sidebar and HTML boxes](#reordering-the-sidebar-and-html-boxes)
 - [Title logo and introduction](#title-logo-and-introduction)
+- [Favicon and home screen icons](#favicon-and-home-screen-icons)
 - [Top menu](#top-menu)
 - [Fixed pages](#fixed-pages)
 - [SEO and OGP](#seo-and-ogp)
@@ -94,9 +97,10 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 | Video and audio | Video: MP4, MOV, WebM. Audio: MP3, M4A, OGG, WAV, FLAC (up to 1GB per file, sent in pieces). Audio has a waveform player with gapless repeat, and reads and writes covers and loop points (`LOOPSTART`). Videos play as chosen: normal, like a GIF, autoplay or repeat |
 | Content warnings | Posts and media can be marked sensitive, R-18 or R-18G. Shown blurred, folded and with an age check; share cards are blurred automatically |
 | Embeds | Paste a URL on a line of its own to embed 22 services such as YouTube, X, Instagram, Spotify, SoundCloud, Bluesky and TikTok, manga sites (19 GigaViewer sites such as Shonen Jump+) and video files. Other pages are shown as blog cards made from their OGP |
-| Lists and display | Microblog and tiles, 3 kinds of paging, a new mark, related posts, likes, sharing, search, a calendar. Six designs (3 light, 3 dark), all meeting the WCAG 2.2 AA color contrast |
-| Building the site | Fixed pages (Markdown), a top menu, footer links, a title logo, a reorderable sidebar with HTML boxes, profile and links, a black hole 404 |
-| Admin panel | Post list (search, bulk delete), media list (search, replace), renaming and reordering categories and hashtags. Shown in Japanese or English |
+| URLs | Posts live at `./20261004123033` and fixed pages at `./privacy`, without `?` (on servers that apply `.htaccess`). The old `./?id=…` and `./?pg=…` redirect to them with 301 |
+| Lists and display | Microblog and tiles, 3 kinds of paging, pinned posts (several, reorderable), a new mark, related posts, likes, sharing, search, a calendar. Six designs (3 light, 3 dark), all meeting the WCAG 2.2 AA color contrast |
+| Building the site | Fixed pages (Markdown), a top menu, footer links, a title logo, a favicon and home screen icons (every size made from one picture), a reorderable sidebar with HTML boxes, profile and links, a black hole 404 |
+| Admin panel | Post list (search, bulk delete), media list (search, replace), renaming and reordering categories and hashtags. Shown in Japanese or English. With English chosen, the public pages are in English too |
 | Search engines and sharing | canonical, OGP, breadcrumbs (JSON-LD), sitemap, RSS (all, per category, per tag), a setting that keeps every page out of search |
 | Speed | Works with LiteSpeed Cache. Versioned JS and CSS are kept by browsers for a year. Posts off screen are built later, and video and audio are served a little at a time |
 | Safety | Password, IP restriction, limited login attempts, CSP, redrawing pictures, checking SVG, measures against image-scraping bots. Logins last 30 days (1 year in the settings) |
@@ -157,6 +161,7 @@ Scroll down and a "書く" (Write) button aligned with the right edge of the sid
 | HTML boxes | For advanced users: add them from templates for grid links, borderless banners and free HTML. |
 | Phones | Posts take the full width. A button with three lines and the word "MENU", following at the top right, opens the menu. |
 | Design | 3 light and 3 dark designs. An icon and a common OGP picture can be set. |
+| Favicon | Choose one 512 × 512 px picture, and favicon.ico, the iPhone and Android home screen icons and the web app manifest are made automatically. |
 | 404 | Pages that are not found show an animation of the inside of a black hole. It honors the device's "reduce motion" setting. |
 | Staying logged in | You stay logged in for 30 days from the last login, or 1 year (365 days) in the settings. |
 | Audience | Public to everyone, or a private Memo. A Memo shows posts and log pictures only when you are logged in. |
@@ -165,6 +170,8 @@ Scroll down and a "書く" (Write) button aligned with the right edge of the sid
 | Likes | A heart button left of "Share" under each post. A tap adds 1, holding adds 10 at a time. The same line and the same device can press at most 100 per post per day. It can be turned off in the settings. The count can be seen, changed and cleared on the post's edit screen. |
 | List style | "Microblog", showing whole posts, or "tiles" with a thumbnail, date and title. New posts get a "NEW" mark (the period and the text are set in the settings). |
 | Related posts | Six posts of the same category or hashtags under each post. Random, or most recently updated first. |
+| Pinned posts | Like “stick to the top” in WordPress, posts can be shown first on the top page. Pin several (up to 30) and reorder them in the admin panel; the admin post list shows them at the top too. |
+| Password locks | Posts and fixed pages can have a password. Readers see only the title and a field; the text and pictures appear only after the right password. The opened state is kept in a cookie, and browsers are never asked to save the password itself. |
 | RSS and sitemap | RSS for the whole log, per category and per hashtag. The settings screen makes the URLs to copy. A sitemap for search engines too. |
 | Search engines | Which pages go into search follows the list style. There is also a setting that keeps every page out of search, for fan works and the like. |
 | Post list | Short rows without the text: date and time, title, a small picture, view, edit and delete. Posts with likes show a heart and the count. Bulk delete too. |
@@ -375,11 +382,18 @@ To keep using this log, use the start method above.
 | Page | URL example |
 | --- | --- |
 | Top | `https://example.com/nagimanga/` |
-| A post | `https://example.com/nagimanga/?id=20261004123033` |
+| A post | `https://example.com/nagimanga/20261004123033` |
 | Category | `https://example.com/nagimanga/?category=abcdef123456` |
 | Hashtag | `https://example.com/nagimanga/?tag=らくがき` |
 | Date and month | `?date=2026-10-04` / `?month=2026-10` |
-| Fixed page | `https://example.com/nagimanga/?pg=profile` |
+| Fixed page | `https://example.com/nagimanga/profile` |
+
+Posts and fixed pages have URLs without `?`.
+The bundled `.htaccess` sends `./20261004123033` to the post and `./profile` to the fixed page (`mod_rewrite` on Apache or LiteSpeed).
+The old `./?id=20261004123033`, `./?pg=profile`, `log.php?id=…` and URLs with a trailing `/` redirect to the new URLs with 301.
+Links and bookmarks people already have keep working, and search engines move to the new URLs.
+On servers that do not apply `.htaccess` (nginx and others), the LOG notices that the rewrite is not there and keeps using `./?id=…` and `./?pg=…`, without redirecting.
+A fixed page whose URL name equals a folder of the LOG such as `admin` or `viewer`, or looks like a post number, keeps `./?pg=…`; such names cannot be chosen for new URL names.
 
 Above each post, only the date (for example `2026/10/04`) is shown, as the link to the post. The time appears on hover.
 The post number is the year, month, day, hour, minute and second (Japan time) of its first publication.
@@ -518,7 +532,7 @@ The chip in the posting box shows a level that comes from pictures as "R-18（�
 
 | Where | Posts with content warnings |
 | --- | --- |
-| OGP (share cards) | If there is a picture without a warning, the first such picture is used. Posts with only marked pictures (and posts marked as a whole) get a WebP made automatically: the picture strongly blurred with the level's name on top ("SEO and OGP" below). |
+| OGP (share cards) | If there is a picture without a warning, the first such picture is used. Posts with only marked pictures (and posts marked as a whole) get a WebP made automatically: the picture strongly blurred with the level's name on top ("SEO and OGP" below). Posts with a password lock always blur their first picture and lay a lock over it, with or without a warning. |
 | Descriptions and RSS | R-18 and R-18G do not show the text; they say "閲覧注意（R-18）の記事です。" (a post with an R-18 warning). Sensitive posts are as usual. |
 | Search engines | R-18 posts are `noindex,follow` and not in the sitemap. |
 | Tiles and related posts | Thumbnails are blurred with the level's label. |
@@ -898,6 +912,54 @@ With random, up to 18 closely related posts (2 points for the same category, 1 p
 The page itself is the same for everyone, so LiteSpeed Cache keeps working. Without JavaScript, the six most related are shown.
 Posts with no post of the same categories get no related posts box.
 
+## Pinned posts
+
+Like “stick to the top of the blog” in WordPress, posts can be shown first on the top page.
+In the admin post list, the pin button on a row pins the post, and pressing it again unpins it. The “ピン留め” (pin) card on the post’s edit page switches it too.
+
+![“Pinned posts” above the post list. Rows with a number, a handle, arrow buttons and the pin button, and below them a post row with the “Pinned” mark](docs/images/log-pins-admin.en.jpg)
+
+- Pin as many as you like (up to 30). Pinned posts come first on the top page, whatever their dates, in the order you choose.
+- Reorder them in “ピン留め中の記事” (pinned posts) above the post list, by dragging the handle or with the arrow buttons. The order is saved at once. A newly pinned post goes to the end.
+- The admin post list shows pinned posts at the top too, with a coloured line on the left and the “固定” (pinned) mark.
+- On the public pages, posts (microblog) and tiles carry the “固定” mark. A pinned tile shows the pin instead of the new mark.
+- Only the top page list puts them first. Category, tag and date lists, RSS, the latest posts in the sidebar and the previous and next posts stay in date order.
+- A draft can be pinned too; readers see it once it is published. The pin stays when publishing gives the post a new number.
+- Deleting a post unpins it. The pins and their order are included in the log backup.
+
+## Password locks
+
+Posts and fixed pages can be locked with a password for readers.
+For a post, use the lock button in the tool row of the post box; for a fixed page, “パスワード（鍵）” (password lock) on its edit page. Turn on “lock with a password” and enter a password of 4 to 200 characters.
+A locked post shows “パスワードあり” (password) in the post box and “鍵付き” (locked) in the post list. The owner (logged in) always sees the text.
+
+![The post editor. The lock button in the tool row (1) opens the “Password lock” panel under it (2)](docs/images/log-lock-editor.en.jpg)
+
+Readers see the following.
+
+| Place | What is shown |
+| --- | --- |
+| A post or fixed page | The title and the password field only. No text, pictures or embeds |
+| Lists (microblog) | The title and a “パスワードを入れて読む” (enter the password to read) link |
+| Tiles and related posts | A lock picture instead of the thumbnail |
+| Description, RSS | Only “この記事はパスワードで保護されています。” (this post is protected by a password) |
+| Share card (OGP) | The first picture of the text, blurred so strongly that only its colours remain, under a lock and “鍵付き” (“Locked” when the admin language is English). The same for posts with content warnings such as R-18. Posts without pictures use the site’s common picture |
+| Search | Found only by the title and category names, never by words of the text |
+| Pictures | Pictures used only by locked posts are given only to readers who opened them (404 for everyone else) |
+| Search engines | `noindex`, and not listed in the sitemap |
+
+After the right password, a mark that lets the browser read that post (a signature per post) is kept in the `nl_keys` cookie for 30 days, so the password is not asked again during that time.
+The cookie holds only that mark: neither the password nor its hash. Changing the password makes the marks invalid, so readers who opened it have to enter the new one.
+
+The password field is built so that browsers and password managers do not save it.
+It is not a password field (`type="password"`) but a plain field whose characters are hidden with CSS, with `autocomplete="off"` and the “ignore” hints of the main password managers.
+So no “save password?” prompt appears, and nothing is kept in the input history. “入力した文字を表示” (show what I typed) reveals the characters to check them.
+After sending, the reader goes back to the post page (303), so reloading never sends the password again.
+
+Wrong answers are limited to 5 per post in 15 minutes and 30 per hour from the same address; beyond that the form refuses for about 15 minutes.
+The password is stored as a hash. So that the owner can look it up on the edit page, a copy encrypted with the secret key is kept too (the same way as the manga reader password).
+Locks are included in the log backup, and posts stay locked after a restore.
+
 ## Likes
 
 On a public log, a heart like button is left of "Share" under each post. To turn it off, remove it under "Settings → LOG → List style and below posts".
@@ -992,12 +1054,32 @@ The logo's `alt` holds the site name. On post pages and fixed pages, the post's 
 
 Turning off "紹介文をサイト名の下に表示する" (show the introduction under the site name) keeps the introduction off the screen and uses it only as the description in search results and when shared (`meta description`, `og:description`).
 
+## Favicon and home screen icons
+
+Choose one picture in “ファビコン・ホーム画面のアイコン” (favicon and home screen icons) under Settings → LOG → LOG design and icon, and these icons are made automatically. A square 512 × 512 px PNG is recommended.
+
+| Made | Size | Used by |
+| --- | --- | --- |
+| `favicon.ico` | 16, 32 and 48 px (an ICO holding three PNGs) | Browser tabs, bookmarks |
+| iPhone icon | 180 px | “Add to Home Screen” on iPhone and iPad |
+| Android icons | 192 px and 512 px | “Add to Home screen” on Android, the web app manifest |
+
+- Pictures are scaled down by halves, step by step (512 → 256 → 128 → 64 → 32 → 16). Thin lines and letters survive better than with one big jump.
+- Everything is saved as lossless PNG; no lossy compression such as JPEG or WebP.
+- A picture that is not square gets a transparent margin instead of being cropped.
+- iPhone paints transparent parts black, so only the iPhone icon gets the design’s background colour behind it. Changing the design colour remakes it.
+- Sizes larger than the picture are not made, since enlarging would blur them. With a picture under 512 px, the settings screen tells which sizes were skipped. Pictures under 48 px and SVG cannot be used.
+- The settings screen shows each made size at its real size. The admin panel’s tab uses the same favicon.
+- The files are served as `./?favicon=…&v=VERSION`, and browsers keep the versioned URLs for a year. A new picture gets a new version.
+- Without one, the icon picture is scaled down as before. “ファビコンを外して、アイコンの画像に戻す” (remove the favicon) goes back to that.
+- The favicon picture is not included in the log backup; choose it again after moving.
+
 ## Top menu
 
 "Settings → LOG → Top menu" makes the links lined up under the site name. With no items, nothing is shown.
 
 - "Add item" adds a row; enter the display name and the link target. Up to 30 items, display names up to 40 characters.
-- Typing part of the name of a fixed page, category or hashtag in the display name shows suggestions (hiragana and katakana, full-width and half-width are not distinguished). Choosing one fills in the display name and the target (a URL inside the site such as `./?pg=privacy` or `./?category=…`). "ホーム（すべての投稿）" (home, all posts) is a suggestion too.
+- Typing part of the name of a fixed page, category or hashtag in the display name shows suggestions (hiragana and katakana, full-width and half-width are not distinguished). Choosing one fills in the display name and the target (a URL inside the site such as `./privacy` or `./?category=…`). Links entered earlier as `./?pg=privacy` keep working. "ホーム（すべての投稿）" (home, all posts) is a suggestion too.
 - Outside sites are entered from `https://`. URLs such as `javascript:` are not saved.
 - Reordering works as in the sidebar: drag the handle on the left or use the arrow buttons. Turning off the switch hides an item without deleting it.
 - Save with "Save settings" at the bottom of the screen.
@@ -1024,7 +1106,8 @@ Pages outside the flow of dates, such as a privacy policy, terms of use or a pro
 | Item | Details |
 | --- | --- |
 | Title | One line of up to 100 characters. It becomes the page's `h1` and `<title>` |
-| URL name | Up to 40 half-width lowercase letters, digits and hyphens. The public URL is `./?pg=URLNAME` (for example `./?pg=privacy`). Empty gets one automatically |
+| URL name | Up to 40 half-width lowercase letters, digits and hyphens. The public URL is `./URLNAME` (for example `./privacy`; `./?pg=privacy` on servers that do not apply `.htaccess`). Empty gets one automatically. Folder names of the LOG such as `admin` cannot be used |
+| Password lock | With “このページにパスワードをかける” (lock this page with a password) on, readers see only the title and a password field ([Password locks](#password-locks)) |
 | Page width (computer) | With the sidebar (normal) / wide single column (no sidebar, full width) / narrow single column (no sidebar, only the text column, centered) |
 | Text | Markdown up to 200KB. A field separate from post text |
 | Public or draft | Drafts give 404 to readers and are shown only when logged in |
@@ -1217,6 +1300,8 @@ The log's internal records are PHP files that give 404 when opened directly, but
 | Top menu | `log/topmenu.php` |
 | Footer links | `log/footmenu.php` |
 | Fixed pages | `log/pages/PAGE_NUMBER.php` |
+| Pinned posts and their order | `log/pins.php` |
+| Favicon and home screen icons | `log/favicon/VERSION/` |
 | Like counts | `log/likes.php` |
 | Presses of the day (per reader; made anew the next day) | `log/likes-today.php` |
 | Pictures and picture data | `log/media/FOLDER_MADE_FROM_THE_SECRET_KEY/` |
@@ -1233,7 +1318,7 @@ The top menu, footer links, whether the link to the top is shown, fixed pages, t
 If the restore target has another fixed page with the same URL name, the restored one gets a number added to its URL name and both are kept.
 Old ZIPs without fixed pages, top menu or footer links keep the restore target's own.
 List style, like and related post settings, search engine settings and the like count of each post are included too.
-Content warnings of posts and pictures (levels and notes) are included too. The presses of the day are not.
+Content warnings of posts and pictures (levels and notes), password locks of posts and fixed pages, and the pinned posts with their order are included too. The presses of the day and the favicon picture are not.
 Restoring with overwrite also applies the audience saved in the ZIP.
 Old ZIPs without an audience keep the restore target's audience.
 Old ZIPs without the sidebar keep the restore target's sidebar.

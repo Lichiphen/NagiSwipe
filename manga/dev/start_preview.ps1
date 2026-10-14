@@ -52,8 +52,11 @@ if (!$Empty -and $taskSample -and !(Test-Path -LiteralPath (Join-Path $taskData 
 }
 if (!(Test-Path -LiteralPath $taskData)) { New-Item -ItemType Directory -Path $taskData | Out-Null }
 $taskPreviousData = [Environment]::GetEnvironmentVariable('NAGIMANGA_DATA', 'Process')
+$taskPreviousPretty = [Environment]::GetEnvironmentVariable('NAGIMANGA_PRETTY', 'Process')
 try {
     $env:NAGIMANGA_DATA = $taskData
+    # Clean URLs (./20261014123456, ./privacy) as with the shipped .htaccess.
+    $env:NAGIMANGA_PRETTY = '1'
     Write-Host "LOG: http://127.0.0.1:$Port/"
     Write-Host "管理: http://127.0.0.1:$Port/admin/login.php"
     $taskListen = '127.0.0.1'
@@ -71,4 +74,5 @@ try {
     & $taskPhp.Source @taskOptions -d memory_limit=256M -d upload_max_filesize=32M -d post_max_size=40M -S "${taskListen}:$Port" -t $taskRoot $taskRouter
 } finally {
     [Environment]::SetEnvironmentVariable('NAGIMANGA_DATA', $taskPreviousData, 'Process')
+    [Environment]::SetEnvironmentVariable('NAGIMANGA_PRETTY', $taskPreviousPretty, 'Process')
 }

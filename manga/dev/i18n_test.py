@@ -9,14 +9,19 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 SERVER = Path(__file__).resolve().parents[1] / 'server'
 # A literal followed by "." or "+" is only the start of a longer text (nm_t('過去の' . $noun)).
-CALL = re.compile(r"\b(?:nm_t|t)\(\s*'((?:[^'\\]|\\.)*)'(?!\s*[.+])")
-CHOICE = re.compile(r"\b(?:nm_t|t)\(\s*[^'()]*\?\s*'((?:[^'\\]|\\.)*)'\s*:\s*'((?:[^'\\]|\\.)*)'")
+CALL = re.compile(r"\b(?:nm_t|t|tr)\(\s*'((?:[^'\\]|\\.)*)'(?!\s*[.+])")
+CHOICE = re.compile(r"\b(?:nm_t|t|tr)\(\s*[^'()]*\?\s*'((?:[^'\\]|\\.)*)'\s*:\s*'((?:[^'\\]|\\.)*)'")
 JP = re.compile(r'[぀-ヿ一-鿿]')
 # Texts that reach nm_t() from constants or built names rather than a literal.
 EXTRA = ['新しい投稿', '過去の投稿', '投稿一覧のページ', '過去の投稿を{n}件', '最新の投稿から見る', '新しい画像', '過去の画像', '画像一覧のページ',
          '投稿一覧', 'カテゴリ・タグ', '固定ページ', 'LOGの設定', 'なし', 'センシティブ', '注意なし',
          '肌の露出・軽い流血など。画像をぼかします', '強い流血・暴力・グロテスク。記事を折りたたみ、年齢を確認します', '性的な表現。記事を折りたたみ、年齢を確認します',
-         'LOG', '投稿を編集', '画像一覧', 'LOGの分類', '{name}：{message}']
+         'LOG', '投稿を編集', '画像一覧', 'LOGの分類', '{name}：{message}',
+         # Public pages: nested choices, the default footer, the title separator and the ready-made warnings.
+         '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。', 'この分類の記録はありません。', 'この日の記録はありません。', 'まだ記録はありません。',
+         'Powered by NagiLog＆NagiManga', '｜', '流血表現があります', '肌の露出があります', '性的な表現があります', '暴力表現があります',
+         'グロテスクな表現があります', 'ホラー表現があります', '死を扱う内容です', '虫が描かれています', '苦手な方はご注意ください',
+         'ニコニコ動画', 'コミック', '動画']
 
 keys = set(EXTRA)
 for f in [*SERVER.rglob('*.php'), *SERVER.rglob('*.js')]:
@@ -78,5 +83,14 @@ for lang in sorted((SERVER / 'lib' / 'lang').glob('*.json')):
             continue
         check(f'{lang.name}: same placeholders in {k}', placeholders(k) == placeholders(v), v)
         check(f'{lang.name}: no quotes or other markup in {k}', not unsafe(k, v), v)
+# Public pages send their scripts only NM_FRONT_TEXTS (lib/i18n.php): every text those scripts translate must be in it.
+front = re.search(r"const NM_FRONT_TEXTS = \[(.*?)\];", (SERVER / 'lib' / 'i18n.php').read_text(encoding='utf-8')).group(1)
+front = {k.replace("\\'", "'") for k in re.findall(r"'((?:[^'\\]|\\.)*)'", front)}
+used = set()
+for f in [*SERVER.glob('viewer/log-*.js'), SERVER / 'viewer' / 'NagiManga.js']:
+    text = f.read_text(encoding='utf-8')
+    used.update(k for k in CALL.findall(text) if JP.search(k))
+    for m in CHOICE.finditer(text): used.update(k for k in m.groups() if JP.search(k))
+check('NM_FRONT_TEXTS: every text of the public scripts', used <= front, '\n  ' + '\n  '.join(sorted(used - front)))
 print(f'\n{passed} / {passed + failed} passed')
 sys.exit(1 if failed else 0)

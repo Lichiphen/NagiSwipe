@@ -109,6 +109,8 @@ function nm_public_base(array $cfg): string
 /** The work's own page: cover, title, read and back buttons, link-card tags; opens the viewer. */
 function nm_serve_reader_page(array $work, array $cfg): never
 {
+    // A work's own page speaks the language of the public pages, like the LOG.
+    nm_lang(nm_site_lang());
     $viewer = __DIR__ . '/viewer/NagiManga.js';
     $ver = nm_asset_version($viewer);
     $attrs = 'data-nagimanga="' . h($work['id']) . '" data-endpoint="read.php"';
@@ -122,7 +124,7 @@ function nm_serve_reader_page(array $work, array $cfg): never
     $base = nm_public_base($cfg);
     $title = (string)($work['title'] ?? '');
     $count = count($work['pages']);
-    $desc = $locked ? 'パスワード付きの作品です。' : '全 ' . $count . ' ページ。タップするとその場で読めます。';
+    $desc = $locked ? nm_t('パスワード付きの作品です。') : nm_t('全 {n} ページ。タップするとその場で読めます。', ['n' => $count]);
     $first = $work['pages'][0];
     $ogImage = $locked
         ? $base . '/viewer/og.jpg'
@@ -132,15 +134,15 @@ function nm_serve_reader_page(array $work, array $cfg): never
     // Back button: a fixed address from the settings, or "auto" (decided by the viewer script)
     $back = (string)($cfg['page_back'] ?? '');
     $backHtml = $back !== ''
-        ? '<a class="btn back" id="nm-back" href="' . h($back) . '">戻る</a>'
-        : '<a class="btn back" id="nm-back" href="#" data-back="auto" hidden>戻る</a>';
+        ? '<a class="btn back" id="nm-back" href="' . h($back) . '">' . nm_t('戻る') . '</a>'
+        : '<a class="btn back" id="nm-back" href="#" data-back="auto" hidden>' . nm_t('戻る') . '</a>';
 
     header('Content-Type: text/html; charset=UTF-8');
     header('Cache-Control: no-store');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: same-origin');
     header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
-    echo '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">'
+    echo '<!DOCTYPE html><html lang="' . nm_lang() . '"><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
         . '<title>' . h($title) . '</title>'
         . '<link rel="icon" href="viewer/favicon.svg" type="image/svg+xml">'
@@ -166,8 +168,8 @@ function nm_serve_reader_page(array $work, array $cfg): never
         . '</head><body><main>'
         . ($cover !== '' ? $cover : '<img class="icon" src="viewer/favicon.svg" alt="">')
         . '<h1>' . h($title) . '</h1><p>' . h($desc) . '</p>'
-        . '<div class="btns"><a href="#" class="btn read" id="nm-open" ' . $attrs . '>読む</a>' . $backHtml . '</div>'
-        . '</main>'
+        . '<div class="btns"><a href="#" class="btn read" id="nm-open" ' . $attrs . '>' . nm_t('読む') . '</a>' . $backHtml . '</div>'
+        . '</main>' . nm_t_script(NM_FRONT_TEXTS)
         . '<script src="viewer/NagiManga.js?v=' . h($ver) . '&amp;open=nm-open" defer></script>'
         . '</body></html>';
     exit;

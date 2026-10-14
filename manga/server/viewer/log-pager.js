@@ -1,10 +1,12 @@
 /* LOG "もっと見る": appends the next page in place. Without JS it stays a link to that page. MIT License (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     let busy = false;
     function status(nav) {
         const p = nav.querySelector('.log-pager-status');
-        if (p) p.innerHTML = '<span class="log-pager-total">' + nav.dataset.total + '件中</span><b>' + nav.dataset.start + '〜' + nav.dataset.end + '件目</b>';
+        if (p) p.innerHTML = '<span class="log-pager-total">' + t('{n}件中', { n: nav.dataset.total }) + '</span><b>' + t('{start}〜{end}件目', { start: nav.dataset.start, end: nav.dataset.end }) + '</b>';
     }
     async function more(link) {
         const nav = link.closest('.log-pager'), main = nav?.parentElement;

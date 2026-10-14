@@ -5,13 +5,15 @@
  */
 (() => {
     'use strict';
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const DELAY = 1000;
     let timer = 0, giveUp = 0, sign = null;
     function make() {
         sign = document.createElement('div');
         sign.className = 'log-nav-wait';
         sign.setAttribute('role', 'status');
-        sign.innerHTML = '<span class="log-nav-drop" aria-hidden="true"><i></i><i></i><i></i></span><span class="log-nav-text">読み込んでいます</span>';
+        sign.innerHTML = '<span class="log-nav-drop" aria-hidden="true"><i></i><i></i><i></i></span><span class="log-nav-text">' + t('読み込んでいます') + '</span>';
         document.body.append(sign);
     }
     function show() {

@@ -283,14 +283,9 @@ body.log-composing { overflow:hidden; }
 .log-bulk-choice { position:absolute; left:8px; top:50%; transform:translateY(-50%); padding:8px; cursor:pointer; }
 .log-bulk-choice input,.log-bulk-bar input[type=checkbox] { width:20px; height:20px; margin:0; accent-color:var(--log-accent); }
 .log-row-selected { background:var(--log-bg); outline:2px solid var(--log-accent); outline-offset:-2px; }
-.log-sort-row { display:flex; align-items:center; gap:12px; border-top:1px solid var(--log-line); padding:12px 0; }
-.log-sort-tools { display:grid; grid-template-columns:repeat(2,36px); gap:4px; flex-shrink:0; }
-.log-sort-tools .btn { min-height:36px; padding:4px; }
 .log-sort-handle { grid-column:1 / -1; cursor:grab; touch-action:none; font-size:24px; user-select:none; }
 .log-sort-dragging { background:var(--log-bg); outline:2px dashed var(--log-accent); outline-offset:-2px; }
 .log-sort-dragging .log-sort-handle { cursor:grabbing; }
-.log-sort-row .log-taxonomy-row { flex:1; min-width:0; margin:0; border:0; padding:0; }
-.log-sort-row .log-taxonomy-row label { min-width:0; overflow-wrap:anywhere; }
 .log-visibility { border:1px solid var(--log-line); border-radius:10px; padding:16px; margin:0; }
 .log-visibility legend { padding:0 6px; font-weight:600; }
 .log-visibility input[type=radio] { width:18px; margin:5px 0 0; accent-color:var(--log-accent); }
@@ -314,10 +309,6 @@ body.log-composing { overflow:hidden; }
     .log-list-controls .log-list-tools form { flex-wrap:wrap; }
     .log-list-tools > .btn { font-size:12px; }
     .log-bulk-bar { border-radius:0; border-left:0; border-right:0; font-size:13px; }
-    .log-sort-row { gap:8px; }
-    .log-sort-tools { grid-template-columns:repeat(2,32px); }
-    .log-sort-row .log-taxonomy-row { grid-template-columns:minmax(0,1fr); }
-    .log-sort-row .log-taxonomy-row .btn { justify-self:start; }
 }
 .log-login-confirm,.log-saved-dialog { width:min(560px,calc(100% - 32px)); padding:24px; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); box-shadow:0 20px 60px #0000004d; }
 .log-login-confirm::backdrop,.log-saved-dialog::backdrop { background:#10192d80; }
@@ -668,3 +659,67 @@ a.log-list-where:hover { text-decoration:underline; }
     .log-av-times { grid-template-columns:minmax(0,1fr); }
     .log-av-dialog-foot .btn { flex:1 1 auto; }
 }
+/* Pinning in the admin: the pin switch on each row, the pinned posts' order above the list, the edit page's card. */
+.log-list-row { grid-template-columns:155px minmax(0,1fr) 52px auto auto auto auto; }
+.log-list-row.is-pinned { background:color-mix(in srgb,var(--log-accent) 5%,var(--log-card)); box-shadow:inset 3px 0 0 var(--log-accent); }
+.log-list-pin { margin:0; }
+.log-list-pin .btn { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:36px; padding:6px 8px; font-size:12px; color:var(--log-muted); }
+.log-list-pin .btn.is-on { color:var(--log-accent); border-color:color-mix(in srgb,var(--log-accent) 50%,var(--log-line)); background:color-mix(in srgb,var(--log-accent) 10%,var(--log-card)); }
+.log-list-pin .log-pin-icon { width:17px; height:17px; }
+.log-list-title .log-pin-badge,.log-list-title .log-lock-badge { flex-shrink:0; }
+.log-pins h2,.log-pin-panel h2 { display:flex; align-items:center; gap:8px; }
+.log-pins h2 .log-pin-icon,.log-pin-panel h2 .log-pin-icon { width:20px; height:20px; color:var(--log-accent); }
+.log-pins { margin:0 0 16px; }
+.log-pin-panel .log-list-pin .btn { min-height:40px; padding:6px 14px; font-size:14px; }
+.log-chip-lock svg { color:var(--log-accent); }
+/* Fixed page editor: the lock. */
+.log-page-lock { display:grid; gap:10px; margin:0; padding:14px; border:1px solid var(--log-line); border-radius:10px; min-width:0; }
+.log-page-lock legend { display:inline-flex; align-items:center; gap:6px; padding:0 6px; font-weight:600; }
+.log-page-lock .note { margin:0; }
+/* Settings: the favicon sizes, each at its real size (up to 96 px) on a checkered ground that shows transparency. */
+.log-favicon-preview { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; margin:8px 0 12px; padding:14px; border:1px solid var(--log-line); border-radius:10px; background:repeating-conic-gradient(color-mix(in srgb,var(--log-line) 70%,transparent) 0 25%,transparent 0 50%) 0 0 / 16px 16px; }
+.log-favicon-size { display:grid; justify-items:center; gap:6px; margin:0; }
+.log-favicon-size img { display:block; image-rendering:auto; }
+.log-favicon-size figcaption { padding:1px 8px; border-radius:999px; background:var(--log-card); color:var(--log-muted); font-size:11px; }
+.log-favicon-warn { color:var(--danger,#b3261e); }
+@media(max-width:900px) {
+    .log-list-row { grid-template-columns:minmax(0,1fr) auto auto auto; }
+    .log-list-time { grid-column:1 / 4; grid-row:1; }
+    .log-list-title { grid-column:1 / 4; grid-row:2; }
+    .log-list-thumb { grid-column:4; grid-row:1 / 3; }
+    .log-list-view { grid-column:1; grid-row:3; }
+    .log-list-pin { grid-column:2; grid-row:3; }
+    .log-list-edit { grid-column:3; grid-row:3; }
+    .log-list-delete { grid-column:4; grid-row:3; }
+    .log-post-list.is-search .log-list-pin { grid-row:4; }
+}
+/* Sortable cards (pinned posts, categories, hashtags): the same rows as the sidebar settings. */
+.log-sort-list { display:grid; gap:8px; margin:0 0 12px; counter-reset:log-sort; }
+.log-sort-card { counter-increment:log-sort; }
+.log-sort-card .log-sidebar-row-head { gap:8px; }
+.log-sort-card .log-sort-handle { flex-shrink:0; }
+.log-sort-number { display:grid; place-items:center; flex-shrink:0; width:26px; height:26px; border-radius:50%; background:color-mix(in srgb,var(--log-accent) 12%,var(--log-card)); color:var(--log-accent); font-size:12px; font-weight:800; }
+.log-sort-number::before { content:counter(log-sort); }
+.log-sort-mark { display:grid; place-items:center; flex-shrink:0; width:26px; height:26px; color:var(--log-accent); }
+.log-sort-mark .log-cat-icon { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round; }
+.log-sort-hash { font-size:17px; font-weight:800; }
+a.log-sidebar-row-title { flex:1; color:var(--log-text); text-decoration:none; }
+a.log-sidebar-row-title:hover { color:var(--log-accent); text-decoration:underline; }
+.log-sidebar-chip.is-draft { background:var(--warn-bg); color:var(--log-text); }
+.log-sort-rename { display:flex; align-items:center; gap:8px; flex:1; min-width:0; margin:0; }
+.log-sort-rename input[name="name"] { flex:1; min-width:0; height:36px; padding:4px 10px; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--log-text); font:inherit; font-weight:600; }
+.log-sort-rename input[name="name"]:hover { border-color:var(--log-line); }
+.log-sort-rename input[name="name"]:focus { border-color:var(--log-accent); background:var(--log-card); outline:2px solid color-mix(in srgb,var(--log-accent) 30%,transparent); outline-offset:1px; }
+.log-sort-rename .btn { flex-shrink:0; min-height:34px; padding:4px 12px; font-size:12px; }
+/* The save button shows up once the name is being edited. */
+.log-sort-rename:not(:focus-within) .btn { opacity:0; pointer-events:none; }
+.log-pin-row .log-list-pin .btn { width:34px; height:34px; min-width:0; min-height:0; padding:0; border-radius:8px; }
+.log-sort-dragging.log-sort-card { background:var(--log-card); }
+@media(max-width:900px) {
+    .log-sort-card .log-sidebar-row-head { flex-wrap:wrap; }
+    .log-pin-row .log-sidebar-chip { display:none; }
+    .log-sort-rename:not(:focus-within) .btn { display:none; }
+}
+.log-sort-edit-hint { display:grid; place-items:center; flex-shrink:0; color:var(--log-muted); opacity:.7; pointer-events:none; }
+.log-sort-edit-hint .log-ui-icon { width:15px; height:15px; }
+.log-sort-rename:focus-within .log-sort-edit-hint { display:none; }

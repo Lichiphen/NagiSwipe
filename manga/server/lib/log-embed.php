@@ -90,13 +90,13 @@ function nl_embed_detect(string $url): ?array
 function nl_embed_name(string $line): string
 {
     $e = nl_embed_detect($line);
-    return $e ? NL_EMBED_NAMES[$e['type']] : '';
+    return $e ? nm_t(NL_EMBED_NAMES[$e['type']]) : '';
 }
 
 function nl_embed_frame(string $type, string $classes, string $src, string $title, string $attrs = '', string $href = ''): string
 {
     return '<span class="log-embed ' . $classes . '" data-embed="' . $type . '"><iframe src="' . h($src) . '" title="' . h($title) . '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"' . $attrs . '></iframe>'
-        . ($href !== '' ? '<a class="log-embed-source" href="' . h($href) . '" target="_blank" rel="noopener noreferrer">' . h($title) . 'で開く ↗</a>' : '') . '</span>';
+        . ($href !== '' ? '<a class="log-embed-source" href="' . h($href) . '" target="_blank" rel="noopener noreferrer">' . h(nm_t('{name}で開く', ['name' => $title])) . ' ↗</a>' : '') . '</span>';
 }
 
 /** HTML for a URL on its own line, or null when its domain is not a supported service. $dark picks the dark X card. */
@@ -127,10 +127,10 @@ function nl_embed_html(string $line, bool $dark = false, bool $admin = false): ?
                 'https://w.soundcloud.com/player/?url=' . rawurlencode($url) . '&auto_play=false&visual=false&show_comments=false', 'SoundCloud', ' scrolling="no" allow="autoplay; encrypted-media"');
         case 'tweet':
             $href = 'https://twitter.com/' . $e['user'] . '/status/' . $e['id'];
-            return '<span class="log-embed embeddedtweet" data-embed="tweet"><blockquote class="twitter-tweet" data-dnt="true"' . ($dark ? ' data-theme="dark"' : '') . '><a href="' . h($href) . '" rel="noopener noreferrer">X（Twitter）で見る</a></blockquote></span>';
+            return '<span class="log-embed embeddedtweet" data-embed="tweet"><blockquote class="twitter-tweet" data-dnt="true"' . ($dark ? ' data-theme="dark"' : '') . '><a href="' . h($href) . '" rel="noopener noreferrer">' . nm_t('{name}で見る', ['name' => 'X（Twitter）']) . '</a></blockquote></span>';
         case 'instagram':
             $href = 'https://www.instagram.com/' . $e['kind'] . '/' . $e['id'] . '/';
-            return '<span class="log-embed embeddedinstagram" data-embed="instagram"><blockquote class="instagram-media" data-instgrm-permalink="' . h($href) . '" data-instgrm-version="14"><a href="' . h($href) . '" rel="noopener noreferrer">Instagramで見る</a></blockquote></span>';
+            return '<span class="log-embed embeddedinstagram" data-embed="instagram"><blockquote class="instagram-media" data-instgrm-permalink="' . h($href) . '" data-instgrm-version="14"><a href="' . h($href) . '" rel="noopener noreferrer">' . nm_t('{name}で見る', ['name' => 'Instagram']) . '</a></blockquote></span>';
         case 'codepen':
             return nl_embed_frame('codepen', 'embeddedcodepen', 'https://codepen.io/' . $e['user'] . '/embed/' . $e['id'] . '?default-tab=html%2Cresult', 'CodePen', ' allowfullscreen');
         case 'note':
@@ -142,7 +142,7 @@ function nl_embed_html(string $line, bool $dark = false, bool $admin = false): ?
         case 'gigaviewer':
             return nl_embed_frame('gigaviewer', 'embeddedgigaviewer', 'https://' . $e['host'] . '/episode/' . $e['id'] . '/embed', 'コミック', ' scrolling="no" allowfullscreen');
         case 'video':
-            return '<span class="log-embed log-embed-video" data-embed="video"><video class="embeddedvideo" controls preload="metadata" playsinline><source src="' . h($e['url']) . '"><a href="' . h($e['url']) . '" rel="noopener noreferrer">動画を開く</a></video></span>';
+            return '<span class="log-embed log-embed-video" data-embed="video"><video class="embeddedvideo" controls preload="metadata" playsinline><source src="' . h($e['url']) . '"><a href="' . h($e['url']) . '" rel="noopener noreferrer">' . nm_t('動画を開く') . '</a></video></span>';
     }
     return nl_embed_extra_html($e, $dark, $admin);
 }

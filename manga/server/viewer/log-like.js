@@ -1,6 +1,8 @@
 /* LOG likes: tap for +1, hold for +10 every 70 frames (counted at 60 fps, so 120 Hz screens are not faster). Taps in a burst go out as one request. MIT License (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const HOLD_MS = 70 * 1000 / 60, HOLD_STEP = 10, SEND_DELAY = 700;
     const endpoint = new URL('like.php', document.baseURI).href;
     const state = new Map(); // id -> {count, left, pending, timer, busy}
@@ -20,8 +22,8 @@
             btn.querySelector('.log-like-count').textContent = st.count.toLocaleString('ja-JP');
             btn.classList.toggle('is-liked', st.left < daily);
             btn.classList.toggle('is-full', st.left <= 0);
-            btn.setAttribute('aria-label', `いいね（${st.count}）` + (st.left <= 0 ? '。今日はこの記事にもう押せません' : ''));
-            btn.title = st.left <= 0 ? '今日はここまで。また明日どうぞ' : 'タップで+1・長押しで+10ずつ';
+            btn.setAttribute('aria-label', t(st.left <= 0 ? 'いいね（{n}）。今日はこの記事にもう押せません' : 'いいね（{n}）', { n: st.count }));
+            btn.title = t(st.left <= 0 ? '今日はここまで。また明日どうぞ' : 'タップで+1・長押しで+10ずつ');
         });
     }
     function pop(btn, text) {

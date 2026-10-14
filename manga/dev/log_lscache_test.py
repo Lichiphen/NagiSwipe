@@ -33,7 +33,7 @@ def run(site,c,csrf,plain,pt):
     check('デザイン・サイト名の保存はstaleで消す',ls(r).get('x-litespeed-purge')=='stale,tag=nagilog')
     top=ls(pub.get('/'))
     check('訪問者の公開トップはキャッシュ（1時間・タグ付き）',top.get('x-litespeed-cache-control')=='public,max-age=3600' and top.get('x-litespeed-tag')=='nagilog')
-    check('ログインCookieの有無でキャッシュを分ける',top.get('x-litespeed-vary')=='cookie=nm_admin')
+    check('ログインCookieと鍵の印の有無でキャッシュを分ける',top.get('x-litespeed-vary')=='cookie=nm_admin,cookie=nl_keys')
     check('訪問者の個別記事もキャッシュ',ls(pub.get('/?id='+pid)).get('x-litespeed-cache-control')=='public,max-age=3600')
     owner=ls(c.get('/'))
     check('ログイン中の表示はキャッシュしない',owner.get('x-litespeed-cache-control')=='no-cache' and 'x-litespeed-tag' not in owner)

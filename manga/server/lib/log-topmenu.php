@@ -124,6 +124,12 @@ function nl_menu_current(string $url, array $here): bool
     if (!(str_starts_with($url, './') || str_starts_with($url, '?') || str_starts_with($url, $base . '/'))) return false;
     parse_str((string)(parse_url($url, PHP_URL_QUERY) ?? ''), $q);
     $path = (string)(parse_url($url, PHP_URL_PATH) ?? '');
+    // Clean URLs: ./20261014123456 is the post, ./privacy the fixed page.
+    $leaf = rawurldecode(substr($path, strrpos($path, '/') !== false ? strrpos($path, '/') + 1 : 0));
+    if ($leaf !== '' && !str_contains($leaf, '.')) {
+        if (nl_valid_post($leaf)) $q += ['id' => $leaf];
+        elseif (preg_match(NL_PAGE_SLUG_PATTERN, $leaf)) $q += ['pg' => $leaf];
+    }
     $top = in_array($path, ['', './', '.', rtrim((string)(parse_url($base, PHP_URL_PATH) ?? ''), '/') . '/'], true) || str_ends_with($path, '/index.php');
     foreach (['pg', 'category', 'tag', 'id'] as $key) if (isset($q[$key]) && is_string($q[$key]) && $q[$key] === ($here[$key] ?? null)) return true;
     return !array_intersect_key($q, ['pg' => 1, 'category' => 1, 'tag' => 1, 'id' => 1, 'q' => 1, 'date' => 1, 'month' => 1]) && $top && !empty($here['top']);
@@ -156,7 +162,7 @@ function nl_footer_html(array $s, array $here): string
 {
     $home = $s['footer_home'] ? '<li><a class="log-footer-home" href="./"' . (!empty($here['top']) ? ' aria-current="page"' : '') . '><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg><span>' . h(nl_crumb_home($s)) . '</span></a></li>' : '';
     $links = $home . nl_menu_items('foot', $here + ['top' => false]);
-    $text = $s['show_footer'] && $s['footer_text'] !== '' ? '<p class="log-footer-text">' . h($s['footer_text']) . '</p>' : '';
+    $text = $s['show_footer'] && $s['footer_text'] !== '' ? '<p class="log-footer-text">' . h(nm_t($s['footer_text'])) . '</p>' : '';
     if ($links === '' && $text === '') return '';
     return '<footer class="log-site-footer">' . ($links !== '' ? '<nav class="log-footer-nav" aria-label="' . nm_t('フッターのリンク') . '"><ul>' . $links . '</ul></nav>' : '') . $text . '</footer>';
 }

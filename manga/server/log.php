@@ -7,10 +7,13 @@ require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/log.php';
 require __DIR__ . '/lib/log-public.php';
 require __DIR__ . '/lib/log-admin.php';
-// Keep old bookmarks; all generated and canonical URLs use the directory root.
+// Keep old bookmarks; all generated and canonical URLs use the directory root (a post or page goes straight to its clean URL).
 if (!defined('NL_FRONT') && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
     $query = (string)($_SERVER['QUERY_STRING'] ?? '');
-    header('Location: ./' . ($query !== '' ? '?' . $query : ''), true, 301);
+    $to = './' . ($query !== '' ? '?' . $query : '');
+    if (nl_pretty() && array_keys($_GET) === ['id'] && is_string($_GET['id']) && nl_valid_post($_GET['id'])) $to = './' . nl_post_path($_GET['id']);
+    elseif (nl_pretty() && array_keys($_GET) === ['pg'] && is_string($_GET['pg']) && preg_match(NL_PAGE_SLUG_PATTERN, $_GET['pg'])) $to = './' . nl_fixed_path($_GET['pg']);
+    header('Location: ' . $to, true, 301);
     header('Cache-Control: no-cache');
     exit;
 }
@@ -23,9 +26,15 @@ if (isset($_COOKIE['nm_admin']) && is_string($_COOKIE['nm_admin'])) {
 }
 define('NL_OWNER', $owner);
 $s = nl_settings();
+// Public pages speak the admin language when it is set to one (English…); otherwise Japanese.
+nm_lang(nm_site_lang());
 header('Vary: Cookie');
-if (!$s['public'] && !$owner) nm_not_found();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+// The site's icons, also for a private Memo (its login page shows them).
+if (isset($_GET['favicon']) && in_array($method, ['GET', 'HEAD'], true)) { nm_lscache_header(false, false); nl_serve_favicon(nm_str($_GET, 'favicon', 10)); }
+if (!$s['public'] && !$owner) nm_not_found();
+// The password form of a locked post or page.
+if ($method === 'POST' && isset($_POST['nl_unlock'])) nl_unlock_request();
 // LiteSpeed caches only what a visitor without the login cookie sees on a public LOG; images stay with PHP (BOT guard).
 $file = isset($_GET['media']) || isset($_GET['card']) || isset($_GET['ogimage']);
 nm_lscache_header(!$owner && $s['public'] && !isset($_COOKIE['nm_admin']) && !$file, !$file);
@@ -39,9 +48,15 @@ $id = nm_str($_GET, 'id', 24);
 $single = isset($_GET['id']);
 $post = $single ? nl_load_post($id) : null;
 if ($single && (!$post || $post['status'] !== 'published')) nm_not_found();
-// A fixed page (./?pg=<URL name>); the owner also sees drafts.
+// A fixed page (./<URL name> or ./?pg=<URL name>); the owner also sees drafts.
 $fixed = !$single && isset($_GET['pg']) ? nl_find_page(nm_str($_GET, 'pg', 40)) : null;
 if (!$single && isset($_GET['pg']) && (!$fixed || ($fixed['status'] !== 'published' && !$owner))) nm_not_found();
+// ./?id=… and ./?pg=… (and a trailing slash) move to the clean URL where the server has it.
+if ($single) nl_clean_redirect(nl_post_path($post['id']));
+if ($fixed) nl_clean_redirect(nl_fixed_path($fixed['slug']));
+// A locked post or page shows its content only to the owner and to readers who opened it with the password.
+$closed = ($single && !nl_unlocked($post)) || ($fixed && !nl_unlocked($fixed));
+$lockState = isset($_GET['locked']) && in_array($_GET['locked'], ['wrong', 'wait'], true) ? (string)$_GET['locked'] : '';
 $summaries = nl_post_summaries();
 if (!$single && !$fixed && isset($_GET['feed'])) nl_serve_feed($s, $summaries);
 if (!$single && !$fixed && isset($_GET['sitemap'])) nl_serve_sitemap($s, $summaries);
@@ -54,6 +69,9 @@ $all = $single ? [$post] : ($fixed ? [] : array_values(array_filter($summaries, 
     return $filter['query'] === '' || nl_date($p['created'], $filter['date'] !== '' ? 'Y-m-d' : 'Y-m') === ($filter['date'] ?: $filter['month']);
 })));
 if ($filter['search'] !== '') $all = nl_search_posts($all, $filter['terms']);
+// The top page lists the pinned posts first, in the owner's order.
+$pins = !$single && !$fixed && $filter['query'] === '' ? array_flip(nl_pins()) : [];
+if ($pins) $all = nl_pinned_first($all);
 $page = max(1, min(100000, (int)nm_str($_GET, 'page', 6)));
 $perPage = $s['posts_per_page'];
 // A page past the end (old bookmark, typed URL) is not an empty list.
@@ -63,18 +81,22 @@ $pageSummaries = $single || $fixed ? [] : array_slice($all, ($page - 1) * $perPa
 $posts = $single ? [$post] : ($fixed ? [] : ($grid ? $pageSummaries : array_values(array_filter(array_map(static fn($s) => nl_load_post($s['id']), $pageSummaries), static fn($p) => $p && $p['status'] === 'published'))));
 $base = nl_base_url();
 $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 'page=' . $page : '');
-$canonical = $base . '/' . ($single ? '?id=' . rawurlencode($id) : ($fixed ? '?pg=' . rawurlencode($fixed['slug']) : ($query !== '' ? '?' . $query : '')));
-$title = $single ? nl_post_title($post) : ($fixed ? $fixed['title'] : ($filter['label'] !== '' ? $filter['label'] . '｜' . $s['title'] : $s['title']));
+$canonical = $base . '/' . ($single ? nl_post_path($id) : ($fixed ? nl_fixed_path($fixed['slug']) : ($query !== '' ? '?' . $query : '')));
+$title = $single ? nl_post_title($post) : ($fixed ? $fixed['title'] : ($filter['label'] !== '' ? $filter['label'] . nm_t('｜') . $s['title'] : $s['title']));
 $rating = $single ? nl_post_rating($post) : '';
-$desc = $single ? (nl_veil_description($post) ?: nl_excerpt($post) ?: $s['description']) : ($fixed ? (nl_page_excerpt($fixed) ?: $s['description']) : $s['description']);
+$desc = $single ? (nl_is_locked($post) ? nl_lock_description() : (nl_veil_description($post) ?: nl_excerpt($post) ?: $s['description']))
+    : ($fixed ? (nl_is_locked($fixed) ? nl_lock_description(true) : (nl_page_excerpt($fixed) ?: $s['description'])) : $s['description']);
 // Share cards need a bitmap: an SVG is never used as og:image.
 [$ogImage, $ogWidth, $ogHeight] = ($og = nl_load_media($s['og_image'])) && !nl_is_svg($og) ? [nl_public_url(nl_media_url($og)), (int)$og['w'], (int)$og['h']] : [$base . '/viewer/log-og.png?v=' . nm_asset_version(__DIR__ . '/viewer/log-og.png'), 0, 0];
 // A post shares its first picture without a warning; with only warned pictures, a blurred copy with the rating's label
 // (lib/log-og.php). Text and manga only posts use the shared image.
+// A locked post shares its first picture only blurred, under a lock (lib/log-og.php).
 if ($single && ($postOg = nl_og_image($post))) [$ogImage, $ogWidth, $ogHeight] = $postOg;
 $robots = $fixed ? ($s['search_engines'] && $fixed['status'] === 'published' ? 'index,follow' : 'noindex,nofollow') : nl_robots($s, $single, $filter, $page, count($all));
-// R-18 posts stay out of search engines.
-if ($rating === 'r18' && $robots === 'index,follow') $robots = 'noindex,follow';
+// R-18 posts stay out of search engines, and so do locked posts and pages (there is nothing to read without the password).
+if (($rating === 'r18' || ($single && nl_is_locked($post)) || ($fixed && nl_is_locked($fixed))) && $robots === 'index,follow') $robots = 'noindex,follow';
+// The answer of the lock form is for this reader only.
+if ($lockState !== '') { $robots = 'noindex,nofollow'; nm_lscache_header(false); }
 header('Content-Type: text/html; charset=UTF-8');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
@@ -94,16 +116,20 @@ if ($owner && !headers_sent()) {
     if ($embedResolved > 0) nm_lscache_purge();
 }
 $postsHtml = '';
-if ($fixed) $postsHtml = '<article class="log-post log-page">' . ($owner ? '<div class="log-post-meta">' . ($fixed['status'] !== 'published' ? '<span class="badge">下書き（ログイン中だけ表示）</span>' : '') . '<a class="log-edit-link" href="admin/index.php?p=log_page&amp;id=' . h($fixed['id']) . '">' . nl_ui_icon() . '<span>編集</span></a></div>' : '')
-    . '<h1>' . h($fixed['title']) . '</h1><div class="log-page-body">' . nl_markdown($fixed['body']) . '</div></article>';
-elseif ($grid && !$single) $postsHtml = nl_tiles($posts, $s);
+if ($fixed) $postsHtml = '<article class="log-post log-page">' . ($owner ? '<div class="log-post-meta">' . ($fixed['status'] !== 'published' ? '<span class="badge">' . nm_t('下書き（ログイン中だけ表示）') . '</span>' : '') . (nl_is_locked($fixed) ? nl_lock_badge() : '') . '<a class="log-edit-link" href="admin/index.php?p=log_page&amp;id=' . h($fixed['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a></div>' : '')
+    . '<h1>' . h($fixed['title']) . '</h1>' . ($closed ? nl_lock_form($fixed, true, $lockState) : '<div class="log-page-body">' . nl_markdown($fixed['body']) . '</div>') . '</article>';
+elseif ($grid && !$single) $postsHtml = nl_tiles($posts, $s, $pins);
 else foreach ($posts as $p) {
-    $postsHtml .= '<article class="log-post">' . ($single ? '' : nl_new_badge($p, $s, 'log-post-new')) . '<div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="./?id=' . h($p['id']) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
-        . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>編集</span></a>'
+    // A locked post shows its title; its content waits behind the password (the form on its own page).
+    $open = nl_unlocked($p);
+    $pinned = isset($pins[$p['id']]);
+    $postsHtml .= '<article class="log-post' . ($pinned ? ' is-pinned' : '') . '">' . ($single ? '' : nl_new_badge($p, $s, 'log-post-new')) . '<div class="log-post-meta">' . nl_icon_html($s) . '<strong>' . h($s['name']) . '</strong><a href="' . h(nl_post_url($p['id'])) . '"><time datetime="' . h(nl_date($p['created'], 'c')) . '" title="' . h(nl_date($p['created'])) . '">' . h(nl_date($p['created'], 'Y/m/d')) . '</time></a>'
+        . ($pinned ? nl_pin_badge() : '') . ($owner && nl_is_locked($p) ? nl_lock_badge() : '')
+        . ($owner ? '<a class="log-edit-link" href="admin/index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a>'
             . '<form class="log-delete-form" method="post" action="admin/index.php" data-log-delete><input type="hidden" name="csrf" value="' . h(nm_csrf_token()) . '"><input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '"><input type="hidden" name="back" value="public">'
-            . '<button class="log-delete-link" type="submit" title="この記事を削除">' . nl_ui_icon('delete') . '<span>削除</span></button></form>' : '') . "</div>\n"
-        . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="./?id=' . h($p['id']) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
-        . nl_render_body($p) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
+            . '<button class="log-delete-link" type="submit" title="' . nm_t('この記事を削除') . '">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button></form>' : '') . "</div>\n"
+        . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="' . h(nl_post_url($p['id'])) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
+        . ($open ? nl_render_body($p) : ($single ? nl_lock_form($p, false, $lockState) : nl_lock_teaser($p))) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
 }
 $relatedHtml = $single && $s['public'] ? nl_related_html($summaries, $post, $s) : '';
 $sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);
@@ -125,14 +151,14 @@ $swipe = $owner || $more || nl_has_image_links($postsHtml . $sidebarHtml);
 $shareRows = $s['public'] && $posts && (!$grid || $single);
 $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 ?><!DOCTYPE html>
-<html lang="ja" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= h($single || $fixed ? $title . '｜' . $s['title'] : $title) ?></title>
+<html lang="<?= nm_lang() ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= h($single || $fixed ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
 <meta name="description" content="<?= h($desc) ?>"><meta name="robots" content="<?= $robots ?>">
 <link rel="canonical" href="<?= h($canonical) ?>"><meta property="og:url" content="<?= h($canonical) ?>">
 <meta property="og:type" content="<?= $single ? 'article' : 'website' ?>"><meta property="og:site_name" content="<?= h($s['title']) ?>">
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>"><?php if ($ogWidth > 0): ?><meta property="og:image:width" content="<?= $ogWidth ?>"><meta property="og:image:height" content="<?= $ogHeight ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
-<link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><?php endif; ?>
+<?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><?php endif; ?>
 <?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
 <?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>
@@ -150,14 +176,15 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && !$fixed && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
+<?= nm_t_script(NM_FRONT_TEXTS) ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
-<?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="メニューを開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
+<?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
 <?= $breadcrumbHtml ?>
-<?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= count($all) ?>件</span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span>すべての投稿</span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
-<?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note">自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。</p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
+<?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= nm_t('{n}件', ['n' => count($all)]) ?></span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span><?= nm_t('すべての投稿') ?></span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
+<?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note"><?= nm_t('自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。') ?></p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?= $postsHtml ?>
-<?php if (!$posts && !$fixed): ?><p class="log-empty"><?= $filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。')) ?></p><?php endif; ?>
+<?php if (!$posts && !$fixed): ?><p class="log-empty"><?= nm_t($filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。'))) ?></p><?php endif; ?>
 <?= $single ? $relatedHtml . ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : ($fixed ? '' : nl_pager($s, $filter['query'], $page, count($all))) ?>
 </main><?= $sidebarHtml ?></div><?= $shareRows ? nl_share_dialog() : '' ?><?= nl_footer_html($s, $here) ?></body></html>

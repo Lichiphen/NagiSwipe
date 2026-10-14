@@ -184,7 +184,8 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h(nm_t($title)) . ' - NagiManga</title>' . nm_t_script()
-        . '<link rel="icon" href="' . nm_asset('../viewer/favicon.svg') . '" type="image/svg+xml">'
+        // The LOG's own favicon when one is set (the tab shows which site this admin belongs to).
+        . ((($favicon = nl_favicon_links('../', false)) !== '') ? $favicon : '<link rel="icon" href="' . nm_asset('../viewer/favicon.svg') . '" type="image/svg+xml">')
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi

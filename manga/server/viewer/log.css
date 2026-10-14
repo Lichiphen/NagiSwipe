@@ -543,3 +543,36 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-veil-media:not([open]) > summary.log-veil-cover { position:relative; min-height:140px; display:grid; border-radius:calc(var(--log-radius) * .75); background:linear-gradient(135deg,#3b3f4a,#20232a); }
 .log-veil-media .log-veil-label { width:100%; background:none; }
 
+/* Pinned posts: a pin mark next to the date (mini blog) or on the tile, and a quiet accent line on the post. */
+.log-pin-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 10px 2px 8px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 12%,var(--log-card)); color:var(--log-accent); font-size:11px; font-weight:800; letter-spacing:.08em; line-height:1.6; white-space:nowrap; }
+.log-pin-icon { width:14px; height:14px; flex:0 0 auto; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.log-post.is-pinned { box-shadow:inset 3px 0 0 var(--log-accent),var(--log-shadow); }
+.log-tile-pin { gap:4px; padding-left:8px; }
+.log-tile-pin::before { display:none; }
+.log-tile-pin .log-pin-icon { width:13px; height:13px; }
+/* Locked posts and pages: the title stays, a lock and the password field take the place of the content. */
+.log-lock { display:grid; justify-items:center; gap:10px; margin:6px 0 4px; padding:28px 20px; border:1px dashed var(--log-line); border-radius:calc(var(--log-radius) * .75); background:var(--log-bg); text-align:center; }
+.log-lock-icon { width:34px; height:34px; fill:none; stroke:var(--log-accent); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-lock-title { margin:0; font-weight:700; color:var(--log-text); }
+.log-lock-error { margin:0; padding:6px 14px; border-radius:999px; background:var(--err-bg,#fce8e6); color:var(--danger,#b3261e); font-size:14px; font-weight:600; }
+.log-lock-form { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:center; gap:10px 12px; width:100%; max-width:420px; }
+.log-lock-field { display:grid; gap:4px; flex:1 1 220px; text-align:left; font-size:13px; color:var(--log-muted); }
+/* A plain text field drawn like a password field (text-security): browsers offer to save only password fields. */
+.log-lock-input { box-sizing:border-box; width:100%; min-height:46px; padding:10px 14px; border:1px solid var(--log-field); border-radius:10px; background:var(--log-card); color:var(--log-text); font:inherit; font-size:16px; letter-spacing:.08em; -webkit-text-security:disc; text-security:disc; }
+.log-lock-input:focus { outline:2px solid var(--log-accent); outline-offset:2px; border-color:var(--log-accent); }
+.log-lock-form:has(.log-lock-show input:checked) .log-lock-input { -webkit-text-security:none; text-security:none; letter-spacing:normal; }
+.log-lock-show { order:3; flex-basis:100%; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:13px; color:var(--log-muted); cursor:pointer; }
+.log-lock-show input { width:16px; height:16px; margin:0; accent-color:var(--log-accent); }
+.log-lock-submit { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:46px; padding:0 22px; border:0; border-radius:10px; background:var(--log-accent); color:var(--log-on-accent); font:inherit; font-weight:700; cursor:pointer; }
+.log-lock-submit:hover { filter:brightness(1.06); }
+.log-lock-submit:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
+.log-lock-submit-icon { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.log-lock-note { margin:0; max-width:420px; color:var(--log-muted); font-size:12px; line-height:1.7; }
+.log-lock.is-teaser { padding:20px 16px; gap:8px; }
+.log-lock.is-teaser .log-lock-icon { width:28px; height:28px; }
+.log-lock-open { display:inline-flex; align-items:center; min-height:40px; padding:0 18px; border-radius:999px; background:var(--log-card); border:1px solid var(--log-line); color:var(--log-accent); font-size:14px; font-weight:700; text-decoration:none; }
+.log-lock-open:hover { border-color:var(--log-accent); }
+.log-tile-blank.is-locked .log-lock-icon { width:40px; height:40px; opacity:.8; }
+.log-lock-badge { display:inline-flex; align-items:center; gap:3px; }
+.log-lock-badge-icon { width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.log-page .log-lock { margin-top:18px; }

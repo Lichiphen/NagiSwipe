@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="site/site.css?v=6a4da33c8c">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiManga", "item": "https://nagiswipe.pages.dev/nagimanga.html"}]}</script>
 <script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=3df2807cb7" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=8d03b49bbf" defer></script>
 </head>
 <body class="page-nagimanga has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -128,7 +128,7 @@
 <ul><li>GitHub の公式リリースから <code>nagimanga-vX.Y.Z.zip</code> をダウンロードし、GitHub が公開している確認用の値（SHA-256）と一致したときだけ使います。中身も 1 つずつ検査します。</li><li>入れ替えるのはプログラムのファイルだけです。作品・設定（<code>data</code> フォルダ）、プラグイン、<code>lib/paths.php</code> はそのままです。</li><li>入れ替える前のファイルは <code>data/update/</code> に保管され（実行できない <code>.bak</code> として）、「元に戻す」で戻せます。直近 3 回分を残します。</li><li>確認は 12 時間に 1 回までです。「更新」画面で、ログイン時の確認をオフにしたり、今すぐ確認したりできます。</li><li>サーバーから GitHub に接続できない（PHP の curl も allow_url_fopen も使えない）、ZipArchive がない、プログラムのファイルに書き込めない場合は自動で更新できません。画面の「手動で更新する」の手順（<code>data</code> フォルダ以外を上書きアップロード）で更新してください。</li><li>v0.1.0 から v0.2.0 へは、手動で更新してください（v0.1.0 には更新機能がありません）。</li></ul>
 </div></details><details class="sec" open><summary><h3 id="管理画面の言語">管理画面の言語<a class="anchor" href="#管理画面の言語" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">管理画面は、日本語と英語で表示できます。作品一覧・作品ページ・LOG・投稿・カテゴリ・固定ページ・画像一覧・設定・バックアップ・更新・ログイ…</span></summary><div class="sec-body">
 <p>管理画面は、日本語と英語で表示できます。作品一覧・作品ページ・LOG・投稿・カテゴリ・固定ページ・画像一覧・設定・バックアップ・更新・ログイン画面と、保存のときのメッセージが対象です。</p>
-<ul><li>「設定 › 共通・安全 › 管理画面の言語」で選びます。最初は「自動」で、ブラウザの言語が対応している言語ならその言語、そうでなければ日本語で表示します。</li><li>公開ページ（LOG や作品ページ）の言語は変わりません。投稿の本文やカテゴリ名など、自分で書いた内容も翻訳しません。</li></ul>
+<ul><li>「設定 › 共通・安全 › 管理画面の言語」で選びます。最初は「自動」で、ブラウザの言語が対応している言語ならその言語、そうでなければ日本語で表示します。</li><li>「English」を選ぶと、公開ページ（LOG・作品ページ・404・鍵や閲覧注意の画面・共有カードの文字）も英語になります。「自動」はブラウザーごとに言語が変わるため、全員に同じページを返す公開ページは日本語のままです。</li><li>投稿の本文やカテゴリ名など、自分で書いた内容は翻訳しません。フッターの文と閲覧注意の定型文は、最初のままなら英語になります。</li></ul>
 <p><strong>言語を足すとき</strong>: <code>server/lib/lang/</code> に <code>fr.json</code> のような JSON を置くと、設定の選択肢に出ます（中国語なら <code>zh-CN.json</code> のように地域を付けても使えます）。</p>
 <ul><li>中身は <code>{&quot;日本語の文&quot;: &quot;訳文&quot;}</code> の組です。プログラムの中の日本語の文をそのまま鍵にしています。<code>&quot;_name&quot;</code> に、選択肢に出す言語名（例: <code>&quot;Français&quot;</code>）を書きます。<code>_</code> で始まる鍵は翻訳者向けのメモで、画面には出ません。</li><li><code>{n}</code> のような差し込みは、そのまま訳文に残してください。訳文には <code>&#x27;</code> <code>&quot;</code> <code>&amp;</code> <code>&lt;</code> <code>&gt;</code> を使わず、アポストロフィは <code>’</code> にします。</li><li>訳がない文は日本語のまま出ます。<code>python dev/i18n_test.py</code> で、訳し漏れ・差し込みの違い・使えない文字を確かめられます。</li><li>新しく画面の文を足すときは、PHP なら <code>nm_t(&#x27;文&#x27;)</code>、JS なら <code>t(&#x27;文&#x27;)</code> を通し、<code>lib/lang/</code> の各 JSON に訳を足します。数字や名前が入る文は <code>nm_t(&#x27;{n}件の記録&#x27;, [&#x27;n&#x27; =&gt; $count])</code> のように、文をまるごと鍵にします。</li></ul>
 </div></details><details class="sec" open><summary><h3 id="設置用コード">設置用コード<a class="anchor" href="#設置用コード" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">メニューの「設置用コード」に、ビューアーを読み込むためのコードがまとまっています。</span></summary><div class="sec-body">

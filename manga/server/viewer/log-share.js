@@ -1,6 +1,8 @@
 /* Post share row: phones use the OS share sheet, PCs a dialog (X / はてなブックマーク / LINE / Instagram); Copy copies "title\nURL". MIT License (c) 2026 Lichiphen. */
 (() => {
     'use strict';
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const ua = navigator.userAgent;
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
     // X's in-app browser on iOS loops on the intent login page, so X there gets the copy guide instead.
@@ -8,8 +10,8 @@
     const COPIED_MS = 1800;
     // Services without a way to receive text: copy first, then the reader opens the site and pastes.
     const PASTE = {
-        instagram: { url: 'https://www.instagram.com/', open: 'Instagramを開く', hint: '投稿やストーリーズに貼り付けてください。' },
-        x: { url: 'https://x.com/', open: 'Xを開く', hint: '新しいポストに貼り付けてください。' },
+        instagram: { url: 'https://www.instagram.com/', open: t('{name}を開く', { name: 'Instagram' }), hint: t('投稿やストーリーズに貼り付けてください。') },
+        x: { url: 'https://x.com/', open: t('{name}を開く', { name: 'X' }), hint: t('新しいポストに貼り付けてください。') },
     };
     const dialog = document.querySelector('.log-share-dialog');
     const preview = dialog?.querySelector('.log-share-preview');
@@ -53,7 +55,7 @@
         const link = document.createElement('a');
         link.href = site.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = site.open;
         status.classList.toggle('is-error', !ok);
-        status.replaceChildren(ok ? 'シェア文をコピーしました。' + site.hint : 'コピーできませんでした。上の文を選んでコピーしてください。', ' ', link);
+        status.replaceChildren(ok ? t('シェア文をコピーしました。') + site.hint : t('コピーできませんでした。上の文を選んでコピーしてください。'), ' ', link);
         if (!ok) getSelection()?.selectAllChildren(preview);
     }
     function share(key) {

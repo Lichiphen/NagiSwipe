@@ -10,7 +10,7 @@ const NL_MEDIA_FILE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif|svg|mp4
 /** Pictures only: thumbnails, covers and everything an <img> shows. */
 const NL_IMAGE_FILE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif|svg)\z/';
 const NL_BODY_MAX = 100000;
-const NL_INDEX_SCHEMA = 7;
+const NL_INDEX_SCHEMA = 8;
 const NL_THEMES = ['light-blue' => 'ライトブルー', 'light-sage' => 'ライトセージ', 'light-paper' => 'ライトペーパー',
     'dark-navy' => 'ダークネイビー', 'dark-charcoal' => 'ダークチャコール', 'dark-plum' => 'ダークプラム'];
 require_once __DIR__ . '/log-taxonomy.php';
@@ -27,6 +27,10 @@ require_once __DIR__ . '/log-pages.php';
 require_once __DIR__ . '/log-topmenu.php';
 require_once __DIR__ . '/log-og.php';
 require_once __DIR__ . '/log-av.php';
+require_once __DIR__ . '/log-url.php';
+require_once __DIR__ . '/log-pins.php';
+require_once __DIR__ . '/log-lock.php';
+require_once __DIR__ . '/log-favicon.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -101,7 +105,7 @@ function nl_settings_media(array $s): array
 function nl_post_summary(array $p): array
 {
     return ['id' => $p['id'], 'created' => $p['created'], 'updated' => $p['updated'], 'title' => nl_post_title($p),
-        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body']), 'thumb' => nl_post_thumb_ref($p), 'rating' => nl_post_rating($p)];
+        'status' => $p['status'], 'media' => $p['media'] ?? [], 'manga' => array_values($p['manga'] ?? []), 'categories' => $p['categories'] ?? [], 'hashtags' => nl_hashtags($p['body']), 'thumb' => nl_post_thumb_ref($p), 'rating' => nl_post_rating($p), 'locked' => nl_is_locked($p)];
 }
 /** A small derived index; original post files remain the source of truth. */
 function nl_post_summaries(bool $public = true): array
@@ -262,6 +266,7 @@ function nl_delete_posts(mixed $items): array
         nm_rmdir_recursive($stage);
         try { nl_likes_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
         nl_og_forget(array_keys($selected));
+        try { nl_pins_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
         $clean = !is_dir($stage);
         foreach ($selected as $p) $clean = nl_prune_empty_dir(dirname(nl_post_file($p['id']))) && $clean;
         foreach (['posts', 'media', 'receipts'] as $dir) $clean = nl_prune_empty_dir(nl_root() . '/' . $dir) && $clean;
@@ -292,7 +297,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3'], 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3'], 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -323,6 +328,7 @@ function nl_read_settings(): array
     $s['show_description'] = $s['show_description'] !== false;
     $s['footer_home'] = $s['footer_home'] !== false;
     if (!is_string($s['logo']) || ($s['logo'] !== '' && !nl_valid_media($s['logo']))) $s['logo'] = '';
+    if (!is_string($s['favicon']) || ($s['favicon'] !== '' && !preg_match(NL_FAVICON_PATTERN, $s['favicon']))) $s['favicon'] = '';
     return $s;
 }
 function nl_date(int $time, string $format = 'Y/m/d H:i'): string
@@ -393,10 +399,13 @@ function nl_save_post(array $input): array
         $categories = nl_post_categories($input, $taxonomy);
         [$rating, $warning] = nl_rating_input($input);
         $mediaRatings = nl_media_ratings_input($input['media_ratings'] ?? [], $media);
+        // Editors without the lock fields (older pages, scripts) leave the lock as it was.
+        $lock = !empty($input['lock_form']) ? nl_lock_input(!empty($input['lock']), (string)($input['lock_password'] ?? ''), $old) : ($old['lock'] ?? null);
         $p = ['id' => $id, 'title' => $title, 'body' => $body, 'manga' => $refs, 'media' => $media,
             'categories' => $categories, 'rating' => $rating, 'warning' => $warning,
             'status' => $status, 'created' => $old && (!str_starts_with($old['id'], 'd') || $status === 'draft') ? $old['created'] : $now,
             'updated' => $now, 'revision' => (int)($old['revision'] ?? 0) + 1];
+        if ($lock !== null) $p['lock'] = $lock;
         $indexFile = nl_root() . '/index.php';
         $oldIndex = is_file($indexFile) ? file_get_contents($indexFile) : null;
         $taxFile = nl_root() . '/taxonomy.php';
@@ -419,7 +428,10 @@ function nl_save_post(array $input): array
             if (function_exists('opcache_invalidate')) @opcache_invalidate($taxFile, true);
             throw $e;
         }
-        if ($old && $old['id'] !== $id) @unlink(nl_post_file($old['id']));
+        if ($old && $old['id'] !== $id) {
+            @unlink(nl_post_file($old['id']));
+            try { nl_pins_rename($old['id'], $id); } catch (Throwable) {}
+        }
         // A changed image rating also changes the summaries of other posts showing the image.
         if ($ratedMedia) { try { nl_rebuild_index(); } catch (Throwable) {} }
         // Retain receipts for one day; they only prevent duplicate form submissions.
@@ -458,13 +470,23 @@ function nl_upload_media(array $file, string $replace = '', int $revision = 0): 
         return $m;
     });
 }
-function nl_media_public(string $id): bool
+function nl_media_public(string $id): bool { return nl_media_access($id) > 0; }
+/**
+ * Who may load a LOG picture: 0 only the owner, 1 everyone, 2 this reader only (only locked posts or pages
+ * show it, and this browser opened one of them with the password).
+ */
+function nl_media_access(string $id): int
 {
     $s = nl_settings();
-    if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER)) return false;
-    if (in_array($id, nl_settings_media($s), true)) return true;
-    if (in_array($id, nl_memo('sidebar-media', static fn() => nl_sidebar_media_ids(true)), true)) return true;
-    if (in_array($id, nl_memo('pages-media', static fn() => nl_pages_media_ids(true)), true)) return true;
+    if (!$s['public'] && !(defined('NL_OWNER') && NL_OWNER)) return 0;
+    if (in_array($id, nl_settings_media($s), true)) return 1;
+    if (in_array($id, nl_memo('sidebar-media', static fn() => nl_sidebar_media_ids(true)), true)) return 1;
+    $access = 0;
+    foreach (nl_pages(true) as $page) {
+        if (!in_array($id, $page['media'] ?? [], true)) continue;
+        if (!nl_is_locked($page)) return 1;
+        if (nl_unlocked($page)) $access = 2;
+    }
     $refs = nl_memo('media-refs', static function (): array {
         $refs = [];
         foreach (nl_post_summaries() as $p) foreach ($p['media'] ?? [] as $mid) $refs[$mid][] = $p['id'];
@@ -473,9 +495,11 @@ function nl_media_public(string $id): bool
     // Never trust cached visibility alone after unpublishing/deletion.
     foreach ($refs[$id] ?? [] as $pid) {
         $p = nl_load_post($pid);
-        if ($p && $p['status'] === 'published' && in_array($id, $p['media'], true)) return true;
+        if (!$p || $p['status'] !== 'published' || !in_array($id, $p['media'], true)) continue;
+        if (!nl_is_locked($p)) return 1;
+        if (nl_unlocked($p)) $access = 2;
     }
-    return false;
+    return $access;
 }
 function nl_media_url(array $m, bool $thumb = false, bool $admin = false, bool $cover = false): string
 {
@@ -497,7 +521,10 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
     if (!$admin && ($range === '' || preg_match('/\Abytes=0-/', $range))) nm_image_guard(nm_config());
     // Check visibility before conditional responses, including after unpublishing.
     $m = nl_load_media($id);
-    if (!$m || (!$admin && !nl_media_public($id))) nm_not_found();
+    $access = $admin ? 1 : nl_media_access($id);
+    if (!$m || $access === 0) nm_not_found();
+    // A picture only an opened lock shows stays in this browser's own cache.
+    $cache = ($access === 2 ? 'private' : 'public') . ', max-age=' . NL_MEDIA_MAX_AGE;
     $av = nl_is_av($m);
     if ($av && ($thumb || $cover) && ($m['cover'] ?? '') === '') nm_not_found();
     $name = $av && ($thumb || $cover) ? $m['cover'] : $m['f'];
@@ -509,7 +536,7 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
         header('Content-Disposition: inline');
         $etag = '"' . $id . '-' . $m['revision'] . '-' . (int)filemtime($file) . '"';
         header('ETag: ' . $etag);
-        header('Cache-Control: ' . ($admin ? 'private, no-store' : 'public, max-age=' . NL_MEDIA_MAX_AGE));
+        header('Cache-Control: ' . ($admin ? 'private, no-store' : $cache));
         nl_av_send($file, nl_av_mime($m), $etag);
     }
     $m['f'] = $name;
@@ -528,7 +555,7 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
         // and then ask again; the visibility check above still runs first, so unpublished images answer 404.
         $mtime = (int)filemtime($file);
         $etag = '"' . $id . '-' . $m['revision'] . ($thumb ? 't' : '') . '-' . $mtime . '"';
-        header('Cache-Control: public, max-age=' . NL_MEDIA_MAX_AGE);
+        header('Cache-Control: ' . $cache);
         header('ETag: ' . $etag);
         header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $mtime) . ' GMT');
         $match = (string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '');
@@ -623,15 +650,17 @@ function nl_search_index_drop(): void
     @unlink(nl_search_file());
     if (function_exists('opcache_invalidate')) @opcache_invalidate(nl_search_file(), true);
 }
-/** Summaries whose post contains every term. */
-function nl_search_posts(array $summaries, array $terms): array
+/** Summaries whose post contains every term. $locks: a locked post is found only by its title (and categories). */
+function nl_search_posts(array $summaries, array $terms, bool $locks = true): array
 {
     if (!$terms) return $summaries;
     $categories = array_map('nl_search_norm', nl_taxonomy()['categories']);
     $index = nl_search_index_read() ?? [];
-    return array_values(array_filter($summaries, static function ($s) use ($terms, $categories, $index) {
+    return array_values(array_filter($summaries, static function ($s) use ($terms, $categories, $index, $locks) {
         $e = $index[$s['id']] ?? null;
-        if (is_array($e) && ($e['u'] ?? null) === (int)$s['updated'] && is_string($e['t'] ?? null)) {
+        if ($locks && !empty($s['locked'])) {
+            $hay = nl_search_norm((string)$s['title']);
+        } elseif (is_array($e) && ($e['u'] ?? null) === (int)$s['updated'] && is_string($e['t'] ?? null)) {
             $hay = $e['t'];
         } else {
             $p = nl_load_post($s['id']);

@@ -1,7 +1,9 @@
 /* LOG content warnings for readers: open a veil, ask the age before R-18, and remember "do not ask again" per browser. MIT License (c) 2026 Lichiphen. */
 (() => {
     'use strict';
-    const LABEL = { sensitive: 'センシティブ', r18: 'R-18', r18g: 'R-18G' };
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = (text, vars = {}) => (i18n[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
+    const LABEL = { sensitive: t('センシティブ'), r18: 'R-18', r18g: 'R-18G' };
     // One LOG per folder: its choices never leak into another LOG on the same host.
     const KEY = 'nagilog-veil:' + location.pathname.replace(/[^/]*$/, '');
     const read = (store, key) => { try { return JSON.parse(store.getItem(key) || '{}') || {}; } catch { return {}; } };
@@ -34,10 +36,10 @@
         if (prefs[level] || session['offered-' + level]) return;
         session['offered-' + level] = true; write(sessionStorage, KEY, session);
         const bar = document.createElement('p'); bar.className = 'log-veil-offer'; bar.setAttribute('role', 'status');
-        const text = document.createElement('span'); text.textContent = 'このブラウザでは、次から' + LABEL[level] + 'を確認せずに表示しますか？';
-        const yes = document.createElement('button'); yes.type = 'button'; yes.textContent = '確認せずに表示する';
-        const no = document.createElement('button'); no.type = 'button'; no.textContent = '毎回確認する';
-        yes.addEventListener('click', () => { remember(level, true); text.textContent = '次から' + LABEL[level] + 'を最初から表示します。'; yes.remove(); no.remove(); });
+        const text = document.createElement('span'); text.textContent = t('このブラウザでは、次から{label}を確認せずに表示しますか？', { label: LABEL[level] });
+        const yes = document.createElement('button'); yes.type = 'button'; yes.textContent = t('確認せずに表示する');
+        const no = document.createElement('button'); no.type = 'button'; no.textContent = t('毎回確認する');
+        yes.addEventListener('click', () => { remember(level, true); text.textContent = t('次から{label}を最初から表示します。', { label: LABEL[level] }); yes.remove(); no.remove(); });
         no.addEventListener('click', () => bar.remove());
         bar.append(text, yes, no);
         // In a gallery of thumbnails, under the whole gallery rather than in one of its squares.
@@ -52,15 +54,15 @@
     }, true);
 
     // R-18 and R-18G are both for adults: ask the age once per tab (or never again for that kind, if the reader chose so) before opening.
-    const ADULT = { r18: '性的な表現を含みます。', r18g: '強い流血・暴力・グロテスクな表現を含みます。' };
+    const ADULT = { r18: t('性的な表現を含みます。'), r18g: t('強い流血・暴力・グロテスクな表現を含みます。') };
     let ageDialog = null, pending = null;
     function askAge(details) {
         pending = details;
         if (!ageDialog) {
             ageDialog = document.createElement('dialog'); ageDialog.className = 'log-age-dialog'; ageDialog.setAttribute('aria-labelledby', 'log-age-title');
-            ageDialog.innerHTML = '<form method="dialog"><h2 id="log-age-title"></h2><p><span data-age-about></span><br>18歳未満の方は閲覧できません。<br>18歳以上ですか？</p>'
-                + '<label><input type="checkbox" data-age-remember>このブラウザでは次から確認しない</label>'
-                + '<div class="log-age-actions"><button value="yes" class="is-yes">18歳以上なので表示する</button><button value="no">表示しない</button></div></form>';
+            ageDialog.innerHTML = '<form method="dialog"><h2 id="log-age-title"></h2><p><span data-age-about></span><br>' + t('18歳未満の方は閲覧できません。') + '<br>' + t('18歳以上ですか？') + '</p>'
+                + '<label><input type="checkbox" data-age-remember>' + t('このブラウザでは次から確認しない') + '</label>'
+                + '<div class="log-age-actions"><button value="yes" class="is-yes">' + t('18歳以上なので表示する') + '</button><button value="no">' + t('表示しない') + '</button></div></form>';
             document.body.append(ageDialog);
             ageDialog.addEventListener('close', () => {
                 const d = pending; pending = null;
@@ -71,7 +73,7 @@
             });
         }
         const level = details.dataset.veil;
-        ageDialog.querySelector('h2').textContent = LABEL[level] + 'の内容です';
+        ageDialog.querySelector('h2').textContent = t('{label}の内容です', { label: LABEL[level] });
         ageDialog.querySelector('[data-age-about]').textContent = ADULT[level];
         ageDialog.returnValue = '';
         ageDialog.querySelector('[data-age-remember]').checked = false;
@@ -94,13 +96,13 @@
         if (!on.length) { row?.remove(); return; }
         if (!row) {
             row = document.createElement('p'); row.className = 'log-veil-reset';
-            const button = document.createElement('button'); button.type = 'button'; button.textContent = '閲覧注意を毎回確認する';
+            const button = document.createElement('button'); button.type = 'button'; button.textContent = t('閲覧注意を毎回確認する');
             button.addEventListener('click', () => { prefs = {}; write(localStorage, KEY, prefs); location.reload(); });
             row.append(document.createElement('span'), ' ', button);
             main.append(row);
         }
         // Unchanged text is left alone, so the observer below is not woken by its own writes.
-        const text = on.map(k => LABEL[k]).join('・') + 'を確認せずに表示しています。';
+        const text = t('{label}を確認せずに表示しています。', { label: on.map(k => LABEL[k]).join(t('・')) });
         if (row.firstChild.textContent !== text) row.firstChild.textContent = text;
     }
 

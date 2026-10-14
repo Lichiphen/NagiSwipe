@@ -62,7 +62,8 @@ function nl_input_post(): array
     return ['id' => nm_str($_POST, 'post_id', 24), 'revision' => (int)nm_str($_POST, 'revision', 10),
         'nonce' => nm_str($_POST, 'nonce', 32), 'title' => nm_str($_POST, 'title', 1000), 'body' => $body,
         'status' => nm_str($_POST, 'status', 20), 'manga' => is_array($refs) ? $refs : [], 'categories' => $_POST['categories'] ?? [], 'new_categories' => nm_str($_POST, 'new_categories', 4000),
-        'rating' => nm_str($_POST, 'rating', 20), 'warning' => nm_str($_POST, 'warning', 400), 'media_ratings' => nm_str($_POST, 'media_ratings', 20000)];
+        'rating' => nm_str($_POST, 'rating', 20), 'warning' => nm_str($_POST, 'warning', 400), 'media_ratings' => nm_str($_POST, 'media_ratings', 20000),
+        'lock_form' => isset($_POST['lock_form']), 'lock' => nm_str($_POST, 'lock', 1) === '1', 'lock_password' => nm_str($_POST, 'lock_password', NL_LOCK_MAX * 4)];
 }
 function nl_handle_post(string $do): never
 {
@@ -73,7 +74,7 @@ function nl_handle_post(string $do): never
                 // Blog cards are fetched here, outside the save lock, so a slow site never blocks saving.
                 if (is_string($input['body'] ?? null) && strlen($input['body']) <= 100000) nl_cards_prepare($input['body']);
                 $p = nl_save_post($input);
-                nm_json(['ok' => true, 'id' => $p['id'], 'redirect' => 'index.php?p=log&saved=' . rawurlencode($p['id'])]);
+                nm_json(['ok' => true, 'id' => $p['id'], 'url' => nl_post_url($p['id'], '../'), 'redirect' => 'index.php?p=log&saved=' . rawurlencode($p['id'])]);
             case 'log_preview':
                 $p = nl_input_post();
                 nl_validate_body($p['body']);
@@ -184,6 +185,14 @@ function nl_handle_post(string $do): never
                 nl_like_set($id, (int)$count);
                 nm_flash('ok', (int)$count > 0 ? nm_t('いいねの数を{n}にしました', ['n' => (int)$count]) : nm_t('いいねを削除しました'));
                 nm_redirect('p=log_edit&id=' . rawurlencode($id) . '#log-likes');
+            case 'log_pin':
+                $id = nm_str($_POST, 'post_id', 24); $on = nm_str($_POST, 'pin', 1) === '1';
+                nl_pin_set($id, $on);
+                nm_flash('ok', $on ? nm_t('ピン留めしました。トップページの最初に表示します') : nm_t('ピン留めを外しました'));
+                nm_redirect(nm_str($_POST, 'back', 10) === 'edit' ? 'p=log_edit&id=' . rawurlencode($id) : 'p=log');
+            case 'log_pin_order':
+                $revision = nl_pins_reorder(nl_json_list(nm_str($_POST, 'order', 10000)), nl_revision_input());
+                nm_json(['ok' => true, 'revision' => $revision]);
             case 'log_sidebar_settings':
                 $raw = $_POST['items'] ?? '';
                 if (!is_string($raw) || strlen($raw) > 1024 * 1024 || !mb_check_encoding($raw, 'UTF-8')) throw new UnexpectedValueException(nm_t('サイドバー全体のHTMLを1MB以内にしてください'));
@@ -194,7 +203,8 @@ function nl_handle_post(string $do): never
                 nl_settings_update([nl_footer_input()]);
                 nm_flash('ok', nm_t('フッターを保存しました')); nm_redirect('p=settings&section=log#log-footer');
             case 'log_page_save':
-                $page = nl_page_save(nm_str($_POST, 'page_id', 14), nl_revision_input(), nl_page_input(['title' => nm_str($_POST, 'title', 1000), 'slug' => nm_str($_POST, 'slug', 200), 'body' => is_string($_POST['body'] ?? null) ? $_POST['body'] : '', 'layout' => nm_str($_POST, 'layout', 10), 'status' => nm_str($_POST, 'status', 10)]));
+                $page = nl_page_save(nm_str($_POST, 'page_id', 14), nl_revision_input(), nl_page_input(['title' => nm_str($_POST, 'title', 1000), 'slug' => nm_str($_POST, 'slug', 200), 'body' => is_string($_POST['body'] ?? null) ? $_POST['body'] : '', 'layout' => nm_str($_POST, 'layout', 10), 'status' => nm_str($_POST, 'status', 10)]),
+                    isset($_POST['lock_form']) ? [nm_str($_POST, 'lock', 1) === '1', nm_str($_POST, 'lock_password', NL_LOCK_MAX * 4)] : null);
                 nm_flash('ok', $page['status'] === 'published' ? nm_t('固定ページを公開しました') : nm_t('固定ページを下書きとして保存しました'));
                 // The editor sends with fetch so a refused save keeps the text on screen.
                 if (str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) nm_json(['ok' => true, 'redirect' => 'index.php?p=log_page&id=' . $page['id']]);
@@ -241,10 +251,10 @@ function nl_handle_post(string $do): never
     } catch (Throwable $e) {
         $message = $e instanceof UnexpectedValueException ? $e->getMessage() : nm_t('保存できませんでした。空き容量や書き込み権限を確認してください');
         nm_log('log_error', $e->getMessage());
-        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_sidebar_settings', 'log_page_preview', 'log_media_play'], true) || str_starts_with($do, 'log_restore_') || str_starts_with($do, 'log_av_')
+        if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_pin_order', 'log_sidebar_settings', 'log_page_preview', 'log_media_play'], true) || str_starts_with($do, 'log_restore_') || str_starts_with($do, 'log_av_')
             || ($do === 'log_page_save' && str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json'))) nm_json(['error' => nm_t($message)], 422);
         nm_flash('err', $message);
-        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', 'log_page_save' => 'p=log_page' . (preg_match(NL_PAGE_ID_PATTERN, nm_str($_POST, 'page_id', 14)) ? '&id=' . nm_str($_POST, 'page_id', 14) : ''), 'log_page_delete' => 'p=log_pages', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
+        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings', 'log_seo_settings' => 'p=settings&section=log', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', 'log_pin' => nm_str($_POST, 'back', 10) === 'edit' ? 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) : 'p=log', 'log_page_save' => 'p=log_page' . (preg_match(NL_PAGE_ID_PATTERN, nm_str($_POST, 'page_id', 14)) ? '&id=' . nm_str($_POST, 'page_id', 14) : ''), 'log_page_delete' => 'p=log_pages', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
     }
 }
 /*
@@ -347,11 +357,15 @@ function nl_design_input(): array
     if (!isset(NL_THEMES[$s['theme']])) throw new UnexpectedValueException(nm_t('デザインを6種類から選んでください'));
     // Forms without the switch (older pages, scripts) leave it as it was.
     $s['show_description'] = isset($_POST['description_form']) ? nm_str($_POST, 'show_description', 1) === '1' : nl_settings()['show_description'];
-    return $s + ['remove_icon' => !empty($_POST['remove_icon']), 'remove_og_image' => !empty($_POST['remove_og_image']), 'remove_logo' => !empty($_POST['remove_logo'])];
+    return $s + ['remove_icon' => !empty($_POST['remove_icon']), 'remove_og_image' => !empty($_POST['remove_og_image']), 'remove_logo' => !empty($_POST['remove_logo']), 'remove_favicon' => !empty($_POST['remove_favicon'])];
 }
 /** Upload outside the settings lock; the media library takes the same lock. */
 function nl_design_uploads(): array
 {
+    // The favicon set is made first: a picture that cannot be used stops here, before anything is stored.
+    $favicon = $_FILES['favicon'] ?? null;
+    $made = is_array($favicon) && ($favicon['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+        ? nl_favicon_upload($favicon, isset(NL_THEMES[nm_str($_POST, 'theme', 30)]) ? nm_str($_POST, 'theme', 30) : nl_settings()['theme']) : null;
     $ids = ['icon' => null, 'og_image' => null, 'logo' => null];
     // Share cards need a bitmap: refuse an SVG before anything is stored.
     $og = $_FILES['og_image'] ?? null;
@@ -360,14 +374,17 @@ function nl_design_uploads(): array
         $file = $_FILES[$name] ?? null;
         if (is_array($file) && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) $ids[$name] = nl_upload_media($file)['id'];
     }
-    return $ids;
+    return $ids + ['favicon' => $made];
 }
 function nl_design_apply(array $s, array $design, array $uploads): array
 {
     $s['icon'] = $uploads['icon'] ?? ($design['remove_icon'] ? '' : $s['icon']);
     $s['og_image'] = $uploads['og_image'] ?? ($design['remove_og_image'] ? '' : $s['og_image']);
     $s['logo'] = $uploads['logo'] ?? ($design['remove_logo'] ? '' : $s['logo']);
-    unset($design['remove_icon'], $design['remove_og_image'], $design['remove_logo']);
+    $s['favicon'] = $uploads['favicon'] ?? ($design['remove_favicon'] ? '' : $s['favicon']);
+    // A new design colour also colours the iPhone icon's background.
+    if (($uploads['favicon'] ?? null) === null && $s['favicon'] !== '' && $design['theme'] !== $s['theme']) $s['favicon'] = nl_favicon_retheme($s['favicon'], $design['theme']);
+    unset($design['remove_icon'], $design['remove_og_image'], $design['remove_logo'], $design['remove_favicon']);
     return array_replace($s, $design);
 }
 /** The sidebar from the settings screen: checked here, saved with nl_sidebar_save after the other blocks. */
@@ -408,6 +425,7 @@ function nl_compose_icon(string $name): string
         'rating' => '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>',
         'help' => '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.6M12 16.9v.1"/>',
         'preview' => '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+        'lock' => '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.2"/>',
     ];
     return '<svg class="log-tool-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 }
@@ -436,6 +454,8 @@ function nl_editor(?array $p = null, bool $public = false): string
     $headingChoices = '';
     foreach ($headings as $level) $headingChoices .= '<button type="button" class="log-heading-choice" data-heading-level="' . $level[1] . '"><b>' . ($level === 'h2' ? nm_t('見出し２') : nm_t('見出し３')) . '</b><code>' . str_repeat('#', (int)$level[1]) . '</code></button>';
     $tool = static fn(string $name, string $label, string $attrs) => '<button type="button" class="log-tool" ' . $attrs . ' aria-label="' . h($label) . '" title="' . h($label) . '">' . nl_compose_icon($name) . '</button>';
+    $locked = $p !== null && nl_is_locked($p);
+    $plain = $locked ? nl_lock_plain($p) : null;
     $panel = static fn(string $name, string $label) => $tool($name, $label, 'data-panel="' . $name . '" aria-expanded="false" aria-controls="log-panel-' . $name . '"');
     return '<section class="log-compose' . ($edit ? ' log-edit active' : '') . '" id="log-compose" aria-labelledby="log-compose-title"' . ($edit ? ' data-edit="1"' : '') . '>'
         . '<div class="log-compose-head"><h2 id="log-compose-title">' . ($edit ? nm_t('投稿を編集') : nm_t('いま、何を残す？')) . '</h2><button type="button" class="btn log-close">' . nm_t('閉じる') . '</button></div>'
@@ -450,15 +470,19 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<div class="log-compose-bar" role="toolbar" aria-label="' . nm_t('投稿の道具') . '"><div class="log-compose-tools">'
         . $tool('upload', nm_t('画像・動画・音声を追加'), 'data-upload') . $tool('media', nm_t('メディア一覧から選ぶ'), 'data-picker="media"') . $tool('manga', nm_t('漫画を選ぶ'), 'data-picker="manga"') . $tool('bold', nm_t('太字'), 'data-bold')
         . ($headings ? $tool('heading', nm_t('見出し'), 'data-heading data-heading-levels="' . implode(',', $headings) . '" aria-haspopup="' . (count($headings) > 1 ? 'dialog' : 'false') . '"') : '')
-        . '<span class="log-tool-sep" aria-hidden="true"></span>' . $panel('tags', nm_t('ハッシュタグ')) . $panel('categories', nm_t('カテゴリ')) . $panel('rating', nm_t('閲覧注意')) . $panel('help', nm_t('使い方'))
+        . '<span class="log-tool-sep" aria-hidden="true"></span>' . $panel('tags', nm_t('ハッシュタグ')) . $panel('categories', nm_t('カテゴリ')) . $panel('rating', nm_t('閲覧注意')) . $panel('lock', nm_t('パスワード')) . $panel('help', nm_t('使い方'))
         . '</div>' . $tool('preview', nm_t('プレビュー'), 'data-preview aria-pressed="false"') . '</div>'
         . '<input type="file" data-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,video/mp4,video/quicktime,video/webm,audio/mpeg,audio/mp4,audio/x-m4a,audio/aac,audio/ogg,audio/wav,audio/x-wav,audio/flac,audio/webm,.mp4,.m4v,.mov,.webm,.mp3,.m4a,.ogg,.oga,.opus,.wav,.flac" multiple hidden>'
         . '<div class="log-compose-panel" id="log-panel-tags" data-panel-body="tags" hidden><p class="log-panel-title">' . nm_t('最近使ったハッシュタグ') . '</p><div class="log-chip-list">' . ($recent ?: '<span class="note">' . nm_t('本文に #らくがき のように書くと、ここに並びます。') . '</span>') . '</div></div>'
         . '<div class="log-compose-panel" id="log-panel-categories" data-panel-body="categories" hidden><p class="log-panel-title">' . nm_t('カテゴリ') . '</p><div class="log-chip-list">' . ($categories ?: '<p class="note">' . nm_t('下の欄から作れます。') . '</p>') . '</div><label class="log-panel-field">' . nm_t('新しいカテゴリ') . '<input name="new_categories" maxlength="800" placeholder="' . nm_t('例：日記、制作メモ（「、」で区切って複数）') . '"></label></div>'
         . '<div class="log-compose-panel" id="log-panel-rating" data-panel-body="rating" hidden><fieldset class="log-rating"><legend class="log-panel-title">' . nm_t('閲覧注意') . '</legend><div class="log-rating-choices">' . $ratings . '</div></fieldset>'
         . '<label class="log-panel-field">' . nm_t('注意書き（任意）') . '<input name="warning" maxlength="' . NL_WARNING_MAX . '" value="' . h(nl_warning_text($p['warning'] ?? '')) . '" placeholder="' . nm_t('例：流血表現があります') . '"></label>'
-        . '<div class="log-chip-list log-warning-presets" role="group" aria-label="' . nm_t('注意書きの定型文') . '">' . implode('', array_map(fn($t) => '<button type="button" class="log-tag-chip" data-warning-preset="' . h($t) . '">' . h($t) . '</button>', nl_settings()['warning_presets'])) . '</div>'
+        . '<div class="log-chip-list log-warning-presets" role="group" aria-label="' . nm_t('注意書きの定型文') . '">' . implode('', array_map(fn($t) => '<button type="button" class="log-tag-chip" data-warning-preset="' . h(nm_t($t)) . '">' . h(nm_t($t)) . '</button>', nl_settings()['warning_presets'])) . '</div>'
         . '<label class="log-panel-check"><input type="checkbox" data-rate-all checked>' . nm_t('選んだとき、本文のメディアにも同じ注意を付ける') . '</label><p class="note">' . nm_t('メディアごとの注意は、サムネイルの左下のボタンで変えられます。') . '</p></div>'
+        . '<div class="log-compose-panel" id="log-panel-lock" data-panel-body="lock" hidden><input type="hidden" name="lock_form" value="1"><p class="log-panel-title">' . nm_t('パスワード（鍵）') . '</p>'
+        . '<label class="log-panel-check"><input type="checkbox" name="lock" value="1" data-lock-toggle' . ($locked ? ' checked' : '') . '>' . nm_t('この記事にパスワードをかける') . '</label>'
+        . '<label class="log-panel-field">' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-lock-field></label>'
+        . '<p class="note">' . nm_t('読者には、タイトル（1行目）とパスワードの入力欄だけを見せます。本文・画像・説明文は、正しいパスワードを入れた人にだけ表示します。開いた人のブラウザーには、パスワードではなく、この記事を読める印をクッキーで{days}日間残します。パスワードを変えると、開いていた人もまた入力が必要になります。', ['days' => NL_LOCK_DAYS]) . '</p></div>'
         . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>' . nm_t('1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」にできます。') . '</li><li>' . nm_t('「H」で、行を見出しにできます。行頭に ## を付けると見出し２、### で見出し３です。') . '</li><li>' . nm_t('画像・動画・音声はここへドロップ、または貼り付けでも追加できます。本文の下に並ぶサムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。×で外せます（スマホは長押ししてから動かします）。') . '</li><li>' . nm_t('追加したメディアは、本文のカーソル位置に「〔メディア1〕」のような行で置きます。置いた場所は光って知らせます。まとまりの＋から追加すると、そのまとまりに入ります。本文の中の帯をドラッグすると、その行を動かせます。') . '</li><li>' . nm_t('動画（MP4・MOV・WebM）と音声（MP3・M4A・OGG・WAV・FLAC）も、画像と同じように追加できます。大きなファイルは分けて送ります。音声は波形とジャケット、動画は最初のほうのコマを表紙にします。') . '</li><li>' . nm_t('URLだけを1行に貼ると、YouTubeやX、Amazon Music、SoundCloudなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。') . '</li><li>' . nm_t('閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。') . '</li></ul></div>'
         . '<div class="log-preview" data-preview-body hidden></div>'
         . '<input type="hidden" name="title" value="">'
@@ -473,7 +497,7 @@ function nl_admin_post_card(array $p): string
 {
     $published = $p['status'] === 'published';
     return '<article class="log-post"><div class="log-post-meta"><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time><span class="badge">' . ($published ? nm_t('公開') : nm_t('下書き')) . '</span><a href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nm_t('編集') . '</a>'
-        . ($published ? '<a href="../?id=' . h($p['id']) . '">' . nm_t('個別ページ') . '</a>' : '') . '</div>'
+        . ($published ? '<a href="' . h(nl_post_url($p['id'], '../')) . '">' . nm_t('個別ページ') . '</a>' : '') . '</div>'
         . '<h2>' . h(nl_post_title($p, 0)) . '</h2>' . nl_render_body($p, true) . nl_category_links($p, true) . '</article>';
 }
 function nl_view_log(): void
@@ -485,7 +509,10 @@ function nl_view_log(): void
     if (!in_array($status, ['published', 'draft'], true)) $status = '';
     $searching = $terms || $status !== '';
     if ($status !== '') $posts = array_values(array_filter($posts, static fn($p) => $p['status'] === $status));
-    $posts = nl_search_posts($posts, $terms);
+    $posts = nl_search_posts($posts, $terms, false);
+    // Pinned posts come first, in their order, as on the top page.
+    $posts = nl_pinned_first($posts);
+    $pins = array_flip(nl_pins());
     $page = nl_page_number();
     $size = nm_str($_GET, 'per_page', 20);
     if (preg_match('/\A[0-9]{1,3}\z/', $size) && (int)$size >= 1 && (int)$size <= 100) $_SESSION['nl_admin_per_page'] = (int)$size;
@@ -500,10 +527,11 @@ function nl_view_log(): void
         $thumb = '';
         foreach ($p['media'] ?? [] as $mid) if ($m = nl_load_media($mid)) { $thumb = '<img src="' . h(nl_media_url($m, true, true)) . '" alt="" loading="lazy">'; break; }
         if ($thumb === '') foreach ($p['manga'] ?? [] as $wid) if (($w = nm_load_work($wid)) && !empty($w['pages'])) { $thumb = '<img src="' . h(nm_thumb_url($w)) . '" alt="" loading="lazy">'; break; }
-        $cards .= '<li class="log-list-row"><span class="log-list-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></span>'
-            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($p['status'] === 'draft' ? '<small class="badge">' . nm_t('下書き') . '</small>' : '') . nl_veil_badge(nl_rating($summary['rating'] ?? '')) . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="' . nm_t('いいね{n}', ['n' => $likes]) . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
+        $pinned = isset($pins[$p['id']]);
+        $cards .= '<li class="log-list-row' . ($pinned ? ' is-pinned' : '') . '"><span class="log-list-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time></span>'
+            . '<a class="log-list-title" href="index.php?p=log_edit&id=' . h($p['id']) . '" title="' . h(nl_post_title($p, 0)) . '">' . nl_ui_icon('title') . '<span>' . nl_search_mark(nl_post_title($p), $terms) . '</span>' . ($pinned ? nl_pin_badge('badge log-pin-badge') : '') . ($p['status'] === 'draft' ? '<small class="badge">' . nm_t('下書き') . '</small>' : '') . (nl_is_locked($p) ? nl_lock_badge() : '') . nl_veil_badge(nl_rating($summary['rating'] ?? '')) . (($likes = nl_like_count($p['id'])) > 0 ? '<small class="log-list-likes" aria-label="' . nm_t('いいね{n}', ['n' => $likes]) . '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.6 13a4.9 4.9 0 0 1 6.9-6.9l.5.5.5-.5a4.9 4.9 0 0 1 6.9 6.9Z"/></svg>' . number_format($likes) . '</small>' : '') . '</a>'
             . ($searching ? nl_admin_search_where($p, $terms, $publicIds, $publicPer) : '')
-            . '<span class="log-list-thumb">' . $thumb . '</span>' . ($p['status'] === 'published' ? '<a class="btn log-list-view" href="../?id=' . h($p['id']) . '">' . nl_ui_icon('view') . '<span>' . nm_t('記事を見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('下書き') . '</span>') . '<a class="btn log-list-edit" href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a>'
+            . '<span class="log-list-thumb">' . $thumb . '</span>' . nl_pin_form($p['id'], $pinned) . ($p['status'] === 'published' ? '<a class="btn log-list-view" href="' . h(nl_post_url($p['id'], '../')) . '">' . nl_ui_icon('view') . '<span>' . nm_t('記事を見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('下書き') . '</span>') . '<a class="btn log-list-edit" href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a>'
             . '<form method="post" action="index.php" class="js-confirm log-list-delete" data-confirm="' . nm_t('この記事を削除しますか？この記事だけで使う画像も削除します。') . '">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button></form><label class="log-bulk-choice" hidden><input type="checkbox" data-bulk-item value="' . h($p['id']) . '" data-revision="' . $p['revision'] . '" aria-label="' . nm_t('{title}を削除対象に選ぶ', ['title' => h(nl_post_title($p))]) . '"></label></li>';
     }
     $s = nl_settings();
@@ -524,8 +552,41 @@ function nl_view_log(): void
     nm_layout('LOG', $header . $tabs . $notice
         . $search . '<div class="log-list-controls"><span>' . ($searching ? '' : nm_t('{n}件の記録', ['n' => count($posts)])) . '</span><div class="log-list-tools"><form method="get" action="index.php"><input type="hidden" name="p" value="log"><label>' . nm_t('1ページの表示件数') . '<input type="number" name="per_page" min="1" max="100" required value="' . $perPage . '"></label><button class="btn">' . nm_t('表示') . '</button></form><button class="btn" type="button" data-bulk-toggle aria-expanded="false" aria-controls="log-bulk-bar">' . nl_ui_icon('delete') . '<span data-bulk-label>' . nm_t('まとめて削除') . '</span></button></div></div>'
         . '<form id="log-bulk-bar" class="log-bulk-bar" data-bulk-form method="post" action="index.php" hidden>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_bulk_delete"><input type="hidden" name="posts" value="[]"><label><input type="checkbox" data-bulk-all>' . nm_t('このページをすべて選ぶ') . '</label><span data-bulk-count aria-live="polite">' . nm_t('0件選択') . '</span><button class="btn danger" disabled data-bulk-submit>' . nm_t('選んだ記事を削除') . '</button><p class="note">' . nm_t('選んだ記事だけで使う画像も削除します。共有画像は残します。取り消しにはバックアップが必要です。') . '</p></form>'
-        . '<div class="log-compose-slot log-compose-collapsed" data-compose-slot>' . nl_editor() . '</div><ul class="log-post-list' . ($searching ? ' is-search' : '') . '">' . ($cards ?: '<li class="log-empty">' . ($searching ? nm_t('見つかりませんでした。言葉を短くするか、公開状態を「すべて」にしてみてください。') : nm_t('まだ記録はありません。ひとことから、どうぞ。')) . '</li>') . '</ul>'
+        . '<div class="log-compose-slot log-compose-collapsed" data-compose-slot>' . nl_editor() . '</div>' . (!$searching && $page === 1 ? nl_pins_panel() : '') . '<ul class="log-post-list' . ($searching ? ' is-search' : '') . '">' . ($cards ?: '<li class="log-empty">' . ($searching ? nm_t('見つかりませんでした。言葉を短くするか、公開状態を「すべて」にしてみてください。') : nm_t('まだ記録はありません。ひとことから、どうぞ。')) . '</li>') . '</ul>'
         . nl_pager(['posts_per_page' => $perPage, 'pager' => 'numbers', 'pager_status' => true], $pagerQuery, $page, count($posts), 'index.php'));
+}
+/** The pin switch of a post (a list row, or the edit page with $back = 'edit'). */
+function nl_pin_form(string $id, bool $pinned, string $back = ''): string
+{
+    $label = $pinned ? nm_t('ピン留めを外す') : nm_t('ピン留めする');
+    return '<form method="post" action="index.php" class="log-list-pin">' . nl_csrf_field() . '<input type="hidden" name="do" value="log_pin"><input type="hidden" name="post_id" value="' . h($id) . '"><input type="hidden" name="pin" value="' . ($pinned ? '0' : '1') . '">' . ($back !== '' ? '<input type="hidden" name="back" value="' . h($back) . '">' : '')
+        . '<button class="btn' . ($pinned ? ' is-on' : '') . '" aria-pressed="' . ($pinned ? 'true' : 'false') . '" title="' . h($label) . '"' . ($back === '' ? ' aria-label="' . h($label) . '"' : '') . '>' . nl_pin_icon() . ($back !== '' ? '<span>' . h($label) . '</span>' : '') . '</button></form>';
+}
+/** The pinned posts above the admin list: drag or the arrows change their order (saved at once, log-manage.js). */
+function nl_pins_panel(): string
+{
+    $record = nl_pins_record();
+    $rows = '';
+    foreach ($record['ids'] as $id) {
+        $p = nl_load_post($id);
+        if (!$p) continue;
+        $title = nl_post_title($p);
+        [$handle, $steps] = nl_sort_controls($title);
+        $rows .= '<div class="log-sidebar-edit-row log-sort-card log-pin-row" data-sort-id="' . h($id) . '"><div class="log-sidebar-row-head">' . $handle . '<span class="log-sort-number" aria-hidden="true"></span>'
+            . '<a class="log-sidebar-row-title log-pin-title" href="index.php?p=log_edit&id=' . h($id) . '">' . h($title) . '</a>'
+            . '<span class="log-sidebar-chip' . ($p['status'] !== 'published' ? ' is-draft' : '') . '">' . ($p['status'] !== 'published' ? nm_t('下書き（公開すると表示）') : nm_t('公開中')) . '</span>'
+            . $steps . nl_pin_form($id, true) . '</div></div>';
+    }
+    if ($rows === '') return '';
+    return '<section class="card log-pins" data-taxonomy-manager data-order-action="log_pin_order" data-revision="' . $record['revision'] . '" aria-labelledby="log-pins-title">' . nl_csrf_field()
+        . '<h2 id="log-pins-title">' . nl_pin_icon() . '<span>' . nm_t('ピン留め中の記事') . '</span></h2><p class="note">' . nm_t('トップページの最初に、上からこの順番で表示します。左の持ち手をドラッグするか、上下ボタンで並べ替えると、その場で保存します。') . '</p>'
+        . '<div class="log-sort-list log-pin-list" data-sort-kind="pins">' . $rows . '</div><p class="note" data-taxonomy-status role="status" aria-live="polite"></p></section>';
+}
+/** The drag handle and the up/down buttons of a sortable row (log-manage.js), drawn like the sidebar settings. */
+function nl_sort_controls(string $label): array
+{
+    return ['<button type="button" class="btn log-icon-btn log-sort-handle" aria-label="' . nm_t('{name}を並び替える', ['name' => h($label)]) . '" title="' . nm_t('ドラッグで並び替え') . '">' . nl_sidebar_ui_icon('grip') . '</button>',
+        '<span class="log-sidebar-steps"><button type="button" class="btn log-icon-btn" data-sort-step="-1" aria-label="' . nm_t('{name}を上へ', ['name' => h($label)]) . '">' . nl_sidebar_ui_icon('up') . '</button><button type="button" class="btn log-icon-btn" data-sort-step="1" aria-label="' . nm_t('{name}を下へ', ['name' => h($label)]) . '">' . nl_sidebar_ui_icon('down') . '</button></span>'];
 }
 /** Search result details: the matching part of the body, and where the post is on the public site. */
 function nl_admin_search_where(array $p, array $terms, array $publicIds, int $publicPer): string
@@ -542,7 +603,10 @@ function nl_view_edit(string $id): void
 {
     $p = nl_load_post($id);
     if (!$p) nm_not_found();
-    nm_layout(nm_t('投稿を編集'), '<p class="crumb crumb-back"><a href="index.php?p=log">' . nm_t('投稿一覧に戻る') . '</a></p>' . nl_editor($p) . nl_like_panel($p)
+    $pinned = nl_is_pinned($p['id']);
+    nm_layout(nm_t('投稿を編集'), '<p class="crumb crumb-back"><a href="index.php?p=log">' . nm_t('投稿一覧に戻る') . '</a></p>' . nl_editor($p)
+        . '<section class="card log-pin-panel"><h2>' . nl_pin_icon() . '<span>' . nm_t('ピン留め') . '</span></h2><p class="note">' . ($pinned ? nm_t('この記事はピン留め中です。トップページの最初に表示しています。順番は投稿一覧の上で変えられます。') : nm_t('ピン留めすると、日付にかかわらずトップページの最初に表示します。いくつでも（{n}件まで）留められ、順番は投稿一覧の上で変えられます。', ['n' => NL_PINS_MAX])) . '</p>' . nl_pin_form($p['id'], $pinned, 'edit') . '</section>'
+        . nl_like_panel($p)
         . '<form method="post" action="index.php" class="js-confirm" data-confirm="' . nm_t('この記事を削除しますか？この記事だけで使う画像も削除します。') . '">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($id) . '"><input type="hidden" name="revision" value="' . $p['revision'] . '"><button class="btn danger">' . nm_t('投稿を削除') . '</button></form>');
 }
 /** Likes of one post: see, change or delete the count. */
@@ -801,6 +865,7 @@ function nl_settings_panel(): string
         . '<h3>' . nm_t('アイコン') . '</h3><div class="log-icon-preview">' . nl_icon_html($s, '../', 'log-settings-avatar') . '</div><label>' . nm_t('新しいアイコン') . '<input type="file" name="icon" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg"></label>'
         . '<p class="note">' . nm_t('サイト名の横・投稿者表示・サイドバーのプロフィール・ログイン画面で使います。画像は丸く表示します。') . '</p>'
         . ($s['icon'] !== '' ? '<label class="check"><input type="checkbox" name="remove_icon" value="1">' . nm_t('今のアイコンを外す') . '</label>' : '')
+        . nl_favicon_panel($s)
         . '<h3>' . nm_t('共通のOGP画像') . '</h3><p class="note">' . nm_t('リンクを共有したときに表示される紹介画像です。投稿に画像がないときと、トップ・分類一覧で使います。横1200×縦630pxの画像が目安です。SNSが表示しないため、SVGは使えません。') . '</p><div class="log-og-preview">' . ($og ? '<img src="' . h('../' . nl_media_url($og, true)) . '" alt="' . nm_t('共通の紹介画像') . '">' : '') . '</div><label>' . nm_t('OGP画像') . '<input type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp"></label>'
         . ($og ? '<label class="check"><input type="checkbox" name="remove_og_image" value="1">' . nm_t('共通のOGP画像を外す') . '</label>' : '')
         . '</div></section>';
@@ -814,8 +879,16 @@ function nl_taxonomy_panel(): string
     foreach ($groups as $kind => $items) {
         $html .= '<h3>' . ($kind === 'category' ? nm_t('カテゴリ') : nm_t('ハッシュタグ')) . '</h3>';
         if (!$items) $html .= '<p class="note">' . nm_t('投稿画面で作ると、ここに並びます。') . '</p>';
-        $html .= '<div class="log-taxonomy-group" data-sort-kind="' . $kind . '">';
-        foreach ($items as $id => $label) $html .= '<div class="log-sort-row" data-sort-id="' . h((string)$id) . '"><div class="log-sort-tools"><button type="button" class="btn log-sort-handle" draggable="true" aria-label="' . nm_t('{name}を並び替える', ['name' => h((string)$label)]) . '" title="' . nm_t('ドラッグで並び替え') . '">⠿</button><button type="button" class="btn" data-sort-step="-1" aria-label="' . nm_t('{name}を上へ', ['name' => h((string)$label)]) . '">↑</button><button type="button" class="btn" data-sort-step="1" aria-label="' . nm_t('{name}を下へ', ['name' => h((string)$label)]) . '">↓</button></div><form method="post" action="index.php" class="log-taxonomy-row">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_taxonomy_rename"><input type="hidden" name="kind" value="' . $kind . '"><input type="hidden" name="old" value="' . h((string)$id) . '"><input type="hidden" name="revision" value="' . $tax['revision'] . '"><label>' . h(($kind === 'hashtag' ? '#' : '') . (string)$label) . '<input name="name" value="' . h((string)$label) . '" maxlength="' . ($kind === 'category' ? 40 : 60) . '" required></label><button class="btn">' . nm_t('名前を保存') . '</button></form></div>';
+        $html .= '<div class="log-sort-list" data-sort-kind="' . $kind . '">';
+        // One card per name: handle, the name as a field (rename and save on the same line), up/down. The order is saved at once.
+        $mark = $kind === 'category' ? nl_category_icon() : '<span class="log-sort-hash">#</span>';
+        foreach ($items as $id => $label) {
+            [$handle, $steps] = nl_sort_controls((string)$label);
+            $html .= '<div class="log-sidebar-edit-row log-sort-card" data-sort-id="' . h((string)$id) . '"><div class="log-sidebar-row-head">' . $handle . '<span class="log-sort-mark" aria-hidden="true">' . $mark . '</span>'
+                . '<form method="post" action="index.php" class="log-sort-rename">' . nm_csrf_field() . '<input type="hidden" name="do" value="log_taxonomy_rename"><input type="hidden" name="kind" value="' . $kind . '"><input type="hidden" name="old" value="' . h((string)$id) . '"><input type="hidden" name="revision" value="' . $tax['revision'] . '">'
+                . '<input name="name" value="' . h((string)$label) . '" maxlength="' . ($kind === 'category' ? 40 : 60) . '" required aria-label="' . nm_t('{name}の名前', ['name' => h((string)$label)]) . '" title="' . nm_t('押すと名前を変えられます') . '"><span class="log-sort-edit-hint" aria-hidden="true">' . nl_ui_icon() . '</span><button class="btn">' . nm_t('名前を保存') . '</button></form>'
+                . $steps . '</div></div>';
+        }
         $html .= '</div>';
     }
     return $html . '</section>';

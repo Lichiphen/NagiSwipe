@@ -59,7 +59,7 @@ function nl_embed_twitch_parent(): string
 function nl_embed_extra_html(array $e, bool $dark, bool $admin): ?string
 {
     $media = ' allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen';
-    $name = NL_EMBED_NAMES[$e['type']] ?? '';
+    $name = nm_t(NL_EMBED_NAMES[$e['type']] ?? '');
     switch ($e['type']) {
         case 'bandcamp':
             $d = nl_embed_resolved($e);
@@ -95,5 +95,5 @@ function nl_embed_extra_html(array $e, bool $dark, bool $admin): ?string
 
 function nl_embed_unavailable(string $url, string $name): string
 {
-    return '<span class="log-embed log-embed-unavailable"><a href="' . h($url) . '" rel="noopener noreferrer">' . h($name) . 'で開く</a></span>';
+    return '<span class="log-embed log-embed-unavailable"><a href="' . h($url) . '" rel="noopener noreferrer">' . h(nm_t('{name}で開く', ['name' => $name])) . '</a></span>';
 }

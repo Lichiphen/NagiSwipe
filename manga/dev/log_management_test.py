@@ -96,7 +96,7 @@ def main():
         check('最近8件タグの利用順は並び替えで変えない',state(site)['recent']==initial['recent'])
         admin_page=c.get('/admin/index.php?p=log&view=taxonomy').text
         groups=re.findall(r'<div class="log-taxonomy-group" data-sort-kind="([^"]+)">(.*?)(?=<h3>|</section>)',admin_page,re.S)
-        check('分類管理にDnD・上下ボタンと順序情報を用意','draggable="true"' in admin_page and 'data-sort-step="-1"' in admin_page and 'data-sort-step="1"' in admin_page and 'data-taxonomy-manager' in admin_page and 'log-manage.js?v=' in admin_page)
+        check('分類管理にDnD・上下ボタンと順序情報を用意','log-sort-handle' in admin_page and 'data-sort-step="-1"' in admin_page and 'data-sort-step="1"' in admin_page and 'data-taxonomy-manager' in admin_page and 'log-manage.js?v=' in admin_page)
         editor=c.get('/admin/index.php?p=log').text
         check('投稿欄カテゴリにも指定順を適用',re.findall(r'name="categories\[\]" value="([^"]+)"',editor)==cat_reverse)
         current_revision=state(site)['taxonomy']['revision']

@@ -1,4 +1,4 @@
-/* LOG list selection and taxonomy ordering. MIT (c) 2026 Lichiphen. */
+/* LOG list selection, taxonomy ordering and the order of pinned posts. MIT (c) 2026 Lichiphen. */
 (() => {
     'use strict';
     // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
@@ -88,7 +88,7 @@
         if (rows(group).every((row, i) => row === previous[i])) { status.textContent = t('順番は変わっていません'); return; }
         busy = true; buttons(); status.textContent = t('順番を保存しています…');
         const data = new FormData();
-        data.set('do', 'log_taxonomy_order');
+        data.set('do', manager.dataset.orderAction || 'log_taxonomy_order');
         data.set('csrf', manager.querySelector('[name="csrf"]').value);
         data.set('revision', manager.dataset.revision);
         data.set('kind', group.dataset.sortKind);

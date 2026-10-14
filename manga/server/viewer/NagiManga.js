@@ -25,6 +25,9 @@
     if (global.NagiManga) return;
 
     const VERSION = '0.6.0';
+    // Texts of the page (#nm-i18n, only on English pages of the site); Japanese elsewhere, for example on another site.
+    const I18N = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const tr = (text, vars = {}) => (I18N[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
     const SCRIPT = document.currentScript;
     const SCRIPT_URL = SCRIPT ? SCRIPT.src : '';
 
@@ -110,11 +113,11 @@
             this.closeBtn.innerHTML = ICON_CLOSE;
             // Zoom controls (mainly for mouse users: pinch covers touch)
             const zoomCtl = el('div', 'nm-zoomctl', { role: 'group', 'aria-label': 'Zoom' });
-            this.zoomOutBtn = el('button', 'nm-btn nm-zoom-out', { type: 'button', 'aria-label': 'Zoom out', title: '縮小（-）' });
+            this.zoomOutBtn = el('button', 'nm-btn nm-zoom-out', { type: 'button', 'aria-label': 'Zoom out', title: tr('縮小（-）') });
             this.zoomOutBtn.innerHTML = ICON_ZOOM_OUT;
-            this.zoomLabel = el('button', 'nm-zoom-label', { type: 'button', title: '元の大きさ（0）' });
+            this.zoomLabel = el('button', 'nm-zoom-label', { type: 'button', title: tr('元の大きさ（0）') });
             this.zoomLabel.textContent = '100%';
-            this.zoomInBtn = el('button', 'nm-btn nm-zoom-in', { type: 'button', 'aria-label': 'Zoom in', title: '拡大（+）' });
+            this.zoomInBtn = el('button', 'nm-btn nm-zoom-in', { type: 'button', 'aria-label': 'Zoom in', title: tr('拡大（+）') });
             this.zoomInBtn.innerHTML = ICON_ZOOM_IN;
             zoomCtl.append(this.zoomOutBtn, this.zoomLabel, this.zoomInBtn);
             top.append(this.titleEl, this.counterEl, zoomCtl, this.closeBtn);
@@ -137,10 +140,10 @@
             this.lockTitle = el('p', 'nm-lock-title');
             this.lockInput = el('input', 'nm-lock-input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', maxlength: '200', required: '' });
             this.lockBtn = el('button', 'nm-lock-btn', { type: 'submit' });
-            this.lockBtn.textContent = '読む';
+            this.lockBtn.textContent = tr('読む');
             this.lockError = el('p', 'nm-lock-error', { role: 'alert' });
             const lockNote = el('p', 'nm-lock-note');
-            lockNote.textContent = 'この作品を読むにはパスワードが必要です';
+            lockNote.textContent = tr('この作品を読むにはパスワードが必要です');
             this.lock.append(this.lockTitle, lockNote, this.lockInput, this.lockBtn, this.lockError);
 
             v.append(this.stage, this.scroller, top, bottom, this.spinner, this.message, this.lock, this.toast);
@@ -355,7 +358,7 @@ manifestUrl() {
                 if (!res.ok) throw new Error(String(res.status));
                 data = await res.json();
             } catch (e) {
-                this.fail('読み込めませんでした。時間をおいて、もう一度お試しください。');
+                this.fail(tr('読み込めませんでした。時間をおいて、もう一度お試しください。'));
                 return;
             }
             if (!this.isOpen) return;
@@ -379,7 +382,7 @@ manifestUrl() {
                 } : null
             }));
             if (!this.pages.length) {
-                this.fail('ページがありません。');
+                this.fail(tr('ページがありません。'));
                 return;
             }
             const dir = ['rtl', 'ltr', 'vertical'].includes(this.opts.direction) ? this.opts.direction
@@ -436,13 +439,13 @@ manifestUrl() {
                     this.setLoading(true);
                     await this.load();
                 } else if (res.status === 429) {
-                    this.lockError.textContent = '何度も間違えたため、しばらく入力できません。時間をおいてお試しください。';
+                    this.lockError.textContent = tr('何度も間違えたため、しばらく入力できません。時間をおいてお試しください。');
                 } else {
-                    this.lockError.textContent = 'パスワードが違います';
+                    this.lockError.textContent = tr('パスワードが違います');
                     this.lockInput.select();
                 }
             } catch (e) {
-                this.lockError.textContent = '通信できませんでした';
+                this.lockError.textContent = tr('通信できませんでした');
             } finally {
                 this.lockBtn.disabled = false;
             }
@@ -461,9 +464,9 @@ manifestUrl() {
         showResumeToast(page) {
             this.toast.innerHTML = '';
             const t = el('span');
-            t.textContent = `前回の続き（${page + 1} ページ目）から開きました`;
+            t.textContent = tr('前回の続き（{n} ページ目）から開きました', { n: page + 1 });
             const b = el('button', 'nm-toast-btn', { type: 'button' });
-            b.textContent = '最初から読む';
+            b.textContent = tr('最初から読む');
             b.addEventListener('click', () => {
                 this.toast.hidden = true;
                 this.goToPage(0, false);
@@ -550,12 +553,12 @@ manifestUrl() {
                 box.classList.add('nm-end');
                 const inner = el('div', 'nm-end-card');
                 const t = el('p', 'nm-end-title');
-                t.textContent = 'おわり';
+                t.textContent = tr('おわり');
                 const again = el('button', 'nm-end-btn', { type: 'button' });
-                again.textContent = '最初から読む';
+                again.textContent = tr('最初から読む');
                 again.addEventListener('click', () => this.goToPage(0, false));
                 const close = el('button', 'nm-end-btn', { type: 'button' });
-                close.textContent = '閉じる';
+                close.textContent = tr('閉じる');
                 close.addEventListener('click', () => this.close());
                 inner.append(t, again, close);
                 box.appendChild(inner);
@@ -1051,7 +1054,7 @@ manifestUrl() {
         setupNav() {
             const set = (btn, step, icon) => {
                 btn.innerHTML = icon;
-                const label = step > 0 ? '次のページ' : '前のページ';
+                const label = tr(step > 0 ? '次のページ' : '前のページ');
                 btn.setAttribute('aria-label', label);
                 btn.title = label;
                 return step;
@@ -1272,15 +1275,15 @@ manifestUrl() {
         showEndToast() {
             this.toast.innerHTML = '';
             const t = el('span');
-            t.textContent = 'おわり';
+            t.textContent = tr('おわり');
             const again = el('button', 'nm-toast-btn', { type: 'button' });
-            again.textContent = '最初から読む';
+            again.textContent = tr('最初から読む');
             again.addEventListener('click', () => {
                 this.toast.hidden = true;
                 this.goToPage(0, false);
             });
             const close = el('button', 'nm-toast-btn', { type: 'button' });
-            close.textContent = '閉じる';
+            close.textContent = tr('閉じる');
             close.addEventListener('click', () => this.close());
             this.toast.append(t, again, close);
             clearTimeout(this.toastTimer);
