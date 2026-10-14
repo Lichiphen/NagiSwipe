@@ -583,15 +583,26 @@ a.log-list-where:hover { text-decoration:underline; }
 .crumb-back a.crumb-return { border-color:var(--log-accent); color:var(--log-accent); }
 .crumb-back a.crumb-return:hover,.crumb-back a.crumb-return:focus-visible { background:var(--log-accent); color:var(--log-on-accent); }
 /* The H button's choice: one large button per heading level, with its mark. */
-.log-heading-dialog { width:min(420px,calc(100% - 24px)); color:var(--log-text); background:var(--log-card); border:1px solid var(--log-line); border-radius:16px; padding:20px; }
-.log-heading-dialog::backdrop { background:#10223880; }
-.log-heading-dialog .note { margin:0 0 14px; }
-.log-heading-choices { display:grid; gap:10px; }
-.log-heading-choice { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:0 18px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); color:var(--log-text); font:inherit; cursor:pointer; text-align:left; }
-.log-heading-choice b { font-size:17px; }
-.log-heading-choice[data-heading-level="3"] b { font-size:15px; }
-.log-heading-choice code { padding:2px 8px; border-radius:6px; background:var(--log-card); color:var(--log-accent); font-size:13px; }
-.log-heading-choice:hover,.log-heading-choice:focus-visible { border-color:var(--log-accent); outline:none; }
+.log-format-dialog { width:min(520px,calc(100% - 24px)); max-height:calc(100dvh - 32px); overflow:auto; color:var(--log-text); background:var(--log-card); border:1px solid var(--log-line); border-radius:16px; padding:18px 20px 20px; }
+.log-format-dialog::backdrop { background:#10223880; }
+.log-format-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; }
+.log-format-head h2 { margin:0; font-size:18px; }
+.log-format-dialog .note { margin:0 0 12px; font-size:12.5px; }
+.log-format-group + .log-format-group { margin-top:14px; }
+.log-format-group h3 { margin:0 0 8px; color:var(--log-muted); font-size:12.5px; font-weight:700; letter-spacing:.04em; }
+.log-format-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.log-format-choice { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:4px; min-height:56px; padding:8px 12px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); color:var(--log-text); font:inherit; cursor:pointer; text-align:left; }
+.log-format-choice b { font-size:14.5px; line-height:1.35; }
+.log-format-choice[data-format="h2"] b { font-size:17px; }
+.log-format-choice[data-format="h3"] b { font-size:15.5px; }
+.log-format-choice[data-format="h4"] b { font-size:14px; }
+.log-format-choice[data-format="strike"] b { text-decoration:line-through; }
+.log-format-choice code { padding:1px 7px; border-radius:6px; background:var(--log-card); color:var(--log-accent); font-size:12px; white-space:pre; }
+.log-format-choice:hover,.log-format-choice:focus-visible { border-color:var(--log-accent); outline:none; }
+@media(max-width:480px) {
+    .log-format-dialog { padding:16px; }
+    .log-format-choices { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
 /* A video or audio file without a cover, in the editor's rows and the picker: its kind instead of a picture. */
 .log-kind-mark { display:grid; place-items:center; gap:2px; width:100%; height:100%; color:var(--log-accent); font-size:11px; font-weight:700; }
 .log-kind-mark svg { width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }

@@ -110,7 +110,7 @@ function nl_restore_plan(ZipArchive $zip): array
     }
     if (array_key_exists('headings', $settings) && (!is_array($settings['headings']) || array_diff($settings['headings'], NL_HEADINGS))) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
     $preferences['headings'] = array_values($settings['headings'] ?? nl_settings()['headings']);
-    foreach (['layout' => NL_LAYOUTS, 'related_by' => NL_RELATED_BY, 'related_order' => NL_RELATED_ORDER] as $field => $choices) {
+    foreach (['layout' => NL_LAYOUTS, 'related_by' => NL_RELATED_BY, 'related_order' => NL_RELATED_ORDER, 'toc' => NL_TOC_MODES] as $field => $choices) {
         if (array_key_exists($field, $settings) && (!is_string($settings[$field]) || !isset($choices[$settings[$field]]))) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
         $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
     }

@@ -111,33 +111,46 @@ function nl_page_delete(string $id, int $revision): void
  * The supported subset: headings (# and ## are 見出し2, ### 見出し3, #### and smaller 見出し4), paragraphs with
  * line breaks kept, **bold**, *italic*, ~~strike~~, `code`, code blocks (```), > quotes, lists (-, 1.) with
  * nesting, tables, --- rules, [links](URL), ![pictures](URL) and bare URLs. HTML is shown as text.
+ * Posts ($post) use the same marks, with their own differences: every line break is kept as is (no paragraphs),
+ * a heading needs ## or more (# starts a hashtag), and #hashtags become links.
  */
-function nl_markdown(string $md, bool $admin = false): string
+function nl_markdown(string $md, bool $admin = false, bool $post = false, ?array &$ids = null): string
 {
-    $ids = [];
-    return nl_md_blocks(explode("\n", str_replace(["\r\n", "\r"], "\n", $md)), $admin, 0, $ids);
+    $ids ??= [];
+    return nl_md_blocks(explode("\n", str_replace(["\r\n", "\r"], "\n", $md)), $admin, 0, $ids, $post);
 }
 const NL_MD_ITEM = '/\A( *)([-*+]|[0-9]{1,9}[.)])(?: +(.*))?\z/u';
-function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids): string
+function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids, bool $post = false): string
 {
     $out = ''; $para = []; $n = count($lines);
-    $flush = static function () use (&$para, &$out, $admin): void {
-        if ($para) $out .= '<p>' . implode('<br>', array_map(static fn($l) => nl_md_inline(trim($l), $admin), $para)) . '</p>';
+    // A post keeps its blank lines as line breaks; next to a heading, list or other block they would only add space.
+    $after = false;
+    $flush = static function (bool $block = true) use (&$para, &$out, &$after, $admin, $post): void {
+        if ($post) {
+            if ($block) while ($para && trim(end($para)) === '') array_pop($para);
+            if ($para) $out .= implode('<br>', array_map(static fn($l) => nl_md_inline(rtrim($l), $admin, true, true), $para));
+            $after = $block;
+        } elseif ($para) $out .= '<p>' . implode('<br>', array_map(static fn($l) => nl_md_inline(trim($l), $admin), $para)) . '</p>';
         $para = [];
     };
     for ($i = 0; $i < $n; $i++) {
         $line = str_replace("\t", '    ', $lines[$i]);
-        if (trim($line) === '') { $flush(); continue; }
+        if (trim($line) === '') {
+            if (!$post) $flush();
+            elseif (!$after) $para[] = '';
+            continue;
+        }
+        $after = false;
         if (preg_match('/\A {0,3}(`{3,}|~{3,})/', $line, $fence)) {
             $flush(); $code = [];
             for ($i++; $i < $n && !preg_match('/\A {0,3}' . preg_quote($fence[1], '/') . '\s*\z/', $lines[$i]); $i++) $code[] = $lines[$i];
             $out .= '<pre class="log-md-code"><code>' . h(implode("\n", $code)) . '</code></pre>';
             continue;
         }
-        if (preg_match('/\A {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*\z/u', $line, $m)) {
+        if (preg_match($post ? '/\A {0,3}(#{2,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*\z/u' : '/\A {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*\z/u', $line, $m)) {
             $flush();
             $level = min(4, max(2, strlen($m[1])));
-            $out .= '<h' . $level . ' id="' . h(nl_md_anchor($m[2], $ids)) . '">' . nl_md_inline($m[2], $admin) . '</h' . $level . '>';
+            $out .= '<h' . $level . ' id="' . h(nl_md_anchor($m[2], $ids)) . '"' . ($post ? ' class="log-heading-' . $level . '"' : '') . '>' . nl_md_inline($m[2], $admin, true, $post) . '</h' . $level . '>';
             continue;
         }
         if (preg_match('/\A {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*\z/', $line)) { $flush(); $out .= '<hr>'; continue; }
@@ -145,24 +158,24 @@ function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids): strin
             $flush(); $quote = [];
             for (; $i < $n && preg_match('/\A {0,3}> ?(.*)\z/u', $lines[$i], $q); $i++) $quote[] = $q[1];
             $i--;
-            $out .= '<blockquote>' . ($depth < 8 ? nl_md_blocks($quote, $admin, $depth + 1, $ids) : h(implode("\n", $quote))) . '</blockquote>';
+            $out .= '<blockquote>' . ($depth < 8 ? nl_md_blocks($quote, $admin, $depth + 1, $ids, $post) : h(implode("\n", $quote))) . '</blockquote>';
             continue;
         }
         if (str_contains($line, '|') && $i + 1 < $n && nl_md_table_rule($lines[$i + 1]) !== null) {
             $flush();
-            [$html, $i] = nl_md_table($lines, $i, $admin);
+            [$html, $i] = nl_md_table($lines, $i, $admin, $post);
             $out .= $html;
             continue;
         }
         if (preg_match(NL_MD_ITEM, $line, $item) && ($item[3] ?? '') !== '' || preg_match('/\A *[-*+]\z/', $line)) {
             $flush();
-            [$html, $i] = nl_md_list($lines, $i, $admin, $depth, $ids);
+            [$html, $i] = nl_md_list($lines, $i, $admin, $depth, $ids, $post);
             $out .= $html;
             continue;
         }
         $para[] = $line;
     }
-    $flush();
+    $flush(false);
     return $out;
 }
 /** Column alignments of a table's second row (|---|:--:|), or null when the row is not one. */
@@ -184,13 +197,13 @@ function nl_md_cells(string $line): array
     if (str_ends_with($line, '|') && !str_ends_with($line, '\\|')) $line = substr($line, 0, -1);
     return array_map(static fn($c) => trim(str_replace('\\|', '|', $c)), preg_split('/(?<!\\\\)\|/', $line) ?: []);
 }
-function nl_md_table(array $lines, int $i, bool $admin): array
+function nl_md_table(array $lines, int $i, bool $admin, bool $post = false): array
 {
     $head = nl_md_cells($lines[$i]); $align = nl_md_table_rule($lines[$i + 1]) ?? [];
     $cols = count($head);
-    $cell = static function (string $tag, string $text, int $c) use ($align, $admin): string {
+    $cell = static function (string $tag, string $text, int $c) use ($align, $admin, $post): string {
         $a = $align[$c] ?? '';
-        return '<' . $tag . ($a !== '' ? ' class="is-' . $a . '"' : '') . '>' . nl_md_inline($text, $admin) . '</' . $tag . '>';
+        return '<' . $tag . ($a !== '' ? ' class="is-' . $a . '"' : '') . '>' . nl_md_inline($text, $admin, true, $post) . '</' . $tag . '>';
     };
     $html = '<div class="log-md-table"><table><thead><tr>';
     foreach ($head as $c => $text) $html .= $cell('th', $text, $c);
@@ -204,7 +217,7 @@ function nl_md_table(array $lines, int $i, bool $admin): array
     return [$html . '</tbody></table></div>', $i - 1];
 }
 /** One list (with the lists nested in its items); returns [html, index of its last line]. */
-function nl_md_list(array $lines, int $i, bool $admin, int $depth, array &$ids): array
+function nl_md_list(array $lines, int $i, bool $admin, int $depth, array &$ids, bool $post = false): array
 {
     $n = count($lines);
     preg_match(NL_MD_ITEM, str_replace("\t", '    ', $lines[$i]), $first);
@@ -232,8 +245,8 @@ function nl_md_list(array $lines, int $i, bool $admin, int $depth, array &$ids):
     $html = '';
     foreach ($items as $item) {
         $text = array_shift($item);
-        $rest = $item && $depth < 8 ? nl_md_blocks($item, $admin, $depth + 1, $ids) : '';
-        $html .= '<li>' . nl_md_inline($text, $admin) . $rest . '</li>';
+        $rest = $item && $depth < 8 ? nl_md_blocks($item, $admin, $depth + 1, $ids, $post) : '';
+        $html .= '<li>' . nl_md_inline($text, $admin, true, $post) . $rest . '</li>';
     }
     $start = $ordered ? (int)$first[2] : 1;
     return [($ordered ? '<ol' . ($start !== 1 ? ' start="' . $start . '"' : '') . '>' : '<ul>') . $html . ($ordered ? '</ol>' : '</ul>'), $i - 1];
@@ -249,17 +262,31 @@ function nl_md_anchor(string $text, array &$ids): string
     $ids[$id] = true;
     return $id;
 }
-/** Inline marks on one line. Links, pictures, code and URLs become placeholders so bold can wrap them. */
-function nl_md_inline(string $text, bool $admin, bool $links = true): string
+/**
+ * Inline marks on one line. Links, pictures, code and URLs become placeholders so bold can wrap them.
+ * $tags: #hashtags become links to their list (posts).
+ */
+function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags = false): string
 {
     $tokens = [];
     $keep = static function (string $html) use (&$tokens): string { $tokens[] = $html; return "\x01" . (count($tokens) - 1) . "\x02"; };
-    $pattern = '/(`+)(.+?)\1|!\[([^\]\n]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|\[([^\]\n]+)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|(https?:\/\/[^\s<>"\[\]()]+)/u';
+    $plain = static function (string $s) use ($tags, $links, $admin, $keep): string {
+        if (!$tags || !$links) return h($s);
+        $out = ''; $at = 0;
+        preg_match_all(NL_HASHTAG_PATTERN, $s, $found, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        foreach ($found as $t) {
+            $out .= h(substr($s, $at, $t[0][1] - $at)) . $keep('<a class="log-hashtag" href="' . ($admin ? '../' : '') . './?tag=' . h(rawurlencode($t[1][0])) . '">' . h($t[0][0]) . '</a>');
+            $at = $t[0][1] + strlen($t[0][0]);
+        }
+        return $out . h(substr($s, $at));
+    };
+    // A bare URL may hold parentheses in pairs (Wikipedia); a closing one of its own belongs to the text.
+    $pattern = '/(`+)(.+?)\1|!\[([^\]\n]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|\[([^\]\n]+)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|(https?:\/\/(?:[^\s<>"\[\]()]|\([^\s<>"\[\]()]*\))+)/u';
     $out = ''; $at = 0;
     preg_match_all($pattern, $text, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
     foreach ($all as $m) {
         [$whole, $offset] = $m[0];
-        $out .= h(substr($text, $at, $offset - $at));
+        $out .= $plain(substr($text, $at, $offset - $at));
         $at = $offset + strlen($whole);
         if (($m[2][1] ?? -1) >= 0 && $m[1][0] !== '') { $out .= $keep('<code>' . h($m[2][0]) . '</code>'); continue; }
         if (($m[4][1] ?? -1) >= 0) { $out .= $keep(nl_md_image($m[3][0], $m[4][0], $admin)); continue; }
@@ -273,9 +300,29 @@ function nl_md_inline(string $text, bool $admin, bool $links = true): string
         $at -= strlen($m[7][0]) - strlen($url);
         $out .= $keep($links && filter_var($url, FILTER_VALIDATE_URL) ? '<a href="' . h($url) . '" rel="noopener noreferrer">' . h($url) . '</a>' : h($url));
     }
-    $out .= h(substr($text, $at));
+    $out .= $plain(substr($text, $at));
     $out = (string)preg_replace(['/\*\*(?=\S)(.+?)(?<=\S)\*\*/u', '/~~(?=\S)(.+?)(?<=\S)~~/u', '/(?<!\*)\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?!\*)/u'], ['<strong>$1</strong>', '<del>$1</del>', '<em>$1</em>'], $out);
     return (string)preg_replace_callback('/\x01([0-9]+)\x02/', static fn($t) => $tokens[(int)$t[1]] ?? '', $out);
+}
+/**
+ * The table of contents of an article or page: with NL_TOC_MIN headings or more (and the setting not "off"),
+ * a foldable list of them right above the first 見出し2 (above the first heading when there is none).
+ */
+const NL_TOC_MIN = 4;
+const NL_TOC_MODES = ['closed' => '畳んで表示', 'open' => '開いて表示', 'off' => '表示しない'];
+function nl_toc(string $html): string
+{
+    $mode = nl_settings()['toc'];
+    if ($mode === 'off' || preg_match_all('~<h([234]) id="([^"]+)"[^>]*>(.*?)</h\1>~s', $html, $found, PREG_SET_ORDER | PREG_OFFSET_CAPTURE) < NL_TOC_MIN) return $html;
+    $items = '';
+    foreach ($found as $m) {
+        $text = trim(html_entity_decode(strip_tags($m[3][0]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        if ($text !== '') $items .= '<li class="log-toc-' . $m[1][0] . '"><a href="#' . $m[2][0] . '">' . h($text) . '</a></li>';
+    }
+    $at = $found[0][0][1];
+    foreach ($found as $m) if ($m[1][0] === '2') { $at = $m[0][1]; break; }
+    $toc = '<details class="log-toc"' . ($mode === 'open' ? ' open' : '') . '><summary>' . nm_t('目次') . '</summary><ol class="log-toc-list">' . $items . '</ol></details>';
+    return substr($html, 0, $at) . $toc . substr($html, $at);
 }
 /** Link targets: ordinary and relative links (as in the sidebar), plus mail and phone links. */
 function nl_md_url(string $url): string
@@ -354,7 +401,7 @@ function nl_view_pages(): void
 function nl_page_help(): string
 {
     $rows = [
-        [nm_t('## 見出し'), nm_t('大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく')],
+        [nm_t('## 見出し'), nm_t('大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく。見出しが4つ以上あると、最初の見出しの上に目次が出ます')],
         [nm_t('**太字** *斜体* ~~取り消し線~~'), nm_t('文字の強調')],
         [nm_t('- 項目 / 1. 項目'), nm_t('箇条書きと番号付きリスト。行頭に空白2つで入れ子')],
         [nm_t('[文字](https://example.com/)'), nm_t('リンク。./privacy や ./?pg=privacy のようなサイト内のURLも使えます')],
@@ -391,7 +438,8 @@ function nl_view_page_edit(string $id): void
         . '<label>' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"></label>'
         . '<p class="note">' . nm_t('読者にはタイトルとパスワードの入力欄だけを見せ、正しいパスワードを入れた人にだけ本文を表示します。開いた人のブラウザーには、パスワードではなく、このページを読める印をクッキーで{days}日間残します。', ['days' => NL_LOCK_DAYS]) . '</p></fieldset>'
         . '<fieldset class="log-page-layouts"><legend>' . nm_t('ページの幅（PC）') . '</legend>' . $layouts . '<p class="note">' . nm_t('スマホでは、どの形でもサイドバーを「MENU」の中に出します。') . '</p></fieldset>'
-        . '<div class="log-md-toolbar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '">' . $tool('data-md="heading"', nm_t('見出し'), 'H') . $tool('data-md="bold"', nm_t('太字'), '<b>B</b>') . $tool('data-md="link"', nm_t('リンク'), nm_t('リンク')) . $tool('data-md="list"', nm_t('箇条書き'), nm_t('・')) . $tool('data-md="ordered"', nm_t('番号付きリスト'), '1.') . $tool('data-md="table"', nm_t('表'), nm_t('表')) . $tool('data-md="rule"', nm_t('区切り線'), '―')
+        . '<div class="log-md-toolbar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '">' . $tool('data-md="bold"', nm_t('太字'), '<b>B</b>') . $tool('data-md="italic"', nm_t('斜体'), '<i>I</i>') . $tool('data-md="link"', nm_t('リンク'), nm_t('リンク'))
+        . '<button type="button" class="btn log-md-tool" data-md-menu aria-haspopup="dialog" title="' . nm_t('装飾（見出し・箇条書き・引用など）') . '">' . nm_t('装飾') . '</button>'
         . '<button type="button" class="btn log-md-tool" data-md-upload>' . nl_compose_icon('upload') . '<span>' . nm_t('画像を追加') . '</span></button><button type="button" class="btn log-md-tool" data-md-pick aria-haspopup="dialog">' . nl_ui_icon('images') . '<span>' . nm_t('画像一覧から選ぶ') . '</span></button><input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'
         . '<button type="button" class="btn log-md-tool" data-md-preview aria-pressed="false">' . nl_ui_icon('view') . '<span>' . nm_t('プレビュー') . '</span></button></div>'
         . '<label class="log-page-body-label">' . nm_t('本文（Markdown）') . '<textarea name="body" rows="22" maxlength="' . NL_PAGE_BODY_MAX . '" spellcheck="false" data-md-body placeholder="' . nm_t('## はじめに&#10;このサイトでは…') . '">' . h($p['body']) . '</textarea></label>'

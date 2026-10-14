@@ -166,7 +166,7 @@ def run(site, other_site, c, csrf, other, ot):
     lst = c.get('/admin/index.php?p=log_pages').text
     check('管理画面に固定ページの一覧とタブ', 'プライバシーポリシー' in lst and '利用規約' in lst and 'href="index.php?p=log_pages" aria-current="page"' in lst)
     edit = c.get('/admin/index.php?p=log_page&id=' + terms).text
-    check('編集画面: 3種類の幅・Markdownの道具・プレビュー', all('value="' + k + '"' in edit for k in ('sidebar', 'wide', 'narrow')) and 'data-md="heading"' in edit and 'data-md-preview' in edit and 'data-md-upload' in edit)
+    check('編集画面: 3種類の幅・Markdownの道具・プレビュー', all('value="' + k + '"' in edit for k in ('sidebar', 'wide', 'narrow')) and 'data-md="bold"' in edit and 'data-md="italic"' in edit and 'data-md-menu' in edit and 'data-md-preview' in edit and 'data-md-upload' in edit)
     r = post({'do': 'log_page_preview', 'title': 'T', 'body': '## 見出し\n![絵](./?media=' + alone['id'] + ')'}, headers=json_head)
     check('プレビューは管理画面用の画像URLで描く', r.status == 200 and 'index.php?p=log_image&amp;media=' + alone['id'] in json.loads(r.text)['html'])
     r = post({'do': 'log_media_delete', 'media': alone['id'], 'revision': '1'})

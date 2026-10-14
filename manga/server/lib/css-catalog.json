@@ -648,6 +648,32 @@
    ],
    "example": ".log-footer-text { font-size: 11px; }",
    "since": "initial"
+  },
+  {
+   "name": ".log-toc",
+   "purpose": {
+    "ja": "記事・固定ページの目次（見出しが4つ以上のとき、最初の見出し２の上）",
+    "en": "The table of contents of an article or page (four or more headings, above the first level-2 heading)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-toc { background: var(--log-card); }",
+   "since": "next"
+  },
+  {
+   "name": ".log-toc-list",
+   "purpose": {
+    "ja": "目次の項目のリスト（.log-toc-2〜4 が見出しの大きさ）",
+    "en": "The list of entries in the table of contents (.log-toc-2 to 4 follow the heading level)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-toc-list .log-toc-3 { padding-left: 2em; }",
+   "since": "next"
   }
  ],
  "variables": [
@@ -887,6 +913,7 @@
   "log-footer-home",
   "log-heading-2",
   "log-heading-3",
+  "log-heading-4",
   "log-latest",
   "log-like-heart",
   "log-like-pop",
@@ -982,6 +1009,9 @@
   "log-tile-thumb",
   "log-tile-veil",
   "log-title-long",
+  "log-toc-2",
+  "log-toc-3",
+  "log-toc-4",
   "log-topmenu-arrow",
   "log-topmenu-inner",
   "log-topmenu-links",
@@ -1039,6 +1069,13 @@
     ".log-pin-badge",
     ".log-lock-form",
     ".log-profile-name"
+   ]
+  },
+  {
+   "version": "next",
+   "added": [
+    ".log-toc",
+    ".log-toc-list"
    ]
   }
  ]

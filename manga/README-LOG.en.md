@@ -39,6 +39,8 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
 - [Public URLs](#public-urls)
 - [Posts, pictures and manga](#posts-pictures-and-manga)
   - [Headings](#headings)
+  - [Table of contents](#table-of-contents)
+  - [Markdown in posts](#markdown-in-posts)
 - [Content warnings (sensitive, R-18, R-18G)](#content-warnings-sensitive-r-18-r-18g)
 - [Embedding social media and video](#embedding-social-media-and-video)
   - [Blog cards](#blog-cards)
@@ -96,7 +98,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
-| Posts | The first line of the text is the title. Bold, headings (h2, h3), URLs, hashtags, manga cards and embeds can be used. Drafts, editing and automatic keeping of unfinished text. Works on phones too |
+| Posts | The first line of the text is the title. Markdown (bold, italic, headings, lists, quotes, tables and more), URLs, hashtags, manga cards and embeds can be used. Posts with four or more headings get a table of contents. Drafts, editing and automatic keeping of unfinished text. Works on phones too |
 | Placing media | Pictures, video and audio go at the cursor in the text, on a line such as 〔メディア1〕, and the band in the text can be dragged to move them. They can also be added by dropping or pasting |
 | Pictures | JPEG, PNG, GIF, WebP, AVIF and BMP are accepted, read again and saved as WebP or JPEG (pictures over 4096px are reduced; GIF animations stay GIF). The limit can be set from 1 to 200MB, 30MB by default. SVG can be imported after its contents are checked (up to 2MB). Pictures in a row become a gallery and zoom with NagiSwipe |
 | Video and audio | Video: MP4, MOV, WebM. Audio: MP3, M4A, OGG, WAV, FLAC (up to 1GB per file, sent in pieces). Audio has a waveform player with gapless repeat, and reads and writes covers and loop points (`LOOPSTART`). Videos play as chosen: normal, like a GIF, autoplay or repeat |
@@ -427,8 +429,8 @@ The posting box has the text, the media of the text, chips for set items and one
 | --- | --- |
 | Add pictures, video or audio / Choose from the media list | Places them at the cursor in the text (see below). Video and audio go into the same rows. |
 | Choose manga | Puts a manga tag at the cursor in the text. |
-| B | Makes the selected text bold. |
-| H | Makes the line a heading (see "Headings" below). |
+| B, I, link | Makes the selected text bold or italic, or a link. Pressing B or I again takes the mark off. |
+| Format (A and three lines) | Opens a choice of headings, strikethrough, code, bulleted and numbered lists, quotes, tables, dividing lines and code blocks (see "Headings" and "Markdown in posts" below). They are gathered here so the tool row stays short on phones. |
 | #, folder, warning triangle, ? | Opens recent hashtags, categories, content warnings or help below the tool row, one at a time. |
 | Eye | Opens and closes the preview. |
 
@@ -486,15 +488,30 @@ Deleting from the media list protects pictures used by posts, drafts, the icon, 
 
 ### Headings
 
-Start a line with `## ` to make it heading 2 (h2), with `### ` for heading 3 (h3). On public pages, heading 2 has an underline and heading 3 a line on the left.
+Start a line with `## ` to make it heading 2 (h2), with `### ` for heading 3 (h3) and with `#### ` for heading 4 (h4). A line with a single `#` is a hashtag, not a heading. On public pages, heading 2 has an underline and heading 3 a line on the left.
 
-Without writing Markdown, use "H" in the posting box. It opens a choice of "見出し２" (heading 2) and "見出し３" (heading 3).
+Without writing Markdown, use "装飾" (Format) in the posting box. It opens a choice of headings, lists and more.
 
 - With text selected, its lines become headings. With nothing selected, the line with the cursor.
-- On an empty line it puts `## 見出し２` and selects "見出し２", ready to be typed over.
+- On an empty line it puts `## 見出し` and selects "見出し", ready to be typed over.
 - Choosing the same heading again turns the line back.
 
-"Settings › LOG › List style and below posts › Heading button in the posting box" chooses which headings the button offers. With only one, a press puts it in at once; with both off, the button is hidden. h4 and below are not offered, as they help neither readers nor search much.
+"Settings › LOG › List style and below posts › Headings in the editor's Format menu" chooses which headings the window offers. Headings left out still work when typed in the text.
+
+### Table of contents
+
+A post with four or more headings (h2 to h4) gets a table of contents right above its first heading 2 on its own page. Pressing an entry moves to that heading. Lists such as the top and categories do not show it. Fixed pages get one on the same terms.
+
+"Settings › LOG › List style and below posts › Table of contents" chooses "畳んで表示" (folded, the default), "開いて表示" (open) or "表示しない" (hidden).
+
+### Markdown in posts
+
+Post text takes the same Markdown as fixed pages (see the table under "Fixed pages"), with these differences:
+
+- Line breaks and blank lines stay as typed; text is not split into paragraphs.
+- Headings start at `##`. A single `#` is a hashtag.
+- `#tag` becomes a hashtag link. A line with only a URL still becomes an embed or a blog card.
+- Code inside ```` ``` ```` is never turned into headings or embeds.
 
 ## Content warnings (sensitive, R-18, R-18G)
 
@@ -990,6 +1007,8 @@ The list of this version:
 | `.log-site-footer` | The site footer | Footer | `.log-site-footer { padding-block: 40px; }` | Initial list |
 | `.log-footer-nav` | The footer links | Footer | `.log-footer-nav a { color: inherit; }` | Initial list |
 | `.log-footer-text` | The footer text | Footer | `.log-footer-text { font-size: 11px; }` | Initial list |
+| `.log-toc` | The table of contents of an article or page (four or more headings, above the first level-2 heading) | Post pages, Fixed pages | `.log-toc { background: var(--log-card); }` | Next version |
+| `.log-toc-list` | The list of entries in the table of contents (.log-toc-2 to 4 follow the heading level) | Post pages, Fixed pages | `.log-toc-list .log-toc-3 { padding-left: 2em; }` | Next version |
 
 **CSS variables**
 
@@ -1275,7 +1294,7 @@ The Markdown that can be used in the text is below. Line breaks stay line breaks
 
 | Syntax | Shown as |
 | --- | --- |
-| `## Heading` (`#` too) / `### Subheading` / `#### Smaller` | Headings (h2 / h3 / h4). Headings get an ID for jumping with `#heading text` |
+| `## Heading` (`#` too) / `### Subheading` / `#### Smaller` | Headings (h2 / h3 / h4). Headings get an ID for jumping with `#heading text`. With four or more, a table of contents goes right above the first heading 2 |
 | `**bold**` `*italic*` `~~strikethrough~~` `` `code` `` | Emphasis |
 | `- item` / `1. item` (two spaces at the start of the line to nest) | Bulleted and numbered lists |
 | `[text](https://…)` / `[text](./?pg=terms)` / `[mail](mailto:…)` | Links. `javascript:` and the like do not become links |
@@ -1285,7 +1304,7 @@ The Markdown that can be used in the text is below. Line breaks stay line breaks
 | `---` | A dividing line |
 | enclosed in ```` ``` ```` | Code over several lines |
 
-The edit screen has buttons for headings, bold, links, bullets, numbers, tables and dividing lines, "画像を追加" (add pictures), "画像一覧から選ぶ" (choose from the picture list) and a preview.
+The edit screen has buttons for bold, italic and links, "装飾" (Format, the same window as in the posting box) for headings, bullets, numbers, quotes, tables, dividing lines, strikethrough and code, "画像を追加" (add pictures), "画像一覧から選ぶ" (choose from the picture list) and a preview.
 "画像一覧から選ぶ" opens the picture list in a small screen; search by description, choose, and it goes in at the cursor in the text. Pictures can also be added by dropping them anywhere on the edit screen or pasting them into the text, which puts in a `![description](./?media=…)` line.
 Under the text, the pictures in the text are lined up as thumbnails, as in the posting screen. Pressing one selects its line in the text, and × removes it from the text (the picture itself stays in the picture list). The "+" at the end of the row and the picture button also add pictures. Saving goes over the network, and when it fails the text you wrote stays on screen. It does not save with a duplicate URL name or when the page was updated on another screen.
 

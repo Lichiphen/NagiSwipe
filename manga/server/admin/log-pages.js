@@ -114,20 +114,13 @@
         body.setSelectionRange(start + before.length, start + before.length + chosen.length);
         dirty = true;
     }
-    // Block marks start on a line of their own.
+    // Pictures start on a line of their own.
     const lineStart = () => { const v = body.value, at = body.selectionStart; return at === 0 || v[at - 1] === '\n' ? '' : '\n'; };
-    const marks = {
-        heading: () => insert(lineStart() + '## ', '', t('見出し')),
-        bold: () => insert('**', '**', t('太字')),
-        link: () => insert('[', '](https://)', t('リンクの文字')),
-        list: () => insert(lineStart() + '- ', '', t('項目')),
-        ordered: () => insert(lineStart() + '1. ', '', t('項目')),
-        table: () => insert(lineStart() + '| ' + t('項目') + ' | ' + t('内容') + ' |\n| --- | --- |\n| ', ' |  |\n', 'a'),
-        rule: () => insert(lineStart() + '\n---\n', '', ''),
-    };
+    // B, I and link on the row; 装飾 opens the dialog with headings, lists and the rest (NagiLogFormat in log-editor.js).
     form.addEventListener('click', event => {
         const tool = event.target.closest('[data-md]');
-        if (tool && marks[tool.dataset.md]) marks[tool.dataset.md]();
+        if (tool) window.NagiLogFormat?.apply(tool.dataset.md, body);
+        if (event.target.closest('[data-md-menu]')) window.NagiLogFormat?.open(body, { levels: [2, 3, 4] });
     });
     // Pictures
     const picker = $('[data-md-upload-input]', form);

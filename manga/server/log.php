@@ -119,7 +119,7 @@ if ($owner && !headers_sent()) {
 }
 $postsHtml = '';
 if ($fixed) $postsHtml = '<article class="log-post log-page">' . ($owner ? '<div class="log-post-meta">' . ($fixed['status'] !== 'published' ? '<span class="badge">' . nm_t('下書き（ログイン中だけ表示）') . '</span>' : '') . (nl_is_locked($fixed) ? nl_lock_badge() : '') . '<a class="log-edit-link" href="admin/index.php?p=log_page&amp;id=' . h($fixed['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a></div>' : '')
-    . '<h1>' . h($fixed['title']) . '</h1>' . ($closed ? nl_lock_form($fixed, true, $lockState) : '<div class="log-page-body">' . nl_markdown($fixed['body']) . '</div>') . '</article>';
+    . '<h1>' . h($fixed['title']) . '</h1>' . ($closed ? nl_lock_form($fixed, true, $lockState) : '<div class="log-page-body">' . nl_toc(nl_markdown($fixed['body'])) . '</div>') . '</article>';
 elseif ($grid && !$single) $postsHtml = nl_tiles($posts, $s, $pins);
 else foreach ($posts as $p) {
     // A locked post shows its title; its content waits behind the password (the form on its own page).
@@ -131,7 +131,7 @@ else foreach ($posts as $p) {
             . '<form class="log-delete-form" method="post" action="admin/index.php" data-log-delete><input type="hidden" name="csrf" value="' . h(nm_csrf_token()) . '"><input type="hidden" name="do" value="log_delete"><input type="hidden" name="post_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '"><input type="hidden" name="back" value="public">'
             . '<button class="log-delete-link" type="submit" title="' . nm_t('この記事を削除') . '">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button></form>' : '') . "</div>\n"
         . ($single ? '<h1>' . h(nl_post_title($p, 0)) . '</h1>' : '<h2><a href="' . h(nl_post_url($p['id'])) . '">' . h(nl_post_title($p, 0)) . '</a></h2>')
-        . ($open ? nl_render_body($p) : ($single ? nl_lock_form($p, false, $lockState) : nl_lock_teaser($p))) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
+        . ($open ? nl_render_body($p, false, $single) : ($single ? nl_lock_form($p, false, $lockState) : nl_lock_teaser($p))) . nl_category_links($p) . ($s['public'] ? nl_share_row($p) : '') . '</article>';
 }
 $relatedHtml = $single && $s['public'] ? nl_related_html($summaries, $post, $s) : '';
 $sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);

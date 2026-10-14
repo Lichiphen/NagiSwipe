@@ -277,7 +277,7 @@ function nl_delete_posts(mixed $items): array
 }
 /** Public list paging: numbered pages, newer/older only, or a "show more" button (no infinite scroll). */
 /** Headings the post editor can insert: ## and ###. h4 and below are left out (little use for readers or search). */
-const NL_HEADINGS = ['h2', 'h3'];
+const NL_HEADINGS = ['h2', 'h3', 'h4'];
 const NL_PAGERS = ['numbers' => '番号つき', 'simple' => '新しい・過去だけ', 'more' => 'もっと見る'];
 /** What the breadcrumb's first step (the top page) says. */
 const NL_CRUMB_HOMES = ['home' => 'HOME', 'site' => 'サイト名', 'custom' => '任意の文字'];
@@ -298,7 +298,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3'], 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3', 'h4'], 'toc' => 'closed', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -313,6 +313,7 @@ function nl_read_settings(): array
     $s['likes'] = $s['likes'] !== false;
     // Which headings the editor's H button offers (none: the button is hidden).
     $s['headings'] = is_array($s['headings']) ? array_values(array_intersect(NL_HEADINGS, $s['headings'])) : NL_HEADINGS;
+    if (!isset(NL_TOC_MODES[$s['toc']])) $s['toc'] = 'closed';
     $s['related'] = $s['related'] !== false;
     if (!is_string($s['related_by']) || !isset(NL_RELATED_BY[$s['related_by']])) $s['related_by'] = 'both';
     if (!is_string($s['related_order']) || !isset(NL_RELATED_ORDER[$s['related_order']])) $s['related_order'] = 'random';
@@ -576,8 +577,10 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
  */
 function nl_excerpt(array $p, int $length = 120): string
 {
-    $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u', '~https?://[^\s<>"\[\]]+~u'], '', nl_post_parts($p)['body']);
-    $text = str_replace('**', '', (string)preg_replace(NL_HASHTAG_PATTERN, '', (string)preg_replace('/^#{2,3}[ \t]+/mu', '', $text)));
+    // Markdown marks: code blocks go, a link keeps its words, line marks (## - 1. >), table rules and emphasis marks are dropped.
+    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '/^ {0,3}(?:#{2,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$/mu', '/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/mu'], ['', '', '$1', '', '', ''], nl_post_parts($p)['body']);
+    $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u', '~https?://[^\s<>"\[\]]+~u'], '', $text);
+    $text = str_replace(['**', '~~', '`', '*', '|'], ['', '', '', '', ' '], (string)preg_replace(NL_HASHTAG_PATTERN, '', $text));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
     return mb_strlen($text) > $length ? rtrim(mb_substr($text, 0, $length - 1)) . '…' : $text;
 }
@@ -704,29 +707,14 @@ function nl_search_snippet(array $p, array $terms, int $length = 80): string
     $piece = mb_substr($text, $start, $length);
     return ($start > 0 ? '…' : '') . nl_search_mark($piece, $terms) . ($start + $length < mb_strlen($text) ? '…' : '');
 }
-function nl_render_text(string $text, bool $admin = false): string
+/**
+ * The body of a post. The text between pictures, manga and embeds is Markdown (nl_markdown() in post mode:
+ * line breaks kept, ## headings, lists, quotes, tables…); a code block is kept whole so nothing in it is embedded.
+ * $toc: the post's own page, where headings get ids and four or more of them a table of contents.
+ */
+function nl_render_body(array $p, bool $admin = false, bool $toc = false): string
 {
-    $parts = preg_split('~(https?://[^\s<>"\[\]]+)~u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
-    $out = '';
-    foreach ($parts ?: [] as $part) {
-        if (preg_match('~\Ahttps?://~i', $part) && filter_var($part, FILTER_VALIDATE_URL)) $out .= '<a href="' . h($part) . '" rel="noopener noreferrer">' . h($part) . '</a>';
-        else {
-            $start = 0;
-            preg_match_all(NL_HASHTAG_PATTERN, $part, $tags, PREG_OFFSET_CAPTURE);
-            foreach ($tags[0] as $i => [$token, $offset]) {
-                $out .= nl2br(h(substr($part, $start, $offset - $start)), false);
-                $out .= '<a class="log-hashtag" href="' . ($admin ? '../' : '') . './?tag=' . h(rawurlencode($tags[1][$i][0])) . '">' . h($token) . '</a>';
-                $start = $offset + strlen($token);
-            }
-            $out .= nl2br(h(substr($part, $start)), false);
-        }
-    }
-    return $out;
-}
-function nl_render_body(array $p, bool $admin = false): string
-{
-    // "## " / "### " at the start of a line: a heading (h2 / h3), set with the editor's H button.
-    $tokens = preg_split('/(^#{2,3}[ \t]+[^\r\n]*\S[^\r\n]*|\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]|' . NL_EMBED_PATTERN . '|\*\*[^\r\n]+?\*\*)/imu', nl_post_parts($p)['body'], -1, PREG_SPLIT_DELIM_CAPTURE);
+    $tokens = preg_split('/(^ {0,3}```[^\n]*\n(?s:.*?)^ {0,3}```[ \t]*$|^ {0,3}~~~[^\n]*\n(?s:.*?)^ {0,3}~~~[ \t]*$|\[Image:[a-f0-9]{16}\]|\[Manga[^\]\r\n]{1,230}\]|' . NL_EMBED_PATTERN . ')/imu', str_replace("\r\n", "\n", nl_post_parts($p)['body']), -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
     $dark = str_starts_with(nl_settings()['theme'], 'dark');
     // The first picture of a public page is usually what the reader sees first: fetch it at once.
@@ -737,23 +725,25 @@ function nl_render_body(array $p, bool $admin = false): string
     $fold = !$admin && nl_rating_folds(nl_post_rating($p)) ? nl_post_rating($p) : '';
     // Pictures with only line breaks between them become one gallery of square thumbnails (like NagiMemo).
     // The line break right after a block (picture, gallery, card, player) would only leave an empty line: drop that one.
-    $run = []; $gap = ''; $block = false;
-    $text = static function (string $t) use (&$block, $admin): string {
-        if ($block && $t !== '') { $t = (string)preg_replace('/\A\r?\n/', '', $t); $block = false; }
-        return nl_render_text($t, $admin);
+    // Text waits in $md until the next picture, player or card, so a list or quote is read as one piece.
+    $run = []; $gap = ''; $block = false; $md = ''; $ids = [];
+    $text = static function () use (&$md, &$out, &$block, &$ids, $admin): void {
+        if ($block && $md !== '') { $md = (string)preg_replace('/\A\n/', '', $md); $block = false; }
+        if ($md !== '') $out .= nl_markdown($md, $admin, true, $ids);
+        $md = '';
     };
-    $flush = static function () use (&$run, &$gap, &$out, &$block, $text): void {
+    $flush = static function () use (&$run, &$gap, &$out, &$block, &$md): void {
         if (count($run) > 1) $out .= '<div class="log-gallery' . (in_array(count($run), [2, 4], true) ? ' is-two' : '') . '">' . implode('', $run) . '</div>';
         else $out .= implode('', $run);
         if ($run) $block = true;
-        if ($gap !== '') $out .= $text($gap);
+        $md .= $gap;
         $run = []; $gap = '';
     };
     foreach ($tokens ?: [] as $token) {
         if ($run && preg_match('/\A\s*\z/u', $token)) { $gap .= $token; continue; }
         if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m) && ($im = nl_load_media($m[1])) && nl_is_av($im) && ($admin || nl_media_public($m[1]))) {
             // A video or audio player stands on its own line: it ends a gallery of pictures.
-            $flush();
+            $flush(); $text();
             $player = nl_av_html($im, $admin);
             $rating = nl_rating_max($postRating, nl_media_rating($p, $im));
             if (!$admin && $fold === '' && $rating !== '') $player = '<details class="log-veil log-veil-media" data-veil="' . h($rating) . '"><summary class="log-veil-cover">' . nl_veil_label($rating, $warning, nm_t('押して表示')) . '</summary>' . $player . '</details>';
@@ -763,6 +753,7 @@ function nl_render_body(array $p, bool $admin = false): string
             continue;
         }
         if (preg_match('/\A\[Image:([a-f0-9]{16})\]\z/', $token, $m) && ($im = nl_load_media($m[1])) && ($admin || nl_media_public($m[1]))) {
+            if (!$run) $text();
             $gap = '';
             $rating = nl_rating_max($postRating, nl_media_rating($p, $im));
             if (!$admin && $fold === '' && $rating !== '') { $run[] = nl_veil_figure($im, $rating, $warning, $admin); continue; }
@@ -776,12 +767,13 @@ function nl_render_body(array $p, bool $admin = false): string
         // A URL alone on its line: a player for known services, otherwise a blog card when its OGP was fetched.
         if (preg_match('~\A[ \t]*https?://~i', $token) && !preg_match('/\s\S/', trim($token))) {
             $html = nl_embed_html(trim($token), $dark, $admin) ?? nl_card_html(trim($token), $admin);
-            $out .= $html ?? $text($token);
-            if ($html !== null) $block = true;
+            if ($html !== null) { $text(); $out .= $html; $block = true; }
+            else $md .= $token;
             continue;
         }
-        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) { $out .= '<span class="note">' . nm_t('画像が見つかりません') . '</span>'; $block = false; }
+        if (preg_match('/\A\[Image:[a-f0-9]{16}\]\z/', $token)) { $text(); $out .= '<span class="note">' . nm_t('画像が見つかりません') . '</span>'; $block = false; }
         elseif (isset($p['manga'][$token])) {
+            $text();
             $w = nm_load_work($p['manga'][$token]);
             if (!$w || empty($w['pages'])) { $out .= '<span class="note">' . nm_t('漫画が見つかりません') . '</span>'; $block = false; continue; }
             $prefix = $admin ? '../' : '';
@@ -789,17 +781,11 @@ function nl_render_body(array $p, bool $admin = false): string
             $cover = empty($w['password_hash']) && nm_work_page_public($w) ? $prefix . 'read.php?a=o&id=' . $w['id'] : $prefix . 'viewer/og.jpg';
             $out .= '<a class="log-manga" href="' . h($href) . '" data-nagimanga="' . h($w['id']) . '" data-endpoint="' . $prefix . 'read.php" data-direction="' . h($w['direction']) . '" data-view="auto" data-cover="1"><img src="' . h($cover) . '" alt="" loading="lazy"><span><strong>' . h($w['title']) . '</strong><small>' . (!empty($w['password_hash']) ? nm_t('パスワードを入れて読む') : nm_t('漫画を読む')) . '</small></span></a>';
             $block = true;
-        } elseif (preg_match('/\A(#{2,3})[ \t]+(.+)\z/u', $token, $m)) {
-            // A heading is a block with its own margin: line breaks before it would only leave empty lines.
-            $out = (string)preg_replace('/(?:<br>\s*)+\z/', '', $out);
-            $level = strlen($m[1]);
-            $inner = trim(str_replace('**', '', $m[2]));
-            $out .= '<h' . $level . ' class="log-heading-' . $level . '">' . nl_render_text($inner, $admin) . '</h' . $level . '>';
-            $block = true;
-        } elseif (str_starts_with($token, '**') && str_ends_with($token, '**')) { $out .= '<strong>' . nl_render_text(substr($token, 2, -2), $admin) . '</strong>'; $block = false; }
-        else $out .= $text($token);
+        } else $md .= $token;
     }
-    $flush();
+    $flush(); $text();
+    // Headings link to themselves only on the post's own page (a list of posts would repeat the ids).
+    $out = $toc ? nl_toc($out) : (string)preg_replace('/(<h[234]) id="[^"]*"/', '$1', $out);
     $out = '<div class="log-body">' . $out . '</div>';
     return $admin ? nl_veil_admin_note($p) . $out : ($fold !== '' ? nl_veil_post($fold, $warning, $out) : $out);
 }

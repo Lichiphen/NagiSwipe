@@ -1,4 +1,192 @@
 /* Personal LOG editor; panel structure inspired by NagiMemo. MIT (c) 2026 Lichiphen. */
+/*
+ * Markdown marks for the post editor and the fixed page editor (log-pages.js). Bold, italic and links sit on the
+ * tool row; headings, lists, quotes and the rest open in one dialog, so the row stays short on a phone.
+ */
+window.NagiLogFormat = (() => {
+    'use strict';
+    const i18n = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
+    const t = text => i18n[text] ?? text;
+    // Replace [start, end) and select [from, to) of the result; insertText keeps the browser's undo history.
+    // Both editors hear an input event, as if the text had been typed.
+    function put(body, start, end, text, from = 0, to = text.length) {
+        body.focus({ preventScroll: true });
+        body.setSelectionRange(start, end);
+        if (!document.execCommand?.('insertText', false, text)) {
+            body.setRangeText(text, start, end, 'end');
+            body.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        body.setSelectionRange(start + from, start + to);
+    }
+    const clamp = (body, range) => [Math.min(range[0], body.value.length), Math.min(range[1], body.value.length)];
+    // The whole lines the selection (or the caret) touches; a selection ending at a line break leaves that line out.
+    function lines(body, range) {
+        const value = body.value, [s, e] = clamp(body, range);
+        const start = value.lastIndexOf('\n', s - 1) + 1;
+        const last = e > s && value[e - 1] === '\n' ? e - 1 : e;
+        let end = value.indexOf('\n', last); if (end < 0) end = value.length;
+        return { start, end, list: value.slice(start, end).split('\n') };
+    }
+    // Bold, italic, strike and code work within one line: each selected line is marked on its own,
+    // spaces around the words stay outside, and the same mark again takes it off.
+    function wrap(body, range, mark, sample) {
+        const value = body.value, [start, end] = clamp(body, range);
+        const picked = value.slice(start, end);
+        const before = value.slice(0, start), after = value.slice(end);
+        const single = mark === '*';
+        const around = before.endsWith(mark) && after.startsWith(mark) && (!single || (!before.endsWith('**') || before.endsWith('***')) && (!after.startsWith('**') || after.startsWith('***')));
+        if (picked !== '' && around) { put(body, start - mark.length, end + mark.length, picked); return; }
+        if (picked.length > mark.length * 2 && picked.startsWith(mark) && picked.endsWith(mark) && !picked.includes('\n') && (!single || !picked.startsWith('**') || picked.startsWith('***'))) {
+            const inner = picked.slice(mark.length, -mark.length); put(body, start, end, inner); return;
+        }
+        if (picked.trim() !== '') {
+            const wrapped = picked.split('\n').map(line => {
+                const [, lead, text, tail] = line.match(/^(\s*)(.*?)(\s*)$/s);
+                return text === '' ? line : lead + mark + text + mark + tail;
+            }).join('\n');
+            const lead = picked.length - picked.trimStart().length, trail = picked.length - picked.trimEnd().length;
+            put(body, start, end, wrapped, lead, wrapped.length - trail);
+            return;
+        }
+        put(body, start, end, mark + sample + mark, mark.length, mark.length + sample.length);
+    }
+    // A link: the selected words become its text (or, when they are a URL, its address).
+    function link(body, range) {
+        const [start, end] = clamp(body, range);
+        const picked = body.value.slice(start, end).trim();
+        if (/^https?:\/\/\S+$/.test(picked)) { const label = t('リンクの文字'); put(body, start, end, '[' + label + '](' + picked + ')', 1, 1 + label.length); return; }
+        const label = picked || t('リンクの文字');
+        const text = '[' + label + '](https://)';
+        put(body, start, end, text, label.length + 3, text.length - 1);
+    }
+    // ## / ### / ####: the lines become headings of that level; the same level again turns them back.
+    function heading(body, range, level, post) {
+        const mark = '#'.repeat(level) + ' ', { start, end, list } = lines(body, range);
+        if (list.every(line => line.trim() === '')) {
+            const sample = t('見出し');
+            put(body, start, end, mark + sample, mark.length, mark.length + sample.length);
+            return;
+        }
+        // In a post a single # begins a hashtag, so only ## and more count as a heading mark there.
+        const plain = line => line.replace(post ? /^#{2,6}[ \t]+/ : /^#{1,6}[ \t]+/, '');
+        const same = list.every(line => line.trim() === '' || (line.startsWith(mark) && plain(line) === line.slice(mark.length)));
+        const next = list.map(line => line.trim() === '' ? line : (same ? plain(line) : mark + plain(line).trimStart())).join('\n');
+        put(body, start, end, next);
+    }
+    // - / 1. / > at the start of each line; when every line has it already, it comes off.
+    function prefix(body, range, kind) {
+        const { start, end, list } = lines(body, range);
+        const marks = { list: /^(\s*)[-*+][ \t]+/, ordered: /^(\s*)[0-9]{1,9}[.)][ \t]+/, quote: /^(\s*)>[ \t]?/ };
+        const mark = n => kind === 'list' ? '- ' : kind === 'quote' ? '> ' : n + '. ';
+        if (list.every(line => line.trim() === '')) {
+            const sample = kind === 'quote' ? t('引用する文') : t('項目');
+            put(body, start, end, mark(1) + sample, mark(1).length, mark(1).length + sample.length);
+            return;
+        }
+        const filled = list.filter(line => line.trim() !== '');
+        const off = filled.every(line => marks[kind].test(line));
+        let n = 0;
+        const next = list.map(line => {
+            if (line.trim() === '') return line;
+            if (off) return line.replace(marks[kind], '$1');
+            // A line with another list mark switches to this one.
+            const bare = line.replace(marks.list, '$1').replace(marks.ordered, '$1');
+            const lead = bare.match(/^\s*/)[0];
+            return lead + mark(++n) + bare.slice(lead.length);
+        }).join('\n');
+        put(body, start, end, next);
+    }
+    // Blocks start on a line of their own and end with a line break (none added when one follows already).
+    function block(body, range, kind) {
+        const value = body.value, [start, end] = clamp(body, range);
+        const lead = start === 0 || value[start - 1] === '\n' ? '' : '\n';
+        const tail = end < value.length && value[end] === '\n' ? '' : '\n';
+        const picked = value.slice(start, end);
+        if (kind === 'rule') {
+            // The rule goes after the selection; the blank line keeps the line above from becoming a heading elsewhere.
+            const text = (end === 0 || value[end - 1] === '\n' ? '' : '\n') + '\n---' + tail;
+            put(body, end, end, text, text.length, text.length);
+            return;
+        }
+        if (kind === 'code') {
+            const code = picked.replace(/\n$/, '') || t('コード');
+            put(body, start, end, lead + '```\n' + code + '\n```' + tail, lead.length + 4, lead.length + 4 + code.length);
+            return;
+        }
+        const a = t('項目'), b = t('内容'), cell = picked.trim() || 'a';
+        const text = lead + '| ' + a + ' | ' + b + ' |\n| --- | --- |\n| ' + cell + ' |  |' + tail;
+        const at = text.lastIndexOf('| ' + cell) + 2;
+        put(body, start, end, text, at, at + cell.length);
+    }
+    const ACTIONS = {
+        bold: (body, range) => wrap(body, range, '**', t('太字にする文字')),
+        italic: (body, range) => wrap(body, range, '*', t('斜体にする文字')),
+        strike: (body, range) => wrap(body, range, '~~', t('取り消す文字')),
+        code: (body, range) => wrap(body, range, '`', t('コード')),
+        link,
+        list: (body, range) => prefix(body, range, 'list'),
+        ordered: (body, range) => prefix(body, range, 'ordered'),
+        quote: (body, range) => prefix(body, range, 'quote'),
+        table: (body, range) => block(body, range, 'table'),
+        rule: (body, range) => block(body, range, 'rule'),
+        codeblock: (body, range) => block(body, range, 'code'),
+    };
+    function apply(name, body, range = [body.selectionStart, body.selectionEnd], options = {}) {
+        const h = /^h([234])$/.exec(name);
+        if (h) heading(body, range, +h[1], !!options.post);
+        else ACTIONS[name]?.(body, range);
+    }
+    // The dialog: the headings the settings allow, then marks for words and for blocks.
+    let dialog = null, target = null;
+    function build() {
+        dialog = document.createElement('dialog');
+        dialog.className = 'log-format-dialog';
+        dialog.setAttribute('aria-labelledby', 'log-format-title');
+        const head = document.createElement('div'); head.className = 'log-format-head';
+        const title = document.createElement('h2'); title.id = 'log-format-title'; title.textContent = t('装飾');
+        const close = document.createElement('button'); close.type = 'button'; close.className = 'btn'; close.textContent = t('閉じる');
+        close.addEventListener('click', () => dialog.close());
+        head.append(title, close);
+        const note = document.createElement('p'); note.className = 'note'; note.textContent = t('選んだ文字や行に付けます。何も選んでいなければ、見本を入れます。同じものをもう一度選ぶと外れます。');
+        dialog.append(head, note);
+        dialog.addEventListener('click', event => {
+            if (event.target === dialog) { dialog.close(); return; }
+            const choice = event.target.closest('[data-format]');
+            if (!choice || !target) return;
+            const { body, range, post, done } = target;
+            dialog.close();
+            apply(choice.dataset.format, body, range, { post });
+            done?.();
+        });
+        document.body.append(dialog);
+    }
+    function group(label, items) {
+        const box = document.createElement('section'); box.className = 'log-format-group';
+        const name = document.createElement('h3'); name.textContent = label;
+        const grid = document.createElement('div'); grid.className = 'log-format-choices';
+        items.forEach(([format, text, code]) => {
+            const b = document.createElement('button'); b.type = 'button'; b.className = 'log-format-choice'; b.dataset.format = format;
+            const big = document.createElement('b'); big.textContent = text;
+            const small = document.createElement('code'); small.textContent = code;
+            b.append(big, small); grid.append(b);
+        });
+        box.append(name, grid);
+        return box;
+    }
+    // levels: the heading levels to offer ([2, 3, 4]); post: the text is a post (## and more are headings); done: called after a choice.
+    function open(body, { levels = [2, 3, 4], post = false, range = [body.selectionStart, body.selectionEnd], done = null } = {}) {
+        if (!dialog) build();
+        target = { body, range: [...range], post, done };
+        dialog.querySelectorAll('.log-format-group').forEach(g => g.remove());
+        const names = { 2: t('見出し２'), 3: t('見出し３'), 4: t('見出し４') };
+        if (levels.length) dialog.append(group(t('見出し'), levels.map(n => ['h' + n, names[n], '#'.repeat(n) + ' '])));
+        dialog.append(group(t('文字'), [['strike', t('取り消し線'), '~~ ~~'], ['code', t('コード'), '` `']]));
+        dialog.append(group(t('まとまり'), [['list', t('箇条書き'), '- '], ['ordered', t('番号付きリスト'), '1. '], ['quote', t('引用'), '> '], ['table', t('表'), '| |'], ['rule', t('区切り線'), '---'], ['codeblock', t('コードブロック'), '```']]));
+        dialog.showModal();
+        dialog.querySelector('.log-format-choice')?.focus();
+    }
+    return { apply, open };
+})();
 (() => {
     'use strict';
     // Texts in the admin's language (#nm-i18n from the page); Japanese, the key, when there is none.
@@ -754,58 +942,14 @@
         const prefix = start > 0 && !/\s/.test(body.value[start - 1]) ? ' ' : '';
         insert(prefix + '#' + button.dataset.hashtag + ' '); body.focus();
     }));
-    $('[data-bold]', form).addEventListener('click', () => {
-        const [start, end] = selection;
-        const picked = body.value.slice(start, end);
-        // Triple-click also selects the line break: keep surrounding spaces/line breaks outside the markers,
-        // and mark each line separately because bold works within one line.
-        if (picked.trim() !== '') {
-            const wrapped = picked.split('\n').map(line => {
-                const [, lead, text, tail] = line.match(/^(\s*)(.*?)(\s*)$/s);
-                return text === '' ? line : lead + '**' + text + '**' + tail;
-            }).join('\n');
-            insert(wrapped);
-            const lead = picked.length - picked.trimStart().length, trail = picked.length - picked.trimEnd().length;
-            body.focus(); body.setSelectionRange(start + lead, start + wrapped.length - trail); rememberSelection();
-            return;
-        }
-        const text = t('太字にする文字');
-        insert('**' + text + '**');
-        body.focus(); body.setSelectionRange(start + 2, start + 2 + text.length); rememberSelection();
+    // B, I and link on the tool row; 装飾 opens the dialog with headings, lists and the rest (NagiLogFormat above).
+    const format = (name, extra = {}) => { window.NagiLogFormat.apply(name, body, selection, { post: true, ...extra }); rememberSelection(); };
+    $$('[data-format]', form).forEach(button => button.addEventListener('click', () => format(button.dataset.format)));
+    const formatButton = $('[data-format-menu]', form);
+    formatButton?.addEventListener('click', () => {
+        const levels = (formatButton.dataset.headingLevels || '').split(',').filter(Boolean).map(level => +level.slice(1));
+        window.NagiLogFormat.open(body, { levels, post: true, range: selection, done: rememberSelection });
     });
-    // H: the selected lines, or the line at the cursor, become a heading (## or ###); the same level again turns it back.
-    // An empty line gets a sample heading, selected so it can be typed over.
-    const headingButton = $('[data-heading]', form), headingDialog = $('.log-heading-dialog');
-    function setHeading(level) {
-        const mark = '#'.repeat(level) + ' ', value = body.value;
-        const [selStart, selEnd] = [Math.min(selection[0], value.length), Math.min(selection[1], value.length)];
-        const start = value.lastIndexOf('\n', selStart - 1) + 1;
-        const last = selEnd > selStart && value[selEnd - 1] === '\n' ? selEnd - 1 : selEnd;
-        let end = value.indexOf('\n', last); if (end < 0) end = value.length;
-        const lines = value.slice(start, end).split('\n');
-        if (lines.every(line => line.trim() === '')) {
-            const sample = level === 2 ? t('見出し２') : t('見出し３');
-            insert(mark + sample, [start, end]);
-            body.focus(); body.setSelectionRange(start + mark.length, start + mark.length + sample.length); rememberSelection();
-            return;
-        }
-        const plain = line => line.replace(/^#{2,3}[ \t]+/, '');
-        const same = lines.every(line => line.trim() === '' || (line.startsWith(mark) && plain(line) === line.slice(mark.length)));
-        const next = lines.map(line => line.trim() === '' ? line : (same ? plain(line) : mark + plain(line).trimStart())).join('\n');
-        insert(next, [start, end]);
-        body.focus(); body.setSelectionRange(start, start + next.length); rememberSelection();
-    }
-    if (headingButton) {
-        const levels = headingButton.dataset.headingLevels.split(',').map(level => +level.slice(1));
-        headingButton.addEventListener('click', () => {
-            if (levels.length === 1) { setHeading(levels[0]); return; }
-            headingDialog.showModal();
-            $('.log-heading-choice', headingDialog)?.focus();
-        });
-        $$('[data-heading-level]', headingDialog).forEach(choice => choice.addEventListener('click', () => { headingDialog.close(); setHeading(+choice.dataset.headingLevel); }));
-        $('[data-heading-close]', headingDialog).addEventListener('click', () => headingDialog.close());
-        headingDialog.addEventListener('click', event => { if (event.target === headingDialog) headingDialog.close(); });
-    }
     let previousFocus = null;
     let inertNodes = [];
     function accessibility(open) {
@@ -1010,7 +1154,8 @@
             // HTML comes only from the server's escaping/token renderer.
             preview.innerHTML = result.html;
             $$('[src],[href],[data-endpoint]', preview).forEach(el => ['src', 'href', 'data-endpoint'].forEach(attr => {
-                if (el.hasAttribute(attr)) el.setAttribute(attr, adminUrl(el.getAttribute(attr)));
+                // Links to a heading of the post (the table of contents) stay on this page.
+                if (el.hasAttribute(attr) && !el.getAttribute(attr).startsWith('#')) el.setAttribute(attr, adminUrl(el.getAttribute(attr)));
             }));
             preview.hidden = false; toggle.setAttribute('aria-pressed', 'true');
             window.NagiSwipe?.init();

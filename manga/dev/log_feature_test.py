@@ -214,6 +214,22 @@ def run(c, csrf, port):
     settings("log_display_settings", layout="grid", related_by="both", related_order="random", likes="1", related="1")
     check("記事を消すといいねも消える", pid_a not in json.loads(public.get("/like.php?ids=" + pid_b).text)["likes"] and f"'{pid_a}'" not in (Path(c.data_dir) / "log/likes.php").read_text(encoding="utf-8") and f" {pid_a} =>" not in (Path(c.data_dir) / "log/likes.php").read_text(encoding="utf-8"))
 
+    # Markdown in posts: line breaks kept, # alone is a hashtag, code blocks are not embedded; a table of contents from 4 headings.
+    pid_md = save("Markdownの記録\n1行目 #記録タグ と*斜体*\n\n2行目\n## はじめに\n- 項目\n- [リンク](https://example.com/)\n> 引用\n### 小見出し\n```\n## 見出しではない\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ\n```\n#### 細かい見出し\n## まとめ\n| a | b |\n| --- | --- |\n| 1 | 2 |")
+    body = public.get("/?id=" + pid_md).text.split('class="log-body"')[1].split('<footer')[0]
+    check("記事のMarkdown: 改行・空行はそのまま、# 1つはハッシュタグ", '1行目 <a class="log-hashtag" href="./?tag=%E8%A8%98%E9%8C%B2%E3%82%BF%E3%82%B0">#記録タグ</a> と<em>斜体</em><br><br>2行目<details' in body and '</details><h2 id="はじめに" class="log-heading-2">はじめに</h2><ul>' in body)
+    check("記事のMarkdown: リスト・リンク・引用・表・見出し４", '<ul><li>項目</li><li><a href="https://example.com/" rel="noopener noreferrer">リンク</a></li></ul><blockquote>引用</blockquote>' in body and '<h4 id="細かい見出し" class="log-heading-4">' in body and '<div class="log-md-table"><table>' in body)
+    check("記事のMarkdown: コードブロックの中は見出しにも埋め込みにもしない", '<pre class="log-md-code"><code>## 見出しではない\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ</code></pre>' in body and 'youtube-nocookie' not in body)
+    check("見出し4つで目次（畳んだ状態）が最初の見出し２の真上", '2行目<details class="log-toc"><summary>' in body and body.count('<li class="log-toc-') == 4 and '<a href="#まとめ">まとめ</a>' in body)
+    settings("log_display_settings", layout="grid", related_by="both", related_order="random", likes="1", related="1", toc="open")
+    check("設定で目次を開いた状態にできる", '<details class="log-toc" open>' in public.get("/?id=" + pid_md).text)
+    settings("log_display_settings", layout="grid", related_by="both", related_order="random", likes="1", related="1", toc="off")
+    check("設定で目次を出さないようにできる", 'log-toc' not in public.get("/?id=" + pid_md).text)
+    settings("log_display_settings", layout="stream", related_by="both", related_order="random", likes="1", related="1", toc="closed")
+    top = public.get("/").text
+    check("一覧では目次も見出しのidも出さない", 'log-heading-2">はじめに' in top and 'log-toc' not in top and 'id="はじめに"' not in top)
+    check("説明文からMarkdownの記号を除く", 'content="1行目 と斜体 2行目 はじめに 項目 リンク 引用 小見出し 細かい見出し まとめ a b 1 2"' in public.get("/?id=" + pid_md).text)
+
 
 def main():
     RESULTS.mkdir(exist_ok=True)
