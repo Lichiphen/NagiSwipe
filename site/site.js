@@ -141,11 +141,54 @@
     // Words of the page, in its language (the pages are Japanese or English).
     const en = document.documentElement.lang === 'en';
     const say = en
-        ? { copy: 'Copy', copied: 'Copied', failed: 'Could not copy', none: (q) => 'Nothing found for “' + q + '”.' }
-        : { copy: 'コピー', copied: 'コピーしました', failed: 'コピーできませんでした', none: (q) => '「' + q + '」は見つかりませんでした。' };
+        ? { copy: 'Copy', copied: 'Copied!', failed: 'Could not copy', none: (q) => 'Nothing found for “' + q + '”.' }
+        : { copy: 'コピー', copied: 'コピーしました！', failed: 'コピーできませんでした', none: (q) => '「' + q + '」は見つかりませんでした。' };
+
+    // ---- toast: a short note at the bottom of the screen ----
+    let toast = null;
+    let toastTimer = 0;
+    function showToast(text, failed) {
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.setAttribute('role', 'status');
+            toast.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toast);
+        }
+        toast.textContent = text;
+        toast.classList.toggle('is-failed', Boolean(failed));
+        // Restart the fade when copied twice in a row.
+        toast.classList.remove('is-shown');
+        void toast.offsetWidth;
+        toast.classList.add('is-shown');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-shown'), 1800);
+    }
+
+    // Older browsers without the Clipboard API: copy through a hidden field.
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        return new Promise((resolve, reject) => {
+            const field = document.createElement('textarea');
+            field.value = text;
+            field.setAttribute('readonly', '');
+            field.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+            document.body.appendChild(field);
+            field.select();
+            const ok = document.execCommand('copy');
+            field.remove();
+            ok ? resolve() : reject(new Error('copy'));
+        });
+    }
 
     // ---- copy buttons for code ----
+    // The button sits on the frame around the code, not inside it, so it
+    // stays put when a long line is scrolled sideways.
     document.querySelectorAll('.doc pre').forEach((pre) => {
+        const frame = document.createElement('div');
+        frame.className = 'code-block';
+        pre.parentNode.insertBefore(frame, pre);
+        frame.appendChild(pre);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'copy';
@@ -153,15 +196,13 @@
         btn.addEventListener('click', async () => {
             const text = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
             try {
-                await navigator.clipboard.writeText(text);
-                btn.textContent = say.copied;
+                await copyText(text);
+                showToast(say.copied);
             } catch (e) {
-                btn.textContent = say.failed;
+                showToast(say.failed, true);
             }
-            btn.classList.add('is-done');
-            setTimeout(() => { btn.textContent = say.copy; btn.classList.remove('is-done'); }, 1600);
         });
-        pre.appendChild(btn);
+        frame.appendChild(btn);
     });
 
     // ---- search ----

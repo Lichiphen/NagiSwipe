@@ -286,15 +286,32 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
     background: none; color: inherit; padding: 0; font-size: 13.5px;
     white-space: pre; overflow-wrap: normal;
 }
+/* The code and its Copy button. The button is fixed to the frame's top right
+   corner, half above it, so it does not scroll with a long line. */
+.doc .code-block { position: relative; margin: 30px 0 16px; }
+.doc .code-block > pre { margin: 0; }
 .copy {
-    position: absolute; top: 8px; right: 8px;
-    padding: 4px 10px; font: inherit; font-size: 12px; line-height: 1.5;
-    color: var(--pre-text); background: rgba(255, 255, 255, .08);
-    border: 1px solid rgba(255, 255, 255, .16); border-radius: 6px; cursor: pointer;
-    opacity: 0; transition: opacity .15s;
+    position: absolute; top: 0; right: 12px; z-index: 1; transform: translateY(-50%);
+    padding: 4px 13px; font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.5;
+    color: var(--pre-text); background: var(--pre-bg);
+    border: 1px solid color-mix(in srgb, var(--pre-text) 30%, var(--pre-bg)); border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .18); cursor: pointer;
 }
-.doc pre:hover .copy, .copy:focus-visible, .copy.is-done { opacity: 1; }
-@media (hover: none) { .copy { opacity: 1; } }
+.copy:hover { border-color: var(--brand-wave); }
+.copy:active { transform: translateY(-50%) scale(.96); }
+
+/* A short note at the bottom of the screen ("Copied!"). */
+.toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 60;
+    max-width: calc(100vw - 32px); padding: 10px 18px;
+    background: var(--pre-bg); color: var(--pre-text); border-radius: 999px;
+    font-size: 14.5px; font-weight: 600; line-height: 1.4; text-align: center;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+    opacity: 0; transform: translate(-50%, 12px); pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+.toast.is-shown { opacity: 1; transform: translate(-50%, 0); }
+.toast.is-failed { background: #8a2b2b; color: #fff; }
 
 .table-wrap {
     margin: 16px 0; overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -474,7 +491,8 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
     .doc-body h2 { margin-top: 44px; font-size: 21px; }
     .doc-body h3 { font-size: 17.5px; }
     .anchor { display: none; }
-    .doc pre { margin-left: -16px; margin-right: -16px; border-radius: 0; padding: 14px 16px; }
+    .doc .code-block { margin-left: -16px; margin-right: -16px; }
+    .doc pre { border-radius: 0; padding: 14px 16px; }
     .pager { grid-template-columns: 1fr; }
     .pager-next { grid-column: auto; }
 }
@@ -599,7 +617,8 @@ h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus-visible { op
 @media (max-width: 960px) {
     .doc details.sec > summary { padding: 12px 14px; }
     .doc details.sec > .sec-body { padding: 2px 14px 14px; }
-    .doc details.sec pre { margin-left: 0; margin-right: 0; border-radius: 10px; }
+    .doc details.sec .code-block { margin-left: 0; margin-right: 0; }
+    .doc details.sec pre { border-radius: 10px; }
     .doc-body details.sec h3 { font-size: 16.5px; scroll-margin-top: calc(var(--topbar-h) + 12px); }
 }
 @media print {
