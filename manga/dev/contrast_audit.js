@@ -72,7 +72,13 @@ mode => {
       const bc = parse(cs.borderTopColor), bw = parseFloat(cs.borderTopWidth);
       const border = bc && bw > 0 && cs.borderTopStyle !== 'none' ? over(bc, around) : null;
       const native = cs.appearance !== 'none' && ['checkbox', 'radio'].includes(el.type);
-      const best = Math.max(border ? Math.min(ratio(border, around), ratio(border, fill)) : 0, ratio(fill, around));
+      let best = Math.max(border ? Math.min(ratio(border, around), ratio(border, fill)) : 0, ratio(fill, around));
+      // A field without a frame of its own inside a framed box (the URL name with ./ in front): the box is its boundary.
+      const box = el.parentElement, bs = box && getComputedStyle(box);
+      if (best < 3 && bs && parseFloat(bs.borderTopWidth) > 0 && bs.borderTopStyle !== 'none' && !border) {
+        const outside = bgOf(box.parentElement).bg, bb = parse(bs.borderTopColor);
+        if (bb) best = Math.max(best, ratio(over(bb, outside), outside));
+      }
       if (!native && best < 3) issues.add(`FIELD ${best.toFixed(2)}<3 ${desc(el)} ${el.type || ''}`);
     }
     if (el.tagName === 'svg') {

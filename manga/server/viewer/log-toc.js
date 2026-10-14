@@ -62,7 +62,6 @@
     });
 
     const railItems = [...railList.querySelectorAll('li')], sheetItems = [...sheetList.querySelectorAll('li')];
-    const inline = document.querySelector('.log-site-main .log-toc');
     let current = -2, frame = 0;
     function update() {
         frame = 0;
@@ -73,9 +72,6 @@
         const progress = Math.min(1, Math.max(0, (window.innerHeight * 0.7 - box.top) / Math.max(1, box.height)));
         rail.style.setProperty('--toc-progress', progress.toFixed(4));
         fab.style.setProperty('--toc-progress', progress.toFixed(4));
-        // The button comes once the list in the article (or the first heading) has gone up out of sight.
-        const anchor = (inline || heads[0]).getBoundingClientRect();
-        fab.classList.toggle('is-shown', anchor.bottom < 0 && box.bottom > window.innerHeight * 0.2);
         if (active === current) return;
         current = active;
         [railItems, sheetItems].forEach(items => items.forEach((li, i) => {
@@ -101,4 +97,6 @@
     article.addEventListener('load', schedule, true);
     update();
     requestAnimationFrame(() => rail.classList.add('is-ready'));
+    // The button is there from the start: it puffs up a moment after the page opens.
+    setTimeout(() => fab.classList.add('is-shown'), reduce.matches ? 0 : 280);
 })();

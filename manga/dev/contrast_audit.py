@@ -64,6 +64,13 @@ def seed(c, csrf):
         if i == 15: extra['media_ratings'] = json.dumps({images[0]['id']: 'r18'}); body += '\n' + images[0]['tag']
         ids[i] = json.loads(post(payload(body, **extra)).text)['id']
     post(payload('書きかけの記録', status='draft'))
+    # Markdown with four headings: the table of contents in the text, beside it (wide screens) and its button and sheet.
+    md = ('目次のある記録\n最初の段落です。#確認タグ と*斜体*と~~取り消し~~と`コード`。\n## はじめに\n- 項目\n  - 入れ子\n1. 番号\n'
+          '> 引用の文\n### 小見出し\n| 項目 | 内容 |\n| --- | --- |\n| a | b |\n---\n#### 細かい見出し\n```\nconst a = 1;\n```\n## まとめ\n'
+          + '\n'.join(f'{i}行目の文章です。読み進めると目次の印が動きます。' for i in range(40)))
+    ids['md'] = json.loads(post(payload(md)).text)['id']
+    post({'do': 'log_page_save', 'page_id': '', 'revision': '0', 'title': '目次のあるページ', 'slug': 'contents', 'layout': 'narrow', 'status': 'published',
+          'body': md.split('\n', 1)[1].replace('#確認タグ', '')})
     return post, cat, ids
 
 
@@ -131,6 +138,17 @@ def run(browser, post, cat, ids):
                 if el and el.is_visible():
                     el.click(); page.wait_for_timeout(300); check_page(page, f'{width} post {i + 1} opened {opener}')
                     page.keyboard.press('Escape'); page.wait_for_timeout(150)
+        # Markdown and the table of contents: the list in the text opened, then the button and its sheet.
+        for path in (f'/?id={ids["md"]}', '/?pg=contents'):
+            visit(page, path, f'{width} {path}')
+            page.click('.log-site-main .log-toc > summary'); check_page(page, f'{width} {path} contents opened')
+            # A narrow fixed page has room for the list beside it from 1200px: no button there.
+            beside = width >= 1200 and path.startswith('/?pg=')
+            if page.is_visible('.log-toc-rail' if beside else '.log-toc-fab') is False:
+                problems['MISSING ' + ('.log-toc-rail' if beside else '.log-toc-fab')].add(f'{width} {path}'); continue
+            if beside: continue
+            page.click('.log-toc-fab'); page.wait_for_selector('.log-toc-sheet[open]'); check_page(page, f'{width} {path} contents sheet')
+            page.keyboard.press('Escape')
         visit(page, '/?q=%E8%A8%98%E9%8C%B2', f'{width} search')
         visit(page, '/?id=00000000000000', f'{width} 404')
         visit(page, '/admin/login.php', f'{width} login')
@@ -142,6 +160,13 @@ def run(browser, post, cat, ids):
                      'index.php?p=log_media', f'index.php?p=log_edit&id={ids[11]}', 'index.php?p=settings&section=log', 'index.php?p=settings&section=common', 'index.php?p=settings&section=manga'):
             visit(page, '/admin/' + path, f'{width} admin/{path}')
         visit(page, '/', f'{width} / logged in (editor)')
+        visit(page, f'/?id={ids["md"]}', f'{width} post with contents, logged in')
+        # The format dialog of both editors.
+        for path, opener in (('/', '[data-format-menu]'), ('/admin/index.php?p=log_page', '[data-md-menu]')):
+            page.goto(BASE + path); page.wait_for_load_state('networkidle')
+            if path.endswith('log_page'): check_page(page, f'{width} fixed page editor')
+            page.click(opener); page.wait_for_selector('.log-format-dialog[open]'); check_page(page, f'{width} {path} format dialog')
+            page.keyboard.press('Escape')
         page.goto(BASE + '/admin/index.php?p=log'); page.click('[data-bulk-toggle]'); check_page(page, f'{width} bulk delete bar')
         page.goto(BASE + '/admin/index.php?p=settings&section=log'); page.fill('[name=footer_text]', '変更の確認')
         check_page(page, f'{width} settings with changes')
@@ -165,6 +190,18 @@ def run(browser, post, cat, ids):
             page.goto(BASE + '/admin/' + path); page.wait_for_load_state('networkidle')
             for issue in page.evaluate(CHECK, 'page'): problems[issue].add(f'admin/{path} [{scheme}]')
         ctx.close()
+
+    # A wide screen: the table of contents beside the article, read part way, and its links hovered.
+    ctx = context(browser, viewport={'width': 1600, 'height': 900})
+    page = ctx.new_page()
+    for path in (f'/?id={ids["md"]}', '/?pg=contents'):
+        visit(page, path, f'1600 {path}')
+        if not page.is_visible('.log-toc-rail'): problems['MISSING .log-toc-rail'].add(f'1600 {path}'); continue
+        page.evaluate("document.getElementById('小見出し').scrollIntoView()"); page.wait_for_timeout(300)
+        check_page(page, f'1600 {path} rail while reading')
+        page.hover('.log-toc-rail a'); check_page(page, f'1600 {path} rail hover')
+    check_focus(page, f'/?id={ids["md"]}', 'focus post with contents', 40)
+    ctx.close()
 
     # Hover and keyboard focus (PC).
     ctx = context(browser, viewport={'width': 1280, 'height': 900})

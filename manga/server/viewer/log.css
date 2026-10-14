@@ -189,6 +189,9 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .log-post-meta .log-edit-link { display:inline-flex; margin-left:auto; color:var(--log-accent); padding:5px 8px; border-radius:8px; background:var(--log-bg); }
 .log-delete-form { display:contents; }.log-delete-link { display:inline-flex; align-items:center; gap:6px; padding:5px 8px; border:0; border-radius:8px; background:var(--log-bg); color:#c0392b; font:inherit; cursor:pointer; }.log-delete-link:hover { background:color-mix(in srgb,#c0392b 12%,var(--log-bg)); }
 .log-delete-link:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+/* The red of the dark themes: light enough on their dark background (AA). */
+html[data-log-theme^="dark"] .log-delete-link { color:#ff9e94; }
+html[data-log-theme^="dark"] .log-delete-link:hover { background:color-mix(in srgb,#ff9e94 14%,var(--log-bg)); }
 .log-private-note { padding:10px 16px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-card); color:var(--log-muted); font-size:13px; }
 .log-site .btn { display:inline-flex; align-items:center; justify-content:center; font:inherit; cursor:pointer; padding:7px 14px; border:1px solid var(--log-line); border-radius:8px; background:var(--log-card); color:var(--log-text); text-decoration:none; }
 .log-site .btn:disabled { opacity:.5; cursor:wait; }
@@ -487,9 +490,14 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-body .is-toc-target,.log-page-body .is-toc-target { animation:log-toc-glow 1.3s ease-out; border-radius:6px; }
 @keyframes log-toc-glow { 0% { background:color-mix(in srgb,var(--log-accent) 22%,transparent); box-shadow:0 0 0 6px color-mix(in srgb,var(--log-accent) 22%,transparent); } 100% { background:transparent; box-shadow:0 0 0 6px transparent; } }
 /* The floating button (narrower screens). The owner's 書く and 管理 buttons are in the same corner, so it sits above them. */
-.log-toc-fab { position:fixed; right:max(24px,calc((100% - 1060px) / 2 + 24px)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:19; display:grid; place-items:center; align-content:center; gap:0; width:60px; height:60px; padding:0; border:1px solid var(--log-line); border-radius:50%; background:color-mix(in srgb,var(--log-card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); color:var(--log-accent); box-shadow:0 8px 24px #0000002b; font:inherit; cursor:pointer; visibility:hidden; opacity:0; transform:translateY(24px) scale(.5) rotate(-20deg); transition:transform .55s cubic-bezier(.34,1.56,.64,1),opacity .25s ease,visibility 0s linear .55s; }
+.log-toc-fab { position:fixed; right:max(24px,calc((100% - 1060px) / 2 + 24px)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:19; display:grid; place-items:center; align-content:center; gap:0; width:60px; height:60px; padding:0; border:1px solid var(--log-line); border-radius:50%; background:color-mix(in srgb,var(--log-card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); color:var(--log-accent); box-shadow:0 8px 24px #0000002b; font:inherit; cursor:pointer; visibility:hidden; opacity:0; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
 .log-toc-fab.is-owner { bottom:calc(24px + 58px + 12px + 42px + 14px + env(safe-area-inset-bottom)); }
-.log-toc-fab.is-shown { visibility:visible; opacity:1; transform:none; transition-delay:0s; }
+.log-toc-fab.is-shown { visibility:visible; opacity:1; animation:log-toc-puff .75s cubic-bezier(.34,1.56,.64,1) backwards; }
+/* ぽわん: it swells a little, settles, and a soft ring spreads once around it. */
+.log-toc-fab::after { content:""; position:absolute; inset:-2px; border-radius:50%; pointer-events:none; }
+.log-toc-fab.is-shown::after { animation:log-toc-halo 1.1s ease-out .3s backwards; }
+@keyframes log-toc-puff { 0% { opacity:0; transform:scale(.35); } 55% { opacity:1; transform:scale(1.12); } 78% { transform:scale(.96); } 100% { transform:none; } }
+@keyframes log-toc-halo { 0% { box-shadow:0 0 0 0 color-mix(in srgb,var(--log-accent) 45%,transparent); } 100% { box-shadow:0 0 0 18px color-mix(in srgb,var(--log-accent) 0%,transparent); } }
 .log-toc-fab:hover { transform:translateY(-3px); }.log-toc-fab:active { transform:scale(.92); }
 .log-toc-fab:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
 .log-toc-fab-ring { position:absolute; inset:-1px; width:calc(100% + 2px); height:calc(100% + 2px); transform:rotate(-90deg); pointer-events:none; }
@@ -523,7 +531,7 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
     .log-layout-narrow .log-toc-rail { display:block; right:calc(50% + 362px + 24px); }
     .log-layout-narrow .log-toc-fab { display:none; }
 }
-@media(prefers-reduced-motion:reduce) { .log-toc-rail-card,.log-toc-progress i,.log-toc-rail .log-toc-list li::before,.log-toc-sheet .log-toc-list li::before,.log-toc-rail .log-toc-list a,.log-toc-sheet .log-toc-list a,.log-toc-marker,.log-toc-fab,.log-toc-fab-ring .log-toc-fab-done { transition:none; }.log-toc-sheet[open],.log-toc-sheet[open]::backdrop,.log-body .is-toc-target,.log-page-body .is-toc-target { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .log-toc-rail-card,.log-toc-progress i,.log-toc-rail .log-toc-list li::before,.log-toc-sheet .log-toc-list li::before,.log-toc-rail .log-toc-list a,.log-toc-sheet .log-toc-list a,.log-toc-marker,.log-toc-fab,.log-toc-fab-ring .log-toc-fab-done { transition:none; }.log-toc-fab.is-shown,.log-toc-fab.is-shown::after,.log-toc-sheet[open],.log-toc-sheet[open]::backdrop,.log-body .is-toc-target,.log-page-body .is-toc-target { animation:none; } }
 .log-page-body h2 { margin:2.1em 0 .8em; padding-bottom:.4em; border-bottom:2px solid var(--log-line); font-size:1.3rem; line-height:1.5; }
 .log-page-body h3 { margin:1.8em 0 .6em; padding-left:.65em; border-left:4px solid var(--log-accent); font-size:1.1rem; line-height:1.5; }
 .log-page-body h4 { margin:1.5em 0 .5em; font-size:1rem; }
