@@ -1,5 +1,17 @@
 image: alpine:latest
 
+# The NagiLog customizing catalog: public selectors may only disappear with a history entry.
+css-catalog:
+  stage: test
+  image: python:3.12-alpine
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - apk add --no-cache git
+  script:
+    - git fetch --tags --force || true
+    - python3 manga/dev/css_catalog_check.py
+
 pages:
   stage: deploy
   script:

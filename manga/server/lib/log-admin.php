@@ -67,6 +67,7 @@ function nl_input_post(): array
 }
 function nl_handle_post(string $do): never
 {
+    if (str_starts_with($do, 'log_css_')) nl_css_handle_post($do);
     try {
         switch ($do) {
             case 'log_save':

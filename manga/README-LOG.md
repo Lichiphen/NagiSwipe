@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.7.0](https://img.shields.io/badge/NagiLog-v0.7.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.7.0](https://img.shields.io/badge/NagiManga-v0.7.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -50,6 +50,11 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
   - [LiteSpeed Cache](#litespeed-cache)
   - [キャッシュされない表示も速くする](#キャッシュされない表示も速くする)
   - [読み込み中の表示](#読み込み中の表示)
+- [追加CSS](#追加css)
+  - [構文チェック](#構文チェック)
+  - [効き方](#効き方)
+  - [保存先と更新](#保存先と更新)
+  - [カスタマイズに使えるクラス・要素](#カスタマイズに使えるクラス要素)
 - [検索](#検索)
 - [一覧の見せ方と関連記事](#一覧の見せ方と関連記事)
 - [ピン留め](#ピン留め)
@@ -85,7 +90,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.6.0（NagiManga v0.6.0に同梱） |
+| 版 | 0.7.0（NagiManga v0.7.0に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -222,7 +227,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.6.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.7.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、30分以内に管理者パスワードを決めます。
 3. 表示された管理用URLをブックマークします。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -857,6 +862,156 @@ FTPでプログラムを上書きした場合も、プログラムのファイ�
 投稿画面・固定ページの編集・画像一覧で、アップロードや保存、プレビューを待っている間は、メッセージの前に小さな波が流れます。
 ページを移るとき、1秒以上かかった場合だけ、画面の下に読み込み中の表示を出します（テーマの色の水滴が広がる輪と、上端を流れる細い光）。すぐに開くページでは何も出しません。画像の拡大表示・漫画・新しいタブ・ダウンロードでは出さず、15秒たっても移らないときは消します。「視差効果を減らす」設定の端末では動きを止めます。
 
+## 追加CSS
+
+公開LOGの見た目を、自分で書いたCSSで調整できます。
+「設定 → LOG」の「追加CSS」にある「追加CSSを編集」を押すと、同じタブで専用の編集ページが開きます。
+
+![追加CSSの編集ページ。「公開ページに適用中」と「適用を止める」、保存・CSSファイルを選ぶ・保存したCSSをダウンロード・公開ページを開くのボタン、行番号と色分けの付いた編集欄](docs/images/log-css-editor.jpg)
+
+| 操作 | 内容 |
+| --- | --- |
+| 入力 | 直接入力のほか、.cssファイルのドラッグ＆ドロップか「CSSファイルを選ぶ」で読み込めます。スマホではファイル選択を使います。読み込むと編集中の内容と置き換え、未保存の編集があるときは先に確認します |
+| 上限 | UTF-8で256KiBです。ファイルは読み込む前に、保存する内容はサーバーでも確かめます |
+| 編集欄 | 行番号と色分けがあります。入力を止めて0.3秒ほどで構文を確かめ、エラーと警告の一覧を押すとその場所へ移ります。Tabで字下げします（Escのあとに押すと次の項目へ移ります）。Ctrl+S（Macは⌘S）でも保存できます |
+| 保存 | 「保存」で公開ページに反映します。保存に失敗しても、編集中の内容は画面に残ります |
+| 適用のオン・オフ | 「適用を止める」で、保存した内容を残したまま公開ページから外します |
+| ダウンロード・復元 | 保存したCSSを.cssファイルでダウンロードできます。「直前の保存に戻す」で、1つ前に保存した内容と入れ替えます |
+
+追加CSSは管理画面には適用しません。公開側のデザインが崩れても、編集ページから直したり、適用を止めたりできます。
+
+> [!IMPORTANT]
+> 構文エラーがあると保存せず、公開中のCSSをそのまま使います。
+
+### 構文チェック
+
+| 種類 | 対象 | 保存 |
+| --- | --- | --- |
+| エラー | コメント・文字列・url()・かっこの閉じ忘れ、対応する相手のない閉じかっこ、セレクターのない「{」、「:」のない宣言、ルールの外に書いた宣言、「{ }」のないセレクター | しない（行・列・理由を表示） |
+| 警告 | 開いているブラウザーが知らないプロパティ・値・セレクター・@ルール、ほかのルールより後ろの@import、ほかのサイトのURL | できる |
+
+エラーの判定は、編集ページとサーバーが同じ規則で行います。
+警告の判定には、ブラウザーの`CSS.supports()`を使います。新しいCSS、CSS変数、ブラウザーごとの接頭辞（`-webkit-`など）は、そのブラウザーが知らなくてもほかのブラウザーで使えることがあるため、拒否しません。
+ページによって表示されない要素（記事の下、固定ページ、ログイン中だけの表示など）もあるため、セレクターが「存在しない」とは判定しません。
+
+### 効き方
+
+- 公開LOGのページ（一覧・記事・固定ページ・検索・アーカイブ）に、LOG本体のCSS（`viewer/log.css`）と画像ビューアーのCSSのあとで読み込みます。漫画ビューアーのCSSはあとから読み込まれますが、追加CSSより前に入れます。
+- 同じ詳細度なら追加CSSが勝ちます。本体のほうが詳細度の高いセレクターや`!important`を使っている場合は、追加CSSが効かないことがあります。そのときは、セレクターをより具体的にします（例：`.log-site .log-post`）。
+- CSS変数（`--log-accent`など）を上書きすると、テーマの色をまとめて変えられます。テーマごとに変えるときは`html[data-log-theme="dark-navy"]`のように書きます。
+- `url()`の相対パスは、LOGのトップ（`log.php`のあるフォルダ）が基準です。例：`url(viewer/og.jpg)`。LOGに載せた画像は、`./?media=…`のURLを使えます。
+- 公開ページのCSP（Content-Security-Policy）は、追加CSSのために緩めません。画像はこのサイトと`data:`、フォントと`@import`はこのサイトのファイルだけを読み込めます。ほかのサイトの画像・フォント・CSSは読み込まれません。
+- CSSは`./?css=内容のハッシュ`から`text/css`で配信し、ブラウザーに1年保存させます。内容を変えるとURLも変わるため、古いCSSが残りません。LiteSpeed Cacheを使っている場合は、保存・オンオフ・復元のたびにページのキャッシュを消します。
+- 404のページ、NagiMangaの作品ページ（`read.php`）、ほかのサイトに埋め込んだビューアーには適用しません。
+
+### 保存先と更新
+
+追加CSSは`data/log/custom-css/`に、LOG本体のCSSとは別に保存します。
+使用中の内容と直前の内容を、内容のハッシュを名前にした`.css`ファイルで置き、どちらを使うかを`state.php`に書きます。アップロードしたファイルの名前は使いません。
+新しい内容を書き終えてから`state.php`を切り替えるため、途中で失敗しても直前の有効なCSSが残ります。
+`data/`は外から読めないままで、配信は`./?css=`の処理だけが行います。保存した内容をPHPとして実行することはありません。
+保存には、ほかの設定と同じログイン・ゲストの拒否・CSRF対策・ロックを使います。ほかのタブや端末で先に保存されていた場合は、どちらを残すかを選べます。
+
+更新（管理画面からの自動更新・更新の取り消し・FTPでの上書き）は`data/`に触れないため、追加CSSは変わりません。
+配布ZIPに利用者のCSSや、その保存先を上書きするファイルは入っていません。本体を更新しても、追加CSSを自動で直したり初期化したりしません。
+LOG用のバックアップZIPには、追加CSSと適用のオン・オフを含めます。上書きで復元すると戻ります。上書きしない復元では、まだ追加CSSを保存したことがない場合だけ入れます。追加CSSを含まない旧形式のZIPでは、今の追加CSSを維持します。
+
+### カスタマイズに使えるクラス・要素
+
+編集ページの下に、カスタマイズ向けの公開セレクターとCSS変数の一覧があります。用途、対象の画面、記述例、追加したバージョンを表示し、絞り込みもできます。
+内部用・状態用の名前は折りたたんだ一覧に分けています。予告なく変わることがあるため、カスタマイズには向きません。
+「初期一覧」は、v0.6.0の時点にあった名前です。それより前の追加時期は記録していません。
+バージョンごとの変更（追加・変更あり・非推奨・改名・廃止）は、比較元のバージョンを選ぶと、途中のバージョンも含めてまとめて表示します。
+
+今のバージョンの一覧は次のとおりです。
+
+<details open>
+<summary>公開セレクターとCSS変数の一覧</summary>
+
+<!-- css-catalog:begin (generated by manga/dev/css_catalog_check.py --write-docs) -->
+
+**公開セレクター**
+
+| 名前 | 用途 | 対象の画面 | 記述例 | 追加 |
+| --- | --- | --- | --- | --- |
+| `html[data-log-theme]` | テーマの切り替え。値はテーマ名（light-blue・dark-navy など） | すべてのページ | `html[data-log-theme="dark-navy"] { --log-accent: #7dd3fc; }` | 初期一覧 |
+| `.log-site` | 公開ページのbody | すべてのページ | `.log-site { letter-spacing: .02em; }` | 初期一覧 |
+| `.log-site-header` | サイト名・ロゴ・紹介文の見出し部分 | すべてのページ | `.log-site-header { padding-block: 32px; }` | 初期一覧 |
+| `.log-site-title` | サイト名（一覧ではh1、記事ではp） | すべてのページ | `.log-site-title a { color: var(--log-accent); }` | 初期一覧 |
+| `.log-site-logo` | タイトルロゴの画像 | すべてのページ | `.log-site-logo { max-height: 56px; }` | 初期一覧 |
+| `.log-site-avatar` | サイト名の横のアイコン | すべてのページ | `.log-site-avatar { border-radius: 12px; }` | 初期一覧 |
+| `.log-site-description` | サイト名の下の紹介文 | すべてのページ | `.log-site-description { font-size: 13px; }` | 初期一覧 |
+| `.log-topmenu` | トップメニュー | すべてのページ | `.log-topmenu { border-bottom: 1px solid var(--log-line); }` | 初期一覧 |
+| `.log-menu-toggle` | スマホのMENUボタン | すべてのページ | `.log-menu-toggle { background: var(--log-accent); }` | 初期一覧 |
+| `.log-site-grid` | 本文とサイドバーを並べる枠 | すべてのページ | `.log-site-grid { max-width: 1200px; }` | 初期一覧 |
+| `.log-site-main` | 本文の列（投稿一覧・記事・固定ページ） | すべてのページ | `.log-site-main { gap: 32px; }` | 初期一覧 |
+| `.log-breadcrumb` | パンくずリスト | 投稿一覧・記事のページ・固定ページ | `.log-breadcrumb { font-size: 12px; }` | 初期一覧 |
+| `.log-archive-head` | カテゴリ・タグ・日付・検索の一覧の見出し部分 | 投稿一覧 | `.log-archive-head { margin-bottom: 24px; }` | 初期一覧 |
+| `.log-archive-title` | 上の見出しの文字 | 投稿一覧 | `.log-archive-title { font-size: 22px; }` | 初期一覧 |
+| `.log-post` | 1件の投稿（ミニブログ表示・記事のページ） | 投稿一覧・記事のページ | `.log-post { border-radius: 4px; }` | 初期一覧 |
+| `.log-post.is-pinned` | ピン留めした投稿 | 投稿一覧 | `.log-post.is-pinned { outline: 2px solid var(--log-accent); }` | v0.7.0 |
+| `.log-post-meta` | 投稿のアイコン・名前・日付の行 | 投稿一覧・記事のページ | `.log-post-meta time { font-weight: 700; }` | 初期一覧 |
+| `.log-pin-badge` | ピン留めの印 | 投稿一覧 | `.log-pin-badge { color: var(--log-accent); }` | v0.7.0 |
+| `.log-body` | 投稿の本文 | 投稿一覧・記事のページ | `.log-body { line-height: 2; }` | 初期一覧 |
+| `.log-figure` | 本文の画像1枚 | 投稿一覧・記事のページ | `.log-figure img { border-radius: 0; }` | 初期一覧 |
+| `.log-gallery` | 続けて並べた画像のまとまり | 投稿一覧・記事のページ | `.log-gallery { gap: 2px; }` | 初期一覧 |
+| `.log-categories` | 投稿の下のカテゴリ | 投稿一覧・記事のページ | `.log-categories { font-size: 12px; }` | 初期一覧 |
+| `.log-share` | 投稿の下の共有・いいねの行 | 投稿一覧・記事のページ | `.log-share { justify-content: flex-end; }` | 初期一覧 |
+| `.log-like` | いいねボタン | 投稿一覧・記事のページ | `.log-like { color: #e0245e; }` | 初期一覧 |
+| `.log-lock-form` | 鍵付きの投稿・固定ページのパスワード入力欄 | 記事のページ・固定ページ | `.log-lock-form { max-width: 420px; }` | v0.7.0 |
+| `.log-tiles` | タイル表示の一覧 | タイル表示の一覧 | `.log-tiles { gap: 8px; }` | 初期一覧 |
+| `.log-tile` | タイル1枚 | タイル表示の一覧 | `.log-tile { border-radius: 0; }` | 初期一覧 |
+| `.log-tile-title` | タイルの題名 | タイル表示の一覧 | `.log-tile-title { font-size: 13px; }` | 初期一覧 |
+| `.log-page` | 固定ページの本体 | 固定ページ | `.log-page h1 { text-align: center; }` | 初期一覧 |
+| `.log-page-body` | 固定ページの本文 | 固定ページ | `.log-page-body { line-height: 1.9; }` | 初期一覧 |
+| `.log-layout-wide` | 幅広レイアウトの固定ページ（bodyに付きます） | 固定ページ | `.log-layout-wide .log-page { max-width: none; }` | 初期一覧 |
+| `.log-layout-narrow` | 狭いレイアウトの固定ページ（bodyに付きます） | 固定ページ | `.log-layout-narrow .log-page { max-width: 640px; }` | 初期一覧 |
+| `.log-md-table` | 固定ページの表 | 固定ページ | `.log-md-table th { background: var(--log-field); }` | 初期一覧 |
+| `.log-pager` | 一覧のページ送り | 投稿一覧 | `.log-pager { margin-top: 40px; }` | 初期一覧 |
+| `.log-post-nav` | 記事の下の前後の記事へのリンク | 記事のページ | `.log-post-nav { gap: 8px; }` | 初期一覧 |
+| `.log-related` | 記事の下の関連記事 | 記事のページ | `.log-related h2 { font-size: 16px; }` | 初期一覧 |
+| `.log-empty` | 記録がないときの文 | 投稿一覧 | `.log-empty { text-align: center; }` | 初期一覧 |
+| `.log-sidebar` | サイドバー | サイドバー | `.log-sidebar { font-size: 14px; }` | 初期一覧 |
+| `.log-sidebar-block` | サイドバーの各項目。data-sidebar-id で項目を選べます（例：[data-sidebar-id="calendar"]） | サイドバー | `.log-sidebar-block[data-sidebar-id="calendar"] { display: none; }` | 初期一覧 |
+| `.log-widget` | 枠付きのサイドバー項目 | サイドバー | `.log-widget { box-shadow: none; }` | 初期一覧 |
+| `.log-profile-links` | プロフィールとリンク集 | サイドバー | `.log-profile-links { padding-top: 0; }` | 初期一覧 |
+| `.log-profile-icon` | プロフィールのアイコン | サイドバー | `.log-profile-icon img { border-radius: 16px; }` | 初期一覧 |
+| `.log-profile-name` | アイコンの下の名前 | サイドバー | `.log-profile-name { font-size: 18px; }` | v0.7.0 |
+| `.log-profile-message` | リンクの上のメッセージ（吹き出し） | サイドバー | `.log-profile-message { text-align: left; }` | 初期一覧 |
+| `.log-link-buttons` | リンクボタンの並び | サイドバー | `.log-link-buttons { gap: 6px; }` | 初期一覧 |
+| `.log-link-button` | リンクボタン1つ | サイドバー | `.log-link-button { border-radius: 999px; }` | 初期一覧 |
+| `.log-search` | サイドバーの検索欄 | サイドバー | `.log-search input { border-radius: 999px; }` | 初期一覧 |
+| `.log-calendar` | カレンダー | サイドバー | `.log-calendar td { font-size: 12px; }` | 初期一覧 |
+| `.log-tag-cloud` | ハッシュタグの一覧 | サイドバー | `.log-tag-cloud a { font-size: 12px; }` | 初期一覧 |
+| `.log-custom-block` | 自分で追加したHTML枠 | サイドバー | `.log-custom-block { text-align: center; }` | 初期一覧 |
+| `.log-site-footer` | サイト下部 | サイト下部 | `.log-site-footer { padding-block: 40px; }` | 初期一覧 |
+| `.log-footer-nav` | フッターのリンク | サイト下部 | `.log-footer-nav a { color: inherit; }` | 初期一覧 |
+| `.log-footer-text` | サイト下部の表記 | サイト下部 | `.log-footer-text { font-size: 11px; }` | 初期一覧 |
+
+**CSS変数**
+
+| 名前 | 用途 | 対象の画面 | 記述例 | 追加 |
+| --- | --- | --- | --- | --- |
+| `--log-accent` | テーマの強調色（ボタン・リンク・フチ） | すべてのページ | `:root { --log-accent: #e85d75; }` | 初期一覧 |
+| `--log-bg` | ページの背景色 | すべてのページ | `:root { --log-bg: #fffaf3; }` | 初期一覧 |
+| `--log-card` | 投稿や枠の背景色 | すべてのページ | `:root { --log-card: #ffffff; }` | 初期一覧 |
+| `--log-cyan` | アイコンの文字などの補助色 | すべてのページ | `:root { --log-cyan: #0e7490; }` | 初期一覧 |
+| `--log-field` | 入力欄やチップの背景色 | すべてのページ | `:root { --log-field: #f3f4f6; }` | 初期一覧 |
+| `--log-line` | 線・区切りの色 | すべてのページ | `:root { --log-line: #e5e7eb; }` | 初期一覧 |
+| `--log-muted` | 薄い文字の色（日付・補足） | すべてのページ | `:root { --log-muted: #6b7280; }` | 初期一覧 |
+| `--log-on-accent` | 強調色の上の文字の色 | すべてのページ | `:root { --log-on-accent: #fff; }` | 初期一覧 |
+| `--log-radius` | 角の丸み | すべてのページ | `:root { --log-radius: 6px; }` | 初期一覧 |
+| `--log-shadow` | 投稿や枠の影 | すべてのページ | `:root { --log-shadow: none; }` | 初期一覧 |
+| `--log-text` | 文字の色 | すべてのページ | `:root { --log-text: #222; }` | 初期一覧 |
+
+<!-- css-catalog:end -->
+
+</details>
+
+一覧は`server/lib/css-catalog.json`に手で書きます。管理画面は読むだけで、一覧の作成や比較はサーバーやスマホでは行いません。
+`dev/css_catalog_check.py`は、`log.css`とコードから名前を拾い、一覧との食い違いを調べます。CSSにあるのに一覧にない名前、もうないのに一覧に残る名前、前のリリース（最新の`v*`タグ）から公開セレクターが消えたり改名されたりしたのに変更履歴がない場合に失敗します。名前を組み立てて付けるクラスは`dynamic`に登録します。
+GitLab CIとGitHub Actionsでも同じチェックを実行します。リリースの前に、一覧の`"next"`を出すバージョン番号に書き換え、`python manga/dev/css_catalog_check.py --write-docs`でREADMEの一覧も書き直します（`dev/build_release.py`が確認し、残っているとZIPを作りません）。下の一覧は、このコマンドが`css-catalog.json`から作ります。
+
 ## 検索
 
 公開ページのサイドメニューに検索欄があります。スマホでは右上の「MENU」の中です。
@@ -1300,6 +1455,7 @@ LOGの内部記録は直接開くと404になるPHP形式ですが、画像フ�
 | 固定ページ | `log/pages/ページ番号.php` |
 | ピン留めとその順番 | `log/pins.php` |
 | ファビコンとホーム画面のアイコン | `log/favicon/版番号/` |
+| 追加CSS（使用中と直前の内容、適用のオン・オフ） | `log/custom-css/` |
 | いいねの数 | `log/likes.php` |
 | その日に押された数（読者ごと。翌日に作り直し） | `log/likes-today.php` |
 | 画像と画像情報 | `log/media/秘密鍵から作るフォルダ/` |
@@ -1317,6 +1473,7 @@ LOG用ZIPには、本文、下書き、画像、カテゴリ、デザイン、�
 固定ページ・トップメニュー・フッターのリンクを含まない旧形式のZIPでは、それぞれ復元先のものを維持します。
 一覧の見せ方、いいね・関連記事の設定、検索エンジンの設定、記事ごとのいいねの数も含めます。
 記事と画像の閲覧注意（区分と注意書き）、記事と固定ページのパスワード（鍵）、ピン留めとその順番も含めます。その日に押された数と、ファビコンの画像は含めません。
+追加CSSと適用のオン・オフも含めます。追加CSSを含まない旧形式のZIPでは、復元先の追加CSSを維持します。
 上書き復元では、そのZIPに保存された公開範囲も反映します。
 公開範囲を持たない旧形式のZIPでは、復元先の公開範囲を維持します。
 サイドバーを含まない旧形式のZIPでは、復元先のサイドバーを維持します。
@@ -1403,6 +1560,9 @@ node manga/dev/log_embed_script_test.js
 python manga/dev/log_lscache_test.py
 python manga/dev/log_av_test.py
 python manga/dev/preview_test.py
+python manga/dev/log_css_test.py
+python manga/dev/log_css_browser_test.py
+python manga/dev/css_catalog_check.py
 python manga/dev/build_release.py
 ```
 
@@ -1412,6 +1572,16 @@ python manga/dev/build_release.py
 確認用のURLは [埋め込みサンプル](dev/embed_samples.json) にまとめています。
 `dev/seed_embed_gallery.py` は、既に設置したローカルの確認用LOGに、これらのサンプルを作ります。
 `log-test-password` を使う開発用のサイトだけで使ってください。
+
+2026年10月14日に追加CSSを加え、次を確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| 追加CSSのHTTP（`dev/log_css_test.py`） | 94項目通過。保存・配信（text/css）・管理画面に出さないこと・構文エラーと警告の区別・256KiB・空・UTF-8・日本語コメント・未ログイン・ゲスト・CSRF・パス風の値・同時編集・書き込み失敗・復元・オンオフ・スクリプトなしの保存・キャッシュのURL・LiteSpeedの削除・バックアップと旧形式ZIP・自動更新・取り消し・FTPでの上書き・配布ZIP・一覧チェックの失敗と通過 |
+| 追加CSSのブラウザー（`dev/log_css_browser_test.py`） | 115項目通過。Playwright の Chromium と WebKit で、パソコン幅とスマホ幅（Pixel 7・iPhone 13 の画面サイズ）。画面とサーバーの構文チェック49件の一致、入力・診断への移動・ファイル選択・ドロップ・サイズと文字コードの拒否・保存と再読み込み・公開ページへの反映・同時編集・オンオフ・一覧の絞り込みと複数バージョンの比較、ほかのページで編集用ファイルを読み込まないこと、英語表示 |
+| 既存の試験 | LOG 204、セキュリティ 192、サイドバー 133、管理 107、固定ページ 94、機能 74、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、プレビュー 7、翻訳 3079 項目を通過 |
+
+WebKitの確認は、このPC上のPlaywrightのWebKitです。実機のiPhone（Safari）での確認はしていません。
 
 色のコントラスト（WCAG 2.2 AA）は、次で6つのテーマすべてを確かめます。PlaywrightとGoogle Chromeが必要です。
 40件の記事を作ってページ送りを11ページにし、3種類のページ送り、ミニブログとタイル、PCとスマホの幅、開いたメニューやダイアログ、ホバー、キーボードの枠まで測ります。

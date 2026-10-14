@@ -123,6 +123,7 @@ match ($page) {
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
     'backup' => nm_is_guest() ? nm_view_guest_denied(nm_t('バックアップ')) : nm_view_backup(),
     'settings' => nm_is_guest() ? nm_view_guest_denied(nm_t('設定')) : nm_view_settings($cfg),
+    'css' => nm_is_guest() ? nm_view_guest_denied(nm_t('追加CSS')) : nl_css_view(),
     'embed' => nm_is_guest() ? nm_view_guest_denied(nm_t('設置用コード')) : nm_view_embed(),
     'update' => nm_is_guest() ? nm_view_guest_denied(nm_t('更新')) : nm_view_update($cfg),
     default => nm_not_found(),
@@ -155,7 +156,8 @@ function nm_asset(string $file): string
     return h($file . '?v=' . $v);
 }
 
-function nm_layout(string $title, string $body, bool $nav = true): void
+/** $head: stylesheets and scripts only one page needs (the CSS editor's). */
+function nm_layout(string $title, string $body, bool $nav = true, string $head = ''): void
 {
     $flash = '';
     if (!empty($_SESSION['nm_flash'])) {
@@ -170,8 +172,9 @@ function nm_layout(string $title, string $body, bool $nav = true): void
         $guest = nm_is_guest();
         $p = nm_str($_GET, 'p', 20);
         $isLog = str_starts_with($p, 'log');
-        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '"><a href="index.php"' . (!$isLog && $p !== 'settings' ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
-            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>' . h(nm_t('LOG・投稿')) . '</a><a href="index.php?p=settings"' . ($p === 'settings' ? ' aria-current="page"' : '') . '>' . h(nm_t('設定')) . '</a>')
+        $isSettings = $p === 'settings' || $p === 'css';
+        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '"><a href="index.php"' . (!$isLog && !$isSettings ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
+            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>' . h(nm_t('LOG・投稿')) . '</a><a href="index.php?p=settings"' . ($isSettings ? ' aria-current="page"' : '') . '>' . h(nm_t('設定')) . '</a>')
             . '<details class="nav-more"><summary>' . h(nm_t('管理メニュー')) . '</summary><div>'
             . ($guest ? '' : '<a href="index.php?p=embed">' . h(nm_t('漫画の設置用コード')) . '</a><a href="index.php?p=backup">' . h(nm_t('バックアップ')) . '</a><a href="index.php?p=update">' . h(nm_t('更新')) . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">' . h(nm_t('新')) . '</span>' : '') . '</a>')
             . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . h(nm_t($guest ? 'ゲストを終了' : 'ログアウト')) . '</button></form></div></details></nav>';
@@ -200,6 +203,7 @@ function nm_layout(string $title, string $body, bool $nav = true): void
               . '<script src="' . nm_asset('log-pages.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiSwipe-main.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/NagiManga.js') . '" defer></script>' : '')
+        . $head
         . '</head><body><header class="top"><span class="brand">' . nl_ui_icon() . '<span>NagiManga / LOG</span></span>' . $navHtml . '</header>'
         . '<main class="main' . ($logPage ? ' log-admin-main' : '') . '">' . $banner . $flash . $body . '</main>'
         . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
@@ -1285,7 +1289,7 @@ function nm_view_settings(array $cfg): void
     // so their forms sit after it and their fields join them with form="…".
     nm_layout(nm_t('設定'), $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="' . nm_t('設定の目次') . '" hidden></nav>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
-        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('common')
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_css_settings_card() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('common')
         . '<section class="card"><h2>' . h(nm_t('管理画面の言語')) . '</h2>' . $block('admin_lang')
         . implode('', array_map(static fn($value, $label) => '<label class="check"><input type="radio" name="admin_lang" value="' . h($value) . '"' . (($cfg['admin_lang'] ?? 'auto') === $value ? ' checked' : '') . '>' . h($label) . '</label>',
             array_keys(['auto' => 0] + nm_langs()), array_merge([nm_t('自動（ブラウザの言語に合わせる）')], array_values(nm_langs()))))

@@ -1,0 +1,1045 @@
+{
+ "_note": "Selectors for the additional CSS. Edit by hand with each release; manga/dev/css_catalog_check.py checks it. since: \"initial\" = in the list from the start (existed in v0.6.0; earlier history is not recorded), \"next\" = the coming release.",
+ "schema": 1,
+ "selectors": [
+  {
+   "name": "html[data-log-theme]",
+   "purpose": {
+    "ja": "テーマの切り替え。値はテーマ名（light-blue・dark-navy など）",
+    "en": "The theme in use; the value is its name (light-blue, dark-navy and so on)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": "html[data-log-theme=\"dark-navy\"] { --log-accent: #7dd3fc; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site",
+   "purpose": {
+    "ja": "公開ページのbody",
+    "en": "The body of every public page"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site { letter-spacing: .02em; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-header",
+   "purpose": {
+    "ja": "サイト名・ロゴ・紹介文の見出し部分",
+    "en": "The header with the site name, logo and description"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-header { padding-block: 32px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-title",
+   "purpose": {
+    "ja": "サイト名（一覧ではh1、記事ではp）",
+    "en": "The site name (h1 on lists, p on a post)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-title a { color: var(--log-accent); }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-logo",
+   "purpose": {
+    "ja": "タイトルロゴの画像",
+    "en": "The title logo image"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-logo { max-height: 56px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-avatar",
+   "purpose": {
+    "ja": "サイト名の横のアイコン",
+    "en": "The icon beside the site name"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-avatar { border-radius: 12px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-description",
+   "purpose": {
+    "ja": "サイト名の下の紹介文",
+    "en": "The description under the site name"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-description { font-size: 13px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-topmenu",
+   "purpose": {
+    "ja": "トップメニュー",
+    "en": "The top menu"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-topmenu { border-bottom: 1px solid var(--log-line); }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-menu-toggle",
+   "purpose": {
+    "ja": "スマホのMENUボタン",
+    "en": "The MENU button on phones"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-menu-toggle { background: var(--log-accent); }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-grid",
+   "purpose": {
+    "ja": "本文とサイドバーを並べる枠",
+    "en": "The grid holding the main column and the sidebar"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-grid { max-width: 1200px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-main",
+   "purpose": {
+    "ja": "本文の列（投稿一覧・記事・固定ページ）",
+    "en": "The main column (lists, posts, fixed pages)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ".log-site-main { gap: 32px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-breadcrumb",
+   "purpose": {
+    "ja": "パンくずリスト",
+    "en": "The breadcrumb trail"
+   },
+   "pages": [
+    "list",
+    "post",
+    "page"
+   ],
+   "example": ".log-breadcrumb { font-size: 12px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-archive-head",
+   "purpose": {
+    "ja": "カテゴリ・タグ・日付・検索の一覧の見出し部分",
+    "en": "The heading row of a category, tag, date or search list"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-archive-head { margin-bottom: 24px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-archive-title",
+   "purpose": {
+    "ja": "上の見出しの文字",
+    "en": "The title in that row"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-archive-title { font-size: 22px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-post",
+   "purpose": {
+    "ja": "1件の投稿（ミニブログ表示・記事のページ）",
+    "en": "One post (mini blog lists and the post page)"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-post { border-radius: 4px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-post.is-pinned",
+   "purpose": {
+    "ja": "ピン留めした投稿",
+    "en": "A pinned post"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-post.is-pinned { outline: 2px solid var(--log-accent); }",
+   "since": "0.7.0"
+  },
+  {
+   "name": ".log-post-meta",
+   "purpose": {
+    "ja": "投稿のアイコン・名前・日付の行",
+    "en": "The row with the icon, name and date of a post"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-post-meta time { font-weight: 700; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-pin-badge",
+   "purpose": {
+    "ja": "ピン留めの印",
+    "en": "The pinned mark"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-pin-badge { color: var(--log-accent); }",
+   "since": "0.7.0"
+  },
+  {
+   "name": ".log-body",
+   "purpose": {
+    "ja": "投稿の本文",
+    "en": "The text of a post"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-body { line-height: 2; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-figure",
+   "purpose": {
+    "ja": "本文の画像1枚",
+    "en": "One picture in a post"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-figure img { border-radius: 0; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-gallery",
+   "purpose": {
+    "ja": "続けて並べた画像のまとまり",
+    "en": "A row of pictures posted together"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-gallery { gap: 2px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-categories",
+   "purpose": {
+    "ja": "投稿の下のカテゴリ",
+    "en": "The categories under a post"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-categories { font-size: 12px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-share",
+   "purpose": {
+    "ja": "投稿の下の共有・いいねの行",
+    "en": "The share and like row under a post"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-share { justify-content: flex-end; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-like",
+   "purpose": {
+    "ja": "いいねボタン",
+    "en": "The like button"
+   },
+   "pages": [
+    "list",
+    "post"
+   ],
+   "example": ".log-like { color: #e0245e; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-lock-form",
+   "purpose": {
+    "ja": "鍵付きの投稿・固定ページのパスワード入力欄",
+    "en": "The password form of a locked post or page"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-lock-form { max-width: 420px; }",
+   "since": "0.7.0"
+  },
+  {
+   "name": ".log-tiles",
+   "purpose": {
+    "ja": "タイル表示の一覧",
+    "en": "The tile list"
+   },
+   "pages": [
+    "tiles"
+   ],
+   "example": ".log-tiles { gap: 8px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-tile",
+   "purpose": {
+    "ja": "タイル1枚",
+    "en": "One tile"
+   },
+   "pages": [
+    "tiles"
+   ],
+   "example": ".log-tile { border-radius: 0; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-tile-title",
+   "purpose": {
+    "ja": "タイルの題名",
+    "en": "The title on a tile"
+   },
+   "pages": [
+    "tiles"
+   ],
+   "example": ".log-tile-title { font-size: 13px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-page",
+   "purpose": {
+    "ja": "固定ページの本体",
+    "en": "The article of a fixed page"
+   },
+   "pages": [
+    "page"
+   ],
+   "example": ".log-page h1 { text-align: center; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-page-body",
+   "purpose": {
+    "ja": "固定ページの本文",
+    "en": "The text of a fixed page"
+   },
+   "pages": [
+    "page"
+   ],
+   "example": ".log-page-body { line-height: 1.9; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-layout-wide",
+   "purpose": {
+    "ja": "幅広レイアウトの固定ページ（bodyに付きます）",
+    "en": "A fixed page with the wide layout (on body)"
+   },
+   "pages": [
+    "page"
+   ],
+   "example": ".log-layout-wide .log-page { max-width: none; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-layout-narrow",
+   "purpose": {
+    "ja": "狭いレイアウトの固定ページ（bodyに付きます）",
+    "en": "A fixed page with the narrow layout (on body)"
+   },
+   "pages": [
+    "page"
+   ],
+   "example": ".log-layout-narrow .log-page { max-width: 640px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-md-table",
+   "purpose": {
+    "ja": "固定ページの表",
+    "en": "A table on a fixed page"
+   },
+   "pages": [
+    "page"
+   ],
+   "example": ".log-md-table th { background: var(--log-field); }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-pager",
+   "purpose": {
+    "ja": "一覧のページ送り",
+    "en": "The page navigation of a list"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-pager { margin-top: 40px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-post-nav",
+   "purpose": {
+    "ja": "記事の下の前後の記事へのリンク",
+    "en": "Links to the previous and next post"
+   },
+   "pages": [
+    "post"
+   ],
+   "example": ".log-post-nav { gap: 8px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-related",
+   "purpose": {
+    "ja": "記事の下の関連記事",
+    "en": "Related posts under a post"
+   },
+   "pages": [
+    "post"
+   ],
+   "example": ".log-related h2 { font-size: 16px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-empty",
+   "purpose": {
+    "ja": "記録がないときの文",
+    "en": "The text shown when a list is empty"
+   },
+   "pages": [
+    "list"
+   ],
+   "example": ".log-empty { text-align: center; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-sidebar",
+   "purpose": {
+    "ja": "サイドバー",
+    "en": "The sidebar"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-sidebar { font-size: 14px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-sidebar-block",
+   "purpose": {
+    "ja": "サイドバーの各項目。data-sidebar-id で項目を選べます（例：[data-sidebar-id=\"calendar\"]）",
+    "en": "Each sidebar block; data-sidebar-id picks one (e.g. [data-sidebar-id=\"calendar\"])"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-sidebar-block[data-sidebar-id=\"calendar\"] { display: none; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-widget",
+   "purpose": {
+    "ja": "枠付きのサイドバー項目",
+    "en": "A framed sidebar block"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-widget { box-shadow: none; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-profile-links",
+   "purpose": {
+    "ja": "プロフィールとリンク集",
+    "en": "The profile and links"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-profile-links { padding-top: 0; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-profile-icon",
+   "purpose": {
+    "ja": "プロフィールのアイコン",
+    "en": "The profile icon"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-profile-icon img { border-radius: 16px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-profile-name",
+   "purpose": {
+    "ja": "アイコンの下の名前",
+    "en": "The name under the profile icon"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-profile-name { font-size: 18px; }",
+   "since": "0.7.0"
+  },
+  {
+   "name": ".log-profile-message",
+   "purpose": {
+    "ja": "リンクの上のメッセージ（吹き出し）",
+    "en": "The message balloon above the links"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-profile-message { text-align: left; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-link-buttons",
+   "purpose": {
+    "ja": "リンクボタンの並び",
+    "en": "The list of link buttons"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-link-buttons { gap: 6px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-link-button",
+   "purpose": {
+    "ja": "リンクボタン1つ",
+    "en": "One link button"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-link-button { border-radius: 999px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-search",
+   "purpose": {
+    "ja": "サイドバーの検索欄",
+    "en": "The search box in the sidebar"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-search input { border-radius: 999px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-calendar",
+   "purpose": {
+    "ja": "カレンダー",
+    "en": "The calendar"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-calendar td { font-size: 12px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-tag-cloud",
+   "purpose": {
+    "ja": "ハッシュタグの一覧",
+    "en": "The hashtag list"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-tag-cloud a { font-size: 12px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-custom-block",
+   "purpose": {
+    "ja": "自分で追加したHTML枠",
+    "en": "An HTML box you added to the sidebar"
+   },
+   "pages": [
+    "sidebar"
+   ],
+   "example": ".log-custom-block { text-align: center; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-site-footer",
+   "purpose": {
+    "ja": "サイト下部",
+    "en": "The site footer"
+   },
+   "pages": [
+    "footer"
+   ],
+   "example": ".log-site-footer { padding-block: 40px; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-footer-nav",
+   "purpose": {
+    "ja": "フッターのリンク",
+    "en": "The footer links"
+   },
+   "pages": [
+    "footer"
+   ],
+   "example": ".log-footer-nav a { color: inherit; }",
+   "since": "initial"
+  },
+  {
+   "name": ".log-footer-text",
+   "purpose": {
+    "ja": "サイト下部の表記",
+    "en": "The footer text"
+   },
+   "pages": [
+    "footer"
+   ],
+   "example": ".log-footer-text { font-size: 11px; }",
+   "since": "initial"
+  }
+ ],
+ "variables": [
+  {
+   "name": "--log-accent",
+   "purpose": {
+    "ja": "テーマの強調色（ボタン・リンク・フチ）",
+    "en": "The theme accent (buttons, links, rims)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-accent: #e85d75; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-bg",
+   "purpose": {
+    "ja": "ページの背景色",
+    "en": "The page background"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-bg: #fffaf3; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-card",
+   "purpose": {
+    "ja": "投稿や枠の背景色",
+    "en": "The background of posts and boxes"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-card: #ffffff; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-cyan",
+   "purpose": {
+    "ja": "アイコンの文字などの補助色",
+    "en": "A second color (icon letters and so on)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-cyan: #0e7490; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-field",
+   "purpose": {
+    "ja": "入力欄やチップの背景色",
+    "en": "The background of fields and chips"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-field: #f3f4f6; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-line",
+   "purpose": {
+    "ja": "線・区切りの色",
+    "en": "Lines and borders"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-line: #e5e7eb; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-muted",
+   "purpose": {
+    "ja": "薄い文字の色（日付・補足）",
+    "en": "Muted text (dates, notes)"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-muted: #6b7280; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-on-accent",
+   "purpose": {
+    "ja": "強調色の上の文字の色",
+    "en": "Text on the accent color"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-on-accent: #fff; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-radius",
+   "purpose": {
+    "ja": "角の丸み",
+    "en": "The corner radius"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-radius: 6px; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-shadow",
+   "purpose": {
+    "ja": "投稿や枠の影",
+    "en": "The shadow of posts and boxes"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-shadow: none; }",
+   "since": "initial"
+  },
+  {
+   "name": "--log-text",
+   "purpose": {
+    "ja": "文字の色",
+    "en": "The text color"
+   },
+   "pages": [
+    "all"
+   ],
+   "example": ":root { --log-text: #222; }",
+   "since": "initial"
+  }
+ ],
+ "state": [
+  "can-next",
+  "can-prev",
+  "has-cover",
+  "has-logo",
+  "is-auto",
+  "is-awake",
+  "is-beat",
+  "is-center",
+  "is-copied",
+  "is-empty",
+  "is-error",
+  "is-full",
+  "is-hinting",
+  "is-holding",
+  "is-liked",
+  "is-locked",
+  "is-muted",
+  "is-newer",
+  "is-next",
+  "is-numbers",
+  "is-older",
+  "is-pinned",
+  "is-plain",
+  "is-playing",
+  "is-preparing",
+  "is-prev",
+  "is-rated",
+  "is-right",
+  "is-shown",
+  "is-simple",
+  "is-started",
+  "is-teaser",
+  "is-touched",
+  "is-two",
+  "is-veiled",
+  "is-yes",
+  "selected",
+  "today"
+ ],
+ "internal": [
+  "btn",
+  "embeddedamazonmusic",
+  "embeddedapplemusic",
+  "embeddedaudiomack",
+  "embeddedbandcamp",
+  "embeddedbluesky",
+  "embeddedcodepen",
+  "embeddedfacebook",
+  "embeddedgigaviewer",
+  "embeddedinstagram",
+  "embeddedmastodon",
+  "embeddedmixcloud",
+  "embeddednicovideo",
+  "embeddednote",
+  "embeddedsoundcloud",
+  "embeddedspotify",
+  "embeddedsteam",
+  "embeddedthreads",
+  "embeddedtiktok",
+  "embeddedtweet",
+  "embeddedtwitch",
+  "embeddedvimeo",
+  "embeddedvoicy",
+  "embeddedyoutube",
+  "instagram-media",
+  "log-age-actions",
+  "log-age-dialog",
+  "log-all-chip",
+  "log-all-count",
+  "log-all-icon",
+  "log-all-link",
+  "log-archive-count",
+  "log-audio",
+  "log-avatar",
+  "log-banner",
+  "log-banner-link",
+  "log-calendar-nav",
+  "log-card",
+  "log-card-image",
+  "log-card-site",
+  "log-card-text",
+  "log-cat-icon",
+  "log-cat-list",
+  "log-cat-sep",
+  "log-categories-label",
+  "log-category-picker",
+  "log-crumb",
+  "log-crumb-home",
+  "log-crumb-sep",
+  "log-delete-form",
+  "log-delete-link",
+  "log-edit-link",
+  "log-embed",
+  "log-embed-song",
+  "log-embed-source",
+  "log-embed-tall",
+  "log-embed-video",
+  "log-feed",
+  "log-figure-badge",
+  "log-footer-home",
+  "log-heading-2",
+  "log-heading-3",
+  "log-latest",
+  "log-like-heart",
+  "log-like-pop",
+  "log-like-ready",
+  "log-link-grid",
+  "log-link-icon",
+  "log-lock",
+  "log-lock-badge",
+  "log-lock-badge-icon",
+  "log-lock-error",
+  "log-lock-field",
+  "log-lock-icon",
+  "log-lock-input",
+  "log-lock-note",
+  "log-lock-open",
+  "log-lock-show",
+  "log-lock-submit",
+  "log-lock-submit-icon",
+  "log-lock-title",
+  "log-login-icon",
+  "log-login-link",
+  "log-mail-actions",
+  "log-mail-address",
+  "log-mail-body",
+  "log-mail-close",
+  "log-mail-dialog",
+  "log-mail-primary",
+  "log-mail-send",
+  "log-mail-status",
+  "log-manga",
+  "log-md-image",
+  "log-menu-backdrop",
+  "log-menu-close",
+  "log-menu-label",
+  "log-menu-open",
+  "log-nav-drop",
+  "log-nav-wait",
+  "log-navigating",
+  "log-pager-added",
+  "log-pager-arrow",
+  "log-pager-back",
+  "log-pager-end",
+  "log-pager-gap",
+  "log-pager-jump",
+  "log-pager-more",
+  "log-pager-num",
+  "log-pager-of",
+  "log-pager-pages",
+  "log-pager-row",
+  "log-pager-status",
+  "log-pager-step",
+  "log-pagination",
+  "log-pin-icon",
+  "log-player",
+  "log-player-caption",
+  "log-player-cover",
+  "log-player-length",
+  "log-player-loop",
+  "log-player-play",
+  "log-player-row",
+  "log-player-time",
+  "log-player-title",
+  "log-player-wave",
+  "log-post-nav-body",
+  "log-post-nav-kicker",
+  "log-post-nav-link",
+  "log-post-nav-tab",
+  "log-post-nav-title",
+  "log-post-new",
+  "log-private-note",
+  "log-profile-icon-framed",
+  "log-related-list",
+  "log-settings-avatar",
+  "log-share-btn",
+  "log-share-close",
+  "log-share-copy",
+  "log-share-dialog",
+  "log-share-dialog-body",
+  "log-share-icon",
+  "log-share-icon-copy",
+  "log-share-icon-done",
+  "log-share-open",
+  "log-share-preview",
+  "log-share-ready",
+  "log-share-service",
+  "log-share-services",
+  "log-share-status",
+  "log-sidebar-head",
+  "log-tile-badge",
+  "log-tile-blank",
+  "log-tile-body",
+  "log-tile-pin",
+  "log-tile-thumb",
+  "log-tile-veil",
+  "log-title-long",
+  "log-topmenu-arrow",
+  "log-topmenu-inner",
+  "log-topmenu-links",
+  "log-topmenu-scroller",
+  "log-ui-icon",
+  "log-ui-icon-grip",
+  "log-veil",
+  "log-veil-badge",
+  "log-veil-cover",
+  "log-veil-icon",
+  "log-veil-image",
+  "log-veil-label",
+  "log-veil-media",
+  "log-veil-note",
+  "log-veil-offer",
+  "log-veil-post",
+  "log-veil-reset",
+  "log-veil-shade",
+  "log-veil-show",
+  "log-video",
+  "log-video-bar",
+  "log-video-big",
+  "log-video-done",
+  "log-video-loaded",
+  "log-video-screen",
+  "log-video-tool",
+  "log-video-track",
+  "log-video-unmute",
+  "log-video-volume",
+  "note",
+  "sr-only",
+  "twitter-tweet",
+  "w"
+ ],
+ "dynamic": [
+  "is-center",
+  "is-numbers",
+  "is-right",
+  "is-simple",
+  "log-layout-narrow",
+  "log-layout-wide"
+ ],
+ "history": [
+  {
+   "version": "initial",
+   "note": {
+    "ja": "v0.6.0 の時点の一覧（それより前の追加時期は記録していません）",
+    "en": "The list as of v0.6.0 (earlier additions are not dated)"
+   }
+  },
+  {
+   "version": "0.7.0",
+   "added": [
+    ".log-post.is-pinned",
+    ".log-pin-badge",
+    ".log-lock-form",
+    ".log-profile-name"
+   ]
+  }
+ ]
+}

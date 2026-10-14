@@ -2,7 +2,7 @@
  * ============================================================================
  * NagiManga - manga reader for NagiSwipe
  *
- * NagiManga v0.6.0
+ * NagiManga v0.7.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * ============================================================================
@@ -24,7 +24,7 @@
 
     if (global.NagiManga) return;
 
-    const VERSION = '0.6.0';
+    const VERSION = '0.7.0';
     // Texts of the page (#nm-i18n, only on English pages of the site); Japanese elsewhere, for example on another site.
     const I18N = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const tr = (text, vars = {}) => (I18N[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
@@ -68,7 +68,8 @@
         const u = new URL(SCRIPT_URL);
         u.pathname = u.pathname.replace(/[^/]*$/, 'NagiManga.css');
         const link = el('link', null, { rel: 'stylesheet', href: u.href, 'data-nagimanga-css': '' });
-        document.head.appendChild(link);
+        // On a NagiLog page the owner's additional CSS stays last, so it can still adjust the reader.
+        document.head.insertBefore(link, document.querySelector('head > link[data-nl-custom-css]'));
     }
 
     class Reader {

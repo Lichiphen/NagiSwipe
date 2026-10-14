@@ -1,0 +1,11 @@
+# The NagiLog customizing catalog: public selectors may only disappear with a history entry.
+name: css-catalog
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 manga/dev/css_catalog_check.py

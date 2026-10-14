@@ -43,7 +43,7 @@ for f in [*SERVER.rglob('*.php'), *SERVER.rglob('*.js')]:
 
 # Labels kept in constants and translated where they are shown (nm_t(NL_THEMES[$key]) and so on).
 LABEL_CONSTS = ['NM_SETTINGS_SECTIONS', 'NL_THEMES', 'NL_PAGERS', 'NL_CRUMB_HOMES', 'NL_LAYOUTS', 'NL_RELATED_BY', 'NL_RELATED_ORDER',
-                'NL_LINK_ICONS', 'NL_SIDEBAR_BUILTINS', 'NL_PAGE_LAYOUTS', 'NL_MENUS', 'NL_RATINGS', 'NL_RATING_NOTES']
+                'NL_LINK_ICONS', 'NL_SIDEBAR_BUILTINS', 'NL_CSS_PAGES', 'NL_CSS_CHANGES', 'NL_PAGE_LAYOUTS', 'NL_MENUS', 'NL_RATINGS', 'NL_RATING_NOTES']
 for f in SERVER.rglob('*.php'):
     if 'data' in f.relative_to(SERVER).parts:
         continue

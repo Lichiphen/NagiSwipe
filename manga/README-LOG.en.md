@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.6.0](https://img.shields.io/badge/NagiLog-v0.6.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.6.0](https://img.shields.io/badge/NagiManga-v0.6.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.7.0](https://img.shields.io/badge/NagiLog-v0.7.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.7.0](https://img.shields.io/badge/NagiManga-v0.7.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -52,6 +52,11 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
   - [LiteSpeed Cache](#litespeed-cache)
   - [Making uncached views fast too](#making-uncached-views-fast-too)
   - [Loading indicators](#loading-indicators)
+- [Additional CSS](#additional-css)
+  - [The syntax check](#the-syntax-check)
+  - [How it applies](#how-it-applies)
+  - [Storage and updates](#storage-and-updates)
+  - [Classes and elements for customizing](#classes-and-elements-for-customizing)
 - [Search](#search)
 - [List styles and related posts](#list-styles-and-related-posts)
 - [Pinned posts](#pinned-posts)
@@ -87,7 +92,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.6.0 (included in NagiManga v0.6.0) |
+| Version | 0.7.0 (included in NagiManga v0.7.0) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -225,7 +230,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.6.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.7.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -860,6 +865,156 @@ The administrator's views while logged in and pictures in the admin panel are st
 While waiting for uploads, saving or the preview in the posting screen, fixed page editor and media list, a small wave flows before the message.
 When moving to another page takes a second or more, a loading sign appears at the bottom of the screen (rings spreading from a drop in the theme's color, and a thin light running along the top edge). Pages that open quickly show nothing. It does not appear for picture zoom, manga, new tabs and downloads, and disappears if the page has not changed after 15 seconds. It stops moving on devices with the "reduce motion" setting.
 
+## Additional CSS
+
+Adjust the look of the public LOG with your own CSS.
+"Edit the additional CSS" (追加CSSを編集) under "Additional CSS" in Settings > LOG opens its own editor page in the same tab.
+
+![The additional CSS editor page: “In use on the public pages” with “Turn off”, the Save, Choose a CSS file, Download the saved CSS and Open the public page buttons, and the editor with line numbers and colors](docs/images/log-css-editor.en.jpg)
+
+| Action | What it does |
+| --- | --- |
+| Input | Type directly, drag and drop a .css file, or read one with "Choose a CSS file". On phones, use the file choice. A file replaces the text being edited; with unsaved edits you are asked first |
+| Limit | 256 KiB of UTF-8. A file is checked before it is read, and the saved text again on the server |
+| Editor | Line numbers and colors. About 0.3 seconds after you stop typing, the syntax is checked; pressing an error or warning in the list moves to its place. Tab indents (press Esc first to move to the next field). Ctrl+S (⌘S on a Mac) saves too |
+| Save | "Save" puts it on the public pages. If saving fails, your text stays on the screen |
+| On and off | "Turn off" takes it off the public pages and keeps the saved text |
+| Download and restore | Download the saved CSS as a .css file. "Go back to the earlier save" swaps in the text saved before |
+
+The additional CSS is never used in the admin. If the public design breaks, you can still fix it or turn it off from the editor page.
+
+> [!IMPORTANT]
+> With a syntax error nothing is saved, and the CSS in use stays.
+
+### The syntax check
+
+| Kind | What | Saving |
+| --- | --- | --- |
+| Error | An unclosed comment, string, url() or bracket, a closing bracket without a partner, a "{" without a selector, a declaration without ":", a declaration outside any rule, a selector without "{ }" | Refused (line, column and reason shown) |
+| Warning | A property, value, selector or at-rule the open browser does not know, @import after other rules, addresses on other sites | Allowed |
+
+The editor page and the server judge errors by the same rules.
+Warnings use the browser's `CSS.supports()`. New CSS, CSS variables and browser prefixes (`-webkit-` and so on) may work in other browsers even when this one does not know them, so they are not refused.
+Some elements appear only on some pages (under posts, on fixed pages, only while logged in…), so the editor never says a selector does not exist.
+
+### How it applies
+
+- It loads on the public LOG pages (lists, posts, fixed pages, search, archives) after the LOG's own CSS (`viewer/log.css`) and the image viewer's CSS. The manga reader's CSS loads later but is placed before the additional CSS.
+- With the same specificity the additional CSS wins. Where the LOG's own CSS uses a more specific selector or `!important`, yours may not take effect; then make your selector more specific (e.g. `.log-site .log-post`).
+- Overriding the CSS variables (`--log-accent` and so on) changes the theme colors at once. For one theme only, write `html[data-log-theme="dark-navy"]` and so on.
+- Relative paths in `url()` start from the top of the LOG (the folder with `log.php`), e.g. `url(viewer/og.jpg)`. Pictures on the LOG can be used with their `./?media=…` address.
+- The public pages' CSP (Content-Security-Policy) is not loosened for the additional CSS. Pictures load from this site and `data:`; fonts and `@import` only from this site. Pictures, fonts and CSS from other sites are not loaded.
+- The CSS is served as `text/css` from `./?css=<hash of the text>` and kept by browsers for a year. Changing the text changes the address, so no old CSS lingers. With LiteSpeed Cache, the cached pages are dropped on every save, on/off switch and restore.
+- It is not used on the 404 page, NagiManga's work pages (`read.php`) or viewers embedded on other sites.
+
+### Storage and updates
+
+The additional CSS is stored in `data/log/custom-css/`, apart from the LOG's own CSS.
+The text in use and the one before it are kept as `.css` files named by the hash of their text, and `state.php` says which one is used. The name of an uploaded file is never used.
+The new text is written completely before `state.php` switches to it, so a failure on the way leaves the last good CSS in place.
+`data/` stays closed to the web; only the `./?css=` handler serves the CSS. The saved text never runs as PHP.
+Saving uses the same login, guest refusal, CSRF protection and locks as the other settings. When another tab or device saved first, you choose which text to keep.
+
+Updates (the automatic update in the admin, undoing an update, and uploading over the files with FTP) do not touch `data/`, so the additional CSS does not change.
+The release ZIP contains no user CSS and nothing that would overwrite where it is stored. Updating never fixes or resets the additional CSS by itself.
+The LOG backup ZIP includes the additional CSS and whether it is on. Restoring with overwrite brings them back; restoring without overwrite adds them only when no additional CSS was ever saved. Old ZIPs without additional CSS keep the current one.
+
+### Classes and elements for customizing
+
+Below the editor is the list of public selectors and CSS variables for customizing, with their use, the screens, an example and the version that added them. It can be filtered.
+Internal and state names are in a folded list of their own. They may change without notice and are not meant for customizing.
+"Initial list" (初期一覧) means names that existed in v0.6.0; earlier additions are not dated.
+The changes by version (added, changed, deprecated, renamed, removed) are shown together, including the versions in between, after choosing the version to compare from.
+
+The list of this version:
+
+<details open>
+<summary>Public selectors and CSS variables</summary>
+
+<!-- css-catalog:begin (generated by manga/dev/css_catalog_check.py --write-docs) -->
+
+**Public selectors**
+
+| Name | Use | Screens | Example | Added |
+| --- | --- | --- | --- | --- |
+| `html[data-log-theme]` | The theme in use; the value is its name (light-blue, dark-navy and so on) | All pages | `html[data-log-theme="dark-navy"] { --log-accent: #7dd3fc; }` | Initial list |
+| `.log-site` | The body of every public page | All pages | `.log-site { letter-spacing: .02em; }` | Initial list |
+| `.log-site-header` | The header with the site name, logo and description | All pages | `.log-site-header { padding-block: 32px; }` | Initial list |
+| `.log-site-title` | The site name (h1 on lists, p on a post) | All pages | `.log-site-title a { color: var(--log-accent); }` | Initial list |
+| `.log-site-logo` | The title logo image | All pages | `.log-site-logo { max-height: 56px; }` | Initial list |
+| `.log-site-avatar` | The icon beside the site name | All pages | `.log-site-avatar { border-radius: 12px; }` | Initial list |
+| `.log-site-description` | The description under the site name | All pages | `.log-site-description { font-size: 13px; }` | Initial list |
+| `.log-topmenu` | The top menu | All pages | `.log-topmenu { border-bottom: 1px solid var(--log-line); }` | Initial list |
+| `.log-menu-toggle` | The MENU button on phones | All pages | `.log-menu-toggle { background: var(--log-accent); }` | Initial list |
+| `.log-site-grid` | The grid holding the main column and the sidebar | All pages | `.log-site-grid { max-width: 1200px; }` | Initial list |
+| `.log-site-main` | The main column (lists, posts, fixed pages) | All pages | `.log-site-main { gap: 32px; }` | Initial list |
+| `.log-breadcrumb` | The breadcrumb trail | Post lists, Post pages, Fixed pages | `.log-breadcrumb { font-size: 12px; }` | Initial list |
+| `.log-archive-head` | The heading row of a category, tag, date or search list | Post lists | `.log-archive-head { margin-bottom: 24px; }` | Initial list |
+| `.log-archive-title` | The title in that row | Post lists | `.log-archive-title { font-size: 22px; }` | Initial list |
+| `.log-post` | One post (mini blog lists and the post page) | Post lists, Post pages | `.log-post { border-radius: 4px; }` | Initial list |
+| `.log-post.is-pinned` | A pinned post | Post lists | `.log-post.is-pinned { outline: 2px solid var(--log-accent); }` | v0.7.0 |
+| `.log-post-meta` | The row with the icon, name and date of a post | Post lists, Post pages | `.log-post-meta time { font-weight: 700; }` | Initial list |
+| `.log-pin-badge` | The pinned mark | Post lists | `.log-pin-badge { color: var(--log-accent); }` | v0.7.0 |
+| `.log-body` | The text of a post | Post lists, Post pages | `.log-body { line-height: 2; }` | Initial list |
+| `.log-figure` | One picture in a post | Post lists, Post pages | `.log-figure img { border-radius: 0; }` | Initial list |
+| `.log-gallery` | A row of pictures posted together | Post lists, Post pages | `.log-gallery { gap: 2px; }` | Initial list |
+| `.log-categories` | The categories under a post | Post lists, Post pages | `.log-categories { font-size: 12px; }` | Initial list |
+| `.log-share` | The share and like row under a post | Post lists, Post pages | `.log-share { justify-content: flex-end; }` | Initial list |
+| `.log-like` | The like button | Post lists, Post pages | `.log-like { color: #e0245e; }` | Initial list |
+| `.log-lock-form` | The password form of a locked post or page | Post pages, Fixed pages | `.log-lock-form { max-width: 420px; }` | v0.7.0 |
+| `.log-tiles` | The tile list | Tile lists | `.log-tiles { gap: 8px; }` | Initial list |
+| `.log-tile` | One tile | Tile lists | `.log-tile { border-radius: 0; }` | Initial list |
+| `.log-tile-title` | The title on a tile | Tile lists | `.log-tile-title { font-size: 13px; }` | Initial list |
+| `.log-page` | The article of a fixed page | Fixed pages | `.log-page h1 { text-align: center; }` | Initial list |
+| `.log-page-body` | The text of a fixed page | Fixed pages | `.log-page-body { line-height: 1.9; }` | Initial list |
+| `.log-layout-wide` | A fixed page with the wide layout (on body) | Fixed pages | `.log-layout-wide .log-page { max-width: none; }` | Initial list |
+| `.log-layout-narrow` | A fixed page with the narrow layout (on body) | Fixed pages | `.log-layout-narrow .log-page { max-width: 640px; }` | Initial list |
+| `.log-md-table` | A table on a fixed page | Fixed pages | `.log-md-table th { background: var(--log-field); }` | Initial list |
+| `.log-pager` | The page navigation of a list | Post lists | `.log-pager { margin-top: 40px; }` | Initial list |
+| `.log-post-nav` | Links to the previous and next post | Post pages | `.log-post-nav { gap: 8px; }` | Initial list |
+| `.log-related` | Related posts under a post | Post pages | `.log-related h2 { font-size: 16px; }` | Initial list |
+| `.log-empty` | The text shown when a list is empty | Post lists | `.log-empty { text-align: center; }` | Initial list |
+| `.log-sidebar` | The sidebar | Sidebar | `.log-sidebar { font-size: 14px; }` | Initial list |
+| `.log-sidebar-block` | Each sidebar block; data-sidebar-id picks one (e.g. [data-sidebar-id="calendar"]) | Sidebar | `.log-sidebar-block[data-sidebar-id="calendar"] { display: none; }` | Initial list |
+| `.log-widget` | A framed sidebar block | Sidebar | `.log-widget { box-shadow: none; }` | Initial list |
+| `.log-profile-links` | The profile and links | Sidebar | `.log-profile-links { padding-top: 0; }` | Initial list |
+| `.log-profile-icon` | The profile icon | Sidebar | `.log-profile-icon img { border-radius: 16px; }` | Initial list |
+| `.log-profile-name` | The name under the profile icon | Sidebar | `.log-profile-name { font-size: 18px; }` | v0.7.0 |
+| `.log-profile-message` | The message balloon above the links | Sidebar | `.log-profile-message { text-align: left; }` | Initial list |
+| `.log-link-buttons` | The list of link buttons | Sidebar | `.log-link-buttons { gap: 6px; }` | Initial list |
+| `.log-link-button` | One link button | Sidebar | `.log-link-button { border-radius: 999px; }` | Initial list |
+| `.log-search` | The search box in the sidebar | Sidebar | `.log-search input { border-radius: 999px; }` | Initial list |
+| `.log-calendar` | The calendar | Sidebar | `.log-calendar td { font-size: 12px; }` | Initial list |
+| `.log-tag-cloud` | The hashtag list | Sidebar | `.log-tag-cloud a { font-size: 12px; }` | Initial list |
+| `.log-custom-block` | An HTML box you added to the sidebar | Sidebar | `.log-custom-block { text-align: center; }` | Initial list |
+| `.log-site-footer` | The site footer | Footer | `.log-site-footer { padding-block: 40px; }` | Initial list |
+| `.log-footer-nav` | The footer links | Footer | `.log-footer-nav a { color: inherit; }` | Initial list |
+| `.log-footer-text` | The footer text | Footer | `.log-footer-text { font-size: 11px; }` | Initial list |
+
+**CSS variables**
+
+| Name | Use | Screens | Example | Added |
+| --- | --- | --- | --- | --- |
+| `--log-accent` | The theme accent (buttons, links, rims) | All pages | `:root { --log-accent: #e85d75; }` | Initial list |
+| `--log-bg` | The page background | All pages | `:root { --log-bg: #fffaf3; }` | Initial list |
+| `--log-card` | The background of posts and boxes | All pages | `:root { --log-card: #ffffff; }` | Initial list |
+| `--log-cyan` | A second color (icon letters and so on) | All pages | `:root { --log-cyan: #0e7490; }` | Initial list |
+| `--log-field` | The background of fields and chips | All pages | `:root { --log-field: #f3f4f6; }` | Initial list |
+| `--log-line` | Lines and borders | All pages | `:root { --log-line: #e5e7eb; }` | Initial list |
+| `--log-muted` | Muted text (dates, notes) | All pages | `:root { --log-muted: #6b7280; }` | Initial list |
+| `--log-on-accent` | Text on the accent color | All pages | `:root { --log-on-accent: #fff; }` | Initial list |
+| `--log-radius` | The corner radius | All pages | `:root { --log-radius: 6px; }` | Initial list |
+| `--log-shadow` | The shadow of posts and boxes | All pages | `:root { --log-shadow: none; }` | Initial list |
+| `--log-text` | The text color | All pages | `:root { --log-text: #222; }` | Initial list |
+
+<!-- css-catalog:end -->
+
+</details>
+
+The list is written by hand in `server/lib/css-catalog.json`. The admin only reads it; nothing builds or compares lists on the server or on a phone.
+`dev/css_catalog_check.py` collects the names from `log.css` and the code and compares them with the list. It fails for a name in the CSS but not in the list, a listed name that no longer exists, and a public selector removed or renamed since the last release (the newest `v*` tag) without a history entry. Classes whose names are built in code are registered in `dynamic`.
+GitLab CI and GitHub Actions run the same check. Before a release, replace `"next"` in the list with the version number and rewrite the README copy with `python manga/dev/css_catalog_check.py --write-docs` (`dev/build_release.py` checks this and refuses to build the ZIP otherwise). That command builds the list below from `css-catalog.json`.
+
 ## Search
 
 The search box is in the side menu of public pages. On phones it is inside "MENU" at the top right.
@@ -1303,6 +1458,7 @@ The log's internal records are PHP files that give 404 when opened directly, but
 | Fixed pages | `log/pages/PAGE_NUMBER.php` |
 | Pinned posts and their order | `log/pins.php` |
 | Favicon and home screen icons | `log/favicon/VERSION/` |
+| Additional CSS (the text in use, the one before it, on or off) | `log/custom-css/` |
 | Like counts | `log/likes.php` |
 | Presses of the day (per reader; made anew the next day) | `log/likes-today.php` |
 | Pictures and picture data | `log/media/FOLDER_MADE_FROM_THE_SECRET_KEY/` |
@@ -1320,6 +1476,7 @@ If the restore target has another fixed page with the same URL name, the restore
 Old ZIPs without fixed pages, top menu or footer links keep the restore target's own.
 List style, like and related post settings, search engine settings and the like count of each post are included too.
 Content warnings of posts and pictures (levels and notes), password locks of posts and fixed pages, and the pinned posts with their order are included too. The presses of the day and the favicon picture are not.
+The additional CSS and whether it is on are included too. Old ZIPs without additional CSS keep the restore target's.
 Restoring with overwrite also applies the audience saved in the ZIP.
 Old ZIPs without an audience keep the restore target's audience.
 Old ZIPs without the sidebar keep the restore target's sidebar.
@@ -1406,6 +1563,9 @@ node manga/dev/log_embed_script_test.js
 python manga/dev/log_lscache_test.py
 python manga/dev/log_av_test.py
 python manga/dev/preview_test.py
+python manga/dev/log_css_test.py
+python manga/dev/log_css_browser_test.py
+python manga/dev/css_catalog_check.py
 python manga/dev/build_release.py
 ```
 
@@ -1415,6 +1575,16 @@ In browsers, 14 kinds of displays were checked using public URLs of official acc
 The URLs used are in the [embed samples](dev/embed_samples.json).
 `dev/seed_embed_gallery.py` makes these samples in an already installed local log for checking.
 Use it only on development sites that use `log-test-password`.
+
+On October 14, 2026 the additional CSS was added and checked as follows.
+
+| Test | Result |
+| --- | --- |
+| Additional CSS over HTTP (`dev/log_css_test.py`) | 94 checks passed: saving, delivery as text/css, never in the admin, errors versus warnings, 256 KiB, empty CSS, UTF-8, Japanese comments, logged out, guests, CSRF, path-like values, editing at the same time, failed writes, restore, on and off, saving without scripts, cache addresses, LiteSpeed purges, backups and old ZIPs, the automatic update, undoing it, uploading over the files with FTP, the release ZIP, and the catalog check failing and passing |
+| Additional CSS in browsers (`dev/log_css_browser_test.py`) | 115 checks passed with Playwright's Chromium and WebKit at desktop and phone sizes (Pixel 7 and iPhone 13 screens): the editor's and the server's syntax checks agree on 49 texts; typing, moving to a message, choosing and dropping files, refusing size and encoding, saving and reloading, the public page, editing at the same time, on and off, filtering the list and comparing several versions, no editor files on other pages, and English |
+| Existing tests | LOG 204, security 192, sidebar 133, admin 107, fixed pages 94, features 74, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, preview 7 and translations 3079 checks passed |
+
+The WebKit checks used Playwright's WebKit on this PC. A real iPhone (Safari) has not been checked.
 
 Color contrast (WCAG 2.2 AA) is checked for all six themes with the command below. It needs Playwright and Google Chrome.
 It makes 40 posts for 11 pages of paging and measures the 3 paging styles, microblog and tiles, computer and phone widths, open menus and dialogs, hover and keyboard focus rings.

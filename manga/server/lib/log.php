@@ -31,6 +31,7 @@ require_once __DIR__ . '/log-url.php';
 require_once __DIR__ . '/log-pins.php';
 require_once __DIR__ . '/log-lock.php';
 require_once __DIR__ . '/log-favicon.php';
+require_once __DIR__ . '/log-css.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }

@@ -1,0 +1,95 @@
+/* NagiLog additional CSS editor (admin page only). MIT License (c) 2026 Lichiphen. */
+.css-page { --code-font: ui-monospace, SFMono-Regular, Consolas, "BIZ UDGothic", monospace; --code-size: 14px; --code-line: 1.6; --code-pad: 10px;
+    --tk-comment: #6a737d; --tk-string: #0a7a3c; --tk-at: #8a3ffc; --tk-prop: #0b5cad; --tk-sel: #9a4a00; --tk-num: #b3261e; --tk-hash: #b3261e; --tk-func: #6f42c1; --tk-url: #0a7a3c; --tk-punct: #57606a; --tk-bang: #b3261e; --tk-error-line: #fce8e6; --tk-warn-line: #fff4d6; }
+@media (prefers-color-scheme: dark) {
+    .css-page { --tk-comment: #8b949e; --tk-string: #7ee2a8; --tk-at: #c4a7ff; --tk-prop: #79c0ff; --tk-sel: #ffb86b; --tk-num: #ff9b8f; --tk-hash: #ff9b8f; --tk-func: #d2a8ff; --tk-url: #7ee2a8; --tk-punct: #a0a4a8; --tk-bang: #ff9b8f; --tk-error-line: #5a2622; --tk-warn-line: #4a3c12; }
+}
+.css-back { margin: 0 0 4px; font-size: .9em; }
+.css-page h1 { margin-top: 0; }
+.css-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.css-switch-state { font-weight: 700; }
+.css-switch-state::before { content: ""; display: inline-block; width: .7em; height: .7em; margin-right: .45em; border-radius: 50%; background: var(--muted); vertical-align: .05em; }
+.css-switch[data-on="1"] .css-switch-state::before { background: #2e9d57; }
+.css-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.css-toolbar [hidden] { display: none; }
+.css-file-button { position: relative; overflow: hidden; }
+.css-file-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+.css-file-button:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.css-editor { position: relative; display: flex; min-height: 240px; height: min(62vh, 640px); border: 1px solid var(--field); border-radius: 8px; background: var(--card); overflow: hidden; }
+.css-editor.is-over { outline: 3px dashed var(--accent); outline-offset: -3px; }
+.css-gutter { flex: none; min-width: 3ch; overflow: hidden; padding: var(--code-pad) 0; border-right: 1px solid var(--line); background: var(--bg); color: var(--muted); font: var(--code-size)/var(--code-line) var(--code-font); text-align: right; user-select: none; }
+.css-gutter-lines { white-space: pre; padding-right: .6ch; will-change: transform; }
+.css-gutter .ln-error { display: inline-block; min-width: 100%; background: var(--tk-error-line); color: var(--danger); font-weight: 700; }
+.css-gutter .ln-warning { display: inline-block; min-width: 100%; background: var(--tk-warn-line); }
+.css-code { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.css-code textarea, .css-highlight { box-sizing: border-box; margin: 0; padding: var(--code-pad); border: 0; font: var(--code-size)/var(--code-line) var(--code-font); letter-spacing: 0; tab-size: 2; white-space: pre; overflow-wrap: normal; word-break: normal; }
+.css-code textarea { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; resize: none; overflow: auto; background: transparent; color: var(--text); caret-color: var(--text); outline: none; }
+/* admin.css styles every <code> (size, padding, background); the overlay must match the text area exactly. */
+.css-highlight code { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; font: inherit; overflow-wrap: normal; }
+.css-highlight { position: absolute; top: 0; left: 0; min-width: 100%; pointer-events: none; color: var(--text); background: transparent; will-change: transform; }
+/* With the script running, the overlay draws the colors and the text area only the caret and selection. */
+.css-page.is-ready .css-code textarea { color: transparent; -webkit-text-fill-color: transparent; }
+.css-page.is-ready .css-code textarea::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); -webkit-text-fill-color: transparent; }
+.css-page.is-typing .css-code textarea { color: var(--text); -webkit-text-fill-color: var(--text); }
+.css-page.is-typing .css-highlight { visibility: hidden; }
+.css-code:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+.css-drop-hint { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 16px; background: color-mix(in srgb, var(--card) 88%, transparent); color: var(--accent); font-weight: 700; text-align: center; pointer-events: none; }
+.css-drop-hint[hidden] { display: none; }
+.tk-comment { color: var(--tk-comment); font-style: italic; }
+.tk-string { color: var(--tk-string); }
+.tk-at { color: var(--tk-at); font-weight: 700; }
+.tk-prop { color: var(--tk-prop); }
+.tk-sel { color: var(--tk-sel); }
+.tk-num { color: var(--tk-num); }
+.tk-hash { color: var(--tk-hash); }
+.tk-func { color: var(--tk-func); }
+.tk-url { color: var(--tk-url); }
+.tk-punct { color: var(--tk-punct); }
+.tk-bang { color: var(--tk-bang); }
+.tk-bad, .tk-error { text-decoration: underline wavy var(--danger); text-decoration-skip-ink: none; }
+
+.css-status { min-height: 1.5em; margin: 10px 0 0; }
+.css-status[data-kind="ok"] { color: #2e7d4f; }
+.css-status[data-kind="error"] { color: var(--danger); font-weight: 700; }
+.css-status[data-kind="dirty"] { color: var(--text); }
+@media (prefers-color-scheme: dark) { .css-status[data-kind="ok"] { color: #7ee2a8; } }
+.css-conflict { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
+.css-conflict p { margin: 0 0 8px; }
+.css-diagnostics { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); }
+.css-diagnostics[data-state="error"] { background: var(--err-bg); }
+.css-diagnostics h2 { margin: 0 0 6px; font-size: 1em; }
+.css-diagnostics ol { margin: 0; padding: 0; list-style: none; max-height: 240px; overflow: auto; }
+.css-diagnostic button { display: block; width: 100%; padding: 6px 4px; border: 0; border-top: 1px solid color-mix(in srgb, var(--text) 12%, transparent); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.css-diagnostic:first-child button { border-top: 0; }
+.css-diagnostic button:hover, .css-diagnostic button:focus-visible { background: color-mix(in srgb, var(--card) 60%, transparent); }
+.css-diagnostic-kind { display: inline-block; min-width: 3em; padding: 0 .4em; border-radius: 4px; font-size: .85em; font-weight: 700; text-align: center; }
+.css-diagnostic.is-error .css-diagnostic-kind { background: var(--danger); color: var(--card); }
+.css-diagnostic.is-warning .css-diagnostic-kind { border: 1px solid currentColor; }
+.css-diagnostic-place { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.css-help ul { margin: 0; padding-left: 1.2em; line-height: 1.75; }
+.css-catalog-search { display: block; max-width: 360px; margin: 8px 0 4px; }
+.css-table-wrap { overflow-x: auto; }
+.css-table { width: 100%; border-collapse: collapse; font-size: .92em; }
+.css-table th, .css-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.css-table thead th { white-space: nowrap; }
+.css-table tbody th { white-space: nowrap; font-weight: 400; }
+.css-table [hidden] { display: none; }
+.css-example { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9em; }
+.css-names { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .9em; }
+.css-since { display: block; max-width: 360px; }
+.css-history { padding-left: 0; list-style: none; }
+.css-history > li[hidden] { display: none; }
+.css-history h3 { margin: 12px 0 4px; font-size: 1em; }
+.css-history ul { margin: 0; padding-left: 1.2em; }
+.css-change { display: inline-block; min-width: 4.5em; padding: 0 .4em; border-radius: 4px; font-size: .85em; text-align: center; background: var(--bg); border: 1px solid var(--line); }
+.css-change-removed, .css-change-renamed { border-color: var(--danger); color: var(--danger); }
+.css-change-added { border-color: #2e9d57; color: #2e7d4f; }
+@media (max-width: 640px) {
+    .css-page { --code-size: 13px; --code-pad: 8px; }
+    .css-editor { height: 58vh; }
+    .css-toolbar .btn { flex: 1 1 calc(50% - 8px); text-align: center; }
+}
+/* admin.css gives fields on touch screens at least 16px (iOS zooms into smaller ones); the colored layer follows. */
+@media (pointer: coarse) { .css-page { --code-size: 16px; } }

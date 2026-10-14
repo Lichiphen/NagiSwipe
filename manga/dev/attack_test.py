@@ -304,7 +304,8 @@ def make_package(version, marker="", extra=None, drop=()):
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(SERVER_DIR.rglob("*")):
             rel = f.relative_to(SERVER_DIR).as_posix()
-            if not f.is_file() or rel in drop or rel == "lib/paths.php":
+            # viewer/NagiSwipe-main.* may be local working copies; the root files are bundled below (as build_release.py does)
+            if not f.is_file() or rel in drop or rel in ("lib/paths.php", "viewer/NagiSwipe-main.js", "viewer/NagiSwipe-main.css"):
                 continue
             if rel.startswith("data/") and rel not in ("data/.htaccess", "data/index.html"):
                 continue

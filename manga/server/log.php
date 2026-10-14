@@ -33,6 +33,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 // The site's icons, also for a private Memo (its login page shows them).
 if (isset($_GET['favicon']) && in_array($method, ['GET', 'HEAD'], true)) { nm_lscache_header(false, false); nl_serve_favicon(nm_str($_GET, 'favicon', 10)); }
 if (!$s['public'] && !$owner) nm_not_found();
+// The owner's additional CSS (./?css=<hash>), served as text/css apart from the pages.
+if (isset($_GET['css']) && in_array($method, ['GET', 'HEAD'], true)) { nm_lscache_header(false, false); nl_css_serve(nm_str($_GET, 'css', 16), $s['public']); }
 // The password form of a locked post or page.
 if ($method === 'POST' && isset($_POST['nl_unlock'])) nl_unlock_request();
 // LiteSpeed caches only what a visitor without the login cookie sees on a public LOG; images stay with PHP (BOT guard).
@@ -161,6 +163,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><?php endif; ?>
 <?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
+<?= nl_css_link() ?>
 <?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-menu.js') ?>" defer></script>
 <script src="<?= nl_public_asset('viewer/log-loading.js') ?>" defer></script>

@@ -12,7 +12,7 @@ function nl_backup_download(): never
         $zip = new ZipArchive();
         if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::EXCL) !== true) throw new RuntimeException('zip failed');
         try {
-            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings(), 'topmenu' => nl_topmenu_settings(), 'footmenu' => nl_menu_settings('foot'), 'pins' => nl_pins(), 'likes' => (object)nl_like_counts()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings(), 'topmenu' => nl_topmenu_settings(), 'footmenu' => nl_menu_settings('foot'), 'pins' => nl_pins(), 'likes' => (object)nl_like_counts(), 'custom_css' => nl_css_backup()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
             foreach (nl_pages() as $page) $zip->addFromString('pages/' . $page['id'] . '.json', json_encode($page, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
             foreach (nl_post_summaries(false) as $summary) {
                 $p = nl_load_post($summary['id']);
@@ -175,7 +175,9 @@ function nl_restore_plan(ZipArchive $zip): array
     $pins = $mark['pins'] ?? [];
     if (!is_array($pins) || !array_is_list($pins) || count($pins) > NL_PINS_MAX) throw new UnexpectedValueException(nm_t('ピン留めの設定が壊れています'));
     foreach ($pins as $pid) if (!is_string($pid) || !nl_valid_post($pid)) throw new UnexpectedValueException(nm_t('ピン留めの設定が壊れています'));
-    return ['settings' => $settings, 'tax' => $tax, 'tag_order' => $tagOrder, 'sidebar' => $sidebar, 'topmenu' => $topmenu, 'footmenu' => $footmenu, 'pages' => $pages, 'likes' => $likes, 'media' => $media, 'posts' => $posts, 'pins' => array_values(array_unique($pins))];
+    return ['settings' => $settings, 'tax' => $tax, 'tag_order' => $tagOrder, 'sidebar' => $sidebar, 'topmenu' => $topmenu, 'footmenu' => $footmenu, 'pages' => $pages, 'likes' => $likes, 'media' => $media, 'posts' => $posts, 'pins' => array_values(array_unique($pins)),
+        // Backups made before the additional CSS existed have none: the CSS here is then kept as it is.
+        'custom_css' => nl_css_restore_plan($mark)];
 }
 /** Convert one image of a backup into $stage/media/<id> and return its record. */
 function nl_restore_image(ZipArchive $zip, string $stage, string $id, array $files): array
@@ -238,10 +240,10 @@ function nl_restore_apply(string $stage, array $plan, array $media, bool $overwr
 {
     ['settings' => $settings, 'tax' => $tax, 'tag_order' => $tagOrder, 'sidebar' => $sidebar, 'likes' => $likes, 'posts' => $posts] = $plan;
     // Plans saved by an older version (a restore in progress during an update) have no pages or top menu.
-    $pages = $plan['pages'] ?? []; $topmenu = $plan['topmenu'] ?? null; $footmenu = $plan['footmenu'] ?? null; $pins = $plan['pins'] ?? [];
+    $pages = $plan['pages'] ?? []; $topmenu = $plan['topmenu'] ?? null; $footmenu = $plan['footmenu'] ?? null; $pins = $plan['pins'] ?? []; $customCss = $plan['custom_css'] ?? null;
     // The favicon's files are not in the backup: the icons in use stay.
     $settings['favicon'] = nl_settings()['favicon'];
-    return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $pages, $topmenu, $footmenu, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite, $pins) {
+    return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $pages, $topmenu, $footmenu, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite, $pins, $customCss) {
         // Validate all references before replacing any live file.
         if ($settings['icon'] !== '' && !isset($media[$settings['icon']]) && !nl_load_media($settings['icon'])) throw new UnexpectedValueException(nm_t('アイコンの画像がバックアップにありません'));
         if ($settings['og_image'] !== '' && !isset($media[$settings['og_image']]) && !nl_load_media($settings['og_image'])) throw new UnexpectedValueException(nm_t('紹介画像がバックアップにありません'));
@@ -326,6 +328,8 @@ function nl_restore_apply(string $stage, array $plan, array $media, bool $overwr
                 $list = array_values(array_unique($overwrite ? $pins : array_merge(nl_pins(), $pins)));
                 nl_pins_write(array_slice(array_values(array_filter($list, static fn($id) => nl_load_post($id) !== null)), 0, NL_PINS_MAX));
             }
+            $cssBefore = nl_css_restore_apply($customCss, $overwrite);
+            if ($cssBefore !== false) $changes[] = ['file', nl_css_dir() . '/state.php', $cssBefore];
             $dest = nl_root() . '/index.php';
             $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
             nl_rebuild_index();

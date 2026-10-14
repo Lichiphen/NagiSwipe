@@ -14,6 +14,7 @@ through the releases API and check it against the SHA-256 GitHub shows for the a
 """
 import hashlib
 import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -85,6 +86,9 @@ def main():
     vv = re.search(r"const VERSION = '([0-9.]+)';", viewer).group(1)
     if vv != version:
         sys.exit(f"version mismatch: lib/bootstrap.php {version} / viewer/NagiManga.js {vv}")
+    # The customizing catalog must match the stylesheets, and its "next" entries must carry this version.
+    if subprocess.run([sys.executable, str(HERE / "css_catalog_check.py"), "--release"]).returncode != 0:
+        sys.exit("css-catalog.json: fix the problems above first")
 
     out = HERE / "results" / f"nagimanga-v{version}.zip"
     out.parent.mkdir(exist_ok=True)
