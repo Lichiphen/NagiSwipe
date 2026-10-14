@@ -660,7 +660,7 @@
     "page"
    ],
    "example": ".log-toc { background: var(--log-card); }",
-   "since": "next"
+   "since": "0.8.0"
   },
   {
    "name": ".log-toc-list",
@@ -673,7 +673,7 @@
     "page"
    ],
    "example": ".log-toc-list .log-toc-3 { padding-left: 2em; }",
-   "since": "next"
+   "since": "0.8.0"
   },
   {
    "name": ".log-toc-rail",
@@ -686,7 +686,7 @@
     "page"
    ],
    "example": ".log-toc-rail-card { border-radius: 12px; }",
-   "since": "next"
+   "since": "0.8.0"
   },
   {
    "name": ".log-toc-fab",
@@ -699,7 +699,7 @@
     "page"
    ],
    "example": ".log-toc-fab { color: var(--log-cyan); }",
-   "since": "next"
+   "since": "0.8.0"
   },
   {
    "name": ".log-toc-sheet",
@@ -712,7 +712,7 @@
     "page"
    ],
    "example": ".log-toc-sheet { border-radius: 16px 16px 0 0; }",
-   "since": "next"
+   "since": "0.8.0"
   }
  ],
  "variables": [
@@ -1126,7 +1126,7 @@
    ]
   },
   {
-   "version": "next",
+   "version": "0.8.0",
    "added": [
     ".log-toc",
     ".log-toc-list",

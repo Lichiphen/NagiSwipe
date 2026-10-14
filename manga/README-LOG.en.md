@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.7.0](https://img.shields.io/badge/NagiLog-v0.7.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.7.0](https://img.shields.io/badge/NagiManga-v0.7.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.8.0](https://img.shields.io/badge/NagiLog-v0.8.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.8.0](https://img.shields.io/badge/NagiManga-v0.8.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -94,7 +94,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.7.0 (included in NagiManga v0.7.0) |
+| Version | 0.8.0 (included in NagiManga v0.8.0) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -232,7 +232,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.7.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.8.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -1013,11 +1013,11 @@ The list of this version:
 | `.log-site-footer` | The site footer | Footer | `.log-site-footer { padding-block: 40px; }` | Initial list |
 | `.log-footer-nav` | The footer links | Footer | `.log-footer-nav a { color: inherit; }` | Initial list |
 | `.log-footer-text` | The footer text | Footer | `.log-footer-text { font-size: 11px; }` | Initial list |
-| `.log-toc` | The table of contents of an article or page (four or more headings, above the first level-2 heading) | Post pages, Fixed pages | `.log-toc { background: var(--log-card); }` | Next version |
-| `.log-toc-list` | The list of entries in the table of contents (.log-toc-2 to 4 follow the heading level) | Post pages, Fixed pages | `.log-toc-list .log-toc-3 { padding-left: 2em; }` | Next version |
-| `.log-toc-rail` | The table of contents that follows beside the article (wide screens) | Post pages, Fixed pages | `.log-toc-rail-card { border-radius: 12px; }` | Next version |
-| `.log-toc-fab` | The table of contents button (bottom right on narrower screens; its ring shows how much is read) | Post pages, Fixed pages | `.log-toc-fab { color: var(--log-cyan); }` | Next version |
-| `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | Next version |
+| `.log-toc` | The table of contents of an article or page (four or more headings, above the first level-2 heading) | Post pages, Fixed pages | `.log-toc { background: var(--log-card); }` | v0.8.0 |
+| `.log-toc-list` | The list of entries in the table of contents (.log-toc-2 to 4 follow the heading level) | Post pages, Fixed pages | `.log-toc-list .log-toc-3 { padding-left: 2em; }` | v0.8.0 |
+| `.log-toc-rail` | The table of contents that follows beside the article (wide screens) | Post pages, Fixed pages | `.log-toc-rail-card { border-radius: 12px; }` | v0.8.0 |
+| `.log-toc-fab` | The table of contents button (bottom right on narrower screens; its ring shows how much is read) | Post pages, Fixed pages | `.log-toc-fab { color: var(--log-cyan); }` | v0.8.0 |
+| `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
 
 **CSS variables**
 
