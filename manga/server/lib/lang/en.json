@@ -1565,5 +1565,6 @@
   "記事の目次": "Table of contents",
   "選んだ文字や行に付けます。何も選んでいなければ、見本を入れます。同じものをもう一度選ぶと外れます。": "Applies to the selected words or lines. With nothing selected, a sample is added. Choosing the same one again removes it.",
   "畳んで表示": "Folded",
-  "開いて表示": "Open"
+  "開いて表示": "Open",
+  "目次を開く": "Open the table of contents"
 }

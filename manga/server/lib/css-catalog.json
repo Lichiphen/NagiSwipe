@@ -674,6 +674,45 @@
    ],
    "example": ".log-toc-list .log-toc-3 { padding-left: 2em; }",
    "since": "next"
+  },
+  {
+   "name": ".log-toc-rail",
+   "purpose": {
+    "ja": "記事の左に付いてくる目次（広い画面）",
+    "en": "The table of contents that follows beside the article (wide screens)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-toc-rail-card { border-radius: 12px; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-toc-fab",
+   "purpose": {
+    "ja": "目次のボタン（狭い画面の右下。読んだ割合をリングで表示）",
+    "en": "The table of contents button (bottom right on narrower screens; its ring shows how much is read)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-toc-fab { color: var(--log-cyan); }",
+   "since": "next"
+  },
+  {
+   "name": ".log-toc-sheet",
+   "purpose": {
+    "ja": "目次のボタンで開くシート",
+    "en": "The sheet the table of contents button opens"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-toc-sheet { border-radius: 16px 16px 0 0; }",
+   "since": "next"
   }
  ],
  "variables": [
@@ -815,6 +854,7 @@
   "can-prev",
   "has-cover",
   "has-logo",
+  "is-active",
   "is-auto",
   "is-awake",
   "is-beat",
@@ -832,17 +872,22 @@
   "is-next",
   "is-numbers",
   "is-older",
+  "is-on",
+  "is-owner",
+  "is-past",
   "is-pinned",
   "is-plain",
   "is-playing",
   "is-preparing",
   "is-prev",
   "is-rated",
+  "is-ready",
   "is-right",
   "is-shown",
   "is-simple",
   "is-started",
   "is-teaser",
+  "is-toc-target",
   "is-touched",
   "is-two",
   "is-veiled",
@@ -1012,6 +1057,16 @@
   "log-toc-2",
   "log-toc-3",
   "log-toc-4",
+  "log-toc-fab-done",
+  "log-toc-fab-icon",
+  "log-toc-fab-label",
+  "log-toc-fab-ring",
+  "log-toc-marker",
+  "log-toc-progress",
+  "log-toc-rail-card",
+  "log-toc-rail-title",
+  "log-toc-sheet-close",
+  "log-toc-sheet-head",
   "log-topmenu-arrow",
   "log-topmenu-inner",
   "log-topmenu-links",
@@ -1075,7 +1130,10 @@
    "version": "next",
    "added": [
     ".log-toc",
-    ".log-toc-list"
+    ".log-toc-list",
+    ".log-toc-rail",
+    ".log-toc-fab",
+    ".log-toc-sheet"
    ]
   }
  ]

@@ -346,13 +346,18 @@ def catalog_checks(tmp):
     old = json.loads(json.dumps(cat))
     old['selectors'].append({'name': '.log-old-box', 'purpose': {'ja': '古い枠', 'en': 'Old box'}, 'pages': ['all'], 'example': '.log-old-box{}', 'since': 'initial'})
     new = json.loads(json.dumps(cat))
-    new['history'] = [h for h in cat['history'] if h['version'] != 'next'] + [{'version': '9.9.9'}]
+    # Names waiting for the next release (since "next") count as added in 9.9.9 here.
+    coming = [n for h in cat['history'] if h['version'] == 'next' for n in h.get('added', [])]
+    later = {'version': '9.9.9', **({'added': coming} if coming else {})}
+    new['history'] = [h for h in cat['history'] if h['version'] != 'next'] + [later]
+    for e in new['selectors']:
+        if e['since'] == 'next': e['since'] = '9.9.9'
     code, out = run_check(new, old)
     check('一覧のチェック：公開セレクターが履歴なしで消えると失敗', code == 1 and '.log-old-box' in out)
-    new['history'][-1] = {'version': '9.9.9', 'removed': ['.log-old-box']}
+    new['history'][-1] = {**later, 'removed': ['.log-old-box']}
     code, out = run_check(new, old)
     check('一覧のチェック：removed を書けば通る', code == 0, out[-400:])
-    new['history'][-1] = {'version': '9.9.9', 'renamed': [{'from': '.log-old-box', 'to': '.log-widget'}]}
+    new['history'][-1] = {**later, 'renamed': [{'from': '.log-old-box', 'to': '.log-widget'}]}
     code, out = run_check(new, old)
     check('一覧のチェック：renamed でも通る', code == 0, out[-400:])
     new2 = json.loads(json.dumps(new)); new2['history'][0]['removed'] = ['.log-old-box']; new2['history'][-1] = {'version': '9.9.9'}

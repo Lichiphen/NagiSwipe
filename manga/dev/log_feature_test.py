@@ -221,6 +221,8 @@ def run(c, csrf, port):
     check("記事のMarkdown: リスト・リンク・引用・表・見出し４", '<ul><li>項目</li><li><a href="https://example.com/" rel="noopener noreferrer">リンク</a></li></ul><blockquote>引用</blockquote>' in body and '<h4 id="細かい見出し" class="log-heading-4">' in body and '<div class="log-md-table"><table>' in body)
     check("記事のMarkdown: コードブロックの中は見出しにも埋め込みにもしない", '<pre class="log-md-code"><code>## 見出しではない\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ</code></pre>' in body and 'youtube-nocookie' not in body)
     check("見出し4つで目次（畳んだ状態）が最初の見出し２の真上", '2行目<details class="log-toc"><summary>' in body and body.count('<li class="log-toc-') == 4 and '<a href="#まとめ">まとめ</a>' in body)
+    single = public.get("/?id=" + pid_md).text
+    check("記事のページに横の目次とそのスクリプト（一覧にはない）", 'class="log-toc-rail"' in single and '<a href="#まとめ">まとめ</a></li></ol></div></aside><main' in single and 'viewer/log-toc.js?v=' in single and 'log-toc-rail' not in public.get("/").text)
     settings("log_display_settings", layout="grid", related_by="both", related_order="random", likes="1", related="1", toc="open")
     check("設定で目次を開いた状態にできる", '<details class="log-toc" open>' in public.get("/?id=" + pid_md).text)
     settings("log_display_settings", layout="grid", related_by="both", related_order="random", likes="1", related="1", toc="off")

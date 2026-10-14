@@ -455,6 +455,73 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-toc-list .log-toc-4 { padding-left:2.6em; font-size:.9em; color:var(--log-muted); }
 .log-body .log-toc-list li::marker,.log-page-body .log-toc-list li::marker { content:none; }
 @media(prefers-reduced-motion:reduce) { .log-toc > summary::before { transition:none; } }
+/* The table of contents beside the article (wide screens): it sticks at the top while the article scrolls. */
+.log-site-grid:has(> .log-toc-rail) { position:relative; }
+.log-toc-rail { display:none; position:absolute; top:0; bottom:0; right:100%; width:196px; }
+.log-toc-rail-card { position:sticky; top:24px; max-height:calc(100vh - 48px); overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:16px 12px 14px 14px; border:1px solid var(--log-line); border-radius:20px; background:color-mix(in srgb,var(--log-card) 90%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:var(--log-shadow); opacity:0; transform:translateX(-14px); transition:opacity .5s ease,transform .7s cubic-bezier(.22,1,.36,1); }
+.log-toc-rail.is-ready .log-toc-rail-card { opacity:1; transform:none; }
+.log-toc-rail-title { display:flex; align-items:center; gap:7px; margin:0 0 10px; color:var(--log-accent); font-size:12.5px; font-weight:800; letter-spacing:.12em; }
+.log-toc-rail-title svg,.log-toc-fab-icon { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+.log-toc-rail-title svg circle,.log-toc-fab-icon circle { fill:currentColor; stroke:none; }
+.log-toc-progress { height:5px; margin:0 2px 12px; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--log-line) 70%,transparent); }
+.log-toc-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--log-accent),var(--log-cyan,var(--log-accent))); transform:scaleX(var(--toc-progress,0)); transform-origin:left; transition:transform .25s ease-out; }
+.log-toc-rail .log-toc-list,.log-toc-sheet .log-toc-list { position:relative; isolation:isolate; margin:0; padding:0 0 0 12px; list-style:none; }
+.log-toc-rail .log-toc-list::before,.log-toc-sheet .log-toc-list::before { content:""; position:absolute; top:12px; bottom:12px; left:4px; width:2px; border-radius:2px; background:var(--log-line); }
+.log-toc-rail .log-toc-list li,.log-toc-sheet .log-toc-list li { position:relative; margin:0; padding:0; font-size:inherit; color:inherit; }
+.log-toc-rail .log-toc-list li + li,.log-toc-sheet .log-toc-list li + li { margin-top:2px; }
+.log-toc-rail .log-toc-list li::before,.log-toc-sheet .log-toc-list li::before { content:""; position:absolute; z-index:1; left:-11px; top:calc(.75em + 1px); width:8px; height:8px; box-sizing:border-box; border:2px solid var(--log-line); border-radius:50%; background:var(--log-card); transition:background-color .3s ease,border-color .3s ease,transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease; }
+.log-toc-rail .log-toc-list li.is-past::before,.log-toc-sheet .log-toc-list li.is-past::before { border-color:var(--log-accent); background:var(--log-accent); }
+.log-toc-rail .log-toc-list li.is-active::before,.log-toc-sheet .log-toc-list li.is-active::before { border-color:var(--log-accent); background:var(--log-card); transform:scale(1.45); box-shadow:0 0 0 4px color-mix(in srgb,var(--log-accent) 18%,transparent); }
+.log-toc-rail .log-toc-list a,.log-toc-sheet .log-toc-list a { position:relative; z-index:1; display:block; padding:5px 8px 5px 9px; border-radius:10px; color:var(--log-muted); font-size:13px; line-height:1.5; text-decoration:none; overflow-wrap:anywhere; transition:color .25s ease,transform .35s cubic-bezier(.34,1.56,.64,1); }
+.log-toc-rail .log-toc-list a:hover,.log-toc-sheet .log-toc-list a:hover { color:var(--log-accent); text-decoration:none; transform:translateX(3px); }
+.log-toc-rail .log-toc-list a:focus-visible,.log-toc-sheet .log-toc-list a:focus-visible { outline:2px solid var(--log-accent); outline-offset:-2px; }
+.log-toc-rail .log-toc-list .is-active > a,.log-toc-sheet .log-toc-list .is-active > a { color:var(--log-text); font-weight:700; }
+.log-toc-rail .log-toc-list .log-toc-3 > a,.log-toc-sheet .log-toc-list .log-toc-3 > a { padding-left:20px; font-size:12.5px; }
+.log-toc-rail .log-toc-list .log-toc-4 > a,.log-toc-sheet .log-toc-list .log-toc-4 > a { padding-left:31px; font-size:12px; }
+.log-toc-rail .log-toc-list .log-toc-2 > a::before,.log-toc-sheet .log-toc-list .log-toc-2 > a::before { margin-right:2px; }
+.log-toc-marker { position:absolute; z-index:0; top:0; left:12px; right:0; height:0; border-radius:10px; background:color-mix(in srgb,var(--log-accent) 13%,transparent); opacity:0; transition:transform .5s cubic-bezier(.34,1.56,.64,1),height .35s ease,opacity .3s ease; }
+.log-toc-marker.is-on { opacity:1; }
+/* The heading a link jumped to glows for a moment. */
+.log-body .is-toc-target,.log-page-body .is-toc-target { animation:log-toc-glow 1.3s ease-out; border-radius:6px; }
+@keyframes log-toc-glow { 0% { background:color-mix(in srgb,var(--log-accent) 22%,transparent); box-shadow:0 0 0 6px color-mix(in srgb,var(--log-accent) 22%,transparent); } 100% { background:transparent; box-shadow:0 0 0 6px transparent; } }
+/* The floating button (narrower screens). The owner's 書く and 管理 buttons are in the same corner, so it sits above them. */
+.log-toc-fab { position:fixed; right:max(24px,calc((100% - 1060px) / 2 + 24px)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:19; display:grid; place-items:center; align-content:center; gap:0; width:60px; height:60px; padding:0; border:1px solid var(--log-line); border-radius:50%; background:color-mix(in srgb,var(--log-card) 92%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); color:var(--log-accent); box-shadow:0 8px 24px #0000002b; font:inherit; cursor:pointer; visibility:hidden; opacity:0; transform:translateY(24px) scale(.5) rotate(-20deg); transition:transform .55s cubic-bezier(.34,1.56,.64,1),opacity .25s ease,visibility 0s linear .55s; }
+.log-toc-fab.is-owner { bottom:calc(24px + 58px + 12px + 42px + 14px + env(safe-area-inset-bottom)); }
+.log-toc-fab.is-shown { visibility:visible; opacity:1; transform:none; transition-delay:0s; }
+.log-toc-fab:hover { transform:translateY(-3px); }.log-toc-fab:active { transform:scale(.92); }
+.log-toc-fab:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
+.log-toc-fab-ring { position:absolute; inset:-1px; width:calc(100% + 2px); height:calc(100% + 2px); transform:rotate(-90deg); pointer-events:none; }
+.log-toc-fab-ring circle { fill:none; stroke:color-mix(in srgb,var(--log-line) 80%,transparent); stroke-width:3; }
+.log-toc-fab-ring .log-toc-fab-done { stroke:var(--log-accent); stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:calc(100 - var(--toc-progress,0) * 100); transition:stroke-dashoffset .25s ease-out; }
+.log-toc-fab-icon { width:20px; height:20px; }
+.log-toc-fab-label { margin-top:1px; font-size:10px; font-weight:800; letter-spacing:.08em; line-height:1; }
+/* The sheet the button opens: it rises from the bottom. */
+.log-toc-sheet { width:min(560px,100%); max-width:100%; max-height:min(74vh,640px); margin:auto auto 0; padding:0 0 calc(16px + env(safe-area-inset-bottom)); overflow:auto; overscroll-behavior:contain; border:1px solid var(--log-line); border-bottom:0; border-radius:24px 24px 0 0; background:var(--log-card); color:var(--log-text); box-shadow:0 -10px 40px #00000033; }
+.log-toc-sheet[open] { animation:log-toc-rise .45s cubic-bezier(.22,1,.36,1); }
+.log-toc-sheet::backdrop { background:#10223866; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+.log-toc-sheet[open]::backdrop { animation:log-toc-fade .3s ease; }
+@keyframes log-toc-rise { from { transform:translateY(100%); } to { transform:none; } }
+@keyframes log-toc-fade { from { opacity:0; } to { opacity:1; } }
+.log-toc-sheet-head { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 20px 12px; background:var(--log-card); }
+.log-toc-sheet-head::before { content:""; position:absolute; top:8px; left:50%; width:40px; height:4px; margin-left:-20px; border-radius:4px; background:var(--log-line); }
+.log-toc-sheet-head h2 { margin:0; color:var(--log-accent); font-size:15px; letter-spacing:.12em; }
+.log-toc-sheet-close { min-height:36px; padding:6px 14px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-bg); color:var(--log-text); font:inherit; font-size:13px; cursor:pointer; }
+.log-toc-sheet .log-toc-list { margin:0 20px 0 22px; }
+.log-toc-sheet .log-toc-list a { padding:10px 10px 10px 12px; font-size:15px; }
+.log-toc-sheet .log-toc-list .log-toc-3 > a { padding-left:24px; font-size:14px; }.log-toc-sheet .log-toc-list .log-toc-4 > a { padding-left:36px; font-size:13.5px; }
+.log-toc-sheet .log-toc-list li::before { top:calc(10px + .62em); }
+.log-toc-sheet .log-toc-list .is-active > a { background:color-mix(in srgb,var(--log-accent) 12%,transparent); }
+/* Wide enough for the rail beside the article (196px and its gap in the left margin): no button. */
+@media(min-width:1500px) {
+    .log-toc-rail { display:block; }
+    .log-toc-fab { display:none; }
+}
+/* A narrow fixed page centres a 724px column, so the rail fits beside it on smaller screens too. */
+@media(min-width:1200px) {
+    .log-layout-narrow .log-toc-rail { display:block; right:calc(50% + 362px + 24px); }
+    .log-layout-narrow .log-toc-fab { display:none; }
+}
+@media(prefers-reduced-motion:reduce) { .log-toc-rail-card,.log-toc-progress i,.log-toc-rail .log-toc-list li::before,.log-toc-sheet .log-toc-list li::before,.log-toc-rail .log-toc-list a,.log-toc-sheet .log-toc-list a,.log-toc-marker,.log-toc-fab,.log-toc-fab-ring .log-toc-fab-done { transition:none; }.log-toc-sheet[open],.log-toc-sheet[open]::backdrop,.log-body .is-toc-target,.log-page-body .is-toc-target { animation:none; } }
 .log-page-body h2 { margin:2.1em 0 .8em; padding-bottom:.4em; border-bottom:2px solid var(--log-line); font-size:1.3rem; line-height:1.5; }
 .log-page-body h3 { margin:1.8em 0 .6em; padding-left:.65em; border-left:4px solid var(--log-accent); font-size:1.1rem; line-height:1.5; }
 .log-page-body h4 { margin:1.5em 0 .5em; font-size:1rem; }

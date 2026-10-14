@@ -152,6 +152,12 @@ $more = !$single && !$fixed && $s['pager'] === 'more' && $page * $perPage < coun
 $swipe = $owner || $more || nl_has_image_links($postsHtml . $sidebarHtml);
 $shareRows = $s['public'] && $posts && (!$grid || $single);
 $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
+// The table of contents again, beside the article on wide screens (viewer/log-toc.js adds the floating button on narrower ones).
+// A folded post (R-18 / R-18G) keeps its headings behind the fold.
+$tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && preg_match('~<details class="log-toc"[^>]*><summary>[^<]*</summary>(<ol class="log-toc-list">.*?</ol>)</details>~s', $postsHtml, $tocMatch)
+    ? '<aside class="log-toc-rail" aria-labelledby="log-toc-rail-title" data-toc-rail><div class="log-toc-rail-card"><p class="log-toc-rail-title" id="log-toc-rail-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="17.5" r="1.2"/></svg><span>' . nm_t('目次') . '</span></p>'
+        . '<div class="log-toc-progress" aria-hidden="true"><i></i></div>' . $tocMatch[1] . '</div></aside>'
+    : '';
 ?><!DOCTYPE html>
 <html lang="<?= nm_lang() ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($single || $fixed ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
@@ -176,6 +182,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
 <?php if ($owner || str_contains($postsHtml, 'data-player=')): ?><script src="<?= nl_public_asset('viewer/log-player.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner || $more || str_contains($postsHtml . $relatedHtml, 'data-veil=')): ?><script src="<?= nl_public_asset('viewer/log-veil.js') ?>" defer></script><?php endif; ?>
+<?php if ($tocRail !== ''): ?><script src="<?= nl_public_asset('viewer/log-toc.js') ?>" defer></script><?php endif; ?>
 <?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && !$fixed && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
@@ -183,7 +190,7 @@ $manga = $owner || $more || str_contains($postsHtml, 'data-nagimanga=');
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
 <?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14"/></svg><span class="log-menu-label" aria-hidden="true">MENU</span></button>
-<div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><main class="log-site-main" id="log-main">
+<div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><?= $tocRail ?><main class="log-site-main" id="log-main">
 <?= $breadcrumbHtml ?>
 <?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= nm_t('{n}件', ['n' => count($all)]) ?></span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span><?= nm_t('すべての投稿') ?></span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note"><?= nm_t('自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。') ?></p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>

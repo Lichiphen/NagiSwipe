@@ -502,6 +502,12 @@ Without writing Markdown, use "装飾" (Format) in the posting box. It opens a c
 
 A post with four or more headings (h2 to h4) gets a table of contents right above its first heading 2 on its own page. Pressing an entry moves to that heading. Lists such as the top and categories do not show it. Fixed pages get one on the same terms.
 
+The same table of contents appears once more, depending on the screen:
+
+- On a wide PC screen (1500px or wider; 1200px for a narrow one-column fixed page), it stays beside the article on the left while scrolling. A round highlight moves to the heading being read, and the bar on top shows how much is read.
+- On narrower screens and phones, a "目次" (Contents) button appears at the bottom right once the list in the article has scrolled away. Its ring shows how much is read; pressing it opens the list in a sheet from the bottom. Logged out, the button takes the place of "書く" (Write); logged in, it sits above "書く" and "管理" (Admin) without covering them.
+- Posts folded as R-18 or R-18G do not get it.
+
 "Settings › LOG › List style and below posts › Table of contents" chooses "畳んで表示" (folded, the default), "開いて表示" (open) or "表示しない" (hidden).
 
 ### Markdown in posts
@@ -1009,6 +1015,9 @@ The list of this version:
 | `.log-footer-text` | The footer text | Footer | `.log-footer-text { font-size: 11px; }` | Initial list |
 | `.log-toc` | The table of contents of an article or page (four or more headings, above the first level-2 heading) | Post pages, Fixed pages | `.log-toc { background: var(--log-card); }` | Next version |
 | `.log-toc-list` | The list of entries in the table of contents (.log-toc-2 to 4 follow the heading level) | Post pages, Fixed pages | `.log-toc-list .log-toc-3 { padding-left: 2em; }` | Next version |
+| `.log-toc-rail` | The table of contents that follows beside the article (wide screens) | Post pages, Fixed pages | `.log-toc-rail-card { border-radius: 12px; }` | Next version |
+| `.log-toc-fab` | The table of contents button (bottom right on narrower screens; its ring shows how much is read) | Post pages, Fixed pages | `.log-toc-fab { color: var(--log-cyan); }` | Next version |
+| `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | Next version |
 
 **CSS variables**
 
