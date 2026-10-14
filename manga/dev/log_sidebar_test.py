@@ -107,11 +107,17 @@ def run(site,other_site,c,csrf,other,ot):
         check('不正なmailtoを拒否 '+name,r.status==422 and hashes(site)==before)
     ok_sidebar(edited); view=block(pub.get('/').text,'links')
     check('アイコンのフチは既定でオン・メッセージは空なら出さない','log-profile-icon-framed' in view and 'log-profile-message' not in view and edited[0]['icon_frame'] is True and edited[0]['message']=='')
-    edited[0].update(message='  依頼はDMへ\r\n<b>どうぞ</b>\n\n\n\n末尾  ',icon_frame=False); response=ok_sidebar(edited); view=block(pub.get('/').text,'links')
+    owner=php(site,"echo json_encode(nl_settings()['name'],JSON_UNESCAPED_UNICODE);")
+    check('名前は既定でアイコンの下・メッセージの上に表示',edited[0]['show_name'] is True and '<p class="log-profile-name">'+html.escape(owner,quote=True)+'</p>' in view and view.index('log-profile-icon')<view.index('log-profile-name')<view.index('log-link-buttons'))
+    check('編集画面に名前の表示スイッチと名前の入れ場所の案内','data-links-name checked' in panel and 'アイコンの下に名前を表示する' in panel and '「LOGのデザイン・アイコン」の「名前」' in panel)
+    post({'do':'settings_save_all','tab':'log','sections[]':'log_design','title':'Test LOG','name':'<b>なぎ</b> & Co.','theme':'light-blue','description':''},headers={'Accept':'application/json'})
+    check('LOG設定で変えた名前をエスケープしてリンク集へ反映','<p class="log-profile-name">&lt;b&gt;なぎ&lt;/b&gt; &amp; Co.</p>' in block(pub.get('/').text,'links'))
+    edited[0].update(message='  依頼はDMへ\r\n<b>どうぞ</b>\n\n\n\n末尾  ',icon_frame=False,show_name=False); response=ok_sidebar(edited); view=block(pub.get('/').text,'links')
     saved=side(site)['items'][0]
     check('メッセージを整えて保存しフチをオフにできる',saved['message']=='依頼はDMへ\n<b>どうぞ</b>\n\n末尾' and saved['icon_frame'] is False and response['items'][0]['message']==saved['message'])
+    check('名前の表示をオフにして保存できる',saved['show_name'] is False and 'log-profile-name' not in view and 'data-links-name>' in c.get('/admin/index.php?p=settings&section=log').text)
     check('メッセージは改行付き・エスケープしてリンクの上へ表示','依頼はDMへ<br>\n&lt;b&gt;どうぞ&lt;/b&gt;' in view and view.index('log-profile-message')<view.index('log-link-buttons') and 'log-profile-icon-framed' not in view)
-    for name,value in [('長いメッセージ',{'message':'字'*301}),('制御文字',{'message':'a\x07b'}),('配列メッセージ',{'message':[]}),('文字列のフチ',{'icon_frame':'1'}),('フチなし',{'icon_frame':None})]:
+    for name,value in [('長いメッセージ',{'message':'字'*301}),('制御文字',{'message':'a\x07b'}),('配列メッセージ',{'message':[]}),('文字列のフチ',{'icon_frame':'1'}),('フチなし',{'icon_frame':None}),('文字列の名前表示',{'show_name':'1'}),('名前表示なし',{'show_name':None})]:
         bad=copy.deepcopy(edited); bad[0].update(value); before=hashes(site); r=save_sidebar(bad)
         check('プロフィールの不正入力を拒否 '+name,r.status==422 and hashes(site)==before)
     edited[0]['enabled']=False; ok_sidebar(edited)

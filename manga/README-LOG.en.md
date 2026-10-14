@@ -989,10 +989,11 @@ The top of the sidebar shows a borderless profile and links.
 The icon chosen in the LOG settings is in the middle, with wide link buttons under it.
 Without an icon, the first character of the display name is used.
 The icon has a rim in the theme's color by default. Turn off "アイコンにフチを付ける" (rim the icon) to remove it.
+Under the icon goes the "名前" (Name) set in "LOGのデザイン・アイコン" (LOG design and icon) in the LOG settings. Turn off "アイコンの下に名前を表示する" (Show the name under the icon) to hide it.
 Above the links, a message separate from the site introduction can be shown, up to 300 characters. Line breaks work; HTML does not. Empty means not shown.
 The message is a speech balloon talking up toward the icon.
 
-"Edit the profile and links" edits the rim and the message, and each link's display name, URL and an icon for its use.
+"Edit the profile and links" edits the rim, the name display and the message, and each link's display name, URL and an icon for its use.
 Links can be added, deleted and moved up and down.
 The initial URLs are the top pages of X, Instagram, Bluesky, GitHub and YouTube.
 Rewrite, for example, X's URL into your profile URL.

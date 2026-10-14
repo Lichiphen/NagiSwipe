@@ -190,7 +190,7 @@
     form.nlSidebarItems = () => JSON.stringify(rows().map(row => {
         const item = {id: row.dataset.sidebarId, kind: row.dataset.sidebarKind, enabled: row.querySelector('[data-sidebar-enabled]').checked};
         if (item.kind === 'html') Object.assign(item, {title: row.querySelector('[data-sidebar-title]').value, html: row.querySelector('[data-sidebar-html]').value, framed: row.querySelector('[data-sidebar-framed]').checked});
-        if (item.kind === 'links') Object.assign(item, {icon_frame: row.querySelector('[data-links-frame]').checked, message: row.querySelector('[data-links-message]').value});
+        if (item.kind === 'links') Object.assign(item, {icon_frame: row.querySelector('[data-links-frame]').checked, show_name: row.querySelector('[data-links-name]').checked,message: row.querySelector('[data-links-message]').value});
         if (item.kind === 'links') item.links = Array.from(row.querySelector('[data-link-items]').children).map(link => ({label: link.querySelector('[data-link-label]').value, url: link.querySelector('[data-link-url]').value, icon: link.querySelector('[data-link-icon]').value}));
         return item;
     }));

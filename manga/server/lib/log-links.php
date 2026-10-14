@@ -8,7 +8,7 @@ const NL_LINKS_MESSAGE_MAX = 300;
 
 function nl_links_default_item(): array
 {
-    return ['id' => 'links', 'kind' => 'links', 'enabled' => true, 'icon_frame' => true, 'message' => '', 'links' => [
+    return ['id' => 'links', 'kind' => 'links', 'enabled' => true, 'icon_frame' => true, 'show_name' => true, 'message' => '', 'links' => [
         ['label' => 'X', 'url' => 'https://x.com/', 'icon' => 'conversation'],
         ['label' => 'Instagram', 'url' => 'https://www.instagram.com/', 'icon' => 'pictures'],
         ['label' => 'Bluesky', 'url' => 'https://bsky.app/', 'icon' => 'sky-network'],
@@ -21,7 +21,7 @@ function nl_sidebar_with_links(array $items): array
 {
     foreach ($items as $i => $item) {
         if (($item['id'] ?? '') !== 'links' || !is_array($item)) continue;
-        $items[$i] += ['icon_frame' => true, 'message' => ''];
+        $items[$i] += ['icon_frame' => true, 'show_name' => true, 'message' => ''];
         return $items;
     }
     array_unshift($items, nl_links_default_item());
@@ -77,6 +77,7 @@ function nl_links_html(array $item, array $s): string
 {
     $message = $item['message'] ?? '';
     $html = '<section class="log-profile-links" aria-label="' . nm_t('プロフィールとリンク集') . '"><div class="log-profile-icon' . (($item['icon_frame'] ?? true) ? ' log-profile-icon-framed' : '') . '">' . nl_icon_html($s, '', 'log-settings-avatar') . '</div>'
+        . (($item['show_name'] ?? true) && $s['name'] !== '' ? '<p class="log-profile-name">' . h($s['name']) . '</p>' : '')
         . ($message !== '' ? '<p class="log-profile-message">' . nl2br(h($message), false) . '</p>' : '')
         . '<nav class="log-link-buttons" aria-label="' . nm_t('リンク集') . '">';
     foreach ($item['links'] as $link) {
@@ -104,6 +105,7 @@ function nl_links_editor(array $item): string
     foreach (array_keys(NL_LINK_ICONS) as $key) $icons .= '<span data-link-icon-source="' . $key . '">' . nl_link_icon($key) . '</span>';
     return '<details class="log-sidebar-editor log-links-editor"><summary>' . nm_t('プロフィールとリンクを編集') . '</summary><div class="log-sidebar-editor-body">'
         . '<fieldset class="log-links-profile"><legend>' . nm_t('プロフィール') . '</legend><label class="check"><input type="checkbox" data-links-frame' . (($item['icon_frame'] ?? true) ? ' checked' : '') . '>' . nm_t('アイコンにフチを付ける') . '</label>'
+        . '<label class="check"><input type="checkbox" data-links-name' . (($item['show_name'] ?? true) ? ' checked' : '') . '>' . nm_t('アイコンの下に名前を表示する') . '</label><p class="note">' . nm_t('名前は「LOGのデザイン・アイコン」の「名前」に入れたものを使います。') . '</p>'
         . '<label>' . nm_t('メッセージ（リンクの上に表示・任意）') . '<textarea data-links-message rows="3" maxlength="' . NL_LINKS_MESSAGE_MAX . '" placeholder="' . nm_t('例：イラストの依頼はDMへどうぞ。') . '">' . h($item['message'] ?? '') . '</textarea></label>'
         . '<p class="note">' . nm_t('サイトの紹介文とは別に、訪問者へ伝えたいことを書けます。{n}文字まで、改行できます。HTMLは使いません。空欄なら表示しません。', ['n' => NL_LINKS_MESSAGE_MAX]) . '</p></fieldset>'
         . '<fieldset class="log-links-list"><legend>' . nm_t('リンク') . '</legend><div data-link-items>' . $rows . '</div><button class="btn" type="button" data-link-add>' . nl_sidebar_ui_icon('add') . nm_t('リンクを追加') . '</button>'

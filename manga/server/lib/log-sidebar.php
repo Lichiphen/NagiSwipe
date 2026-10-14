@@ -109,7 +109,8 @@ function nl_sidebar_validate(mixed $items): array
             $row = ['id' => $id, 'kind' => $kind, 'enabled' => $item['enabled']];
             if ($kind === 'links') {
                 if (!is_bool($item['icon_frame'])) throw new UnexpectedValueException(nm_t('アイコンのフチの設定を確認してください'));
-                $row += ['icon_frame' => $item['icon_frame'], 'message' => nl_links_message($item['message']), 'links' => nl_links_validate($item['links'] ?? null)];
+                if (!is_bool($item['show_name'])) throw new UnexpectedValueException(nm_t('名前の表示の設定を確認してください'));
+                $row += ['icon_frame' => $item['icon_frame'], 'show_name' => $item['show_name'],'message' => nl_links_message($item['message']), 'links' => nl_links_validate($item['links'] ?? null)];
             }
             $out[] = $row; $builtins[$id] = true; continue;
         }

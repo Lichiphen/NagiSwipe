@@ -59,6 +59,9 @@ def run(c, csrf):
         check(f'{name}に日本語の表示が残っていない', r.status == 200 and not found, f'{r.status} {found}')
     top = pub.get('/').text
     check('ページの言語が英語', '<html lang="en"' in top)
+    check('サイドバーのアイコンの下に名前を表示', re.search(r'class="log-profile-icon[^"]*">.*?</div><p class="log-profile-name">Me</p>', top, re.S) is not None)
+    panel = c.get('/admin/index.php?p=settings&section=log').text
+    check('管理画面に名前の表示スイッチの英語の案内', 'Show the name under the icon' in panel and 'The name comes from “Name” in “LOG design and icon”.' in panel)
     data = re.search(r'<script type="application/json" id="nm-i18n">(.*?)</script>', top, re.S)
     check('スクリプト用の英語の文言だけを小さく入れる', data is not None and 0 < len(json.loads(data.group(1))) < 100)
     missing = pub.get('/no-such-page-here', headers={'Accept': 'text/html'})

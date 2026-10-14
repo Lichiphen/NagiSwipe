@@ -198,6 +198,7 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .log-profile-links { margin:0 0 24px; padding:8px 0 0; border:0; background:none; box-shadow:none; }
 .log-profile-icon { display:flex; justify-content:center; margin:0 0 16px; }.log-profile-icon .log-settings-avatar { width:84px; height:84px; font-size:36px; }
 .log-profile-message::before { content:""; position:absolute; left:50%; top:-9px; width:16px; height:16px; background:inherit; border:inherit; border-right:0; border-bottom:0; border-radius:3px 0 0; transform:translateX(-50%) rotate(45deg); }
+.log-profile-name { margin:-4px 0 16px; color:var(--log-text); font-size:16px; font-weight:700; line-height:1.4; text-align:center; overflow-wrap:anywhere; }
 .log-profile-icon-framed .log-settings-avatar { box-shadow:0 0 0 3px var(--log-bg),0 0 0 5px var(--log-accent),0 6px 18px #0000001f; }
 .log-profile-message { position:relative; margin:6px 0 16px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--log-accent) 30%,var(--log-line)); border-radius:14px; background:color-mix(in srgb,var(--log-accent) 10%,var(--log-card)); color:var(--log-text); font-size:13px; line-height:1.7; text-align:center; overflow-wrap:anywhere; }
 .log-link-buttons { display:grid; gap:8px; }
