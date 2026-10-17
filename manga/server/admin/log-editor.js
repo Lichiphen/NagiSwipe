@@ -59,6 +59,23 @@ window.NagiLogFormat = (() => {
         const text = '[' + label + '](https://)';
         put(body, start, end, text, label.length + 3, text.length - 1);
     }
+    // Ruby: the selected words get |…《》 with the caret in the brackets for the reading; |words《reading》 again comes off.
+    function ruby(body, range) {
+        const [start, end] = clamp(body, range);
+        const picked = body.value.slice(start, end);
+        const marked = /^[|｜]([^|｜《》\n]+)《[^《》\n]*》$/.exec(picked);
+        if (marked) { put(body, start, end, marked[1]); return; }
+        const words = picked.trim();
+        if (words === '' || picked.includes('\n')) {
+            const sample = t('漢字'), reading = t('かんじ');
+            put(body, start, end, '|' + sample + '《' + reading + '》', 1, 1 + sample.length);
+            return;
+        }
+        const lead = picked.length - picked.trimStart().length, trail = picked.length - picked.trimEnd().length;
+        const text = picked.slice(0, lead) + '|' + words + '《》' + picked.slice(picked.length - trail);
+        const at = lead + 1 + words.length + 1;
+        put(body, start, end, text, at, at);
+    }
     // ## / ### / ####: the lines become headings of that level; the same level again turns them back.
     function heading(body, range, level, post) {
         const mark = '#'.repeat(level) + ' ', { start, end, list } = lines(body, range);
@@ -124,6 +141,7 @@ window.NagiLogFormat = (() => {
         strike: (body, range) => wrap(body, range, '~~', t('取り消す文字')),
         code: (body, range) => wrap(body, range, '`', t('コード')),
         link,
+        ruby,
         list: (body, range) => prefix(body, range, 'list'),
         ordered: (body, range) => prefix(body, range, 'ordered'),
         quote: (body, range) => prefix(body, range, 'quote'),
@@ -180,7 +198,7 @@ window.NagiLogFormat = (() => {
         dialog.querySelectorAll('.log-format-group').forEach(g => g.remove());
         const names = { 2: t('見出し２'), 3: t('見出し３'), 4: t('見出し４') };
         if (levels.length) dialog.append(group(t('見出し'), levels.map(n => ['h' + n, names[n], '#'.repeat(n) + ' '])));
-        dialog.append(group(t('文字'), [['strike', t('取り消し線'), '~~ ~~'], ['code', t('コード'), '` `']]));
+        dialog.append(group(t('文字'), [['strike', t('取り消し線'), '~~ ~~'], ['code', t('コード'), '` `'], ['ruby', t('ルビ（読み仮名）'), '|漢字《かんじ》']]));
         dialog.append(group(t('まとまり'), [['list', t('箇条書き'), '- '], ['ordered', t('番号付きリスト'), '1. '], ['quote', t('引用'), '> '], ['table', t('表'), '| |'], ['rule', t('区切り線'), '---'], ['codeblock', t('コードブロック'), '```']]));
         dialog.showModal();
         dialog.querySelector('.log-format-choice')?.focus();

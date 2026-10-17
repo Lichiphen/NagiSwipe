@@ -304,7 +304,9 @@ def run(site, c, csrf):
     version = re.search(r"const NM_VERSION = '([0-9.]+)'", (tmp / 'manga/server/lib/bootstrap.php').read_text(encoding='utf-8')).group(1)
     released = cat_path.read_text(encoding='utf-8').replace('"next"', f'"{version}"')
     # Before a release the coming version is "next": the ZIP is refused.
-    cat_path.write_text(released.replace(f'"{version}"', '"next"'), encoding='utf-8')
+    # A patch release may add no names, so mark the newest version the list has (this one when it is there).
+    mark = version if f'"{version}"' in released else json.loads(released)['history'][-1]['version']
+    cat_path.write_text(released.replace(f'"{mark}"', '"next"'), encoding='utf-8')
     r = subprocess.run([sys.executable, str(tmp / 'manga/dev/build_release.py')], capture_output=True, text=True, encoding='utf-8', cwd=tmp)
     check('一覧に "next" が残っている間は配布ZIPを作らない', r.returncode != 0 and 'next' in r.stdout, r.stdout[-300:])
     # As at a release: the version number goes in and the README copy of the list is written again.

@@ -85,7 +85,7 @@ function nl_handle_post(string $do): never
                 [$p['rating'], $p['warning']] = nl_rating_input($p);
                 $p['media'] = nl_media_refs($p['body']);
                 $p['_media_ratings'] = nl_media_ratings_input($p['media_ratings'], $p['media']);
-                nm_json(['html' => '<h2>' . h(nl_post_title($p, 0)) . '</h2>' . nl_render_body($p, true, true)]);
+                nm_json(['html' => '<h2>' . nl_post_title_html($p) . '</h2>' . nl_render_body($p, true, true)]);
             case 'log_upload':
                 $file = $_FILES['image'] ?? null;
                 if (!is_array($file)) throw new UnexpectedValueException(nm_t('画像を選んでください'));
@@ -473,7 +473,7 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<label class="log-panel-check"><input type="checkbox" name="lock" value="1" data-lock-toggle' . ($locked ? ' checked' : '') . '>' . nm_t('この記事にパスワードをかける') . '</label>'
         . '<label class="log-panel-field">' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-lock-field></label>'
         . '<p class="note">' . nm_t('読者には、タイトル（1行目）とパスワードの入力欄だけを見せます。本文・画像・説明文は、正しいパスワードを入れた人にだけ表示します。開いた人のブラウザーには、パスワードではなく、この記事を読める印をクッキーで{days}日間残します。パスワードを変えると、開いていた人もまた入力が必要になります。', ['days' => NL_LOCK_DAYS]) . '</p></div>'
-        . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>' . nm_t('1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」「斜体」「リンク」のボタンで飾れます。') . '</li><li>' . nm_t('「装飾」ボタンで、見出し・箇条書き・番号付きリスト・引用・表・区切り線・取り消し線・コードを入れられます。本文はMarkdownで、## で見出し２、### で見出し３、#### で見出し４です（# が1つだけならハッシュタグ）。') . '</li><li>' . nm_t('見出しが{n}つ以上ある記事には、記事のページで最初の見出し２の上に目次が出ます。', ['n' => NL_TOC_MIN]) . '</li><li>' . nm_t('画像・動画・音声はここへドロップ、または貼り付けでも追加できます。本文の下に並ぶサムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。×で外せます（スマホは長押ししてから動かします）。') . '</li><li>' . nm_t('追加したメディアは、本文のカーソル位置に「〔メディア1〕」のような行で置きます。置いた場所は光って知らせます。まとまりの＋から追加すると、そのまとまりに入ります。本文の中の帯をドラッグすると、その行を動かせます。') . '</li><li>' . nm_t('動画（MP4・MOV・WebM）と音声（MP3・M4A・OGG・WAV・FLAC）も、画像と同じように追加できます。大きなファイルは分けて送ります。音声は波形とジャケット、動画は最初のほうのコマを表紙にします。') . '</li><li>' . nm_t('URLだけを1行に貼ると、YouTubeやX、Amazon Music、SoundCloudなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。') . '</li><li>' . nm_t('閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。') . '</li></ul></div>'
+        . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>' . nm_t('1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」「斜体」「リンク」のボタンで飾れます。') . '</li><li>' . nm_t('「装飾」ボタンで、見出し・箇条書き・番号付きリスト・引用・表・区切り線・取り消し線・コード・ルビを入れられます。本文はMarkdownで、## で見出し２、### で見出し３、#### で見出し４です（# が1つだけならハッシュタグ）。ルビは |漢字《かんじ》 と書きます。') . '</li><li>' . nm_t('見出しが{n}つ以上ある記事には、記事のページで最初の見出し２の上に目次が出ます。', ['n' => NL_TOC_MIN]) . '</li><li>' . nm_t('画像・動画・音声はここへドロップ、または貼り付けでも追加できます。本文の下に並ぶサムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。×で外せます（スマホは長押ししてから動かします）。') . '</li><li>' . nm_t('追加したメディアは、本文のカーソル位置に「〔メディア1〕」のような行で置きます。置いた場所は光って知らせます。まとまりの＋から追加すると、そのまとまりに入ります。本文の中の帯をドラッグすると、その行を動かせます。') . '</li><li>' . nm_t('動画（MP4・MOV・WebM）と音声（MP3・M4A・OGG・WAV・FLAC）も、画像と同じように追加できます。大きなファイルは分けて送ります。音声は波形とジャケット、動画は最初のほうのコマを表紙にします。') . '</li><li>' . nm_t('URLだけを1行に貼ると、YouTubeやX、Amazon Music、SoundCloudなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。') . '</li><li>' . nm_t('閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。') . '</li></ul></div>'
         . '<div class="log-preview" data-preview-body hidden></div>'
         . '<input type="hidden" name="title" value="">'
         . '<p class="log-status" role="status" aria-live="polite"></p><div class="log-submit"><span class="note" data-character-count></span><button class="btn" name="status" value="draft">' . nm_t('下書き保存') . '</button><button class="btn primary" name="status" value="published">' . (!nl_settings()['public'] ? nm_t('メモを保存') : ($edit ? nm_t('公開して保存') : nm_t('投稿する'))) . '</button></div></form></section>'
@@ -486,7 +486,7 @@ function nl_admin_post_card(array $p): string
     $published = $p['status'] === 'published';
     return '<article class="log-post"><div class="log-post-meta"><time datetime="' . h(nl_date($p['created'], 'c')) . '">' . h(nl_date($p['created'])) . '</time><span class="badge">' . ($published ? nm_t('公開') : nm_t('下書き')) . '</span><a href="index.php?p=log_edit&id=' . h($p['id']) . '">' . nm_t('編集') . '</a>'
         . ($published ? '<a href="' . h(nl_post_url($p['id'], '../')) . '">' . nm_t('個別ページ') . '</a>' : '') . '</div>'
-        . '<h2>' . h(nl_post_title($p, 0)) . '</h2>' . nl_render_body($p, true) . nl_category_links($p, true) . '</article>';
+        . '<h2>' . nl_post_title_html($p) . '</h2>' . nl_render_body($p, true) . nl_category_links($p, true) . '</article>';
 }
 function nl_view_log(): void
 {

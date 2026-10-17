@@ -578,7 +578,7 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
 function nl_excerpt(array $p, int $length = 120): string
 {
     // Markdown marks: code blocks go, a link keeps its words, line marks (## - 1. >), table rules and emphasis marks are dropped.
-    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '/^ {0,3}(?:#{2,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$/mu', '/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/mu'], ['', '', '$1', '', '', ''], nl_post_parts($p)['body']);
+    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '/^ {0,3}(?:#{2,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$/mu', '/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/mu'], ['', '', '$1', '', '', ''], nl_ruby_plain(nl_post_parts($p)['body']));
     $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u', '~https?://[^\s<>"\[\]]+~u'], '', $text);
     $text = str_replace(['**', '~~', '`', '*', '|'], ['', '', '', '', ' '], (string)preg_replace(NL_HASHTAG_PATTERN, '', $text));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
@@ -601,8 +601,13 @@ function nl_post_parts(array $p): array
 }
 function nl_post_title(array $p, int $limit = 80): string
 {
-    $first = nl_post_parts($p)['title'];
+    $first = nl_ruby_plain(nl_post_parts($p)['title']);
     return $limit > 0 && mb_strlen($first) > $limit ? mb_substr($first, 0, $limit) . '…' : $first;
+}
+/** The whole title as HTML for the article's own heading, with its ruby (nl_post_title() is the plain text). */
+function nl_post_title_html(array $p): string
+{
+    return nl_ruby(h(nl_post_parts($p)['title']));
 }
 /** Search folds width, case and katakana/hiragana one character to one, so match positions map back to the original text. */
 function nl_search_norm(string $s): string
@@ -624,14 +629,19 @@ function nl_search_text(array $p, array $categories): string
 }
 function nl_search_body(array $p): string
 {
-    return str_replace('**', '', (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], (string)$p['body']));
+    return str_replace('**', '', (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], nl_ruby_plain((string)$p['body'])));
+}
+/** What search looks through: the body without ruby marks, then the readings (検索 is found by けんさく too). */
+function nl_search_hay(array $p): string
+{
+    return nl_search_norm(nl_search_body($p) . "\n" . nl_ruby_readings((string)$p['body']));
 }
 /**
  * Derived search file: folded body text per post, read only when someone searches.
  * An entry counts only while its "updated" equals the post summary's; otherwise the post file is read.
  */
 function nl_search_file(): string { return nl_root() . '/search.php'; }
-function nl_search_entry(array $p): array { return ['u' => (int)$p['updated'], 't' => nl_search_norm(nl_search_body($p))]; }
+function nl_search_entry(array $p): array { return ['u' => (int)$p['updated'], 't' => nl_search_hay($p)]; }
 function nl_search_index_write(array $entries): void
 {
     try { nl_write_record(nl_search_file(), ['schema' => 1, 'posts' => $entries]); }
@@ -669,7 +679,7 @@ function nl_search_posts(array $summaries, array $terms, bool $locks = true): ar
         } else {
             $p = nl_load_post($s['id']);
             if (!$p) return false;
-            $hay = nl_search_norm(nl_search_body($p));
+            $hay = nl_search_hay($p);
         }
         foreach ($s['categories'] ?? [] as $id) if (isset($categories[$id])) $hay .= "\n" . $categories[$id];
         foreach ($terms as $t) if (!str_contains($hay, $t)) return false;

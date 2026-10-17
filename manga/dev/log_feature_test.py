@@ -232,6 +232,18 @@ def run(c, csrf, port):
     check("一覧では目次も見出しのidも出さない", 'log-heading-2">はじめに' in top and 'log-toc' not in top and 'id="はじめに"' not in top)
     check("説明文からMarkdownの記号を除く", 'content="1行目 と斜体 2行目 はじめに 項目 リンク 引用 小見出し 細かい見出し まとめ a b 1 2"' in public.get("/?id=" + pid_md).text)
 
+    # Ruby: |親文字《よみ》, kanji《よみ》 and |《; plain text in the title tag, description and search; readings found by search.
+    pid_ruby = save("|花火《はなび》大会の記録\n東京都《とうきょうと》の｜夜空《よぞら》、ひらがな《かな》、|《そのまま》\n**強調《きょうちょう》**と`漢字《かんじ》`\n## 花火《はなび》の夜")
+    page = public.get("/?id=" + pid_ruby).text
+    body = page.split('class="log-body"')[1].split('<footer')[0]
+    ruby = lambda base, rt: '<ruby>' + base + '<rp>（</rp><rt>' + rt + '</rt><rp>）</rp></ruby>'
+    check("ルビ: |親文字《よみ》・全角｜・漢字だけの省略形", ruby('東京都', 'とうきょうと') + 'の' + ruby('夜空', 'よぞら') + '、ひらがな《かな》、《そのまま》' in body)
+    check("ルビ: 太字の中は振り、コードの中は記号のまま", '<strong>' + ruby('強調', 'きょうちょう') + '</strong>' in body and '<code>漢字《かんじ》</code>' in body)
+    check("ルビ: 見出しに振り、idは親文字だけ", '<h2 id="花火の夜" class="log-heading-2">' + ruby('花火', 'はなび') + 'の夜</h2>' in body)
+    check("ルビ: タイトルの見出しに振り、題名と説明文は親文字だけ", '<h1>' + ruby('花火', 'はなび') + '大会の記録</h1>' in page and '<title>花火大会の記録｜' in page and 'content="東京都の夜空、ひらがな《かな》、《そのまま》 強調と漢字 花火の夜"' in page)
+    found = lambda q: has(public.get("/?q=" + urllib.parse.quote(q)).text, pid_ruby)
+    check("ルビ: 親文字でも読み仮名でも検索で見つかる", found("東京都の夜空") and found("とうきょうと") and found("花火大会") and found("よぞら"))
+
 
 def main():
     RESULTS.mkdir(exist_ok=True)

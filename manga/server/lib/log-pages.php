@@ -110,7 +110,8 @@ function nl_page_delete(string $id, int $revision): void
 /**
  * The supported subset: headings (# and ## are 見出し2, ### 見出し3, #### and smaller 見出し4), paragraphs with
  * line breaks kept, **bold**, *italic*, ~~strike~~, `code`, code blocks (```), > quotes, lists (-, 1.) with
- * nesting, tables, --- rules, [links](URL), ![pictures](URL) and bare URLs. HTML is shown as text.
+ * nesting, tables, --- rules, [links](URL), ![pictures](URL), bare URLs and ruby (|漢字《かんじ》, nl_ruby()).
+ * HTML is shown as text.
  * Posts ($post) use the same marks, with their own differences: every line break is kept as is (no paragraphs),
  * a heading needs ## or more (# starts a hashtag), and #hashtags become links.
  */
@@ -254,13 +255,39 @@ function nl_md_list(array $lines, int $i, bool $admin, int $depth, array &$ids, 
 /** A heading's id for #links: its words, like GitHub (見出し → #見出し), numbered when repeated. */
 function nl_md_anchor(string $text, array &$ids): string
 {
-    $plain = (string)preg_replace(['/!?\[([^\]]*)\]\([^)]*\)/u', '/[*_~`]/'], ['$1', ''], $text);
+    $plain = (string)preg_replace(['/!?\[([^\]]*)\]\([^)]*\)/u', '/[*_~`]/'], ['$1', ''], nl_ruby_plain($text));
     $id = trim((string)preg_replace('/[^\p{L}\p{N}_-]+/u', '-', mb_strtolower($plain, 'UTF-8')), '-');
     $id = mb_substr($id !== '' ? $id : 'section', 0, 60);
     $base = $id;
     for ($k = 1; isset($ids[$id]); $k++) $id = $base . '-' . $k;
     $ids[$id] = true;
     return $id;
+}
+/**
+ * Ruby (読み仮名) on escaped text, as in Aozora Bunko and novel sites: |親文字《よみ》 (or ｜), or 漢字《かんじ》 where the
+ * kanji right before 《 take the reading. |《 shows 《 itself. <rp> keeps the reading in brackets where ruby is not shown.
+ */
+const NL_RUBY_PATTERN = '/[|｜]([^|｜《》\n]{1,50})《([^《》\n\x01\x02]{1,50})》|([\p{Han}々〆ヶ〇]{1,20})《([^《》\n\x01\x02]{1,50})》/u';
+function nl_ruby(string $html): string
+{
+    $html = (string)preg_replace_callback(NL_RUBY_PATTERN, static function (array $m): string {
+        $base = ($m[1] ?? '') !== '' ? $m[1] : $m[3];
+        $reading = ($m[2] ?? '') !== '' ? $m[2] : $m[4];
+        return '<ruby>' . $base . '<rp>（</rp><rt>' . trim($reading) . '</rt><rp>）</rp></ruby>';
+    }, $html);
+    return (string)preg_replace('/[|｜](?=《)/u', '', $html);
+}
+/** The text without ruby marks: only the base characters (for titles, descriptions, heading ids and search). */
+function nl_ruby_plain(string $text): string
+{
+    $text = (string)preg_replace_callback(NL_RUBY_PATTERN, static fn(array $m): string => ($m[1] ?? '') !== '' ? $m[1] : $m[3], $text);
+    return (string)preg_replace('/[|｜](?=《)/u', '', $text);
+}
+/** The readings alone, one space apart, so search finds a word by its reading too. */
+function nl_ruby_readings(string $text): string
+{
+    preg_match_all(NL_RUBY_PATTERN, $text, $found, PREG_SET_ORDER);
+    return implode(' ', array_map(static fn(array $m): string => ($m[2] ?? '') !== '' ? $m[2] : $m[4], $found));
 }
 /**
  * Inline marks on one line. Links, pictures, code and URLs become placeholders so bold can wrap them.
@@ -301,6 +328,7 @@ function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags 
         $out .= $keep($links && filter_var($url, FILTER_VALIDATE_URL) ? '<a href="' . h($url) . '" rel="noopener noreferrer">' . h($url) . '</a>' : h($url));
     }
     $out .= $plain(substr($text, $at));
+    $out = nl_ruby($out);
     $out = (string)preg_replace(['/\*\*(?=\S)(.+?)(?<=\S)\*\*/u', '/~~(?=\S)(.+?)(?<=\S)~~/u', '/(?<!\*)\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?!\*)/u'], ['<strong>$1</strong>', '<del>$1</del>', '<em>$1</em>'], $out);
     return (string)preg_replace_callback('/\x01([0-9]+)\x02/', static fn($t) => $tokens[(int)$t[1]] ?? '', $out);
 }
@@ -316,8 +344,9 @@ function nl_toc(string $html): string
     if ($mode === 'off' || preg_match_all('~<h([234]) id="([^"]+)"[^>]*>(.*?)</h\1>~s', $html, $found, PREG_SET_ORDER | PREG_OFFSET_CAPTURE) < NL_TOC_MIN) return $html;
     $items = '';
     foreach ($found as $m) {
-        $text = trim(html_entity_decode(strip_tags($m[3][0]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
-        if ($text !== '') $items .= '<li class="log-toc-' . $m[1][0] . '"><a href="#' . $m[2][0] . '">' . h($text) . '</a></li>';
+        // Ruby stays (its words are escaped already); every other tag goes.
+        $label = trim(strip_tags($m[3][0], '<ruby><rp><rt>'));
+        if (trim(strip_tags($label)) !== '') $items .= '<li class="log-toc-' . $m[1][0] . '"><a href="#' . $m[2][0] . '">' . $label . '</a></li>';
     }
     $at = $found[0][0][1];
     foreach ($found as $m) if ($m[1][0] === '2') { $at = $m[0][1]; break; }
@@ -368,7 +397,7 @@ function nl_md_image_origins(string $html): string
 /** Plain text of a page for its description: Markdown marks and URLs removed. */
 function nl_page_excerpt(array $p, int $length = 120): string
 {
-    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '$1', '', '', '', ''], $p['body']);
+    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '$1', '', '', '', ''], nl_ruby_plain($p['body']));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
     return mb_strlen($text) > $length ? rtrim(mb_substr($text, 0, $length - 1)) . '…' : $text;
 }
@@ -403,6 +432,7 @@ function nl_page_help(): string
     $rows = [
         [nm_t('## 見出し'), nm_t('大きな見出し（# も同じ）。### で小見出し、#### でさらに小さく。見出しが4つ以上あると、最初の見出しの上に目次が出ます')],
         [nm_t('**太字** *斜体* ~~取り消し線~~'), nm_t('文字の強調')],
+        [nm_t('|親文字《ルビ》'), nm_t('ルビ（読み仮名）。漢字だけなら | は省けます（漢字《かんじ》）。表の中では全角の ｜ を使います')],
         [nm_t('- 項目 / 1. 項目'), nm_t('箇条書きと番号付きリスト。行頭に空白2つで入れ子')],
         [nm_t('[文字](https://example.com/)'), nm_t('リンク。./privacy や ./?pg=privacy のようなサイト内のURLも使えます')],
         [nm_t('![説明](./?media=…)'), nm_t('画像。「画像を追加」かドロップで入ります')],

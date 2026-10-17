@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.8.0](https://img.shields.io/badge/NagiLog-v0.8.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.8.0](https://img.shields.io/badge/NagiManga-v0.8.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.8.1](https://img.shields.io/badge/NagiLog-v0.8.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.8.1](https://img.shields.io/badge/NagiManga-v0.8.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -41,6 +41,7 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
   - [Headings](#headings)
   - [Table of contents](#table-of-contents)
   - [Markdown in posts](#markdown-in-posts)
+  - [Ruby (reading aids)](#ruby-reading-aids)
 - [Content warnings (sensitive, R-18, R-18G)](#content-warnings-sensitive-r-18-r-18g)
 - [Embedding social media and video](#embedding-social-media-and-video)
   - [Blog cards](#blog-cards)
@@ -94,7 +95,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.8.0 (included in NagiManga v0.8.0) |
+| Version | 0.8.1 (included in NagiManga v0.8.1) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -232,7 +233,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.8.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.8.1.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -430,7 +431,7 @@ The posting box has the text, the media of the text, chips for set items and one
 | Add pictures, video or audio / Choose from the media list | Places them at the cursor in the text (see below). Video and audio go into the same rows. |
 | Choose manga | Puts a manga tag at the cursor in the text. |
 | B, I, link | Makes the selected text bold or italic, or a link. Pressing B or I again takes the mark off. |
-| Format (A and three lines) | Opens a choice of headings, strikethrough, code, bulleted and numbered lists, quotes, tables, dividing lines and code blocks (see "Headings" and "Markdown in posts" below). They are gathered here so the tool row stays short on phones. |
+| Format (A and three lines) | Opens a choice of headings, strikethrough, code, ruby, bulleted and numbered lists, quotes, tables, dividing lines and code blocks (see "Headings" and "Markdown in posts" below). They are gathered here so the tool row stays short on phones. |
 | #, folder, warning triangle, ? | Opens recent hashtags, categories, content warnings or help below the tool row, one at a time. |
 | Eye | Opens and closes the preview. |
 
@@ -518,6 +519,21 @@ Post text takes the same Markdown as fixed pages (see the table under "Fixed pag
 - Headings start at `##`. A single `#` is a hashtag.
 - `#tag` becomes a hashtag link. A line with only a URL still becomes an embed or a blog card.
 - Code inside ```` ``` ```` is never turned into headings or embeds.
+
+### Ruby (reading aids)
+
+The text of posts and fixed pages, and a post's title (its first line), take ruby written the way Aozora Bunko and Japanese novel sites do. The reading is shown small above the words.
+
+| Syntax | Shown as |
+| --- | --- |
+| `\|親文字《おやもじ》` | "おやもじ" above "親文字". A full-width `｜` works the same as `\|` |
+| `漢字《かんじ》` | Only the kanji right before 《 get the reading (the short form without `\|`). Words mixing hiragana or katakana start with `\|` |
+| `\|《` | Shows 《 as it is |
+
+- "装飾 › 文字 › ルビ（読み仮名）" (Format › Text › Ruby) in the posting box and the page editor puts `|…《》` around the selected words and leaves the cursor where the reading goes. Selecting the marked words and pressing it again takes it off.
+- In a table `|` divides the columns, so use the full-width `｜` there. Inside code the marks stay as typed.
+- Where ruby is not supported (some RSS readers), it shows in brackets, like "親文字（おやもじ）".
+- Page titles, descriptions, search results and lists show only the base words. Search finds a post by its readings too (`漢字` and `かんじ` both find it).
 
 ## Content warnings (sensitive, R-18, R-18G)
 
@@ -1305,6 +1321,7 @@ The Markdown that can be used in the text is below. Line breaks stay line breaks
 | --- | --- |
 | `## Heading` (`#` too) / `### Subheading` / `#### Smaller` | Headings (h2 / h3 / h4). Headings get an ID for jumping with `#heading text`. With four or more, a table of contents goes right above the first heading 2 |
 | `**bold**` `*italic*` `~~strikethrough~~` `` `code` `` | Emphasis |
+| `\|親文字《おやもじ》` / `漢字《かんじ》` | Ruby (readings; see [Ruby (reading aids)](#ruby-reading-aids)) |
 | `- item` / `1. item` (two spaces at the start of the line to nest) | Bulleted and numbered lists |
 | `[text](https://…)` / `[text](./?pg=terms)` / `[mail](mailto:…)` | Links. `javascript:` and the like do not become links |
 | `![description](./?media=…)` | Pictures. Log pictures can be zoomed with NagiSwipe, and replacing them shows the new picture |
@@ -1313,7 +1330,7 @@ The Markdown that can be used in the text is below. Line breaks stay line breaks
 | `---` | A dividing line |
 | enclosed in ```` ``` ```` | Code over several lines |
 
-The edit screen has buttons for bold, italic and links, "装飾" (Format, the same window as in the posting box) for headings, bullets, numbers, quotes, tables, dividing lines, strikethrough and code, "画像を追加" (add pictures), "画像一覧から選ぶ" (choose from the picture list) and a preview.
+The edit screen has buttons for bold, italic and links, "装飾" (Format, the same window as in the posting box) for headings, bullets, numbers, quotes, tables, dividing lines, strikethrough, code and ruby, "画像を追加" (add pictures), "画像一覧から選ぶ" (choose from the picture list) and a preview.
 "画像一覧から選ぶ" opens the picture list in a small screen; search by description, choose, and it goes in at the cursor in the text. Pictures can also be added by dropping them anywhere on the edit screen or pasting them into the text, which puts in a `![description](./?media=…)` line.
 Under the text, the pictures in the text are lined up as thumbnails, as in the posting screen. Pressing one selects its line in the text, and × removes it from the text (the picture itself stays in the picture list). The "+" at the end of the row and the picture button also add pictures. Saving goes over the network, and when it fails the text you wrote stays on screen. It does not save with a duplicate URL name or when the page was updated on another screen.
 

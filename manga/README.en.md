@@ -4,8 +4,8 @@
 
 # NagiManga (manga viewer)
 
-[![NagiManga v0.8.0](https://img.shields.io/badge/NagiManga-v0.8.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#demo)
-[![NagiLog v0.8.0](https://img.shields.io/badge/NagiLog-v0.8.0-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.en.md)
+[![NagiManga v0.8.1](https://img.shields.io/badge/NagiManga-v0.8.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#demo)
+[![NagiLog v0.8.1](https://img.shields.io/badge/NagiLog-v0.8.1-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)

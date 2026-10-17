@@ -438,6 +438,9 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-body pre code { padding:0; background:none; white-space:pre; }
 .log-body hr { margin:1.4em 0; border:0; border-top:1px solid var(--log-line); }
 .log-body del { color:var(--log-muted); }
+/* Ruby (|漢字《かんじ》, in posts, pages, titles and the table of contents): a small reading over the words. */
+.log-site ruby,.log-body ruby,.log-page-body ruby { ruby-align:center; overflow-wrap:normal; }
+.log-site rt,.log-body rt,.log-page-body rt { font-size:.55em; font-weight:500; line-height:1.2; letter-spacing:.02em; text-align:center; }
 .log-body img.log-md-image { max-width:100%; height:auto; border-radius:8px; vertical-align:middle; }
 /* The table of contents (above the first 見出し2 of an article or page). */
 .log-toc { margin:1.2em 0 1.6em; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); font-size:.94rem; line-height:1.6; }
