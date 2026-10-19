@@ -434,8 +434,8 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-body li::marker { color:var(--log-accent); }
 .log-body blockquote { padding:.6em 1em; border-left:4px solid var(--log-line); border-radius:0 10px 10px 0; background:var(--log-bg); color:var(--log-muted); }
 .log-body code { padding:.12em .4em; border-radius:6px; background:var(--log-bg); font:.9em/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; }
-.log-body pre { padding:12px 14px; overflow:auto; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); line-height:1.6; }
-.log-body pre code { padding:0; background:none; white-space:pre; }
+.log-body pre { padding:12px 14px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); line-height:1.6; }
+.log-body pre code { padding:0; background:none; white-space:pre-wrap; overflow-wrap:anywhere; }
 .log-body hr { margin:1.4em 0; border:0; border-top:1px solid var(--log-line); }
 .log-body del { color:var(--log-muted); }
 /* Ruby (|漢字《かんじ》, in posts, pages, titles and the table of contents): a small reading over the words. */
@@ -544,10 +544,21 @@ html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
 .log-page-body blockquote { padding:.7em 1.1em; border-left:4px solid var(--log-line); border-radius:0 10px 10px 0; background:var(--log-bg); color:var(--log-muted); }
 .log-page-body blockquote > :last-child { margin-bottom:0; }
 .log-page-body code { padding:.12em .4em; border-radius:6px; background:var(--log-bg); font:.9em/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; }
-.log-page-body pre { padding:14px 16px; overflow:auto; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); line-height:1.6; }
-.log-page-body pre code { padding:0; background:none; white-space:pre; }
+.log-page-body pre { padding:14px 16px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); line-height:1.6; }
+.log-page-body pre code { padding:0; background:none; white-space:pre-wrap; overflow-wrap:anywhere; }
 .log-page-body hr { margin:2.2em 0; border:0; border-top:1px solid var(--log-line); }
 .log-page-body del { color:var(--log-muted); }
+/* Code blocks wrap long lines (no sideways scrolling) and carry a COPY button (viewer/log-code.js) on the frame's top right corner, half above it. */
+.log-code-block { position:relative; margin:22px 0 .5em; }.log-page-body .log-code-block { margin:26px 0 1.15em; }
+.log-body .log-code-block > pre,.log-page-body .log-code-block > pre { margin:0; padding-top:18px; }
+.log-code-copy { position:absolute; top:0; right:12px; z-index:1; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 11px; transform:translateY(-50%); border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-muted); box-shadow:0 2px 8px #0000001f; font:inherit; font-size:.7rem; font-weight:700; line-height:1; letter-spacing:.06em; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:color .15s ease,border-color .15s ease,background-color .15s ease; }
+.log-code-copy:hover { color:var(--log-accent); border-color:var(--log-accent); }.log-code-copy:active { transform:translateY(-50%) scale(.95); }.log-code-copy:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-code-copy svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }.log-code-copy .log-code-icon-done { display:none; }
+.log-code-copy.is-copied { color:#047857; background:var(--ok-bg); border-color:#6ee7b7; }.log-code-copy.is-error { color:var(--danger); background:var(--err-bg); border-color:var(--danger); }
+html[data-log-theme^="dark"] .log-code-copy.is-copied { color:#8fe0b5; border-color:#4f9f78; }
+.log-code-copy.is-copied .log-code-icon-copy { display:none; }.log-code-copy.is-copied .log-code-icon-done { display:block; animation:log-share-pop .25s ease; }
+@media(prefers-reduced-motion:reduce) { .log-code-copy { transition:none; }.log-code-copy.is-copied .log-code-icon-done { animation:none; } }
+@media print { .log-code-copy { display:none; } }
 .log-md-table { max-width:100%; overflow-x:auto; }
 .log-md-table table { width:100%; border-collapse:collapse; font-size:.94em; line-height:1.7; }
 .log-md-table th,.log-md-table td { padding:9px 12px; border:1px solid var(--log-line); text-align:left; vertical-align:top; }

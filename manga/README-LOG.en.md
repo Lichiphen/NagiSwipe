@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.8.1](https://img.shields.io/badge/NagiLog-v0.8.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.8.1](https://img.shields.io/badge/NagiManga-v0.8.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -95,7 +95,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.8.1 (included in NagiManga v0.8.1) |
+| Version | 0.8.2 (included in NagiManga v0.8.2) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -233,7 +233,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.8.1.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.8.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -518,7 +518,7 @@ Post text takes the same Markdown as fixed pages (see the table under "Fixed pag
 - Line breaks and blank lines stay as typed; text is not split into paragraphs.
 - Headings start at `##`. A single `#` is a hashtag.
 - `#tag` becomes a hashtag link. A line with only a URL still becomes an embed or a blog card.
-- Code inside ```` ``` ```` is never turned into headings or embeds.
+- Code inside ```` ``` ```` is never turned into headings or embeds. Long lines wrap instead of scrolling sideways, and the COPY button on the frame's top right corner copies the code as it is (posts and fixed pages alike).
 
 ### Ruby (reading aids)
 
@@ -1034,6 +1034,8 @@ The list of this version:
 | `.log-toc-rail` | The table of contents that follows beside the article (wide screens) | Post pages, Fixed pages | `.log-toc-rail-card { border-radius: 12px; }` | v0.8.0 |
 | `.log-toc-fab` | The table of contents button (bottom right on narrower screens; its ring shows how much is read) | Post pages, Fixed pages | `.log-toc-fab { color: var(--log-cyan); }` | v0.8.0 |
 | `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
+| `.log-code-block` | The frame of a code block in an article or page; holds pre.log-md-code and the COPY button | Post pages, Fixed pages | `.log-code-block pre { font-size: 13px; }` | v0.8.2 |
+| `.log-code-copy` | The COPY button on the top right corner of a code block (.is-copied after copying) | Post pages, Fixed pages | `.log-code-copy { color: var(--log-accent); }` | v0.8.2 |
 
 **CSS variables**
 

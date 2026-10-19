@@ -713,6 +713,32 @@
    ],
    "example": ".log-toc-sheet { border-radius: 16px 16px 0 0; }",
    "since": "0.8.0"
+  },
+  {
+   "name": ".log-code-block",
+   "purpose": {
+    "ja": "記事・固定ページのコードブロックの枠。中に pre.log-md-code と COPY ボタン",
+    "en": "The frame of a code block in an article or page; holds pre.log-md-code and the COPY button"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-code-block pre { font-size: 13px; }",
+   "since": "0.8.2"
+  },
+  {
+   "name": ".log-code-copy",
+   "purpose": {
+    "ja": "コードブロックの右上の COPY ボタン（コピーしたあとは .is-copied）",
+    "en": "The COPY button on the top right corner of a code block (.is-copied after copying)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-code-copy { color: var(--log-accent); }",
+   "since": "0.8.2"
   }
  ],
  "variables": [
@@ -942,6 +968,8 @@
   "log-cat-sep",
   "log-categories-label",
   "log-category-picker",
+  "log-code-icon-copy",
+  "log-code-icon-done",
   "log-crumb",
   "log-crumb-home",
   "log-crumb-sep",
@@ -1133,6 +1161,13 @@
     ".log-toc-rail",
     ".log-toc-fab",
     ".log-toc-sheet"
+   ]
+  },
+  {
+   "version": "0.8.2",
+   "added": [
+    ".log-code-block",
+    ".log-code-copy"
    ]
   }
  ]

@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.8.1](https://img.shields.io/badge/NagiLog-v0.8.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.8.1](https://img.shields.io/badge/NagiManga-v0.8.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -93,7 +93,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.8.1（NagiManga v0.8.1に同梱） |
+| 版 | 0.8.2（NagiManga v0.8.2に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -230,7 +230,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.8.1.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.8.2.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、30分以内に管理者パスワードを決めます。
 3. 表示された管理用URLをブックマークします。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -515,7 +515,7 @@ Markdownを書かない場合は、投稿欄の「装飾」を使います。押
 - 改行も空行も、書いたとおりに残します。段落には分けません。
 - 見出しは `##` からです。`#` が1つだけならハッシュタグです。
 - `#タグ` はハッシュタグのリンクになります。URLだけの行は、これまでどおり埋め込みやブログカードになります。
-- ```` ``` ```` で囲んだコードの中は、見出しにも埋め込みにもしません。
+- ```` ``` ```` で囲んだコードの中は、見出しにも埋め込みにもしません。長い行は横にスクロールせず折り返し、枠の右上の「COPY」ボタンでコードをそのままコピーできます（記事・固定ページとも）。
 
 ### ルビ（読み仮名）
 
@@ -1031,6 +1031,8 @@ LOG用のバックアップZIPには、追加CSSと適用のオン・オフを�
 | `.log-toc-rail` | 記事の左に付いてくる目次（広い画面） | 記事のページ・固定ページ | `.log-toc-rail-card { border-radius: 12px; }` | v0.8.0 |
 | `.log-toc-fab` | 目次のボタン（狭い画面の右下。読んだ割合をリングで表示） | 記事のページ・固定ページ | `.log-toc-fab { color: var(--log-cyan); }` | v0.8.0 |
 | `.log-toc-sheet` | 目次のボタンで開くシート | 記事のページ・固定ページ | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
+| `.log-code-block` | 記事・固定ページのコードブロックの枠。中に pre.log-md-code と COPY ボタン | 記事のページ・固定ページ | `.log-code-block pre { font-size: 13px; }` | v0.8.2 |
+| `.log-code-copy` | コードブロックの右上の COPY ボタン（コピーしたあとは .is-copied） | 記事のページ・固定ページ | `.log-code-copy { color: var(--log-accent); }` | v0.8.2 |
 
 **CSS変数**
 
