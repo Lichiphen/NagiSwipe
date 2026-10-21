@@ -326,6 +326,9 @@ details.more[open] > summary { margin-bottom: 12px; }
 .nm-qr-box { margin: 0; text-align: center; }
 .nm-qr { display: block; width: 228px; max-width: 100%; height: auto; margin: 0 auto 6px; border-radius: 6px; }
 .nm-qr-box figcaption { font-size: .78em; max-width: 228px; margin: 0 auto; }
+.nm-totp-name { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+.nm-totp-name img { flex: none; border-radius: 8px; background: #fff; }
+.nm-totp-name p { margin: 0; }
 .nm-totp-key { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; letter-spacing: .06em; word-break: break-all; }
 .nm-otp { font-family: ui-monospace, Consolas, monospace; font-size: 1.3em; letter-spacing: .2em; max-width: 14em; }
 .nm-recovery-codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; line-height: 1.7; padding: 10px 14px; border: 1px solid var(--line, #ccc); border-radius: 8px; background: var(--bg, transparent); }

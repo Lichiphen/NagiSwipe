@@ -327,6 +327,7 @@ Logging in can ask for the 6-digit verification code from an authenticator app o
 - Wrong codes count like wrong passwords (locked for 15 minutes after 5).
 - Turning it on or off logs out the other devices.
 - The key is kept encrypted in `data/config.php`.
+- The app lists it under the site’s domain (for example `example.com`). Apps that read an image field (`image=`) also get the LOG’s favicon (NagiManga’s icon if none is set). Apps such as Authy look up a logo by the name and may show an unrelated one; pick the generic logo (a key) then.
 
 > [!NOTE]
 > The QR code is made inside this program (`lib/qrcode.php`); the key is never sent to another service. QR Code is a registered trademark of DENSO WAVE INCORPORATED.

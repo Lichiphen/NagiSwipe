@@ -5,7 +5,7 @@ The QR code on the setup page is read back with OpenCV (cv2) and must give the s
 the codes are made here with hmac (RFC 6238), so the server's own code is never trusted to check itself.
 Usage: python manga/dev/totp_test.py
 """
-import argparse, base64, hashlib, hmac, html, json, re, secrets, socket, struct, sys, time, urllib.parse
+import argparse, base64, hashlib, hmac, html, json, re, secrets, socket, struct, sys, time, urllib.parse, zlib
 from pathlib import Path
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--port', type=int, default=5440)
@@ -42,6 +42,15 @@ def qr_text(page):
     return ''
 
 
+def square_png(side=256):
+    """An opaque square PNG for the LOG's favicon."""
+    def chunk(t, data):
+        c = struct.pack('>I', len(data)) + t + data
+        return c + struct.pack('>I', zlib.crc32(t + data) & 0xFFFFFFFF)
+    raw = b''.join(b'\x00' + bytes((40, 120, 200)) * side for _ in range(side))
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', side, side, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+
+
 def login(port, key):
     c = h.Client(port)
     r = c.get('/admin/index.php?k=' + key)
@@ -64,15 +73,28 @@ def run(c, csrf, key):
     check('設定画面にQRコード（SVG）', '<svg class="nm-qr"' in page and 'role="img"' in page)
     check('QRコードの登録商標の表記', 'QRコードは株式会社デンソーウェーブの登録商標です。' in page)
     uri = html.unescape(re.search(r'<a class="btn" href="(otpauth://[^"]+)"', page).group(1))
-    check('スマホ用に otpauth:// のボタン', uri.startswith('otpauth://totp/NagiManga:'))
+    check('スマホ用に otpauth:// のボタン（発行元はサイトのホスト名）', uri.startswith(f'otpauth://totp/{h.HOST}:NagiManga?'))
     read = qr_text(page)
     check('QRコードを読むと同じ otpauth:// のアドレス', read == uri)
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(uri).query)
     secret = q['secret'][0]
-    check('鍵は160ビット（Base32で32文字）', re.fullmatch(r'[A-Z2-7]{32}', secret) is not None and q['issuer'] == ['NagiManga'] and q['digits'] == ['6'] and q['period'] == ['30'])
+    check('鍵は160ビット（Base32で32文字）', re.fullmatch(r'[A-Z2-7]{32}', secret) is not None and q['issuer'] == [h.HOST] and q['digits'] == ['6'] and q['period'] == ['30'])
+    image = q.get('image', [''])[0]
+    check('ファビコンがないときは NagiManga のアイコン（版付きの絶対URL）を image= で渡す', re.fullmatch(rf'http://{re.escape(h.HOST)}:{args.port}/viewer/favicon\.svg\?v=[0-9a-f]+', image) is not None)
+    check('渡したアイコンは開ける', c.get(urllib.parse.urlsplit(image).path + '?' + urllib.parse.urlsplit(image).query).status == 200)
+    check('設定画面に登録名とアイコンを表示', f'<strong>{h.HOST}</strong>' in page and '<img src="../viewer/favicon.svg?v=' in page)
     check('手入力用に鍵を4文字ずつ表示', ' '.join(secret[i:i + 4] for i in range(0, 32, 4)) in page)
     check('入力欄は数字キーボードと one-time-code', 'inputmode="numeric" autocomplete="one-time-code"' in page)
     check('開き直しても同じ鍵（読み込み済みのアプリが使える）', secret in c.get('/admin/index.php?p=twofactor').text)
+    r = c.post('/admin/index.php', {'csrf': csrf, 'do': 'settings_save_all', 'tab': 'log', 'sections[]': 'log_design', 'title': 'テストLOG', 'name': 'わたし', 'theme': 'light-blue', 'description': ''},
+               files={'favicon': ('icon.png', square_png(512), 'image/png')}, headers={'Accept': 'application/json'})
+    page = c.get('/admin/index.php?p=twofactor').text
+    image = urllib.parse.parse_qs(urllib.parse.urlsplit(html.unescape(re.search(r'href="(otpauth://[^"]+)"', page).group(1))).query).get('image', [''])[0]
+    m = re.fullmatch(rf'http://{re.escape(h.HOST)}:{args.port}/\?favicon=(\d+)&v=([0-9a-f]{{12}})', image)
+    check('LOGのファビコンを設定すると、いちばん大きいPNGを image= で渡す', r.status == 200 and m is not None and m.group(1) == '512')
+    got = c.get(f'/?favicon={m.group(1)}&v={m.group(2)}') if m else None
+    check('渡したファビコンはPNGとして開ける', got is not None and got.status == 200 and got.getheader('Content-Type') == 'image/png')
+    check('設定画面のアイコンもLOGのファビコン', m is not None and f'<img src="../?favicon={m.group(1)}&amp;v={m.group(2)}"' in page)
 
     # --- Turning it on ---------------------------------------------------------------------
     r = post({'do': 'totp_enable', 'current': PASSWORD, 'otp': '000000' if totp(secret, step()) != '000000' else '111111'})

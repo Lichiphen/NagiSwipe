@@ -70,11 +70,16 @@ function nm_totp_match(string $secret, string $code, int $after = 0): ?int
     }
     return null;
 }
-/** The address an authenticator app reads (from the QR code, or tapped on the phone itself). */
-function nm_totp_uri(string $secret, string $account): string
+/**
+ * The address an authenticator app reads (from the QR code, or tapped on the phone itself).
+ * $issuer is the site (its host), so several installs stay apart in the app; $image is the site's icon for the apps
+ * that read an image= field (FreeOTP and others). Some apps (Authy) look up a logo by the name instead.
+ */
+function nm_totp_uri(string $secret, string $issuer, string $account, string $image = ''): string
 {
-    $issuer = 'NagiManga';
-    return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode(mb_substr($account, 0, 60)) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=' . NM_TOTP_DIGITS . '&period=' . NM_TOTP_STEP;
+    $issuer = mb_substr($issuer, 0, 60);
+    return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode(mb_substr($account, 0, 60)) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=' . NM_TOTP_DIGITS . '&period=' . NM_TOTP_STEP
+        . ($image !== '' ? '&image=' . rawurlencode($image) : '');
 }
 /** The secret in groups of four, easier to type by hand. */
 function nm_totp_grouped(string $secret): string
