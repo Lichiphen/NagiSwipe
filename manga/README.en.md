@@ -50,6 +50,7 @@ The admin panel can be shown in Japanese or English (see [Admin panel language](
   - [Hotlink protection (advanced, v0.3.0 and later)](#hotlink-protection-advanced-v030-and-later)
   - [Plugins (guest mode)](#plugins-guest-mode)
   - [Two-step login (v0.9.1 and later, optional)](#two-step-login-v091-and-later-optional)
+  - [Passkeys (v0.10.0 and later, optional)](#passkeys-v0100-and-later-optional)
   - [Troubleshooting](#troubleshooting)
   - [Protecting the data folder](#protecting-the-data-folder)
   - [Tighter IP restriction for the admin panel (optional)](#tighter-ip-restriction-for-the-admin-panel-optional)
@@ -332,6 +333,22 @@ Logging in can ask for the 6-digit verification code from an authenticator app o
 > [!NOTE]
 > The QR code is made inside this program (`lib/qrcode.php`); the key is never sent to another service. QR Code is a registered trademark of DENSO WAVE INCORPORATED.
 
+### Passkeys (v0.10.0 and later, optional)
+
+Log in without the password, with a passkey saved in Proton Pass, the iPhone Passwords app (iCloud Keychain), Google Password Manager, 1Password, Windows Hello and others.
+
+1. Open Settings → "Common and safety" → "Register a passkey".
+2. Enter a name (e.g. iPhone, Proton Pass) and the admin password, then press "Register a passkey"; the browser asks where to save it.
+3. From then on, press **"Log in with a passkey"** on the login screen and confirm with your fingerprint, face or PIN.
+
+- **Passkeys work only at an HTTPS address** (`https://…`; `http://localhost` for testing is the exception).
+- A passkey is **bound to the domain it was registered on**. Register again after moving to another domain.
+- A passkey proves both that you have the device and who you are, so logging in with one asks for **neither the password nor the two-step code**. Logging in with the password (and the code) still works as before.
+- Up to 10 passkeys. Deleting one needs the admin password.
+- Failures count like wrong passwords (locked for 15 minutes after 5).
+- Only the public keys are kept (`data/config.php`); the private keys never leave the passkey provider.
+- No outside library or service: PHP’s openssl checks them (ES256 and RS256).
+
 ### Troubleshooting
 
 | Problem | What to do |
@@ -341,6 +358,7 @@ Logging in can ask for the 6-digit verification code from an authenticator app o
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
 | Too many wrong logins | Wait 15 minutes (the login screen says "Not Found" meanwhile) |
 | You lost the phone for two-step login | Enter one of the recovery codes you saved in the code field. Without them, open `data/config.php` with FTP and delete the entry that starts with `'totp' =>` (two-step login turns off) |
+| A passkey does not work or is lost | Log in with the password (and the code), then delete it or register again in Settings → Passkeys. To remove all, open `data/config.php` with FTP and delete the entry that starts with `'passkeys' =>` |
 | The admin panel says the data folder can be seen from the internet | See "Protecting the data folder" below |
 | An EPUB cannot be imported | Check that it has no DRM, is not text only, and is within the upload limit (shown in the admin panel) |
 
@@ -393,7 +411,7 @@ Picture locations in `manifest.json` are relative to the place of `manifest.json
 ## Security approach
 
 - **The public side is read only.** All `read.php` can do is "list a work's pages", "check a password" and "return a picture". Every odd request gets the same "Not Found", telling nothing about what exists.
-- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after 5 failures; at most 40 per hour overall; when turned on, then a code from an authenticator app) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
+- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after 5 failures; at most 40 per hour overall; when turned on, then a code from an authenticator app; or, once registered, a passkey instead) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
 - **Uploaded pictures are always redrawn.** Whether a file is a picture is judged from its contents, not its name; it is read with GD and written to a new file. Programs hidden in pictures and data such as the shooting location do not survive. File names are given anew. SVG is not accepted for manga pages. EPUB and backup ZIPs are also checked item by item before use.
 - **Programs do not run in the picture folders.** `data` cannot be seen from outside, and only `.webp` / `.jpg` are stored.
 - **Error details are not shown on screen.** So that server paths and the like do not leak. Records go to `data/logs/security.log`, which can be read on the settings page of the admin panel.

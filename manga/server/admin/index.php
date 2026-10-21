@@ -11,6 +11,7 @@ require __DIR__ . '/../lib/bootstrap.php';
 require __DIR__ . '/../lib/auth.php';
 require __DIR__ . '/../lib/totp.php';
 require __DIR__ . '/../lib/qrcode.php';
+require __DIR__ . '/../lib/passkey.php';
 require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
@@ -127,6 +128,7 @@ match ($page) {
     'backup' => nm_is_guest() ? nm_view_guest_denied(nm_t('バックアップ')) : nm_view_backup(),
     'settings' => nm_is_guest() ? nm_view_guest_denied(nm_t('設定')) : nm_view_settings($cfg),
     'twofactor' => nm_is_guest() ? nm_view_guest_denied(nm_t('二段階認証')) : nm_view_twofactor(),
+    'passkeys' => nm_is_guest() ? nm_view_guest_denied(nm_t('パスキー')) : nm_view_passkeys(),
     'css' => nm_is_guest() ? nm_view_guest_denied(nm_t('追加CSS')) : nl_css_view(),
     'embed' => nm_is_guest() ? nm_view_guest_denied(nm_t('設置用コード')) : nm_view_embed(),
     'update' => nm_is_guest() ? nm_view_guest_denied(nm_t('更新')) : nm_view_update($cfg),
@@ -354,6 +356,8 @@ function nm_login_page(string $method, array $cfg): void
     if ($method === 'POST') {
         $pre = (string)($_SESSION['nm_pre'] ?? '');
         if ($pre === '' || !hash_equals($pre, (string)($_POST['csrf'] ?? ''))) nm_not_found();
+        // Passkey login (lib/passkey.php, admin/passkey.js): JSON in, JSON out; the page's token stays the same between the two calls.
+        if (isset($_POST['passkey'])) nm_passkey_login_post($publicLogin);
         if (isset($_POST['otp'])) {
             // The second step of the two-step login (lib/totp.php)
             if (!nm_code_pending()) {
@@ -390,8 +394,35 @@ function nm_login_page(string $method, array $cfg): void
         $form .= '<label>' . nm_t('パスワード') . '<input type="password" name="password" autocomplete="current-password" required autofocus></label>'
             . '<button class="btn primary">' . ($publicLogin ? nl_login_icon() : '') . nm_t('ログイン') . '</button></form>';
     }
+    // With a passkey made on this address, offer it first (the script shows the button only where the browser can use it).
+    $passkey = !$askCode && nm_passkeys_here() !== [];
+    if ($passkey) {
+        $form = '<p class="nm-passkey-login"><button type="button" class="btn primary" data-passkey-login hidden data-action="' . ($publicLogin ? 'login.php' : 'index.php') . '" data-csrf="' . h((string)$_SESSION['nm_pre']) . '"' . ($publicLogin ? '' : ' data-key="' . h($key) . '"') . '>' . nm_t('パスキーでログイン') . '</button></p>'
+            . '<p class="flash flash-err" data-passkey-login-status role="alert" hidden></p>' . $form;
+    }
     nm_layout(nm_t('ログイン'), $error . '<section class="card narrow log-login-card"><h1>' . ($publicLogin ? nl_icon_html(nl_settings(), '../', 'log-login-avatar') : '') . nm_t('ログイン') . '</h1>'
-        . $form . ($publicLogin ? '<p>' . nm_t('<a href="../">LOGへ戻る</a>') . '</p>' : '') . '</section>', false);
+        . $form . ($publicLogin ? '<p>' . nm_t('<a href="../">LOGへ戻る</a>') . '</p>' : '') . '</section>', false, $passkey ? '<script src="' . nm_asset('passkey.js') . '" defer></script>' : '');
+}
+
+/** The login page's passkey calls: passkey=options (a challenge), then passkey=verify (the signed answer). Never returns. */
+function nm_passkey_login_post(bool $publicLogin): never
+{
+    $step = nm_str($_POST, 'passkey', 10);
+    if ($step === 'options') nm_json(['ok' => true, 'options' => nm_passkey_get_options()]);
+    if ($step !== 'verify') nm_not_found();
+    $in = [];
+    foreach (['id', 'clientDataJSON', 'authenticatorData', 'signature', 'userHandle'] as $field) $in[$field] = nm_str($_POST, $field, 16384);
+    try {
+        $index = nm_passkey_assert($in);
+    } catch (UnexpectedValueException) {
+        nm_login_failed('passkey_failed');
+        if (nm_login_blocked()) nm_not_found();
+        nm_json(['ok' => false, 'error' => nm_t('このパスキーではログインできませんでした')], 403);
+    }
+    // A passkey proves the device and the person: no password and no two-step code after it.
+    nm_start_admin_session('login_ok_passkey');
+    nm_log('passkey_used', nm_passkeys()[$index]['name'] ?? '');
+    nm_json(['ok' => true, 'redirect' => $publicLogin ? 'index.php?p=log' : 'index.php']);
 }
 
 // ===========================================================================
@@ -682,6 +713,12 @@ function nm_handle_post(array $cfg): void
         case 'totp_recovery':
             nm_twofactor_post($do, $cfg);
 
+        // Passkeys (lib/passkey.php): the password is asked before a new one can be made, and to remove one.
+        case 'passkey_options':
+        case 'passkey_add':
+        case 'passkey_delete':
+            nm_passkey_post($do);
+
         case 'regen_key':
             $cfg['login_key'] = nm_random_id(24);
             nm_save_config($cfg);
@@ -952,6 +989,76 @@ function nm_view_twofactor(): void
         . $confirm('totp_enable', nm_t('確認してオンにする'))
         . '<p class="note">' . nm_t('締め出されたときは、FTP で data/config.php を開き、totp の項目を消すとオフに戻ります。') . '</p></section>';
     nm_layout(nm_t('二段階認証'), $body);
+}
+
+// ===========================================================================
+// Passkeys (lib/passkey.php, admin/passkey.js)
+// ===========================================================================
+
+function nm_view_passkeys(): void
+{
+    $hidden = nm_csrf_field();
+    $list = nm_passkeys_here();
+    $rows = '';
+    foreach ($list as $p) {
+        $rows .= '<tr><td>' . h($p['name']) . '</td><td data-label="' . nm_t('登録した日') . '">' . h(date('Y-m-d H:i', (int)$p['created'])) . '</td><td data-label="' . nm_t('最後に使った日') . '">' . ($p['used'] ? h(date('Y-m-d H:i', (int)$p['used'])) : nm_t('まだ使っていません')) . '</td>'
+            . '<td><details class="nm-passkey-remove"><summary>' . nm_t('削除') . '</summary><form method="post" action="index.php" class="form" autocomplete="off">' . $hidden
+            . '<input type="hidden" name="do" value="passkey_delete"><input type="hidden" name="id" value="' . h($p['id']) . '">'
+            . '<label>' . nm_t('管理者パスワード') . '<input type="password" name="current" autocomplete="current-password" required></label>'
+            . '<p><button class="btn danger">' . nm_t('このパスキーを削除') . '</button></p></form></details></td></tr>';
+    }
+    $others = count(nm_passkeys()) - count($list);
+    $body = '<h1>' . nm_t('パスキー') . '</h1><p><a href="index.php?p=settings&amp;section=common#passkeys">' . nm_t('← 設定へ戻る') . '</a></p>'
+        . '<section class="card"><h2>' . nm_t('登録したパスキー') . '</h2>'
+        . ($list ? '<div class="table-wrap"><table class="table nm-passkeys"><thead><tr><th>' . nm_t('名前') . '</th><th>' . nm_t('登録した日') . '</th><th>' . nm_t('最後に使った日') . '</th><th></th></tr></thead><tbody>' . $rows . '</tbody></table></div>'
+            : '<p>' . nm_t('まだありません。') . '</p>')
+        . ($others > 0 ? '<p class="note">' . nm_t('ほかのアドレスで登録したパスキーが {n} 個あります（そのアドレスで開いたときだけ使えます）。', ['n' => $others]) . '</p>' : '')
+        . '<p class="note">' . nm_t('パスキーでログインすると、パスワードと二段階認証の確認コードは聞きません。パスキーそのものが、端末を持っていることと、指紋・顔・PIN での本人確認の両方を兼ねるためです。パスワードでのログインも、これまでどおり使えます。') . '</p></section>';
+    $body .= '<section class="card"><h2>' . nm_t('パスキーを登録する') . '</h2>'
+        . (nm_passkey_possible() ? '' : '<p class="warn">' . nm_t('パスキーは HTTPS のアドレス（https://〜）でしか使えません。いま開いているアドレスでは登録できません。') . '</p>')
+        . '<p>' . nm_t('Proton Pass、iPhone の「パスワード」アプリ（iCloud キーチェーン）、Google パスワードマネージャー、1Password、Windows Hello などに保存できます。ボタンを押すと、ブラウザが保存先を聞いてきます。') . '</p>'
+        . '<form class="form" data-passkey-register autocomplete="off">' . $hidden
+        . '<label>' . nm_t('名前（あとで見分けるため。例：iPhone、Proton Pass）') . '<input name="name" maxlength="' . NM_PASSKEY_NAME_MAX . '" placeholder="' . h(nm_t('パスキー {n}', ['n' => count(nm_passkeys()) + 1])) . '"></label>'
+        . '<label>' . nm_t('管理者パスワード') . '<input type="password" name="current" autocomplete="current-password" required></label>'
+        . '<p class="flash" data-passkey-status role="alert" hidden></p>'
+        . '<p><button class="btn primary"' . (count(nm_passkeys()) >= NM_PASSKEY_MAX ? ' disabled' : '') . '>' . nm_t('パスキーを登録する') . '</button></p></form>'
+        . (count(nm_passkeys()) >= NM_PASSKEY_MAX ? '<p class="note">' . nm_t('パスキーは {n} 個までです。使っていないものを削除してください。', ['n' => NM_PASSKEY_MAX]) . '</p>' : '')
+        . '<p class="note">' . nm_t('パスキーは、登録したときのドメイン（{host}）でだけ使えます。ドメインを変えたときは登録し直してください。', ['host' => '<code>' . h(nm_passkey_rp_id()) . '</code>']) . '</p>'
+        . '<p class="note">' . nm_t('パスキーを消してしまって入れないときは、パスワード（と確認コード）でログインできます。すべて消すには、FTP で data/config.php を開き、passkeys の項目を消します。') . '</p></section>';
+    nm_layout(nm_t('パスキー'), $body, true, '<script src="' . nm_asset('passkey.js') . '" defer></script>');
+}
+
+function nm_passkey_post(string $do): never
+{
+    $json = $do !== 'passkey_delete';
+    $fail = static function (string $message, int $status = 403) use ($json): never {
+        if ($json) nm_json(['ok' => false, 'error' => $message], $status);
+        nm_flash('err', $message);
+        nm_redirect('p=passkeys');
+    };
+    if ($do === 'passkey_add') {
+        $name = nm_passkey_name(nm_str($_POST, 'name', 400));
+        try {
+            $record = nm_passkey_register(['clientDataJSON' => nm_str($_POST, 'clientDataJSON', 16384), 'attestationObject' => nm_str($_POST, 'attestationObject', 90000)], $name !== '' ? $name : nm_t('パスキー {n}', ['n' => count(nm_passkeys()) + 1]));
+            nm_passkey_add($record);
+        } catch (UnexpectedValueException $e) {
+            nm_log('passkey_add_failed', $e->getMessage());
+            $fail($e->getMessage() === 'alg' ? nm_t('この種類のパスキーには対応していません（ES256・RS256 のみ）') : nm_t('パスキーを確かめられませんでした。ページを開き直して、もう一度試してください'), 422);
+        }
+        nm_log('passkey_added', $record['name']);
+        nm_flash('ok', nm_t('パスキー「{name}」を登録しました', ['name' => $record['name']]));
+        nm_json(['ok' => true, 'redirect' => 'index.php?p=passkeys']);
+    }
+    if (nm_login_blocked()) $fail(nm_t('失敗が続いたため、しばらく待ってからやり直してください'), 429);
+    if (!nm_password_ok(nm_str($_POST, 'current', 200))) $fail(nm_t('管理者パスワードが違います'));
+    if ($do === 'passkey_options') {
+        if (count(nm_passkeys()) >= NM_PASSKEY_MAX) $fail(nm_t('パスキーは {n} 個までです。使っていないものを削除してください。', ['n' => NM_PASSKEY_MAX]), 422);
+        nm_json(['ok' => true, 'options' => nm_passkey_create_options()]);
+    }
+    if (!nm_passkey_remove(nm_str($_POST, 'id', 2000))) $fail(nm_t('そのパスキーは見つかりませんでした'), 404);
+    nm_log('passkey_removed');
+    nm_flash('ok', nm_t('パスキーを削除しました'));
+    nm_redirect('p=passkeys');
 }
 
 /** The picture sent with the QR code: the LOG's favicon (largest size), else NagiManga's own icon; versioned, under $base. */
@@ -1492,6 +1599,10 @@ function nm_view_settings(array $cfg): void
         . '<p>' . (nm_totp_on($cfg) ? '<span class="badge">' . nm_t('オン') . '</span> ' . nm_t('ログインのときに、パスワードのあとで認証アプリの確認コードを入力します。') : nm_t('オフです。オンにすると、ログインのときにパスワードに加えて、スマホの認証アプリに表示される6桁の確認コードが必要になります。')) . '</p>'
         . '<p><a class="btn" href="index.php?p=twofactor">' . (nm_totp_on($cfg) ? nm_t('二段階認証の設定を開く') : nm_t('二段階認証を設定する')) . '</a></p>'
         . '<p class="note">' . nm_t('設定は専用の画面ですぐに変わります（「設定を保存」とは別です）。') . '</p></section>'
+
+        . '<section class="card" id="passkeys"><h2>' . nm_t('パスキー') . '</h2>'
+        . '<p>' . (nm_passkeys_here() ? nm_t('登録済み：{n} 個。ログイン画面の「パスキーでログイン」から、パスワードなしでログインできます。', ['n' => count(nm_passkeys_here())]) : nm_t('Proton Pass や iPhone の「パスワード」アプリなどに保存したパスキーで、パスワードを入れずにログインできるようにします。')) . '</p>'
+        . '<p><a class="btn" href="index.php?p=passkeys">' . (nm_passkeys_here() ? nm_t('パスキーの設定を開く') : nm_t('パスキーを登録する')) . '</a></p></section>'
 
         . '<section class="card"><h2>' . nm_t('管理者パスワード') . '</h2>'
         . '<div class="form">'

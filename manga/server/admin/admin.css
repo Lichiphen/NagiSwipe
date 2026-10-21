@@ -333,3 +333,20 @@ details.more[open] > summary { margin-bottom: 12px; }
 .nm-otp { font-family: ui-monospace, Consolas, monospace; font-size: 1.3em; letter-spacing: .2em; max-width: 14em; }
 .nm-recovery-codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; line-height: 1.7; padding: 10px 14px; border: 1px solid var(--line, #ccc); border-radius: 8px; background: var(--bg, transparent); }
 @media (max-width: 640px) { .nm-totp-setup { grid-template-columns: 1fr; } }
+
+/* Passkeys (p=passkeys and the login page) */
+.table-wrap { overflow-x: auto; }
+.nm-passkeys th { text-align: left; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.nm-passkeys td { vertical-align: top; }
+.nm-passkey-remove summary { cursor: pointer; color: var(--danger); }
+.nm-passkey-remove .form { margin-top: 8px; min-width: 14em; }
+@media (max-width: 640px) {
+    .nm-passkeys thead { display: none; }
+    .nm-passkeys tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+    .nm-passkeys td { display: block; border: 0; padding: 2px 0; }
+    .nm-passkeys td:first-child { font-weight: 600; }
+    .nm-passkeys td[data-label]::before { content: attr(data-label) "："; color: var(--muted); font-size: .9em; }
+}
+.nm-passkey-login { margin: 0 0 12px; }
+.nm-passkey-login .btn { width: 100%; justify-content: center; }
+.nm-passkey-login + .flash + .form { border-top: 1px solid var(--line); padding-top: 12px; }
