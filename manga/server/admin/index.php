@@ -929,12 +929,15 @@ function nm_view_twofactor(): void
     $secret = $_SESSION['nm_totp_new'];
     $site = (string)(parse_url(nm_base_url(), PHP_URL_HOST) ?: 'NagiManga');
     $uri = nm_totp_uri($secret, $site, 'NagiManga', nm_totp_icon_url(nm_base_url()));
+    $qr = nm_qr_svg($uri, nm_t('認証アプリに読み込ませるQRコード'));
+    // A very long site address: leave the icon out rather than the QR code.
+    if ($qr === '') $qr = nm_qr_svg($uri = nm_totp_uri($secret, $site, 'NagiManga'), nm_t('認証アプリに読み込ませるQRコード'));
     $body .= '<section class="card"><h2>' . nm_t('二段階認証をオンにする') . '</h2>'
         . '<p>' . nm_t('ログインのときに、パスワードに加えて、スマホの認証アプリに表示される6桁の確認コードを入力するようにします。パスワードが知られても、スマホがなければログインできません。') . '</p>'
         . '<h3>' . nm_t('1. 認証アプリを用意する') . '</h3>'
         . '<p>' . nm_t('iPhone は標準の「パスワード」アプリ（iOS 18 以降。iOS 17 以前は「設定」→「パスワード」）で使えます。ほかに Google Authenticator、Microsoft Authenticator、1Password などの認証アプリも使えます。') . '</p>'
         . '<h3>' . nm_t('2. アプリに登録する') . '</h3>'
-        . '<div class="nm-totp-setup"><figure class="nm-qr-box">' . nm_qr_svg($uri, nm_t('認証アプリに読み込ませるQRコード')) . '<figcaption class="note">' . nm_t('QRコードは株式会社デンソーウェーブの登録商標です。') . '</figcaption></figure>'
+        . '<div class="nm-totp-setup"><figure class="nm-qr-box">' . $qr . '<figcaption class="note">' . nm_t('QRコードは株式会社デンソーウェーブの登録商標です。') . '</figcaption></figure>'
         . '<div><p>' . nm_t('パソコンでこの画面を開いているときは、スマホの認証アプリでQRコードを読み込みます。iPhone は標準のカメラで読み込み、表示された「パスワードに追加」などを押しても登録できます。') . '</p>'
         . '<p>' . nm_t('スマホでこの画面を開いているときは、下のボタンを押すと認証アプリが開きます。') . '</p>'
         . '<p><a class="btn" href="' . h($uri) . '">' . nm_t('このスマホの認証アプリに登録する') . '</a></p>'

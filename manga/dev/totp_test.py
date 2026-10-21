@@ -155,6 +155,17 @@ def run(c, csrf, key):
     _, r = login(args.port, key)
     check('やめたあとはパスワードだけでログイン', r.status == 303)
 
+    # --- Long site addresses (the image= field makes the QR code bigger) ----------------------------
+    def with_base(path):
+        post({'do': 'settings_save_all', 'tab': 'common', 'sections[]': 'general', 'base_url': f'https://{h.HOST}/' + path, 'image_quality': '90', 'max_upload_mb': '30'})
+        page = c.get('/admin/index.php?p=twofactor').text
+        return page, html.unescape(re.search(r'href="(otpauth://[^"]+)"', page).group(1))
+    page, uri = with_base('nagimanga/' + 'long-folder-name/' * 8)
+    check('長いアドレスでもQRコードを出し、読むと同じアドレス（画像の欄つき）', len(uri) > 300 and 'image=' in uri and qr_text(page) == uri)
+    page, uri = with_base('あ' * 150)
+    check('QRコードに入らないほど長いときは、画像の欄を外してQRコードを出す', 'image=' not in uri and '<svg class="nm-qr"' in page and qr_text(page) == uri)
+    post({'do': 'settings_save_all', 'tab': 'common', 'sections[]': 'general', 'base_url': '', 'image_quality': '90', 'max_upload_mb': '30'})
+
     # --- Lockout ------------------------------------------------------------------------------------
     page = c.get('/admin/index.php?p=twofactor').text
     secret = urllib.parse.parse_qs(urllib.parse.urlsplit(html.unescape(re.search(r'href="(otpauth://[^"]+)"', page).group(1))).query)['secret'][0]
