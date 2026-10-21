@@ -113,6 +113,10 @@ def run(c, csrf, key):
     settings = c.get('/admin/index.php?p=settings&section=common').text
     check('設定の「共通・安全」にパスキーの欄', 'id="passkeys"' in settings and 'index.php?p=passkeys' in settings)
     page = c.get('/admin/index.php?p=passkeys').text
+    form = re.search(r'<form class="form" data-passkey-register.*?</form>', page, re.S).group(0)
+    check('名前の欄はパスワードの後ろで、パスワード管理アプリの自動入力から外す（Proton Pass などが名前を消さない）',
+          form.index('name="current"') < form.index('name="passkey_label"') and 'autocomplete="username" readonly hidden' in form
+          and re.search(r'name="passkey_label"[^>]*autocomplete="off"[^>]*data-protonpass-ignore="true"', form) is not None)
     check('パスキーの画面に登録フォームと passkey.js', 'data-passkey-register' in page and 'passkey.js?v=' in page and 'name="current"' in page)
     check('HTTPS でないアドレスでは注意を出す', 'HTTPS のアドレス' in page)
     _, lp = login_page()

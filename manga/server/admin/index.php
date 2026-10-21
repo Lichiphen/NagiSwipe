@@ -1017,9 +1017,13 @@ function nm_view_passkeys(): void
     $body .= '<section class="card"><h2>' . nm_t('パスキーを登録する') . '</h2>'
         . (nm_passkey_possible() ? '' : '<p class="warn">' . nm_t('パスキーは HTTPS のアドレス（https://〜）でしか使えません。いま開いているアドレスでは登録できません。') . '</p>')
         . '<p>' . nm_t('Proton Pass、iPhone の「パスワード」アプリ（iCloud キーチェーン）、Google パスワードマネージャー、1Password、Windows Hello などに保存できます。ボタンを押すと、ブラウザが保存先を聞いてきます。') . '</p>'
+        // Password managers take a text box just before a password box for the user name and overwrite it when they fill
+        // the password: the user name gets its own hidden box, the password comes first, and the name box opts out of autofill.
         . '<form class="form" data-passkey-register autocomplete="off">' . $hidden
-        . '<label>' . nm_t('名前（あとで見分けるため。例：iPhone、Proton Pass）') . '<input name="name" maxlength="' . NM_PASSKEY_NAME_MAX . '" placeholder="' . h(nm_t('パスキー {n}', ['n' => count(nm_passkeys()) + 1])) . '"></label>'
+        . '<input type="text" name="username" value="' . h(nm_passkey_rp_id()) . '" autocomplete="username" readonly hidden>'
         . '<label>' . nm_t('管理者パスワード') . '<input type="password" name="current" autocomplete="current-password" required></label>'
+        . '<label>' . nm_t('名前（あとで見分けるため。例：iPhone、Proton Pass）') . '<input name="passkey_label" maxlength="' . NM_PASSKEY_NAME_MAX . '" placeholder="' . h(nm_t('パスキー {n}', ['n' => count(nm_passkeys()) + 1])) . '"'
+        . ' autocomplete="off" data-protonpass-ignore="true" data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"></label>'
         . '<p class="flash" data-passkey-status role="alert" hidden></p>'
         . '<p><button class="btn primary"' . (count(nm_passkeys()) >= NM_PASSKEY_MAX ? ' disabled' : '') . '>' . nm_t('パスキーを登録する') . '</button></p></form>'
         . (count(nm_passkeys()) >= NM_PASSKEY_MAX ? '<p class="note">' . nm_t('パスキーは {n} 個までです。使っていないものを削除してください。', ['n' => NM_PASSKEY_MAX]) . '</p>' : '')

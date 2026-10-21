@@ -53,7 +53,7 @@
             button.disabled = true;
             try {
                 const csrf = form.querySelector('[name="csrf"]').value;
-                const name = form.querySelector('[name="name"]').value;
+                const name = form.querySelector('[name="passkey_label"]').value;
                 const o = (await send('index.php', { csrf, do: 'passkey_options', current: form.querySelector('[name="current"]').value })).options;
                 o.challenge = toBytes(o.challenge);
                 o.user.id = toBytes(o.user.id);
