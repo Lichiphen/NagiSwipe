@@ -101,7 +101,7 @@ def run(c, csrf, key):
     check('Google Authenticator の形式：ラベルの発行元と issuer= が同じ', urllib.parse.unquote(label.split(':', 1)[0]) == q['issuer'][0] and urllib.parse.urlsplit(uri).netloc == 'totp')
     check('設定画面に登録名・アカウント名とアイコンを表示', f'<strong>{ISSUER}</strong>' in page and f'<strong>{h.HOST}</strong>' in page and '<img src="../viewer/favicon.svg?v=' in page)
     check('手入力用に鍵を4文字ずつ表示', ' '.join(secret[i:i + 4] for i in range(0, 32, 4)) in page)
-    check('入力欄は数字キーボードと one-time-code', 'inputmode="numeric" autocomplete="one-time-code"' in page)
+    check('入力欄は数字キーボード・半角数字6桁・one-time-code', 'inputmode="numeric" pattern="[0-9]{6}" maxlength="20" autocomplete="one-time-code"' in page and 'data-otp-digits' in page)
     check('開き直しても同じ鍵（読み込み済みのアプリが使える）', secret in c.get('/admin/index.php?p=twofactor').text)
     r = c.post('/admin/index.php', {'csrf': csrf, 'do': 'settings_save_all', 'tab': 'log', 'sections[]': 'log_design', 'title': 'テストLOG', 'name': 'わたし', 'theme': 'light-blue', 'description': ''},
                files={'favicon': ('icon.png', square_png(512), 'image/png')}, headers={'Accept': 'application/json'})
@@ -133,6 +133,10 @@ def run(c, csrf, key):
     # --- Logging in ----------------------------------------------------------------------------
     d, r = login(args.port, key)
     check('パスワードのあとに確認コードの欄', r.status == 200 and 'name="otp"' in r.text and 'name="password"' not in r.text)
+    code_form = re.search(r'<form[^>]*id="nm-login-form".*?</form>', r.text, re.S).group(0)
+    recovery_form = re.search(r'<details class="nm-recovery-login">.*?</details>', r.text, re.S)
+    check('確認コードの欄は半角数字だけ（数字キーボード）、リカバリーコードは別の欄', 'pattern="[0-9]{6}"' in code_form and 'inputmode="numeric"' in code_form and 'data-otp-digits' in code_form
+          and recovery_form is not None and 'name="otp"' in recovery_form.group(0) and 'inputmode' not in recovery_form.group(0) and f'name="k" value="{key}"' in recovery_form.group(0))
     check('コードを入れるまで管理画面は開かない', d.get('/admin/index.php?p=settings').status != 200)
     r = d.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': '12345'})
     check('桁の違うコードは断る', '確認コードが違います' in r.text and 'name="otp"' in r.text)

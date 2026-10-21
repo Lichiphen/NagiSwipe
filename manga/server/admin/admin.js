@@ -305,6 +305,15 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && menu.open) { menu.open = false; $('summary', menu).focus(); } });
     });
 
+    // --- Verification code boxes: half-width digits only -------------------------
+    // A Japanese keyboard types full-width digits (０-９): turn them into 0-9 and drop anything else, up to 6.
+    $$('[data-otp-digits]').forEach(box => {
+        box.addEventListener('input', () => {
+            if (box.value === '' || /^[0-9]{0,6}$/.test(box.value)) return;
+            box.value = box.value.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '').slice(0, 6);
+        });
+    });
+
     // --- Copy buttons -------------------------------------------------------
     $$('.js-copy').forEach(btn => {
         btn.addEventListener('click', async () => {

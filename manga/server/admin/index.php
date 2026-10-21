@@ -405,11 +405,18 @@ function nm_login_page(string $method, array $cfg): void
     if ($askCode) {
         // autocomplete="one-time-code": iPhone and Android offer the code from their own password app.
         $land = '';
-        $form .= '<input type="hidden" name="p" value="' . ($after !== '' ? 'log' : 'manga') . '">'
+        // The code box takes 6 half-width digits only (admin.js turns full-width digits into them as they are typed);
+        // a recovery code has letters, so it has its own form.
+        $hiddenFields = $form . '<input type="hidden" name="p" value="' . ($after !== '' ? 'log' : 'manga') . '">';
+        $form = $hiddenFields
             . '<p>' . nm_t('認証アプリに表示されている6桁の確認コードを入力してください。') . '</p>'
-            . '<label>' . nm_t('確認コード') . '<input name="otp" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="20" required autofocus class="nm-otp"></label>'
-            . '<button class="btn primary">' . nm_t('確認してログイン') . '</button>'
-            . '<p class="note">' . nm_t('スマホをなくしたときは、保存しておいたリカバリーコード（abcd-efgh-jkmn の形）を入力できます。') . '</p></form>';
+            . '<label>' . nm_t('確認コード') . '<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="20" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" required autofocus class="nm-otp" data-otp-digits placeholder="000000"></label>'
+            . '<button class="btn primary">' . nm_t('確認してログイン') . '</button></form>'
+            . '<details class="nm-recovery-login"><summary>' . nm_t('リカバリーコードを使う') . '</summary>'
+            . str_replace(' id="nm-login-form"', '', $hiddenFields)
+            . '<p class="note">' . nm_t('スマホをなくしたときは、保存しておいたリカバリーコード（abcd-efgh-jkmn の形）を入力できます。') . '</p>'
+            . '<label>' . nm_t('リカバリーコード') . '<input name="otp" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" required></label>'
+            . '<button class="btn">' . nm_t('リカバリーコードでログイン') . '</button></form></details>';
     } else {
         $form .= '<label>' . nm_t('パスワード') . '<input type="password" name="password" autocomplete="current-password" required autofocus></label>'
             . '<button class="btn primary">' . ($publicLogin ? nl_login_icon() : '') . nm_t('ログイン') . '</button></form>';
@@ -987,7 +994,8 @@ function nm_view_twofactor(): void
     $hidden = nm_csrf_field();
     $confirm = static fn(string $do, string $button, string $class = 'btn primary') => '<form method="post" action="index.php" class="form" autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="' . $do . '">'
         . '<label>' . nm_t('管理者パスワード') . '<input type="password" name="current" autocomplete="current-password" required></label>'
-        . '<label>' . nm_t('確認コード（6桁）') . '<input name="otp" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="40" required class="nm-otp"></label>'
+        . '<label>' . nm_t('確認コード（6桁）') . '<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="20" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" ' . ($do === 'totp_enable' ? 'required ' : '') . 'class="nm-otp" data-otp-digits placeholder="000000"></label>'
+        . ($do === 'totp_enable' ? '' : '<details class="nm-recovery-login"><summary>' . nm_t('リカバリーコードを使う') . '</summary><label>' . nm_t('リカバリーコード（確認コードの代わり）') . '<input name="recovery" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40"></label></details>')
         . '<p><button class="' . $class . '">' . $button . '</button></p></form>';
     $body = '<h1>' . nm_t('二段階認証') . '</h1><p><a href="index.php?p=settings&amp;section=common#twofactor">' . nm_t('← 設定へ戻る') . '</a></p>';
 
@@ -1141,6 +1149,7 @@ function nm_twofactor_post(string $do, array $cfg): never
         nm_redirect($back);
     }
     $code = nm_str($_POST, 'otp', 40);
+    if ($code === '' && $do !== 'totp_enable') $code = nm_str($_POST, 'recovery', 40);
     if ($do === 'totp_enable') {
         if (nm_totp_on($cfg)) nm_redirect($back);
         $secret = (string)($_SESSION['nm_totp_new'] ?? '');

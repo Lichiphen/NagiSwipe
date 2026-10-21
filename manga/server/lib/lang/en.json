@@ -1705,5 +1705,8 @@
   "パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレスごとに数えます。ロック中は、ログイン画面も「Not Found」になります。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。": "Wrong passwords, two-step codes and passkeys are counted per IP address. While an address is locked, the login screen also says Not Found. If you lock yourself out, wait, or delete the contents of the data/ratelimit folder over FTP. Addresses the IP restriction does not allow never reach the login screen, so they are not counted.",
   "ログインの失敗とロック": "Failed logins and lockout",
   "ログインの失敗とロックの設定を選び直してください": "Choose the failed login and lockout settings again",
-  "超えたら、その IP アドレスをロックする時間": "How long to lock that IP address after that"
+  "超えたら、その IP アドレスをロックする時間": "How long to lock that IP address after that",
+  "リカバリーコードでログイン": "Log in with a recovery code",
+  "リカバリーコードを使う": "Use a recovery code",
+  "リカバリーコード（確認コードの代わり）": "Recovery code (instead of the verification code)"
 }
