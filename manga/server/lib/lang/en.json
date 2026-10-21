@@ -1655,5 +1655,5 @@
   "読み込めないときは、アプリで「キーを入力」などを選び、次の鍵を入力します（種類は「時間ベース」）。": "If scanning does not work, choose Enter a setup key (or similar) in the app and type this key (type: time based).",
   "鍵": "Key",
   "Authy など一部のアプリは画像の欄を使わず、名前から自分でロゴを探します。関係のないロゴが出たときは、汎用のロゴ（鍵のマーク）を選ぶか、あとでアプリの編集画面から変えてください。": "Some apps such as Authy do not use the image field and look up a logo by the name. If an unrelated logo appears, choose the generic logo (a key), or change it later in the app’s edit screen.",
-  "アプリには「{site}」の名前で登録されます。画像の欄に対応したアプリ（FreeOTP など）には、LOGのファビコン（設定していなければNagiMangaのアイコン）も届けます。": "The app lists it under the name {site}. Apps that read an image field (FreeOTP and others) also get the LOG’s favicon (NagiManga’s icon if none is set)."
+  "アプリには「{issuer}」の名前で、アカウント名「{site}」として登録されます。画像の欄に対応したアプリ（FreeOTP など）には、LOGのファビコン（設定していなければNagiMangaのアイコン）も届けます。": "The app lists it as {issuer} with the account name {site}. Apps that read an image field (FreeOTP and others) also get the LOG’s favicon (NagiManga’s icon if none is set)."
 }

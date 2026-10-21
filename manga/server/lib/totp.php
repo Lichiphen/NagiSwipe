@@ -19,6 +19,8 @@ const NM_TOTP_DIGITS = 6;
 const NM_TOTP_DRIFT = 1;            // also the step before and after (phone clocks run a little off)
 const NM_TOTP_WAIT = 300;           // seconds between the password and the code at login
 const NM_RECOVERY_COUNT = 8;
+/** The name the authenticator app lists the code under; the site's host is the account, so several installs stay apart. */
+const NM_TOTP_ISSUER = 'NagiSeries NagiLog';
 const NM_BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 function nm_base32_encode(string $raw): string
@@ -71,14 +73,17 @@ function nm_totp_match(string $secret, string $code, int $after = 0): ?int
     return null;
 }
 /**
- * The address an authenticator app reads (from the QR code, or tapped on the phone itself).
- * $issuer is the site (its host), so several installs stay apart in the app; $image is the site's icon for the apps
- * that read an image= field (FreeOTP and others). Some apps (Authy) look up a logo by the name instead.
+ * The address an authenticator app reads (from the QR code, or tapped on the phone itself), in the Key URI format
+ * Google Authenticator documents: "Issuer:account" in the path (spaces as %20, never "+") and the same issuer= in the query.
+ * $account is the site's host; $image is the site's icon for the apps that read an image= field (FreeOTP and others).
+ * Only the secret makes the codes: changing these names never breaks a code that is already registered.
  */
-function nm_totp_uri(string $secret, string $issuer, string $account, string $image = ''): string
+function nm_totp_uri(string $secret, string $account, string $image = ''): string
 {
-    $issuer = mb_substr($issuer, 0, 60);
-    return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode(mb_substr($account, 0, 60)) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=' . NM_TOTP_DIGITS . '&period=' . NM_TOTP_STEP
+    $issuer = NM_TOTP_ISSUER;
+    // A colon would end the issuer part of the label
+    $account = str_replace(':', '', mb_substr($account, 0, 60));
+    return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode($account) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&digits=' . NM_TOTP_DIGITS . '&period=' . NM_TOTP_STEP
         . ($image !== '' ? '&image=' . rawurlencode($image) : '');
 }
 /** The secret in groups of four, easier to type by hand. */

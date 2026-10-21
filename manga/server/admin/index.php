@@ -927,11 +927,11 @@ function nm_view_twofactor(): void
     // Off: one new secret per session until it is confirmed (reloading keeps the QR code the app already read)
     if (!is_string($_SESSION['nm_totp_new'] ?? null) || nm_base32_decode($_SESSION['nm_totp_new']) === null) $_SESSION['nm_totp_new'] = nm_totp_new_secret();
     $secret = $_SESSION['nm_totp_new'];
-    $site = (string)(parse_url(nm_base_url(), PHP_URL_HOST) ?: 'NagiManga');
-    $uri = nm_totp_uri($secret, $site, 'NagiManga', nm_totp_icon_url(nm_base_url()));
+    $site = (string)(parse_url(nm_base_url(), PHP_URL_HOST) ?: 'LOG');
+    $uri = nm_totp_uri($secret, $site, nm_totp_icon_url(nm_base_url()));
     $qr = nm_qr_svg($uri, nm_t('認証アプリに読み込ませるQRコード'));
     // A very long site address: leave the icon out rather than the QR code.
-    if ($qr === '') $qr = nm_qr_svg($uri = nm_totp_uri($secret, $site, 'NagiManga'), nm_t('認証アプリに読み込ませるQRコード'));
+    if ($qr === '') $qr = nm_qr_svg($uri = nm_totp_uri($secret, $site), nm_t('認証アプリに読み込ませるQRコード'));
     $body .= '<section class="card"><h2>' . nm_t('二段階認証をオンにする') . '</h2>'
         . '<p>' . nm_t('ログインのときに、パスワードに加えて、スマホの認証アプリに表示される6桁の確認コードを入力するようにします。パスワードが知られても、スマホがなければログインできません。') . '</p>'
         . '<h3>' . nm_t('1. 認証アプリを用意する') . '</h3>'
@@ -945,7 +945,7 @@ function nm_view_twofactor(): void
         . '<p><code class="nm-totp-key">' . h(nm_totp_grouped($secret)) . '</code></p>'
         . '<p><input class="copy-src wide" readonly value="' . h($secret) . '" aria-label="' . nm_t('鍵') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
         . '<p class="note">' . nm_t('この鍵は確認コードを作るための秘密の文字列です。ほかの人に見せないでください。') . '</p></div></div>'
-        . '<div class="nm-totp-name"><img src="' . h(nm_totp_icon_url('..')) . '" alt="" width="40" height="40"><p>' . nm_t('アプリには「{site}」の名前で登録されます。画像の欄に対応したアプリ（FreeOTP など）には、LOGのファビコン（設定していなければNagiMangaのアイコン）も届けます。', ['site' => '<strong>' . h($site) . '</strong>']) . '</p></div>'
+        . '<div class="nm-totp-name"><img src="' . h(nm_totp_icon_url('..')) . '" alt="" width="40" height="40"><p>' . nm_t('アプリには「{issuer}」の名前で、アカウント名「{site}」として登録されます。画像の欄に対応したアプリ（FreeOTP など）には、LOGのファビコン（設定していなければNagiMangaのアイコン）も届けます。', ['issuer' => '<strong>' . h(NM_TOTP_ISSUER) . '</strong>', 'site' => '<strong>' . h($site) . '</strong>']) . '</p></div>'
         . '<p class="note">' . nm_t('Authy など一部のアプリは画像の欄を使わず、名前から自分でロゴを探します。関係のないロゴが出たときは、汎用のロゴ（鍵のマーク）を選ぶか、あとでアプリの編集画面から変えてください。') . '</p>'
         . '<h3>' . nm_t('3. 確認してオンにする') . '</h3>'
         . '<p>' . nm_t('アプリに表示された6桁の確認コードと、管理者パスワードを入力してください。正しければオンになり、リカバリーコードを表示します。') . '</p>'

@@ -5,7 +5,7 @@ The QR code on the setup page is read back with OpenCV (cv2) and must give the s
 the codes are made here with hmac (RFC 6238), so the server's own code is never trusted to check itself.
 Usage: python manga/dev/totp_test.py
 """
-import argparse, base64, hashlib, hmac, html, json, re, secrets, socket, struct, sys, time, urllib.parse, zlib
+import argparse, base64, hashlib, hmac, html, json, re, secrets, socket, struct, subprocess, sys, time, urllib.parse, zlib
 from pathlib import Path
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--port', type=int, default=5440)
@@ -19,6 +19,7 @@ checks = []
 def check(name, ok):
     checks.append((name, bool(ok))); print(f"[{'PASS' if ok else 'FAIL'}] {name}", flush=True)
 PASSWORD = 'log-test-password'
+ISSUER = 'NagiSeries NagiLog'
 
 
 def totp(secret, step):
@@ -26,6 +27,12 @@ def totp(secret, step):
     digest = hmac.new(key, struct.pack('>Q', step), hashlib.sha1).digest()
     o = digest[19] & 15
     return '%06d' % ((struct.unpack('>I', digest[o:o + 4])[0] & 0x7FFFFFFF) % 1000000)
+
+
+def server_code(secret, step):
+    """The code lib/totp.php makes, run on its own with the PHP command line."""
+    code = ("define('NAGIMANGA', 1); require 'manga/server/lib/totp.php'; echo nm_totp_code($argv[1], (int)$argv[2]);")
+    return subprocess.run(['php', '-n', '-r', code, '--', secret, str(step)], cwd=ROOT, capture_output=True, text=True).stdout
 
 
 def qr_text(page):
@@ -66,6 +73,13 @@ def run(c, csrf, key):
     other, _ = login(args.port, key)
     check('ほかの端末もログインしている', other.get('/admin/index.php?p=settings').status == 200)
 
+    # --- Codes: RFC 6238 test vector and the same codes as Google Authenticator's algorithm ---------------
+    rfc = base64.b32encode(b'12345678901234567890').decode()
+    check('RFC 6238 の試験値（T=59 → 287082）と同じコード', server_code(rfc, 59 // 30) == '287082' and totp(rfc, 1) == '287082')
+    check('RFC 6238 の試験値（T=1111111109 → 081804）', server_code(rfc, 1111111109 // 30) == '081804')
+    sample = base64.b32encode(secrets.token_bytes(20)).decode()
+    check('ランダムな鍵でも、HMAC-SHA1・6桁・30秒の標準どおりのコード', all(server_code(sample, s) == totp(sample, s) for s in (0, 1, 56789012, int(time.time()) // 30)))
+
     # --- Setup page ------------------------------------------------------------------------
     settings = c.get('/admin/index.php?p=settings&section=common').text
     check('設定の「共通・安全」に二段階認証の欄', 'id="twofactor"' in settings and 'index.php?p=twofactor' in settings and 'オフです' in settings)
@@ -73,16 +87,19 @@ def run(c, csrf, key):
     check('設定画面にQRコード（SVG）', '<svg class="nm-qr"' in page and 'role="img"' in page)
     check('QRコードの登録商標の表記', 'QRコードは株式会社デンソーウェーブの登録商標です。' in page)
     uri = html.unescape(re.search(r'<a class="btn" href="(otpauth://[^"]+)"', page).group(1))
-    check('スマホ用に otpauth:// のボタン（発行元はサイトのホスト名）', uri.startswith(f'otpauth://totp/{h.HOST}:NagiManga?'))
+    check('スマホ用に otpauth:// のボタン', uri.startswith('otpauth://totp/'))
+    label = urllib.parse.urlsplit(uri).path.lstrip('/')
+    check('ラベルは「NagiSeries NagiLog:ホスト名」（空白は%20、+は使わない）', label == f'NagiSeries%20NagiLog:{h.HOST}' and '+' not in uri)
     read = qr_text(page)
     check('QRコードを読むと同じ otpauth:// のアドレス', read == uri)
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(uri).query)
     secret = q['secret'][0]
-    check('鍵は160ビット（Base32で32文字）', re.fullmatch(r'[A-Z2-7]{32}', secret) is not None and q['issuer'] == [h.HOST] and q['digits'] == ['6'] and q['period'] == ['30'])
+    check('鍵は160ビット（Base32で32文字）', re.fullmatch(r'[A-Z2-7]{32}', secret) is not None and q['issuer'] == [ISSUER] and q['digits'] == ['6'] and q['period'] == ['30'])
     image = q.get('image', [''])[0]
     check('ファビコンがないときは NagiManga のアイコン（版付きの絶対URL）を image= で渡す', re.fullmatch(rf'http://{re.escape(h.HOST)}:{args.port}/viewer/favicon\.svg\?v=[0-9a-f]+', image) is not None)
     check('渡したアイコンは開ける', c.get(urllib.parse.urlsplit(image).path + '?' + urllib.parse.urlsplit(image).query).status == 200)
-    check('設定画面に登録名とアイコンを表示', f'<strong>{h.HOST}</strong>' in page and '<img src="../viewer/favicon.svg?v=' in page)
+    check('Google Authenticator の形式：ラベルの発行元と issuer= が同じ', urllib.parse.unquote(label.split(':', 1)[0]) == q['issuer'][0] and urllib.parse.urlsplit(uri).netloc == 'totp')
+    check('設定画面に登録名・アカウント名とアイコンを表示', f'<strong>{ISSUER}</strong>' in page and f'<strong>{h.HOST}</strong>' in page and '<img src="../viewer/favicon.svg?v=' in page)
     check('手入力用に鍵を4文字ずつ表示', ' '.join(secret[i:i + 4] for i in range(0, 32, 4)) in page)
     check('入力欄は数字キーボードと one-time-code', 'inputmode="numeric" autocomplete="one-time-code"' in page)
     check('開き直しても同じ鍵（読み込み済みのアプリが使える）', secret in c.get('/admin/index.php?p=twofactor').text)
@@ -110,6 +127,7 @@ def run(c, csrf, key):
     check('オンにした端末はログインしたまま', c.get('/admin/index.php?p=settings').status == 200)
     check('ほかの端末はログアウトされる', other.get('/admin/index.php?p=settings').status != 200)
     config = (site / 'data/config.php').read_text(encoding='utf-8')
+    check('保存するのは鍵だけで、発行元の名前は保存しない（名前を変えても登録済みのコードは壊れない）', ISSUER not in config and 'NagiManga:' not in config)
     check('config.php に鍵をそのまま保存しない', secret not in config and "'totp'" in config and not any(x in config for x in codes))
 
     # --- Logging in ----------------------------------------------------------------------------
