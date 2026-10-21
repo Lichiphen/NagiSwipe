@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""The login entrance: "secret login URL only" (admin/login.php closed), and choosing NagiLog or NagiManga on the login page.
+"""The login entrance: "secret login URL only" (admin/login.php closed), choosing NagiLog or NagiManga on the login page,
+the lockout settings (failures allowed, lock time) and the security log shown in Japan time.
 
 Installs once with the setup page's "secret login URL only" box ticked (as a browser sends it), then switches the setting.
 Usage: python manga/dev/login_entry_test.py
 """
-import argparse, json, re, secrets, socket, sys
+import argparse, datetime, hashlib, json, re, secrets, socket, sys
 from pathlib import Path
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--port', type=int, default=5450)
@@ -72,6 +73,35 @@ def run(site):
     check('おかしな値は断る', r.status == 422)
     log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
     check('切り替えをセキュリティログに記録', 'settings_login_entry_changed\tpublic' in log)
+
+    # --- Security log in Japan time ---------------------------------------------------------------
+    first = log.splitlines()[-1].split('\t')
+    jst = datetime.datetime.fromisoformat(first[0]).astimezone(datetime.timezone(datetime.timedelta(hours=9))).strftime('%Y-%m-%d %H:%M:%S')
+    page = d.get('/admin/index.php?p=settings&section=common').text
+    check('セキュリティログは日本時間（JST）で表示', f'{jst} JST\t' in page and first[0] not in page)
+
+    # --- Lockout settings ---------------------------------------------------------------------------
+    settings = d.get('/admin/index.php?p=settings&section=common').text
+    check('設定に「ログインの失敗とロック」（初期は 5 回・15 分）', '<option value="5" selected>5 回</option>' in settings and '<option value="900" selected>15 分</option>' in settings and '<option value="86400">24 時間</option>' in settings)
+    save = lambda data: d.post('/admin/index.php', {'csrf': csrf, 'do': 'settings_save_all', 'tab': 'common', 'sections[]': 'login_guard', **data}, headers={'Accept': 'application/json'})
+    check('範囲の外（2 回・10 分）は断る', save({'login_fail_max': '2', 'login_lock': '900'}).status == 422 and save({'login_fail_max': '5', 'login_lock': '600'}).status == 422)
+    r = save({'login_fail_max': '3', 'login_lock': '3600'})
+    check('3 回・1 時間に変えられる', r.status == 200 and json.loads(r.text).get('ok') and "'login_fail_max' => 3" in (site / 'data/config.php').read_text(encoding='utf-8'))
+    x = h.Client(args.port)
+    for i in range(3):
+        page = x.get('/admin/index.php?k=' + key)
+        r = x.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(page.text), 'password': 'wrong-password'})
+    check('3 回間違えると、ログイン画面も 404', h.is_404(x.get('/admin/index.php?k=' + key)))
+    ratelimit = site / 'data/ratelimit'
+    bucket = lambda name: ratelimit / (hashlib.sha256(f'{name}|{h.HOST}'.encode()).hexdigest() + '.json')
+    bucket('login').unlink()
+    check('15 分の数え直しが過ぎても、1 時間のロックは続く', h.is_404(x.get('/admin/index.php?k=' + key)))
+    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    check('ロックしたことと設定の変更をセキュリティログに記録', 'login_locked\t60min' in log and 'settings_login_guard_changed\t3 / 60min' in log)
+    bucket('login-lock').unlink()
+    page = x.get('/admin/index.php?k=' + key)
+    r = x.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(page.text), 'password': PASSWORD})
+    check('ロックが明けると（data/ratelimit を消すと）ログインできる', r.status == 303)
 
 
 def main():

@@ -41,6 +41,7 @@ const NM_SETTINGS_SECTIONS = [
     'lscache' => ['LiteSpeed Cache', 'common'],
     'login_days' => ['ログインを保つ期間', 'common'],
     'login_entry' => ['ログインの入口', 'common'],
+    'login_guard' => ['ログインの失敗とロック', 'common'],
     'log_guard' => ['画像収集BOTへの対策', 'common'],
     'access' => ['管理画面を開ける場所（IP 制限）', 'common'],
     'general' => ['設置先と画像アップロード', 'common'],
@@ -798,6 +799,16 @@ function nm_settings_login_entry(array $cfg): array
     return $cfg;
 }
 
+function nm_settings_login_guard(array $cfg): array
+{
+    $max = (int)nm_str($_POST, 'login_fail_max', 3);
+    $lock = (int)nm_str($_POST, 'login_lock', 6);
+    if (!in_array($max, NM_LOGIN_FAIL_CHOICES, true) || !in_array($lock, NM_LOGIN_LOCKS, true)) throw new UnexpectedValueException(nm_t('ログインの失敗とロックの設定を選び直してください'));
+    $cfg['login_fail_max'] = $max;
+    $cfg['login_lock'] = $lock;
+    return $cfg;
+}
+
 function nm_settings_access(array $cfg): array
 {
     $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
@@ -866,6 +877,7 @@ function nm_settings_logged(array $cfg, array $sections): void
     if (in_array('lscache', $sections, true)) nm_log('settings_lscache_changed', $cfg['lscache'] ? 'on' : 'off');
     if (in_array('login_days', $sections, true)) nm_log('settings_login_days_changed', (string)$cfg['login_days']);
     if (in_array('login_entry', $sections, true)) nm_log('settings_login_entry_changed', (string)$cfg['login_entry']);
+    if (in_array('login_guard', $sections, true)) nm_log('settings_login_guard_changed', $cfg['login_fail_max'] . ' / ' . intdiv($cfg['login_lock'], 60) . 'min');
     if (in_array('access', $sections, true)) nm_log('settings_access_changed', implode(',', $cfg['allowed_ips']));
     if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $cfg['hotlink_allow']));
 }
@@ -886,7 +898,7 @@ function nm_settings_save_all(array $cfg): never
     try {
         // 1. Check every block; nothing is written yet.
         $next = $cfg;
-        foreach (['admin_lang', 'lscache', 'login_days', 'login_entry', 'access', 'general', 'page', 'advanced'] as $key) {
+        foreach (['admin_lang', 'lscache', 'login_days', 'login_entry', 'login_guard', 'access', 'general', 'page', 'advanced'] as $key) {
             if (!in_array($key, $sections, true)) continue;
             // Without LiteSpeed the switch is disabled and absent; keep the stored value.
             if ($key === 'lscache' && !nm_lscache_server()) continue;
@@ -1585,6 +1597,22 @@ function nm_view_backup(): void
         . '</section>' . nl_backup_panel());
 }
 
+/**
+ * A security log line with its time in the reader's zone: Japan time (JST) in Japanese, UTC in other languages.
+ * The file keeps the server's ISO time with its offset; only the display changes.
+ */
+function nm_log_line_time(string $line): string
+{
+    [$at, $rest] = array_pad(explode("\t", $line, 2), 2, '');
+    try {
+        $time = new DateTimeImmutable($at);
+    } catch (Exception) {
+        return $line;
+    }
+    $ja = nm_lang() === 'ja';
+    return $time->setTimezone(new DateTimeZone($ja ? 'Asia/Tokyo' : 'UTC'))->format('Y-m-d H:i:s') . ($ja ? ' JST' : ' UTC') . ($rest !== '' ? "\t" . $rest : '');
+}
+
 function nm_view_settings(array $cfg): void
 {
     $login = nm_base_url() . '/admin/index.php?k=' . $cfg['login_key'];
@@ -1592,7 +1620,7 @@ function nm_view_settings(array $cfg): void
     $logFile = NM_DATA . '/logs/security.log';
     if (is_file($logFile)) {
         $lines = array_slice(file($logFile, FILE_IGNORE_NEW_LINES) ?: [], -40);
-        $log = h(implode("\n", array_reverse($lines)));
+        $log = h(implode("\n", array_map('nm_log_line_time', array_reverse($lines))));
     }
     $hidden = nm_csrf_field();
     $block = 'nl_settings_block';
@@ -1637,6 +1665,13 @@ function nm_view_settings(array $cfg): void
         . '<label class="check"><input type="radio" name="login_days" value="30"' . (nm_login_days() === 30 ? ' checked' : '') . '>' . nm_t('30 日（おすすめ）') . '</label>'
         . '<label class="check"><input type="radio" name="login_days" value="365"' . (nm_login_days() === 365 ? ' checked' : '') . '>' . nm_t('1 年（365 日）') . '</label>'
         . '<p class="note">' . nm_t('最後にログインした日から数えます。期間中はブラウザを閉じてもログインしたままです。共用のパソコンでは使わず、使い終わったらログアウトしてください。パスワードを変えると、ほかの端末はログアウトされます。') . '</p>'
+        . '</div></section>'
+
+        . '<section class="card"><h2>' . nm_t('ログインの失敗とロック') . '</h2>'
+        . $block('login_guard')
+        . '<label>' . nm_t('15 分のあいだに失敗してよい回数') . '<select name="login_fail_max">' . implode('', array_map(static fn($n) => '<option value="' . $n . '"' . ($n === nm_login_fail_max($cfg) ? ' selected' : '') . '>' . nm_t('{n} 回', ['n' => $n]) . '</option>', NM_LOGIN_FAIL_CHOICES)) . '</select></label>'
+        . '<label>' . nm_t('超えたら、その IP アドレスをロックする時間') . '<select name="login_lock">' . implode('', array_map(static fn($s) => '<option value="' . $s . '"' . ($s === nm_login_lock($cfg) ? ' selected' : '') . '>' . ($s < 3600 ? nm_t('{n} 分', ['n' => intdiv($s, 60)]) : nm_t('{n} 時間', ['n' => intdiv($s, 3600)])) . '</option>', NM_LOGIN_LOCKS)) . '</select></label>'
+        . '<p class="note">' . nm_t('パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレスごとに数えます。ロック中は、ログイン画面も「Not Found」になります。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。') . '</p>'
         . '</div></section>'
 
         . nl_guard_panel()

@@ -327,7 +327,7 @@ Logging in can ask for the 6-digit verification code from an authenticator app o
 
 - A verification code works only once (the same code cannot log in again). A phone clock that is about 30 seconds off is accepted.
 - Full-width digits (a Japanese phone keyboard) and spaces in between are accepted.
-- Wrong codes count like wrong passwords (locked for 15 minutes after 5).
+- Wrong codes count like wrong passwords (by default, locked for 15 minutes after 5).
 - Turning it on or off logs out the other devices.
 - The key is kept encrypted in `data/config.php`.
 - The app lists it as “NagiSeries NagiLog” with the site’s domain (for example `example.com`) as the account name. The name does not change the codes, so codes registered before keep working. Apps that read an image field (`image=`) also get the LOG’s favicon (NagiManga’s icon if none is set). Apps such as Authy look up a logo by the name and may show an unrelated one; pick the generic logo (a key) then.
@@ -347,7 +347,7 @@ Log in without the password, with a passkey saved in Proton Pass, the iPhone Pas
 - A passkey is **bound to the domain it was registered on**. Register again after moving to another domain.
 - A passkey proves both that you have the device and who you are, so logging in with one asks for **neither the password nor the two-step code**. Logging in with the password (and the code) still works as before.
 - Up to 10 passkeys. Deleting one needs the admin password.
-- Failures count like wrong passwords (locked for 15 minutes after 5).
+- Failures count like wrong passwords (by default, locked for 15 minutes after 5).
 - Only the public keys are kept (`data/config.php`); the private keys never leave the passkey provider.
 - No outside library or service: PHP’s openssl checks them (ES256 and RS256).
 
@@ -358,7 +358,7 @@ Log in without the password, with a passkey saved in Proton Pass, the iPhone Pas
 | The setup screen says "Not Found" (30 minutes passed) | Delete `data/install.lock` with FTP and open it again |
 | You forgot the login URL (with the secret login URL only, there is no other way in) | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
-| Too many wrong logins | Wait 15 minutes (the login screen says "Not Found" meanwhile) |
+| Too many wrong logins | Wait for the lock time you set (15 minutes by default); the login screen says "Not Found" meanwhile. In a hurry, delete the contents of `data/ratelimit` with FTP |
 | You lost the phone for two-step login | Enter one of the recovery codes you saved in the code field. Without them, open `data/config.php` with FTP and delete the entry that starts with `'totp' =>` (two-step login turns off) |
 | A passkey does not work or is lost | Log in with the password (and the code), then delete it or register again in Settings → Passkeys. To remove all, open `data/config.php` with FTP and delete the entry that starts with `'passkeys' =>` |
 | The admin panel says the data folder can be seen from the internet | See "Protecting the data folder" below |
@@ -413,7 +413,7 @@ Picture locations in `manifest.json` are relative to the place of `manifest.json
 ## Security approach
 
 - **The public side is read only.** All `read.php` can do is "list a work's pages", "check a password" and "return a picture". Every odd request gets the same "Not Found", telling nothing about what exists.
-- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after 5 failures; at most 40 per hour overall; when turned on, then a code from an authenticator app; or, once registered, a passkey instead) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
+- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after a number of failures, for a time, both set in the settings: 5 and 15 minutes by default; at most 40 per hour overall; when turned on, then a code from an authenticator app; or, once registered, a passkey instead) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
 - **Uploaded pictures are always redrawn.** Whether a file is a picture is judged from its contents, not its name; it is read with GD and written to a new file. Programs hidden in pictures and data such as the shooting location do not survive. File names are given anew. SVG is not accepted for manga pages. EPUB and backup ZIPs are also checked item by item before use.
 - **Programs do not run in the picture folders.** `data` cannot be seen from outside, and only `.webp` / `.jpg` are stored.
 - **Error details are not shown on screen.** So that server paths and the like do not leak. Records go to `data/logs/security.log`, which can be read on the settings page of the admin panel.

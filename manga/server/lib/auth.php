@@ -7,7 +7,7 @@
  * Layers (each one alone answers 404):
  *   1. IP allow list (config, checked here even if .htaccess is not honoured)
  *   2. Secret login key in the URL (scanners never find the login form)
- *   3. Password + lockout after repeated failures, then (when turned on) a code from an
+ *   3. Password + lockout after repeated failures (how many, and for how long, is a setting), then (when turned on) a code from an
  *      authenticator app (lib/totp.php), counted against the same lockout
  *   4. Session bound to the browser; the owner stays signed in for 30 or 365
  *      days after logging in (setting), guests keep the short idle / absolute timeouts
@@ -28,7 +28,9 @@ const NM_SESSION_IDLE = 1800;       // 30 min (guest)
 const NM_SESSION_MAX = 43200;       // 12 h (guest)
 const NM_LOGIN_DAYS = [30, 365];    // owner: days from the last login, first one is the default
 const NM_SESSION_GC = 31708800;     // 367 days: PHP must not collect a session that is still valid
-const NM_LOGIN_FAIL_MAX = 5;        // per IP / 15 min
+const NM_LOGIN_FAIL_MAX = 5;        // per IP / 15 min (default; the setting allows NM_LOGIN_FAIL_CHOICES)
+const NM_LOGIN_FAIL_CHOICES = [3, 4, 5, 6, 7, 8, 9, 10];
+const NM_LOGIN_LOCKS = [900, 3600, 21600, 86400];   // how long an address is shut out: 15 min (default), 1 h, 6 h, 24 h
 const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing)
 
 /**
@@ -181,10 +183,24 @@ function nm_admin_version(): string
     return substr(hash('sha256', (string)($cfg['admin_hash'] ?? '') . $since), 0, 16);
 }
 
+/** Wrong answers (password, code, passkey) one address may make within 15 minutes (setting, 3–10). */
+function nm_login_fail_max(?array $cfg = null): int
+{
+    $n = (int)(($cfg ?? nm_config() ?? [])['login_fail_max'] ?? NM_LOGIN_FAIL_MAX);
+    return in_array($n, NM_LOGIN_FAIL_CHOICES, true) ? $n : NM_LOGIN_FAIL_MAX;
+}
+/** Seconds an address stays shut out after that (setting: 15 minutes, 1, 6 or 24 hours). */
+function nm_login_lock(?array $cfg = null): int
+{
+    $s = (int)(($cfg ?? nm_config() ?? [])['login_lock'] ?? NM_LOGIN_LOCKS[0]);
+    return in_array($s, NM_LOGIN_LOCKS, true) ? $s : NM_LOGIN_LOCKS[0];
+}
+
 function nm_login_blocked(): bool
 {
     $ip = nm_client_ip();
-    return nm_rate_count('login', $ip, 900) >= NM_LOGIN_FAIL_MAX
+    return nm_rate_count('login', $ip, 900) >= nm_login_fail_max()
+        || nm_rate_count('login-lock', $ip, nm_login_lock()) > 0
         || nm_rate_count('login-all', 'all', 3600) >= NM_LOGIN_FAIL_GLOBAL;
 }
 
@@ -206,9 +222,14 @@ function nm_password_ok(string $password): bool
 function nm_login_failed(string $event): void
 {
     $ip = nm_client_ip();
-    nm_rate_hit('login', $ip, 900);
+    $count = nm_rate_hit('login', $ip, 900);
     nm_rate_hit('login-all', 'all', 3600);
     nm_log($event);
+    // The failure that reaches the limit starts the lock (kept apart, so a long lock outlives the 15-minute count).
+    if ($count === nm_login_fail_max()) {
+        nm_rate_hit('login-lock', $ip, nm_login_lock());
+        nm_log('login_locked', (string)intdiv(nm_login_lock(), 60) . 'min');
+    }
     usleep(random_int(400000, 900000));
 }
 

@@ -1697,5 +1697,13 @@
   "ログインの入口": "Way in to log in",
   "ログインの入口を選んでください": "Choose the way in to log in",
   "秘密のログイン URL からだけログインできるようにする（推奨。LOGの「ログイン」リンクと login.php を使いません。あとで設定から変更できます）": "Log in only from the secret login URL (recommended; no Log in link on the LOG and no login.php; you can change this later in the settings)",
-  "秘密のログイン URL からだけ（おすすめ）": "Only the secret login URL (recommended)"
+  "秘密のログイン URL からだけ（おすすめ）": "Only the secret login URL (recommended)",
+  "15 分のあいだに失敗してよい回数": "Failed tries allowed within 15 minutes",
+  "{n} 分": "{n} minutes",
+  "{n} 回": "{n} times",
+  "{n} 時間": "{n} hours",
+  "パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレスごとに数えます。ロック中は、ログイン画面も「Not Found」になります。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。": "Wrong passwords, two-step codes and passkeys are counted per IP address. While an address is locked, the login screen also says Not Found. If you lock yourself out, wait, or delete the contents of the data/ratelimit folder over FTP. Addresses the IP restriction does not allow never reach the login screen, so they are not counted.",
+  "ログインの失敗とロック": "Failed logins and lockout",
+  "ログインの失敗とロックの設定を選び直してください": "Choose the failed login and lockout settings again",
+  "超えたら、その IP アドレスをロックする時間": "How long to lock that IP address after that"
 }
