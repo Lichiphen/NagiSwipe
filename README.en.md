@@ -5,8 +5,8 @@
 # NagiSeries
 
 [![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
-[![NagiManga v0.9.1](https://img.shields.io/badge/NagiManga-v0.9.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
-[![NagiLog v0.9.1](https://img.shields.io/badge/NagiLog-v0.9.1-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
+[![NagiManga v0.10.0](https://img.shields.io/badge/NagiManga-v0.10.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
+[![NagiLog v0.10.0](https://img.shields.io/badge/NagiLog-v0.10.0-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
 [![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
