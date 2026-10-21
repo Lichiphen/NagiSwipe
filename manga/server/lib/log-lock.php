@@ -95,7 +95,7 @@ function nl_lock_cookie_path(): string
 /** The public address of a post or a fixed page, with the lock form's answer when there is one. */
 function nl_lock_target(array $item, bool $page, string $state = ''): string
 {
-    $url = nl_base_url() . '/' . ($page ? nl_fixed_path($item['slug']) : nl_post_path($item['id']));
+    $url = nl_base_url() . '/' . ($page ? nl_page_path($item) : nl_post_path($item['id']));
     return $url . ($state !== '' ? (str_contains($url, '?') ? '&' : '?') . 'locked=' . $state : '');
 }
 /**

@@ -70,13 +70,15 @@ function nl_menu_input(string $kind): array
     return [$items, (int)$revision];
 }
 function nl_topmenu_input(): array { return nl_menu_input('top'); }
-/** What the editor can link by name: the top, fixed pages, categories and hashtags. */
+/** What the editor can link by name: the top, the blog (with the fixed top page), fixed pages, categories and hashtags. */
 function nl_topmenu_candidates(): array
 {
-    $out = [['t' => nm_t('ホーム（すべての投稿）'), 'u' => './', 'k' => nm_t('トップ')]];
+    $blog = nl_blog_slug() !== '';
+    $out = [['t' => nm_t($blog ? 'ホーム' : 'ホーム（すべての投稿）'), 'u' => './', 'k' => nm_t('トップ')]];
+    if ($blog) $out[] = ['t' => nl_blog_label(nl_settings()), 'u' => nl_list_url(), 'k' => nm_t('ブログ（すべての投稿）')];
     foreach (nl_pages() as $p) $out[] = ['t' => $p['title'], 'u' => nl_fixed_url($p), 'k' => $p['status'] === 'published' ? nm_t('固定ページ') : nm_t('固定ページ・下書き')];
-    foreach (nl_taxonomy()['categories'] as $id => $name) $out[] = ['t' => $name, 'u' => './?category=' . rawurlencode((string)$id), 'k' => nm_t('カテゴリ')];
-    foreach (array_slice(nl_ordered_hashtags(true), 0, 100) as $tag) $out[] = ['t' => '#' . $tag, 'u' => './?tag=' . rawurlencode($tag), 'k' => nm_t('ハッシュタグ')];
+    foreach (nl_taxonomy()['categories'] as $id => $name) $out[] = ['t' => $name, 'u' => nl_list_url('category=' . rawurlencode((string)$id)), 'k' => nm_t('カテゴリ')];
+    foreach (array_slice(nl_ordered_hashtags(true), 0, 100) as $tag) $out[] = ['t' => '#' . $tag, 'u' => nl_list_url('tag=' . rawurlencode($tag)), 'k' => nm_t('ハッシュタグ')];
     return $out;
 }
 function nl_topmenu_edit_row(array $item): string
@@ -117,7 +119,7 @@ function nl_footmenu_panel(): string
     return nl_menu_editor('foot', nm_t('ページの一番下に並ぶリンクです。利用規約やプライバシーポリシーなどを置けます。左から順に表示し、スマホでは折り返して並べます。'),
         '<input type="hidden" name="footer_home_form" value="1"><label class="check"><input type="checkbox" name="footer_home" value="1"' . ($s['footer_home'] ? ' checked' : '') . '>' . nm_t('先頭に、家のアイコンと「{home}」のトップへのリンクを出す', ['home' => h(nl_crumb_home($s))]) . '</label><p class="note">' . nm_t('文字はパンくずリストの先頭と同じです（「一覧の見せ方・記事の下」で変えられます）。') . '</p>');
 }
-/** Whether a menu link points at the page being shown ($here: pg / category / tag / id / top). */
+/** Whether a menu link points at the page being shown ($here: pg / category / tag / id / top / blog). */
 function nl_menu_current(string $url, array $here): bool
 {
     $base = nl_base_url();
@@ -131,6 +133,13 @@ function nl_menu_current(string $url, array $here): bool
         elseif (preg_match(NL_PAGE_SLUG_PATTERN, $leaf)) $q += ['pg' => $leaf];
     }
     $top = in_array($path, ['', './', '.', rtrim((string)(parse_url($base, PHP_URL_PATH) ?? ''), '/') . '/'], true) || str_ends_with($path, '/index.php');
+    // The blog (./blog, ./?pg=blog) is the list: a category or tag under it counts as that list, the blog alone as the blog.
+    $blog = nl_blog_slug();
+    if ($blog !== '' && ($q['pg'] ?? null) === $blog) {
+        unset($q['pg']);
+        if (!array_intersect_key($q, ['category' => 1, 'tag' => 1, 'q' => 1, 'date' => 1, 'month' => 1])) return !empty($here['blog']);
+        $top = false;
+    }
     foreach (['pg', 'category', 'tag', 'id'] as $key) if (isset($q[$key]) && is_string($q[$key]) && $q[$key] === ($here[$key] ?? null)) return true;
     return !array_intersect_key($q, ['pg' => 1, 'category' => 1, 'tag' => 1, 'id' => 1, 'q' => 1, 'date' => 1, 'month' => 1]) && $top && !empty($here['top']);
 }
@@ -139,7 +148,10 @@ function nl_menu_items(string $kind, array $here): string
 {
     $base = nl_base_url();
     $list = ''; $marked = false;
-    foreach (nl_menu_settings($kind)['items'] as $item) {
+    $items = nl_menu_settings($kind)['items'];
+    // The blog link the settings add (lib/log-front.php) comes first; in the footer, after HOME.
+    if ($blog = nl_blog_menu_item($kind)) array_unshift($items, $blog);
+    foreach ($items as $item) {
         if (!$item['enabled']) continue;
         $current = !$marked && nl_menu_current($item['url'], $here);
         $marked = $marked || $current;

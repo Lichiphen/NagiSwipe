@@ -25,6 +25,7 @@ const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.6.0/
 /** Blocks of the settings screen: their heading (for messages) and tab. */
 const NM_SETTINGS_SECTIONS = [
     'log_preferences' => ['公開範囲・表示件数・ページ送り', 'log'],
+    'log_front' => ['トップページとブログ', 'log'],
     'log_display' => ['一覧の見せ方・記事の下', 'log'],
     'log_design' => ['LOGのデザイン・アイコン', 'log'],
     'log_seo' => ['検索エンジンとサイトマップ', 'log'],
@@ -781,7 +782,7 @@ function nm_settings_save_all(array $cfg): never
         }
         if (in_array('log_guard', $sections, true)) { $at = 'log_guard'; $next = nl_guard_input($next); }
         $changes = [];
-        foreach (['log_preferences' => 'nl_preferences_input', 'log_display' => 'nl_display_input', 'log_seo' => 'nl_seo_input', 'log_footer' => 'nl_footer_input', 'log_warning' => 'nl_warning_presets_input'] as $key => $fn) {
+        foreach (['log_preferences' => 'nl_preferences_input', 'log_front' => 'nl_front_input', 'log_display' => 'nl_display_input', 'log_seo' => 'nl_seo_input', 'log_footer' => 'nl_footer_input', 'log_warning' => 'nl_warning_presets_input'] as $key => $fn) {
             if (in_array($key, $sections, true)) { $at = $key; $changes[] = $fn(); }
         }
         $design = null;
@@ -1289,7 +1290,7 @@ function nm_view_settings(array $cfg): void
     // so their forms sit after it and their fields join them with form="…".
     nm_layout(nm_t('設定'), $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="' . nm_t('設定の目次') . '" hidden></nav>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
-        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_display_panel() . nl_settings_panel() . nl_css_settings_card() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('common')
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_front_panel() . nl_display_panel() . nl_settings_panel() . nl_css_settings_card() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('common')
         . '<section class="card"><h2>' . h(nm_t('管理画面の言語')) . '</h2>' . $block('admin_lang')
         . implode('', array_map(static fn($value, $label) => '<label class="check"><input type="radio" name="admin_lang" value="' . h($value) . '"' . (($cfg['admin_lang'] ?? 'auto') === $value ? ' checked' : '') . '>' . h($label) . '</label>',
             array_keys(['auto' => 0] + nm_langs()), array_merge([nm_t('自動（ブラウザの言語に合わせる）')], array_values(nm_langs()))))

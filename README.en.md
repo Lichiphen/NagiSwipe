@@ -5,8 +5,8 @@
 # NagiSeries
 
 [![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
-[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
-[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
+[![NagiManga v0.9.0](https://img.shields.io/badge/NagiManga-v0.9.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
+[![NagiLog v0.9.0](https://img.shields.io/badge/NagiLog-v0.9.0-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
 [![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
@@ -161,6 +161,7 @@ A personal log that needs no database, for posting text, pictures and manga to y
 - Posting from a phone, drafts, replacing pictures, manga cards
 - Categories, hashtags, search, related posts, likes, RSS and a sitemap
 - Content warnings (sensitive, R-18, R-18G), 3 light and 3 dark designs
+- Fixed pages (Markdown), and a setting that puts a fixed page on the top and moves the post list to `./blog` (on or off)
 - Video and audio (a waveform player, gapless repeat, writing the cover and loop points into songs, autoplay and repeat settings for videos)
 
 ![The top of NagiLog on a computer](manga/docs/images/log-pc.jpg)

@@ -50,12 +50,25 @@ $id = nm_str($_GET, 'id', 24);
 $single = isset($_GET['id']);
 $post = $single ? nl_load_post($id) : null;
 if ($single && (!$post || $post['status'] !== 'published')) nm_not_found();
+// With the fixed top page (lib/log-front.php), ./blog (./?pg=blog) is the post list and ./ shows the chosen page.
+$blogSlug = nl_blog_slug();
+$blog = !$single && $blogSlug !== '' && isset($_GET['pg']) && $_GET['pg'] === $blogSlug;
 // A fixed page (./<URL name> or ./?pg=<URL name>); the owner also sees drafts.
-$fixed = !$single && isset($_GET['pg']) ? nl_find_page(nm_str($_GET, 'pg', 40)) : null;
-if (!$single && isset($_GET['pg']) && (!$fixed || ($fixed['status'] !== 'published' && !$owner))) nm_not_found();
+$fixed = !$single && !$blog && isset($_GET['pg']) ? nl_find_page(nm_str($_GET, 'pg', 40)) : null;
+// Links to the blog outlive turning it off: they go back to the list at the top.
+if (!$single && !$fixed && $blogSlug === '' && $s['front_page'] !== '' && isset($_GET['pg']) && $_GET['pg'] === $s['blog_slug']) nl_move_to(nl_list_path(nl_list_query($_GET)));
+if (!$single && !$blog && isset($_GET['pg']) && (!$fixed || ($fixed['status'] !== 'published' && !$owner))) nm_not_found();
+// The top page shows its fixed page under ./ only; its own URL moves there.
+if ($fixed && nl_is_front($fixed)) nl_move_to('');
+$front = !$single && !$blog && !$fixed && $blogSlug !== '' && !isset($_GET['feed']) && !isset($_GET['sitemap']) ? nl_front_page($owner) : null;
+if ($blogSlug !== '' && !$single && !$blog && !$fixed && !isset($_GET['feed']) && !isset($_GET['sitemap'])) {
+    // Lists asked for at the top (old links, ./?category=…) move to the blog, and so does the top while its page is missing or a draft.
+    if (nl_list_query($_GET) !== '' || !$front) nl_move_to(nl_list_path(nl_list_query($_GET)));
+    $fixed = $front;
+}
 // ./?id=… and ./?pg=… (and a trailing slash) move to the clean URL where the server has it.
 if ($single) nl_clean_redirect(nl_post_path($post['id']));
-if ($fixed) nl_clean_redirect(nl_fixed_path($fixed['slug']));
+if ($fixed) nl_clean_redirect(nl_page_path($fixed));
 // A locked post or page shows its content only to the owner and to readers who opened it with the password.
 $closed = ($single && !nl_unlocked($post)) || ($fixed && !nl_unlocked($fixed));
 $lockState = isset($_GET['locked']) && in_array($_GET['locked'], ['wrong', 'wait'], true) ? (string)$_GET['locked'] : '';
@@ -83,11 +96,13 @@ $pageSummaries = $single || $fixed ? [] : array_slice($all, ($page - 1) * $perPa
 $posts = $single ? [$post] : ($fixed ? [] : ($grid ? $pageSummaries : array_values(array_filter(array_map(static fn($s) => nl_load_post($s['id']), $pageSummaries), static fn($p) => $p && $p['status'] === 'published'))));
 $base = nl_base_url();
 $query = $filter['query'] . ($page > 1 ? ($filter['query'] !== '' ? '&' : '') . 'page=' . $page : '');
-$canonical = $base . '/' . ($single ? nl_post_path($id) : ($fixed ? nl_fixed_path($fixed['slug']) : ($query !== '' ? '?' . $query : '')));
-$title = $single ? nl_post_title($post) : ($fixed ? $fixed['title'] : ($filter['label'] !== '' ? $filter['label'] . nm_t('｜') . $s['title'] : $s['title']));
+// ./blog/, index.php?pg=blog and the like move to the blog's clean URL.
+if ($blog && nl_pretty() && nl_request_leaf() !== $blogSlug) nl_move_to(nl_list_path($query));
+$canonical = $base . '/' . ($single ? nl_post_path($id) : ($fixed ? nl_page_path($fixed) : nl_list_path($query)));
+$title = $single ? nl_post_title($post) : ($front ? $s['title'] : ($fixed ? $fixed['title'] : ($filter['label'] !== '' ? $filter['label'] . nm_t('｜') . $s['title'] : ($blog ? nl_blog_label($s) . nm_t('｜') . $s['title'] : $s['title']))));
 $rating = $single ? nl_post_rating($post) : '';
 $desc = $single ? (nl_is_locked($post) ? nl_lock_description() : (nl_veil_description($post) ?: nl_excerpt($post) ?: $s['description']))
-    : ($fixed ? (nl_is_locked($fixed) ? nl_lock_description(true) : (nl_page_excerpt($fixed) ?: $s['description'])) : $s['description']);
+    : ($fixed ? (nl_is_locked($fixed) ? nl_lock_description(true) : ($front ? ($s['description'] ?: nl_page_excerpt($fixed)) : (nl_page_excerpt($fixed) ?: $s['description']))) : $s['description']);
 // Share cards need a bitmap: an SVG is never used as og:image.
 [$ogImage, $ogWidth, $ogHeight] = ($og = nl_load_media($s['og_image'])) && !nl_is_svg($og) ? [nl_public_url(nl_media_url($og)), (int)$og['w'], (int)$og['h']] : [$base . '/viewer/log-og.png?v=' . nm_asset_version(__DIR__ . '/viewer/log-og.png'), 0, 0];
 // A post shares its first picture without a warning; with only warned pictures, a blurred copy with the rating's label
@@ -105,7 +120,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Cache-Control: ' . ($owner ? 'private, no-store' : 'no-cache'));
 header('X-Robots-Tag: ' . $robots);
 // One trail for the visible breadcrumb and the BreadcrumbList JSON-LD (allowed in the CSP by its hash).
-[$breadcrumbHtml, $breadcrumb] = nl_breadcrumb($fixed ? [[nl_crumb_home($s), ''], [$fixed['title'], null]] : nl_breadcrumb_trail($s, $filter, $page, $single ? $post : null), $canonical);
+[$breadcrumbHtml, $breadcrumb] = nl_breadcrumb($front ? [] : ($fixed ? [[nl_crumb_home($s), ''], [$fixed['title'], null]] : nl_breadcrumb_trail($s, $filter, $page, $single ? $post : null)), $canonical);
 $jsonHash = $breadcrumb !== '' ? " 'sha256-" . base64_encode(hash('sha256', $breadcrumb, true)) . "'" : '';
 function nl_public_asset(string $file): string { return h($file . '?v=' . nm_asset_version(__DIR__ . '/' . $file)); }
 // The top page keeps the open editor; other pages open it from the floating button.
@@ -136,7 +151,8 @@ else foreach ($posts as $p) {
 $relatedHtml = $single && $s['public'] ? nl_related_html($summaries, $post, $s) : '';
 $sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);
 // The page shown, for the menus' current link.
-$here = ['pg' => $fixed['slug'] ?? null, 'category' => $filter['category'] !== '' ? $filter['category'] : null, 'tag' => $filter['tag'] !== '' ? $filter['tag'] : null, 'id' => $single ? $post['id'] : null, 'top' => !$single && !$fixed && $filter['query'] === ''];
+$here = ['pg' => $fixed['slug'] ?? null, 'category' => $filter['category'] !== '' ? $filter['category'] : null, 'tag' => $filter['tag'] !== '' ? $filter['tag'] : null, 'id' => $single ? $post['id'] : null,
+    'top' => $front !== null || ($blogSlug === '' && !$single && !$fixed && $filter['query'] === ''), 'blog' => $blog && $filter['query'] === ''];
 $topmenuHtml = nl_topmenu_html($here);
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js. A fixed page adds the hosts of its outside pictures.
@@ -160,7 +176,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
     : '';
 ?><!DOCTYPE html>
 <html lang="<?= nm_lang() ?>" data-icons="<?= h(nm_icon_url()) ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= h($single || $fixed ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
+<title><?= h($single || ($fixed && !$front) ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
 <meta name="description" content="<?= h($desc) ?>"><meta name="robots" content="<?= $robots ?>">
 <link rel="canonical" href="<?= h($canonical) ?>"><meta property="og:url" content="<?= h($canonical) ?>">
 <meta property="og:type" content="<?= $single ? 'article' : 'website' ?>"><meta property="og:site_name" content="<?= h($s['title']) ?>">
@@ -193,7 +209,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><?= nm_icon('menu') ?><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><?= $tocRail ?><main class="log-site-main" id="log-main">
 <?= $breadcrumbHtml ?>
-<?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= nm_t('{n}件', ['n' => count($all)]) ?></span><a class="log-all-chip" href="./"><?= nl_all_icon() ?><span><?= nm_t('すべての投稿') ?></span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
+<?php if (!$single && $filter['label'] !== ''): ?><div class="log-archive-head"><h2 class="log-archive-title"><?= h($filter['label']) ?></h2><span class="log-archive-count"><?= nm_t('{n}件', ['n' => count($all)]) ?></span><a class="log-all-chip" href="<?= h(nl_list_url()) ?>"><?= nl_all_icon() ?><span><?= nm_t('すべての投稿') ?></span><span class="log-all-count"><?= count($summaries) ?></span></a></div><?php endif; ?>
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note"><?= nm_t('自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。') ?></p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?= $postsHtml ?>
 <?php if (!$posts && !$fixed): ?><p class="log-empty"><?= nm_t($filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。'))) ?></p><?php endif; ?>

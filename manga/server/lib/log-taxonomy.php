@@ -94,7 +94,7 @@ function nl_category_icon(): string
 function nl_category_links(array $p, bool $admin = false): string
 {
     $taxonomy = nl_taxonomy(); $links = [];
-    foreach ($p['categories'] ?? [] as $id) if (isset($taxonomy['categories'][$id])) $links[] = '<a href="' . ($admin ? '../' : '') . './?category=' . h((string)$id) . '">' . nl_category_icon() . '<span>' . h($taxonomy['categories'][$id]) . '</span></a>';
+    foreach ($p['categories'] ?? [] as $id) if (isset($taxonomy['categories'][$id])) $links[] = '<a href="' . h(nl_list_url('category=' . $id, $admin ? '../' : './')) . '">' . nl_category_icon() . '<span>' . h($taxonomy['categories'][$id]) . '</span></a>';
     return $links ? '<nav class="log-categories" aria-label="' . nm_t('カテゴリ') . '"><span class="log-categories-label">' . nm_t('カテゴリ') . '</span>' . implode('<span class="log-cat-sep" aria-hidden="true">,</span>', $links) . '</nav>' : '';
 }
 function nl_taxonomy_rename(array $input): void

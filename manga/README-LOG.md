@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.9.0](https://img.shields.io/badge/NagiLog-v0.9.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.9.0](https://img.shields.io/badge/NagiManga-v0.9.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -68,6 +68,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 - [ファビコンとホーム画面のアイコン](#ファビコンとホーム画面のアイコン)
 - [トップメニュー](#トップメニュー)
 - [固定ページ](#固定ページ)
+  - [トップページとブログ](#トップページとブログ)
 - [SEOとOGP](#seoとogp)
   - [パンくずリスト](#パンくずリスト)
   - [検索エンジンに載せない](#検索エンジンに載せない)
@@ -93,7 +94,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.8.2（NagiManga v0.8.2に同梱） |
+| 版 | 0.9.0（NagiManga v0.9.0に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -105,7 +106,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 | 埋め込み | URLを1行に貼るだけで、YouTube・X・Instagram・Spotify・SoundCloud・Bluesky・TikTok など22のサービスと、マンガサイト（少年ジャンプ＋などGigaViewerの19サイト）、動画ファイルを埋め込みます。対応していないページは、OGPを読んだブログカードで表示します |
 | URL | 記事は `./20261004123033`、固定ページは `./privacy` のような、`?` のないURLです（`.htaccess` が効くサーバー）。以前の `./?id=…` `./?pg=…` は新しいURLへ301で転送します |
 | 一覧と表示 | ミニブログとタイル、3種類のページ送り、ピン留め（複数・並べ替え）、新着の印、関連記事、いいね、シェア、検索、カレンダー。デザインは6種類（ライト3・ダーク3）で、どれもWCAG 2.2 AAの色のコントラストを満たします |
-| サイトの作り | 固定ページ（Markdown）、トップメニュー、フッターのリンク、タイトルロゴ、ファビコンとホーム画面のアイコン（1枚から全サイズを作成）、サイドバーの並び替えとHTML枠、プロフィールとリンク集、ブラックホールの404 |
+| サイトの作り | 固定ページ（Markdown）、トップページを固定ページにして投稿を `./blog` へ（オン・オフ）、トップメニュー、フッターのリンク、タイトルロゴ、ファビコンとホーム画面のアイコン（1枚から全サイズを作成）、サイドバーの並び替えとHTML枠、プロフィールとリンク集、ブラックホールの404 |
 | 管理画面 | 投稿一覧（検索・一括削除）、メディア一覧（検索・差し替え）、カテゴリとハッシュタグの改名・並び替え。表示は日本語と英語から選べます。管理画面を英語にすると、公開ページも英語になります |
 | 検索エンジン・共有 | canonical、OGP、パンくずリスト（JSON-LD）、サイトマップ、RSS（全体・カテゴリ・タグ）、すべてのページを検索に載せない設定 |
 | 速さ | LiteSpeed Cacheに対応します。版番号付きのJS・CSSは、ブラウザーに1年保存させます。画面の外の記事は後から組み立て、動画・音声は少しずつ配信します |
@@ -182,6 +183,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 | 投稿一覧 | 本文を省いた短い行に、日時・タイトル・小さな画像・記事を見る・編集・削除を並べます。いいねがある記事には、ハートと数を出します。一括削除も使えます。 |
 | トップメニュー | サイト名の下に、固定ページ・カテゴリ・ハッシュタグなどへのリンクを並べられます。スマホでは左右にスワイプできます。 |
 | 固定ページ | プロフィールや利用規約などをMarkdownで作れます。本文に画像を入れ、保存前にプレビューを確認できます。 |
+| トップページとブログ | 設定でオンにすると、トップに固定ページを出し、投稿の一覧を `./blog` へ移せます。トップメニューとフッターにブログへのリンクを出せます。 |
 | フッター | サイト下部の文章と、HOME・利用規約などへのリンクを別々に設定できます。 |
 | バックアップ | LOG用のZIPで、投稿、下書き、画像、分類、公開範囲、表示設定、いいねの数を保存・復元できます。 |
 
@@ -230,7 +232,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.8.2.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.9.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、30分以内に管理者パスワードを決めます。
 3. 表示された管理用URLをブックマークします。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -392,6 +394,7 @@ ZIPはアプリのバックアップ機能で作るため、管理パスワー�
 | ハッシュタグ | `https://example.com/nagimanga/?tag=らくがき` |
 | 日付・月 | `?date=2026-10-04` / `?month=2026-10` |
 | 固定ページ | `https://example.com/nagimanga/profile` |
+| ブログ（[トップページとブログ](#トップページとブログ)をオンにしたとき） | `https://example.com/nagimanga/blog`（カテゴリなどは `./blog?category=…`） |
 
 個別投稿と固定ページは、`?` のないURLです。
 同梱の `.htaccess` が `./20261004123033` を記事に、`./profile` を固定ページにつなぎます（Apache・LiteSpeedの `mod_rewrite`）。
@@ -1339,6 +1342,35 @@ HTML枠を外して保存しても、リンク先や画像そのものは削除�
 
 固定ページの説明文（`meta description`）は、本文の最初の部分からMarkdownの記号を除いて作ります。公開中の固定ページはサイトマップに載り（優先度0.5）、検索エンジンに載せる設定なら `index,follow` です。パンくずリストは「HOME › タイトル」です。トップメニューの候補にも出ます。固定ページで使っている画像は、画像一覧で削除できません。
 
+### トップページとブログ
+
+WordPressの「ホームページの表示」のように、サイトのトップに固定ページを出し、投稿の一覧を「ブログ」として別のURLへ移せます。
+「設定」の「LOG」タブにある「トップページとブログ」で、オン・オフを切り替えます。初めはオフで、今までどおりトップに投稿の一覧を出します。
+
+NagiLogをドメインの直下（`https://example.com/`）に置いた場合は、次のようになります。
+
+| ページ | オフ（標準） | オン |
+| --- | --- | --- |
+| トップ | `https://example.com/`（投稿の一覧） | `https://example.com/`（選んだ固定ページ） |
+| 投稿の一覧 | `https://example.com/` | `https://example.com/blog` |
+| カテゴリ・タグ・日付・検索・2ページ目以降 | `https://example.com/?category=…` | `https://example.com/blog?category=…` |
+| 個別投稿・ほかの固定ページ | `https://example.com/20261004123033`／`https://example.com/privacy` | 変わりません |
+
+| 項目 | 内容 |
+| --- | --- |
+| トップページに出す固定ページ | 固定ページの中から選びます。選んだページは自分のURL（`./about` など）ではなく、トップのURLで表示し、元のURLを開くとトップへ301で移ります。下書きの間は、ログインしていない人がトップを開くとブログへ移ります（ログイン中は下書きのまま確認できます） |
+| ブログのURL名 | 標準は `blog`。半角の英小文字・数字・ハイフンで40文字までです。固定ページと同じURL名や、`admin` などLOGのフォルダー名は使えません。`.htaccess` が効かないサーバーでは `./?pg=blog` です |
+| ブログの表示名 | メニューとパンくずリストに出す名前です。空のままだと「ブログ」（英語の画面では Blog） |
+| ブログへのリンク | 「トップメニューの先頭に出す」「フッターのリンクに出す（HOMEの次）」を選べます。どちらも標準でオンです。URL名や表示名を変えても、リンクは自動で変わります |
+
+ブログのURLは、固定ページと同じ深さの `./blog` です。末尾に `/` を付けた `./blog/` は `./blog` へ301で移ります（LOGのリンクや画像は相対URLなので、フォルダーの形にしないためです）。
+オンにすると、それまでの `./?category=…` や `./?page=2` はブログの同じ一覧へ301で移ります。オフに戻すと、`./blog?…` はトップの一覧へ移るので、貼ってあったリンクはどちらに切り替えても使えます。
+
+パンくずリストは、ブログの一覧で「HOME › ブログ」、カテゴリで「HOME › ブログ › カテゴリ名」、記事で「HOME › ブログ › カテゴリ名 › 記事のタイトル」です。トップの固定ページにはパンくずリストを出さず、`<title>` はサイト名だけにします。
+サイトマップには、トップ（優先度1.0）、ブログ（0.8）、カテゴリ（`./blog?category=…`）を載せ、トップにした固定ページは元のURLでは載せません。RSSの `<link>` もブログのURLです。
+トップメニューやフッターのリンクの候補にも「ブログ（すべての投稿）」が出ます。好きな位置に置きたいときは、上のチェックを外してから、項目を追加して表示名に「ブログ」と入れ、候補から選びます。この方法で入れたリンクは、あとでURL名を変えたときに手で直してください。
+設定はLOG用のバックアップに入ります。
+
 ## SEOとOGP
 
 検索エンジンに載せるページは、一覧の見せ方で変わります。
@@ -1629,6 +1661,14 @@ python manga/dev/build_release.py
 | 既存の試験 | LOG 204、セキュリティ 192、サイドバー 133、管理 107、固定ページ 94、機能 74、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、プレビュー 7、翻訳 3079 項目を通過 |
 
 WebKitの確認は、このPC上のPlaywrightのWebKitです。実機のiPhone（Safari）での確認はしていません。
+
+2026年10月21日に「トップページとブログ」（v0.9.0）を加え、次を確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| トップページとブログ（`dev/log_front_test.py`） | 70項目通過。`.htaccess` の書き換えがあるサーバーとないサーバーの両方で、トップの固定ページ、`./blog` の一覧・カテゴリ・ページ送り・検索、元のURLや `./?category=…`・`./blog/` の301転送、パンくずリスト、メニューとフッターのリンク、サイトマップ・RSS、下書き・鍵付きのトップ、オフに戻したときの転送、入力の誤りを断ること |
+| 既存の試験 | LOG 204、セキュリティ 192、サイドバー 133、管理 107、固定ページ 94、機能 89、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、埋め込み 124、追加CSS 94、動画・音声 28、プレビュー 7、翻訳 3209項目すべて通過 |
+| ブラウザー | Playwright の Chromium で、パソコン幅（1280px）とスマホ幅（390px）のトップ・ブログ・設定画面を表示し、横にはみ出さないことを確認 |
 
 色のコントラスト（WCAG 2.2 AA）は、次で6つのテーマすべてを確かめます。PlaywrightとGoogle Chromeが必要です。
 40件の記事を作ってページ送りを11ページにし、3種類のページ送り、ミニブログとタイル、PCとスマホの幅、開いたメニューやダイアログ、ホバー、キーボードの枠まで測ります。

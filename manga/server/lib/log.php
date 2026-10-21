@@ -32,6 +32,7 @@ require_once __DIR__ . '/log-pins.php';
 require_once __DIR__ . '/log-lock.php';
 require_once __DIR__ . '/log-favicon.php';
 require_once __DIR__ . '/log-css.php';
+require_once __DIR__ . '/log-front.php';
 
 function nl_valid_post(string $id): bool { return (bool)preg_match(NL_POST_PATTERN, $id); }
 function nl_valid_media(string $id): bool { return (bool)preg_match(NL_MEDIA_PATTERN, $id); }
@@ -298,7 +299,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3', 'h4'], 'toc' => 'closed', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3', 'h4'], 'toc' => 'closed', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'front' => false, 'front_page' => '', 'blog_slug' => 'blog', 'blog_label' => '', 'blog_topmenu' => true, 'blog_footer' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -331,6 +332,13 @@ function nl_read_settings(): array
     $s['footer_home'] = $s['footer_home'] !== false;
     if (!is_string($s['logo']) || ($s['logo'] !== '' && !nl_valid_media($s['logo']))) $s['logo'] = '';
     if (!is_string($s['favicon']) || ($s['favicon'] !== '' && !preg_match(NL_FAVICON_PATTERN, $s['favicon']))) $s['favicon'] = '';
+    // The fixed top page (lib/log-front.php): off unless turned on; the blog's URL name and label are kept while it is off.
+    $s['front'] = $s['front'] === true;
+    if (!is_string($s['front_page']) || !preg_match(NL_PAGE_ID_PATTERN, $s['front_page'])) $s['front_page'] = '';
+    if (!is_string($s['blog_slug']) || !preg_match(NL_PAGE_SLUG_PATTERN, $s['blog_slug']) || !nl_slug_free($s['blog_slug'])) $s['blog_slug'] = 'blog';
+    $s['blog_label'] = is_string($s['blog_label']) ? nl_blog_label_clean($s['blog_label']) : '';
+    $s['blog_topmenu'] = $s['blog_topmenu'] !== false;
+    $s['blog_footer'] = $s['blog_footer'] !== false;
     return $s;
 }
 function nl_date(int $time, string $format = 'Y/m/d H:i'): string

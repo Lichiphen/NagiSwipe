@@ -124,6 +124,15 @@ function nl_restore_plan(ZipArchive $zip): array
     $preferences['crumb_label'] = $settings['crumb_label'] ?? nl_settings()['crumb_label'];
     if (array_key_exists('warning_presets', $settings) && (!is_array($settings['warning_presets']) || !array_is_list($settings['warning_presets']) || nl_warning_presets($settings['warning_presets']) !== $settings['warning_presets'])) throw new UnexpectedValueException(nm_t('閲覧注意の定型文が壊れています'));
     $preferences['warning_presets'] = $settings['warning_presets'] ?? nl_settings()['warning_presets'];
+    // The fixed top page and the blog (lib/log-front.php). A page id that is not in the backup just leaves the top on the blog.
+    foreach (['front', 'blog_topmenu', 'blog_footer'] as $field) {
+        if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
+        $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
+    }
+    if (array_key_exists('front_page', $settings) && (!is_string($settings['front_page']) || ($settings['front_page'] !== '' && !preg_match(NL_PAGE_ID_PATTERN, $settings['front_page'])))) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
+    if (array_key_exists('blog_slug', $settings) && (!is_string($settings['blog_slug']) || !preg_match(NL_PAGE_SLUG_PATTERN, $settings['blog_slug']) || !nl_slug_free($settings['blog_slug']))) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
+    if (array_key_exists('blog_label', $settings) && (!is_string($settings['blog_label']) || nl_blog_label_clean($settings['blog_label']) !== $settings['blog_label'])) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
+    foreach (['front_page', 'blog_slug', 'blog_label'] as $field) $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
     $likes = $mark['likes'] ?? [];
     if (!is_array($likes) || count($likes) > 100000) throw new UnexpectedValueException(nm_t('いいねの数が壊れています'));
     foreach ($likes as $id => $n) if (!nl_valid_post((string)$id) || !is_int($n) || $n < 0 || $n > NL_LIKE_MAX) throw new UnexpectedValueException(nm_t('いいねの数が壊れています'));

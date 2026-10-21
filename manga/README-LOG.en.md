@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.9.0](https://img.shields.io/badge/NagiLog-v0.9.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.9.0](https://img.shields.io/badge/NagiManga-v0.9.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -70,6 +70,7 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
 - [Favicon and home screen icons](#favicon-and-home-screen-icons)
 - [Top menu](#top-menu)
 - [Fixed pages](#fixed-pages)
+  - [Top page and blog](#top-page-and-blog)
 - [SEO and OGP](#seo-and-ogp)
   - [Breadcrumbs](#breadcrumbs)
   - [Keeping it out of search engines](#keeping-it-out-of-search-engines)
@@ -95,7 +96,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.8.2 (included in NagiManga v0.8.2) |
+| Version | 0.9.0 (included in NagiManga v0.9.0) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -107,7 +108,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 | Embeds | Paste a URL on a line of its own to embed 22 services such as YouTube, X, Instagram, Spotify, SoundCloud, Bluesky and TikTok, manga sites (19 GigaViewer sites such as Shonen Jump+) and video files. Other pages are shown as blog cards made from their OGP |
 | URLs | Posts live at `./20261004123033` and fixed pages at `./privacy`, without `?` (on servers that apply `.htaccess`). The old `./?id=…` and `./?pg=…` redirect to them with 301 |
 | Lists and display | Microblog and tiles, 3 kinds of paging, pinned posts (several, reorderable), a new mark, related posts, likes, sharing, search, a calendar. Six designs (3 light, 3 dark), all meeting the WCAG 2.2 AA color contrast |
-| Building the site | Fixed pages (Markdown), a top menu, footer links, a title logo, a favicon and home screen icons (every size made from one picture), a reorderable sidebar with HTML boxes, profile and links, a black hole 404 |
+| Building the site | Fixed pages (Markdown), a fixed page as the top with the posts at `./blog` (on or off), a top menu, footer links, a title logo, a favicon and home screen icons (every size made from one picture), a reorderable sidebar with HTML boxes, profile and links, a black hole 404 |
 | Admin panel | Post list (search, bulk delete), media list (search, replace), renaming and reordering categories and hashtags. Shown in Japanese or English. With English chosen, the public pages are in English too |
 | Search engines and sharing | canonical, OGP, breadcrumbs (JSON-LD), sitemap, RSS (all, per category, per tag), a setting that keeps every page out of search |
 | Speed | Works with LiteSpeed Cache. Versioned JS and CSS are kept by browsers for a year. Posts off screen are built later, and video and audio are served a little at a time |
@@ -185,6 +186,7 @@ Scroll down and a "書く" (Write) button aligned with the right edge of the sid
 | Post list | Short rows without the text: date and time, title, a small picture, view, edit and delete. Posts with likes show a heart and the count. Bulk delete too. |
 | Top menu | Links under the site name to fixed pages, categories, hashtags and so on. On phones they can be swiped sideways. |
 | Fixed pages | Pages such as a profile or terms of use, written in Markdown. Pictures can be put in, with a preview before saving. |
+| Top page and blog | Turned on in the settings, the top shows a fixed page and the post list moves to `./blog`. Links to the blog can go in the top menu and the footer. |
 | Footer | The text at the bottom of the site and links such as HOME and terms are set separately. |
 | Backup | A log ZIP saves and restores posts, drafts, pictures, categories, audience, display settings and like counts. |
 
@@ -233,7 +235,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.8.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.9.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -395,6 +397,7 @@ To keep using this log, use the start method above.
 | Hashtag | `https://example.com/nagimanga/?tag=らくがき` |
 | Date and month | `?date=2026-10-04` / `?month=2026-10` |
 | Fixed page | `https://example.com/nagimanga/profile` |
+| Blog (with [Top page and blog](#top-page-and-blog) on) | `https://example.com/nagimanga/blog` (categories and so on: `./blog?category=…`) |
 
 Posts and fixed pages have URLs without `?`.
 The bundled `.htaccess` sends `./20261004123033` to the post and `./profile` to the fixed page (`mod_rewrite` on Apache or LiteSpeed).
@@ -1342,6 +1345,35 @@ The example below has a picture in the text of a profile, with the preview open.
 
 The description (`meta description`) of a fixed page is made from the start of the text without Markdown marks. Public fixed pages are in the sitemap (priority 0.5), and `index,follow` when search engines are allowed. The breadcrumbs are "HOME › title". They are suggestions in the top menu too. Pictures used by fixed pages cannot be deleted in the picture list.
 
+### Top page and blog
+
+Like the “Your homepage displays” setting of WordPress, the top of the site can show a fixed page, and the post list moves to its own URL as the blog.
+Turn it on or off under “トップページとブログ” (Top page and blog) in the LOG tab of the settings. It starts off: the top page lists the posts as before.
+
+With NagiLog at the root of a domain (`https://example.com/`):
+
+| Page | Off (default) | On |
+| --- | --- | --- |
+| Top | `https://example.com/` (the post list) | `https://example.com/` (the chosen fixed page) |
+| Post list | `https://example.com/` | `https://example.com/blog` |
+| Categories, tags, dates, search, later pages | `https://example.com/?category=…` | `https://example.com/blog?category=…` |
+| Posts and other fixed pages | `https://example.com/20261004123033` / `https://example.com/privacy` | Unchanged |
+
+| Item | Details |
+| --- | --- |
+| Page shown on the top page | One of the fixed pages. It is shown at the top URL instead of its own (`./about` and so on); its own URL moves to the top with a 301. While it is a draft, visitors who open the top are taken to the blog (logged in, you still see the draft) |
+| URL name of the blog | `blog` by default. Up to 40 half-width lowercase letters, digits and hyphens. The URL name of a fixed page and folder names of the LOG such as `admin` cannot be used. On servers that do not apply `.htaccess` it is `./?pg=blog` |
+| Blog label | The name in the menus and the breadcrumbs. Left blank, it is “ブログ” (Blog on English screens) |
+| Links to the blog | “First in the top menu” and “In the footer links (after HOME)”, both on by default. They follow the URL name and the label when you change them |
+
+The blog URL is `./blog`, at the same depth as fixed pages. `./blog/` with a trailing slash moves to `./blog` with a 301 (the LOG's links and pictures are relative URLs, so the blog must not look like a folder).
+Turning it on moves the earlier `./?category=…` and `./?page=2` to the same list in the blog with a 301. Turning it off moves `./blog?…` back to the list at the top, so links you have shared keep working either way.
+
+The breadcrumbs are “HOME › Blog” on the blog, “HOME › Blog › category” on a category and “HOME › Blog › category › post title” on a post. The top page shows no breadcrumbs, and its `<title>` is only the site name.
+The sitemap lists the top (priority 1.0), the blog (0.8) and the categories (`./blog?category=…`); the fixed page used as the top is not listed under its own URL. The RSS `<link>` is the blog URL too.
+“Blog (all posts)” is also a suggestion in the top menu and footer link editors. To place the link elsewhere, clear the box above, add an item, type Blog as its label and pick it from the suggestions. Fix links added this way by hand if you change the URL name later.
+The settings are part of the LOG backup.
+
 ## SEO and OGP
 
 Which pages go into search engines depends on the list style.
@@ -1632,6 +1664,14 @@ On October 14, 2026 the additional CSS was added and checked as follows.
 | Existing tests | LOG 204, security 192, sidebar 133, admin 107, fixed pages 94, features 74, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, preview 7 and translations 3079 checks passed |
 
 The WebKit checks used Playwright's WebKit on this PC. A real iPhone (Safari) has not been checked.
+
+On October 21, 2026, “Top page and blog” (v0.9.0) was added and checked as follows.
+
+| Check | Result |
+| --- | --- |
+| Top page and blog (`dev/log_front_test.py`) | 70 checks passed. On a server with the `.htaccess` rewrites and on one without them: the fixed page on the top; the list, categories, paging and search at `./blog`; 301 moves from the page’s own URL, `./?category=…` and `./blog/`; breadcrumbs; menu and footer links; sitemap and RSS; a draft or locked top page; the moves after turning it off; refusing wrong input |
+| Existing tests | LOG 204, security 192, sidebar 133, admin 107, fixed pages 94, features 89, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, additional CSS 94, video and audio 28, preview 7 and translations 3209 checks, all passed |
+| Browser | Playwright’s Chromium at computer width (1280px) and phone width (390px): the top, the blog and the settings screen, with no sideways overflow |
 
 Color contrast (WCAG 2.2 AA) is checked for all six themes with the command below. It needs Playwright and Google Chrome.
 It makes 40 posts for 11 pages of paging and measures the 3 paging styles, microblog and tiles, computer and phone widths, open menus and dialogs, hover and keyboard focus rings.

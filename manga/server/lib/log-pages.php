@@ -42,7 +42,7 @@ function nl_find_page(string $slug): ?array
     foreach (nl_pages() as $p) if ($p['slug'] === $slug) return $p;
     return null;
 }
-function nl_fixed_url(array $p): string { return './' . nl_fixed_path($p['slug']); }
+function nl_fixed_url(array $p): string { return './' . nl_page_path($p); }
 /** LOG pictures a page shows (written as ./?media=<id>… in its Markdown). */
 function nl_page_media_refs(string $body): array
 {
@@ -84,6 +84,7 @@ function nl_page_save(string $id, int $revision, array $fields, ?array $lock = n
         $now = time();
         $page = $fields + ['id' => $old['id'] ?? 'pg' . bin2hex(random_bytes(6)), 'media' => nl_page_media_refs($fields['body']), 'created' => $old['created'] ?? $now, 'updated' => $now, 'revision' => ($old['revision'] ?? 0) + 1];
         // A new URL name may not be a folder of the LOG or look like a post (older pages keep theirs).
+        if ($fields['slug'] === nl_blog_slug()) throw new UnexpectedValueException(nm_t('URL名「{slug}」はブログ（投稿の一覧）のURLで使っています', ['slug' => $fields['slug']]));
         if ((!$old || $old['slug'] !== $fields['slug']) && !nl_slug_free($fields['slug'])) throw new UnexpectedValueException(nm_t('URL名「{slug}」はLOGのフォルダー名や記事の番号と重なるため使えません', ['slug' => $fields['slug']]));
         $locked = $lock !== null ? nl_lock_input($lock[0], $lock[1], $old) : ($old['lock'] ?? null);
         if ($locked !== null) $page['lock'] = $locked;
@@ -302,7 +303,7 @@ function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags 
         $out = ''; $at = 0;
         preg_match_all(NL_HASHTAG_PATTERN, $s, $found, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         foreach ($found as $t) {
-            $out .= h(substr($s, $at, $t[0][1] - $at)) . $keep('<a class="log-hashtag" href="' . ($admin ? '../' : '') . './?tag=' . h(rawurlencode($t[1][0])) . '">' . h($t[0][0]) . '</a>');
+            $out .= h(substr($s, $at, $t[0][1] - $at)) . $keep('<a class="log-hashtag" href="' . h(nl_list_url('tag=' . rawurlencode($t[1][0]), $admin ? '../' : './')) . '">' . h($t[0][0]) . '</a>');
             $at = $t[0][1] + strlen($t[0][0]);
         }
         return $out . h(substr($s, $at));

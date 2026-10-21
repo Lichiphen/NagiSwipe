@@ -5,8 +5,8 @@
 # NagiSeries
 
 [![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
-[![NagiManga v0.8.2](https://img.shields.io/badge/NagiManga-v0.8.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.md)
-[![NagiLog v0.8.2](https://img.shields.io/badge/NagiLog-v0.8.2-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.md)
+[![NagiManga v0.9.0](https://img.shields.io/badge/NagiManga-v0.9.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.md)
+[![NagiLog v0.9.0](https://img.shields.io/badge/NagiLog-v0.9.0-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.md)
 [![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
@@ -159,6 +159,7 @@ https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https:
 - スマホからの投稿、下書き、画像の差し替え、漫画カード
 - カテゴリ、ハッシュタグ、検索、関連記事、いいね、RSS・サイトマップ
 - 閲覧注意（センシティブ・R-18・R-18G）、ライト 3 種類・ダーク 3 種類のデザイン
+- 固定ページ（Markdown）、トップページを固定ページにして投稿の一覧を `./blog` に移す設定（オン・オフ）
 - 動画と音声（波形のプレーヤー、つなぎ目のないループ再生、曲へのジャケットとループ位置の書き込み、動画の自動再生・くり返しの設定）
 
 ![NagiLogのトップ（パソコン）](manga/docs/images/log-pc.jpg)
