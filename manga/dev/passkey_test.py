@@ -99,12 +99,13 @@ def run(c, csrf, key):
     def login_page(client=None):
         client = client or h.Client(args.port)
         return client, client.get('/admin/index.php?k=' + key)
-    def passkey_login(auth, client=None, **kw):
+    def passkey_login(auth, client=None, land=None, **kw):
         client, page = login_page(client)
         token = h.csrf_of(page.text)
-        r = client.post('/admin/index.php', {'k': key, 'csrf': token, 'passkey': 'options'})
+        extra = {'p': land} if land else {}
+        r = client.post('/admin/index.php', {'k': key, 'csrf': token, 'passkey': 'options', **extra})
         o = json.loads(r.text)['options']
-        r = client.post('/admin/index.php', {'k': key, 'csrf': token, 'passkey': 'verify', **auth.get(o, origin, **kw)})
+        r = client.post('/admin/index.php', {'k': key, 'csrf': token, 'passkey': 'verify', **extra, **auth.get(o, origin, **kw)})
         return client, r
     def logged_in(client): return client.get('/admin/index.php?p=settings').status == 200
     def ok_json(r): return r.status == 200 and json.loads(r.text).get('ok') is True
@@ -159,6 +160,8 @@ def run(c, csrf, key):
     check('ログイン用のオプション：このホスト・本人確認必須・鍵の一覧は渡さない', o['rpId'] == h.HOST and o['userVerification'] == 'required' and o['allowCredentials'] == [])
     d, r = passkey_login(a)
     check('ES256 のパスキーでログインできる', ok_json(r) and json.loads(r.text)['redirect'] == 'index.php' and logged_in(d))
+    f, r = passkey_login(a, land='log')
+    check('ログイン画面で NagiLog を選ぶと、パスキーのあと LOG・投稿の画面へ', ok_json(r) and json.loads(r.text)['redirect'] == 'index.php?p=log' and logged_in(f))
     e, r = passkey_login(r_)
     check('RS256 のパスキーでもログインできる', ok_json(r) and logged_in(e))
     page = c.get('/admin/index.php?p=passkeys').text

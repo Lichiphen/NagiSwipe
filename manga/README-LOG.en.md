@@ -245,7 +245,8 @@ Use HTTPS, and let PHP write to the storage.
 There is no default product password. You set it yourself the first time.
 The administrator password is 10 characters or more. The first setup turns on a setting that allows the admin panel only from your current IP address. You can change it later if needed.
 "Icon + Log in" on the public log leads to `admin/login.php`.
-This entrance is guarded by the password, the IP restriction and the limit on attempts too.
+Since v0.10.0 a new install starts with "secret login URL only", which hides this link and closes `admin/login.php`. For the LOG, bookmark the "For NagiLog" URL, the login URL with `&p=log` added (shown under Login URL in the settings). The login page also lets you choose whether NagiLog or NagiManga opens after logging in.
+Either way in is guarded by the password (or a passkey), the IP restriction and the limit on attempts.
 Five failed logins within 15 minutes from the same IP address block logins for a while.
 
 You stay logged in for 30 days from the last login, even after closing the browser.

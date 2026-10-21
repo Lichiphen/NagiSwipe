@@ -80,6 +80,9 @@
             login.disabled = true;
             const fields = { csrf: login.dataset.csrf };
             if (login.dataset.key) fields.k = login.dataset.key;
+            // NagiLog or NagiManga after logging in: the radio buttons on the login page
+            const land = document.querySelector('input[name="p"]:checked');
+            if (land) fields.p = land.value;
             try {
                 const o = (await send(login.dataset.action, { ...fields, passkey: 'options' })).options;
                 o.challenge = toBytes(o.challenge);

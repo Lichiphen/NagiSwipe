@@ -1686,5 +1686,16 @@
   "最後に使った日": "Last used",
   "登録したパスキー": "Registered passkeys",
   "登録した日": "Registered",
-  "登録済み：{n} 個。ログイン画面の「パスキーでログイン」から、パスワードなしでログインできます。": "Registered: {n}. “Log in with a passkey” on the login screen logs in without the password."
+  "登録済み：{n} 個。ログイン画面の「パスキーでログイン」から、パスワードなしでログインできます。": "Registered: {n}. “Log in with a passkey” on the login screen logs in without the password.",
+  "<strong>次の URL をブックマークしてください。</strong>管理画面には、この URL からだけ入れます（LOGに「ログイン」のリンクは出ません）。": "<strong>Bookmark this URL.</strong> The admin panel opens only from it (the LOG shows no Log in link).",
+  "LOGの「ログイン」リンク（admin/login.php）からも入れる": "Also from the LOG’s Log in link (admin/login.php)",
+  "NagiLog 用（ログインすると LOG・投稿の画面が開きます）": "For NagiLog (opens LOG and posts after logging in)",
+  "NagiLog（LOG・投稿）": "NagiLog (LOG and posts)",
+  "NagiManga（漫画）": "NagiManga (manga)",
+  "「秘密のログイン URL からだけ」にすると、admin/login.php と、URL の k= を削って開いたページは「Not Found」になり、LOGに「ログイン」のリンクも出しません。ログイン画面の場所を知られにくくなります。上のログイン URL をブックマークしてから切り替えてください。": "With the secret login URL only, admin/login.php and the address without k= say Not Found, and the LOG shows no Log in link, so the login screen is hard to find. Bookmark the login URL above before switching.",
+  "ログインしたら開く画面": "Open after logging in",
+  "ログインの入口": "Way in to log in",
+  "ログインの入口を選んでください": "Choose the way in to log in",
+  "秘密のログイン URL からだけログインできるようにする（推奨。LOGの「ログイン」リンクと login.php を使いません。あとで設定から変更できます）": "Log in only from the secret login URL (recommended; no Log in link on the LOG and no login.php; you can change this later in the settings)",
+  "秘密のログイン URL からだけ（おすすめ）": "Only the secret login URL (recommended)"
 }

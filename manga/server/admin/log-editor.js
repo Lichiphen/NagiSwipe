@@ -1153,7 +1153,7 @@ window.NagiLogFormat = (() => {
         } catch (e) {
             if (currentGeneration !== generation) return;
             pickerStatus.textContent = e.message;
-            if (e.login) { const a = document.createElement('a'); a.href = adminUrl('login.php'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = t('ログイン画面を開く'); pickerStatus.append(' ', a); }
+            if (e.login && document.documentElement.dataset.publicLogin) { const a = document.createElement('a'); a.href = adminUrl('login.php'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = t('ログイン画面を開く'); pickerStatus.append(' ', a); }
         }
         finally { if (currentGeneration === generation) more.disabled = false; }
     }

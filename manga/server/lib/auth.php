@@ -31,6 +31,16 @@ const NM_SESSION_GC = 31708800;     // 367 days: PHP must not collect a session 
 const NM_LOGIN_FAIL_MAX = 5;        // per IP / 15 min
 const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing)
 
+/**
+ * Whether admin/login.php (the LOG's "ログイン" link) may show the login form. "secret": only the secret login URL
+ * (admin/index.php?k=…) does, and a shortened address answers 404 like any other. Installs from before the setting
+ * existed have no value and keep the public entrance until it is turned off.
+ */
+function nm_public_login(?array $cfg = null): bool
+{
+    return (($cfg ?? nm_config() ?? [])['login_entry'] ?? 'public') !== 'secret';
+}
+
 function nm_ip_allowed(array $cfg): bool
 {
     $list = $cfg['allowed_ips'] ?? [];

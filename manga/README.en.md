@@ -144,7 +144,9 @@ Open `https://your-site/nagimanga/admin/` in a browser and choose the administra
 > This screen is shown **only for 30 minutes after it is first opened** (so that nobody else sets it up first). If the time has passed, delete `data/install.lock` with FTP and open it again.
 
 > [!IMPORTANT]
-> When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.4.0 you can also go through "ログイン" (Log in) on the public site to a password-only entrance. The IP restriction and the limit on attempts apply there too.
+> When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.10.0 the setup ticks "Log in only from the secret login URL" by default. Then `admin/login.php` and the address without `k=` say "Not Found", and the LOG shows no Log in link. Settings → "Common and safety" → "Way in to log in" opens the LOG’s Log in link (`admin/login.php`) again (installs from v0.9 and earlier keep it open). The IP restriction and the limit on attempts apply to both.
+>
+> The login page lets you choose what opens after logging in (NagiLog or NagiManga); the choice is kept for next time. The login URL with `&p=log` added (shown as "For NagiLog" under Login URL in the settings) starts with NagiLog chosen.
 
 ### 3. Checks after installing
 
@@ -354,7 +356,7 @@ Log in without the password, with a passkey saved in Proton Pass, the iPhone Pas
 | Problem | What to do |
 |---|---|
 | The setup screen says "Not Found" (30 minutes passed) | Delete `data/install.lock` with FTP and open it again |
-| You forgot the login URL | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
+| You forgot the login URL (with the secret login URL only, there is no other way in) | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
 | Too many wrong logins | Wait 15 minutes (the login screen says "Not Found" meanwhile) |
 | You lost the phone for two-step login | Enter one of the recovery codes you saved in the code field. Without them, open `data/config.php` with FTP and delete the entry that starts with `'totp' =>` (two-step login turns off) |

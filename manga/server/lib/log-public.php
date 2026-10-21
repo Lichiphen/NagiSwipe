@@ -307,7 +307,7 @@ function nl_sidebar(array $summaries, array $filter, array $s, bool $owner = fal
         foreach (array_keys($works) as $id) { $w = nm_load_work((string)$id); if ($w) $last = max($last, (int)($w['updated'] ?? 0)); }
     }
     $blocks = [
-        'login' => $s['show_login'] ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . nm_t($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
+        'login' => $s['show_login'] && ($owner || nm_public_login()) ? '<a class="log-login-link" href="' . ($owner ? 'admin/index.php?p=log' : 'admin/login.php') . '">' . nl_login_icon() . '<span>' . nm_t($owner ? '管理ページ' : 'ログイン') . '</span></a>' : '',
         'search' => nl_search_form($filter['search']),
         'calendar' => nl_calendar($summaries, $filter),
         'latest' => '<section class="log-widget"><h2>' . nm_t('最新ポスト') . '</h2><ol class="log-latest">' . ($latest ?: '<li>' . nm_t('まだ記録はありません。') . '</li>') . '</ol></section>',

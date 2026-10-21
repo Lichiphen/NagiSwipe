@@ -350,3 +350,7 @@ details.more[open] > summary { margin-bottom: 12px; }
 .nm-passkey-login { margin: 0 0 12px; }
 .nm-passkey-login .btn { width: 100%; justify-content: center; }
 .nm-passkey-login + .flash + .form { border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Login: NagiLog or NagiManga after logging in */
+.nm-login-to { border: 0; margin: 0 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.nm-login-to legend { padding: 0; margin-bottom: 6px; font-weight: 600; font-size: .92em; }

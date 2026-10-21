@@ -40,6 +40,7 @@ const NM_SETTINGS_SECTIONS = [
     'admin_lang' => ['管理画面の言語', 'common'],
     'lscache' => ['LiteSpeed Cache', 'common'],
     'login_days' => ['ログインを保つ期間', 'common'],
+    'login_entry' => ['ログインの入口', 'common'],
     'log_guard' => ['画像収集BOTへの対策', 'common'],
     'access' => ['管理画面を開ける場所（IP 制限）', 'common'],
     'general' => ['設置先と画像アップロード', 'common'],
@@ -189,7 +190,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
     }
     $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
     $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
-    echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
+    echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . (nm_public_login() ? ' data-public-login="1"' : '') . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h(nm_t($title)) . ' - NagiManga</title>' . nm_t_script()
@@ -280,6 +281,7 @@ function nm_setup(string $method): void
             $cfg['admin_hash'] = password_hash($pw, PASSWORD_DEFAULT);
             // base_url stays empty: share tags follow the address the admin is opened with
             if (!empty($_POST['lock_ip'])) $cfg['allowed_ips'] = [$ip];
+            $cfg['login_entry'] = empty($_POST['secret_login']) ? 'public' : 'secret';
             nm_save_config($cfg);
             @unlink($mark);
             nm_ensure_dir(NM_DATA . '/works');
@@ -290,8 +292,10 @@ function nm_setup(string $method): void
             $login = nm_base_url() . '/admin/index.php?k=' . $cfg['login_key'];
             $_SESSION = [];
             nm_layout(nm_t('セットアップ完了'), '<section class="card"><h1>' . nm_t('セットアップが完了しました') . '</h1>'
-                . '<p>' . nm_t('<strong>次の URL をブックマークしてください。</strong>LOGのメニューにある「ログイン」からも、パスワードで入れます。') . '</p>'
+                . '<p>' . (nm_public_login($cfg) ? nm_t('<strong>次の URL をブックマークしてください。</strong>LOGのメニューにある「ログイン」からも、パスワードで入れます。') : nm_t('<strong>次の URL をブックマークしてください。</strong>管理画面には、この URL からだけ入れます（LOGに「ログイン」のリンクは出ません）。')) . '</p>'
                 . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+                . '<p class="note">' . nm_t('NagiLog 用（ログインすると LOG・投稿の画面が開きます）') . '</p>'
+                . '<p><input class="copy-src wide" readonly value="' . h($login . '&p=log') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
                 . '<p class="note">' . nm_t('忘れた場合は、FTP で {config} の {key} を確認し、{url} の後ろに付けてください。', ['config' => '<code>data/config.php</code>', 'key' => '<code>login_key</code>', 'url' => '<code>admin/index.php?k=</code>']) . '</p>'
                 . '<p><a class="btn primary" href="' . h($login) . '">' . nm_t('ログイン画面へ') . '</a></p></section>', false);
             return;
@@ -323,6 +327,7 @@ function nm_setup(string $method): void
         . '<label>' . nm_t('管理者パスワード（10 文字以上）') . '<input type="password" name="password" autocomplete="new-password" required minlength="10"></label>'
         . '<label>' . nm_t('もう一度') . '<input type="password" name="password2" autocomplete="new-password" required minlength="10"></label>'
         . '<label class="check"><input type="checkbox" name="lock_ip" value="1" checked> ' . nm_t('今の IP アドレス（{ip}）からだけ管理画面を開けるようにする（推奨。あとで設定から変更できます）', ['ip' => h($ip)]) . '</label>'
+        . '<label class="check"><input type="checkbox" name="secret_login" value="1" checked> ' . nm_t('秘密のログイン URL からだけログインできるようにする（推奨。LOGの「ログイン」リンクと login.php を使いません。あとで設定から変更できます）') . '</label>'
         . '<button class="btn primary">' . nm_t('セットアップする') . '</button></form>'
         . '<p class="note">' . nm_t('この画面は、ファイルを置いてから 30 分だけ表示されます。') . '</p></section>', false);
 }
@@ -334,13 +339,15 @@ function nm_setup(string $method): void
 function nm_login_page(string $method, array $cfg): void
 {
     $publicLogin = defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN;
+    // Secret URL only: login.php is not there for anyone (the same 404 as a wrong key).
+    if ($publicLogin && !nm_public_login($cfg)) nm_not_found();
     $src = $method === 'POST' ? $_POST : $_GET;
     $key = nm_str($src, 'k', 64);
     // The LOG login alias exposes only a password form; the keyed URL stays valid.
     if (!$publicLogin && ($key === '' || !hash_equals((string)$cfg['login_key'], $key))) {
         // While the LOG shows its "ログイン" link, the password form is public anyway: send an expired
         // session (or an old "管理" tab) there instead of a dead end. A wrong key or a hidden link: keep answering 404.
-        if ($method === 'GET' && $key === '' && function_exists('nl_settings') && nl_settings()['show_login'] && !isset($_GET['guest']) && nm_ip_allowed($cfg)) {
+        if ($method === 'GET' && $key === '' && nm_public_login($cfg) && function_exists('nl_settings') && nl_settings()['show_login'] && !isset($_GET['guest']) && nm_ip_allowed($cfg)) {
             header('Location: login.php', true, 303);
             exit;
         }
@@ -351,19 +358,25 @@ function nm_login_page(string $method, array $cfg): void
         nm_not_found();
     }
 
+    // Where the login leads, chosen on the form: NagiLog or NagiManga. The page starts on what the address asks for
+    // (login.php and the secret URL with &p=log: NagiLog), else on the last choice in this browser (cookie nm_land).
+    $asked = nm_str($_POST, 'p', 20);
+    if ($asked === '') $asked = nm_str($_GET, 'p', 20);
+    if ($asked === '') $asked = nm_str($_COOKIE, 'nm_land', 10);
+    $after = $asked === 'log' ? 'p=log' : '';
     $error = '';
     $askCode = false;
     if ($method === 'POST') {
         $pre = (string)($_SESSION['nm_pre'] ?? '');
         if ($pre === '' || !hash_equals($pre, (string)($_POST['csrf'] ?? ''))) nm_not_found();
         // Passkey login (lib/passkey.php, admin/passkey.js): JSON in, JSON out; the page's token stays the same between the two calls.
-        if (isset($_POST['passkey'])) nm_passkey_login_post($publicLogin);
+        if (isset($_POST['passkey'])) nm_passkey_login_post($after);
         if (isset($_POST['otp'])) {
             // The second step of the two-step login (lib/totp.php)
             if (!nm_code_pending()) {
                 $error = '<p class="flash flash-err">' . nm_t('時間が過ぎました。もう一度パスワードから入力してください') . '</p>';
             } elseif (nm_try_code(nm_str($_POST, 'otp', 40))) {
-                nm_redirect($publicLogin ? 'p=log' : '');
+                nm_login_land($after);
             } else {
                 if (nm_login_blocked()) nm_not_found();
                 $error = '<p class="flash flash-err">' . nm_t('確認コードが違います') . '</p>';
@@ -371,7 +384,7 @@ function nm_login_page(string $method, array $cfg): void
             }
         } else {
             $result = nm_try_login(nm_str($_POST, 'password', 200));
-            if ($result === true) nm_redirect($publicLogin ? 'p=log' : '');
+            if ($result === true) nm_login_land($after);
             if ($result === 'code') $askCode = true;
             else {
                 if (nm_login_blocked()) nm_not_found();
@@ -381,12 +394,18 @@ function nm_login_page(string $method, array $cfg): void
     }
 
     $_SESSION['nm_pre'] = bin2hex(random_bytes(32));
-    $form = '<form method="post" action="' . ($publicLogin ? 'login.php' : 'index.php') . '" class="form">'
+    $form = '<form method="post" action="' . ($publicLogin ? 'login.php' : 'index.php') . '" class="form" id="nm-login-form">'
         . '<input type="hidden" name="csrf" value="' . h((string)$_SESSION['nm_pre']) . '">'
         . ($publicLogin ? '' : '<input type="hidden" name="k" value="' . h($key) . '">');
+    // The choice stays out of the form markup (form="…") so the passkey button above it uses the same radio buttons.
+    $land = '<fieldset class="nm-login-to"><legend>' . nm_t('ログインしたら開く画面') . '</legend>'
+        . '<label class="check"><input type="radio" name="p" value="log" form="nm-login-form"' . ($after !== '' ? ' checked' : '') . '>' . nm_t('NagiLog（LOG・投稿）') . '</label>'
+        . '<label class="check"><input type="radio" name="p" value="manga" form="nm-login-form"' . ($after === '' ? ' checked' : '') . '>' . nm_t('NagiManga（漫画）') . '</label></fieldset>';
     if ($askCode) {
         // autocomplete="one-time-code": iPhone and Android offer the code from their own password app.
-        $form .= '<p>' . nm_t('認証アプリに表示されている6桁の確認コードを入力してください。') . '</p>'
+        $land = '';
+        $form .= '<input type="hidden" name="p" value="' . ($after !== '' ? 'log' : 'manga') . '">'
+            . '<p>' . nm_t('認証アプリに表示されている6桁の確認コードを入力してください。') . '</p>'
             . '<label>' . nm_t('確認コード') . '<input name="otp" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="20" required autofocus class="nm-otp"></label>'
             . '<button class="btn primary">' . nm_t('確認してログイン') . '</button>'
             . '<p class="note">' . nm_t('スマホをなくしたときは、保存しておいたリカバリーコード（abcd-efgh-jkmn の形）を入力できます。') . '</p></form>';
@@ -400,12 +419,13 @@ function nm_login_page(string $method, array $cfg): void
         $form = '<p class="nm-passkey-login"><button type="button" class="btn primary" data-passkey-login hidden data-action="' . ($publicLogin ? 'login.php' : 'index.php') . '" data-csrf="' . h((string)$_SESSION['nm_pre']) . '"' . ($publicLogin ? '' : ' data-key="' . h($key) . '"') . '>' . nm_t('パスキーでログイン') . '</button></p>'
             . '<p class="flash flash-err" data-passkey-login-status role="alert" hidden></p>' . $form;
     }
+    $form = $land . $form;
     nm_layout(nm_t('ログイン'), $error . '<section class="card narrow log-login-card"><h1>' . ($publicLogin ? nl_icon_html(nl_settings(), '../', 'log-login-avatar') : '') . nm_t('ログイン') . '</h1>'
         . $form . ($publicLogin ? '<p>' . nm_t('<a href="../">LOGへ戻る</a>') . '</p>' : '') . '</section>', false, $passkey ? '<script src="' . nm_asset('passkey.js') . '" defer></script>' : '');
 }
 
 /** The login page's passkey calls: passkey=options (a challenge), then passkey=verify (the signed answer). Never returns. */
-function nm_passkey_login_post(bool $publicLogin): never
+function nm_passkey_login_post(string $after): never
 {
     $step = nm_str($_POST, 'passkey', 10);
     if ($step === 'options') nm_json(['ok' => true, 'options' => nm_passkey_get_options()]);
@@ -422,7 +442,19 @@ function nm_passkey_login_post(bool $publicLogin): never
     // A passkey proves the device and the person: no password and no two-step code after it.
     nm_start_admin_session('login_ok_passkey');
     nm_log('passkey_used', nm_passkeys()[$index]['name'] ?? '');
-    nm_json(['ok' => true, 'redirect' => $publicLogin ? 'index.php?p=log' : 'index.php']);
+    nm_login_land_cookie($after);
+    nm_json(['ok' => true, 'redirect' => 'index.php' . ($after !== '' ? '?' . $after : '')]);
+}
+
+/** Remember NagiLog / NagiManga for the next login in this browser (nothing secret: only which screen opens first). */
+function nm_login_land_cookie(string $after): void
+{
+    setcookie('nm_land', $after !== '' ? 'log' : 'manga', ['expires' => time() + 400 * 86400, 'path' => $GLOBALS['nm_session_path'] ?? '/', 'secure' => nm_is_https(), 'httponly' => true, 'samesite' => 'Lax']);
+}
+function nm_login_land(string $after): never
+{
+    nm_login_land_cookie($after);
+    nm_redirect($after);
 }
 
 // ===========================================================================
@@ -758,6 +790,14 @@ function nm_settings_login_days(array $cfg): array
     return $cfg;
 }
 
+function nm_settings_login_entry(array $cfg): array
+{
+    $entry = nm_str($_POST, 'login_entry', 10);
+    if (!in_array($entry, ['secret', 'public'], true)) throw new UnexpectedValueException(nm_t('ログインの入口を選んでください'));
+    $cfg['login_entry'] = $entry;
+    return $cfg;
+}
+
 function nm_settings_access(array $cfg): array
 {
     $ips = nm_lines(nm_str($_POST, 'allowed_ips', 5000));
@@ -825,6 +865,7 @@ function nm_settings_logged(array $cfg, array $sections): void
 {
     if (in_array('lscache', $sections, true)) nm_log('settings_lscache_changed', $cfg['lscache'] ? 'on' : 'off');
     if (in_array('login_days', $sections, true)) nm_log('settings_login_days_changed', (string)$cfg['login_days']);
+    if (in_array('login_entry', $sections, true)) nm_log('settings_login_entry_changed', (string)$cfg['login_entry']);
     if (in_array('access', $sections, true)) nm_log('settings_access_changed', implode(',', $cfg['allowed_ips']));
     if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $cfg['hotlink_allow']));
 }
@@ -845,7 +886,7 @@ function nm_settings_save_all(array $cfg): never
     try {
         // 1. Check every block; nothing is written yet.
         $next = $cfg;
-        foreach (['admin_lang', 'lscache', 'login_days', 'access', 'general', 'page', 'advanced'] as $key) {
+        foreach (['admin_lang', 'lscache', 'login_days', 'login_entry', 'access', 'general', 'page', 'advanced'] as $key) {
             if (!in_array($key, $sections, true)) continue;
             // Without LiteSpeed the switch is disabled and absent; keep the stored value.
             if ($key === 'lscache' && !nm_lscache_server()) continue;
@@ -1573,7 +1614,16 @@ function nm_view_settings(array $cfg): void
         . '<p class="note">' . h(nm_t('「自動」は、ブラウザの言語がこの中にあればその言語、なければ日本語で表示します。公開ページの言語は変わりません。')) . '</p></div></section>'
         . '<section class="card"><h2>' . nm_t('ログイン URL') . '</h2>'
         . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+        . '<p class="note">' . nm_t('NagiLog 用（ログインすると LOG・投稿の画面が開きます）') . '</p>'
+        . '<p><input class="copy-src wide" readonly value="' . h($login . '&p=log') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
         . '<p><button class="btn" form="settings-regen-key">' . nm_t('ログイン URL を変更する') . '</button></p><p class="note">' . nm_t('押すとすぐに変わります（「設定を保存」とは別です）。') . '</p></section>'
+
+        . '<section class="card"><h2>' . nm_t('ログインの入口') . '</h2>'
+        . $block('login_entry')
+        . '<label class="check"><input type="radio" name="login_entry" value="secret"' . (nm_public_login($cfg) ? '' : ' checked') . '>' . nm_t('秘密のログイン URL からだけ（おすすめ）') . '</label>'
+        . '<label class="check"><input type="radio" name="login_entry" value="public"' . (nm_public_login($cfg) ? ' checked' : '') . '>' . nm_t('LOGの「ログイン」リンク（admin/login.php）からも入れる') . '</label>'
+        . '<p class="note">' . nm_t('「秘密のログイン URL からだけ」にすると、admin/login.php と、URL の k= を削って開いたページは「Not Found」になり、LOGに「ログイン」のリンクも出しません。ログイン画面の場所を知られにくくなります。上のログイン URL をブックマークしてから切り替えてください。') . '</p>'
+        . '</div></section>'
 
         . '<section class="card"><h2>LiteSpeed Cache</h2>'
         . '<p>' . (nm_lscache_server() ? nm_t('このサーバーは LiteSpeed です。') . (nm_lscache_active() ? nm_t('公開LOGのページをサーバーでキャッシュしています。') : nm_t('今はキャッシュを使っていません。')) : nm_t('このサーバーは LiteSpeed ではないため、この機能は動きません。設定を変える必要はありません。')) . '</p>'
