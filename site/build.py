@@ -40,6 +40,15 @@ REPO_URL = "https://github.com/Lichiphen/NagiSwipe"
 GITLAB_URL = "https://gitlab.com/lichiphen/nagiswipe"
 BRANCH = "main"
 
+# Software the pages describe: the logo shown beside the title and in schema.org SoftwareApplication JSON-LD.
+# Logos are PNG (square, 512 and 1024 px): search engines and link previews do not all read SVG.
+APPS = {
+    "nagimanga": dict(name="NagiManga", logo="img/logo/nagimanga-logo-512.png", logos=["img/logo/nagimanga-logo-1024.png", "img/logo/nagimanga-logo-512.png"],
+                      category="MultimediaApplication", os="Web (PHP 8.1 or later)", version_file="manga/server/lib/bootstrap.php",
+                      version_re=r"const NM_VERSION = '([0-9.]+)';"),
+}
+AUTHOR = {"@type": "Person", "name": "Lichiphen", "url": "https://lichiphen.com/"}
+
 PAGES_JA = [
     dict(key="top", out="index.html", nav="トップ", sub="NagiSeries について",
          title="NagiSeries", src="README.md", top="site/top.html", sections=["権利・免責事項", "ライセンス"],
@@ -52,7 +61,7 @@ PAGES_JA = [
     dict(key="nagimanga", out="nagimanga.html", nav="NagiManga", sub="漫画ビューアー",
          src="manga/README.md", hero="img/ogp/nagimanga-ogp.svg", skip=["開発"],
          desc="タグを 1 つ貼るだけで開く漫画ビューアー NagiManga の設置・管理画面・機能の説明。",
-         ogp="img/ogp/nagimanga-ogp.png"),
+         ogp="img/ogp/nagimanga-ogp.png", app=APPS["nagimanga"]),
     dict(key="nagilog", out="nagilog.html", nav="NagiLog", sub="個人用LOG",
          src="manga/README-LOG.md", hero="img/ogp/nagilog-ogp.svg", skip=["ローカルで続けて使う", "検証と残る確認", "参照元と文章"],
          desc="データベース不要で、文章・画像・漫画・動画・音声を自分のサイトへ投稿できる NagiLog の使い方と設定。",
@@ -74,7 +83,7 @@ PAGES_EN = [
     dict(key="nagimanga", out="nagimanga.en.html", nav="NagiManga", sub="Manga viewer",
          src="manga/README.en.md", hero="img/ogp/nagimanga-ogp.en.svg", skip=["Development"],
          desc="Installing NagiManga, a manga viewer that opens from a single tag, its admin panel and its features.",
-         ogp="img/ogp/nagimanga-ogp.en.png"),
+         ogp="img/ogp/nagimanga-ogp.en.png", app=APPS["nagimanga"]),
     dict(key="nagilog", out="nagilog.en.html", nav="NagiLog", sub="Personal log",
          src="manga/README-LOG.en.md", hero="img/ogp/nagilog-ogp.en.svg",
          skip=["Keep using it locally", "Tests and what remains to be checked", "Sources and writing"],
@@ -833,6 +842,23 @@ def breadcrumb(page, home, url, ui):
             f'<script type="application/ld+json">{js}</script>\n')
 
 
+def app_json(page, url):
+    """schema.org SoftwareApplication for a page about one piece of software (its logo as image, free, MIT)."""
+    app = page['app']
+    m = re.search(app['version_re'], (ROOT / app['version_file']).read_text(encoding='utf-8'))
+    data = {'@context': 'https://schema.org', '@type': 'SoftwareApplication', 'name': app['name'], 'url': url,
+            'description': page['desc'], 'inLanguage': page['lang'], 'image': [SITE_URL + asset(rel) for rel in app['logos']],
+            'applicationCategory': app['category'], 'operatingSystem': app['os'],
+            'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'JPY'}, 'isAccessibleForFree': True,
+            'license': 'https://opensource.org/licenses/MIT', 'author': AUTHOR,
+            'downloadUrl': f'{REPO_URL}/releases/latest',
+            'isPartOf': {'@type': 'WebSite', 'name': 'NagiSeries', 'url': SITE_URL}}
+    if m:
+        data['softwareVersion'] = m.group(1)
+    js = json.dumps(data, ensure_ascii=False).replace('<', '\\u003c')
+    return f'<script type="application/ld+json">{js}</script>\n'
+
+
 def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     ui = UI[page['lang']]
     title_text = plain(re.sub(r'<[^>]+>', '', title_html))
@@ -842,6 +868,14 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
     toc = toc_html(ctx.headings, 'toc-list')
     url = SITE_URL + ('' if page['out'] == 'index.html' else page['out'])
     crumbs, crumbs_json = ('', '') if page['key'] == 'top' else breadcrumb(page, home, url, ui)
+    if page.get('app'):
+        crumbs_json += app_json(page, url)
+    # The software's logo beside the page title (decorative: the name follows it)
+    logo = page['app']['logo'] if page.get('app') else ''
+    title_logo = (f'<img class="doc-logo" src="{esc(asset(logo))}" alt="" width="56" height="56" decoding="async">' if logo else '')
+    ogp_size = image_size(page['ogp'])
+    ogp_meta = (f'<meta property="og:image:width" content="{ogp_size[0]}">\n<meta property="og:image:height" content="{ogp_size[1]}">\n' if ogp_size else '')
+    ogp_meta += f'<meta property="og:image:alt" content="{esc(full_title)}">\n'
     pager = ''
     if prev_page or next_page:
         a = f'<a class="pager-prev" href="{prev_page["out"]}"><span>{ui["prev"]}</span>{esc(prev_page["nav"])}</a>' if prev_page else '<span></span>'
@@ -894,7 +928,8 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 <meta property="og:description" content="{esc(page['desc'])}">
 <meta property="og:url" content="{url}">
 <meta property="og:image" content="{SITE_URL}{asset(page['ogp'])}">
-<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image:type" content="image/png">
+{ogp_meta}<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{asset('site/favicon.svg')}" type="image/svg+xml">
 <link rel="stylesheet" href="{asset('NagiSwipe-main.css')}">
 <link rel="stylesheet" href="{asset('site/site.css')}">
@@ -920,7 +955,7 @@ def layout(page, title_html, lead, body, ctx, prev_page, next_page):
 <main id="main" class="main">
 <article class="doc">
 {crumbs}
-<h1 class="doc-title">{title_html}</h1>
+<h1 class="doc-title{' has-logo' if title_logo else ''}">{title_logo}<span>{title_html}</span></h1>
 {lead_html}
 {toc_block}
 <div class="doc-body">

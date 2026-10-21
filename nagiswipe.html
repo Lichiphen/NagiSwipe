@@ -18,10 +18,14 @@
 <meta property="og:description" content="JS と CSS を読み込むだけで動く、軽量な画像ポップアップギャラリー NagiSwipe の導入方法とオプション。">
 <meta property="og:url" content="https://nagiswipe.pages.dev/nagiswipe.html">
 <meta property="og:image" content="https://nagiswipe.pages.dev/img/ogp/nagiswipe-ogp.png?v=b4c2b1f265">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="NagiSwipe | NagiSeries">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
 <link rel="stylesheet" href="NagiSwipe-main.css?v=b57203b70e">
-<link rel="stylesheet" href="site/site.css?v=6a4da33c8c">
+<link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiSwipe", "item": "https://nagiswipe.pages.dev/nagiswipe.html"}]}</script>
 <script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
 <script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=0f60e2da42" defer></script>
@@ -45,7 +49,7 @@
 <main id="main" class="main">
 <article class="doc">
 <nav class="breadcrumb" aria-label="パンくずリスト"><ol><li><a class="crumb" href="index.html"><svg class="crumb-home" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.6 12 3.8l8.5 6.8"/><path d="M5.8 9v10.2a.8.8 0 0 0 .8.8h3.6v-5.4a1.8 1.8 0 0 1 3.6 0V20h3.6a.8.8 0 0 0 .8-.8V9"/></svg><span>NagiSeries</span></a></li><li aria-current="page"><svg class="crumb-sep" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9.5 6 6 6-6 6"/></svg><span class="crumb"><span>NagiSwipe</span></span></li></ol></nav>
-<h1 class="doc-title">NagiSwipe</h1>
+<h1 class="doc-title"><span>NagiSwipe</span></h1>
 <figure class="doc-hero"><img src="img/ogp/nagiswipe-ogp.svg?v=3118cf3638" alt="" width="1200" height="630" decoding="async" fetchpriority="high"></figure><div class="lead"><p>JS と CSS の 2 ファイルを読み込むだけで動く、軽量な画像ポップアップギャラリー・ライブラリです。モバイルファースト、タッチ操作の快適さを目指しています。<a href="demo.html">デモ</a>で、スワイプやズームを試せます。</p></div><section class="try" aria-labelledby="try-title"><p class="try-title" id="try-title">ここで試す</p><ul class="try-gallery"><li><a class="zoom" href="img/Kyururun.png?v=ace886fd9a" data-ns-width="489" data-ns-height="446"><img src="img/Kyururun.png?v=ace886fd9a" alt="きゅるるん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Fu-n.png?v=1041db46b9" data-ns-width="489" data-ns-height="446"><img src="img/Fu-n.png?v=1041db46b9" alt="ふーん（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li><li><a class="zoom" href="img/Shimeshime.png?v=023fcd6aff" data-ns-width="489" data-ns-height="446"><img src="img/Shimeshime.png?v=023fcd6aff" alt="しめしめ（猫のイラスト）" width="489" height="446" loading="lazy" decoding="async"></a></li></ul><p class="try-note">画像を押すと NagiSwipe で開きます。スワイプ・ピンチ・ダブルタップで動かしてみてください。</p></section>
 <nav class="toc-inline" aria-labelledby="toc-title-nagiswipe"><div class="toc-head"><p class="toc-title" id="toc-title-nagiswipe">このページの目次</p><button class="fold-all" type="button" data-fold-all data-open="すべて開く" data-close="すべて閉じる">すべて閉じる</button></div><ol class="toc-list"><li><a href="#特徴" data-id="特徴">特徴</a></li><li><a href="#導入方法" data-id="導入方法">導入方法</a><ol><li><a href="#cdn経由-推奨" data-id="cdn経由-推奨">CDN経由 (推奨)</a></li><li><a href="#使い方" data-id="使い方">使い方</a></li><li><a href="#キャプションv110" data-id="キャプションv110">キャプション（v1.1.0〜）</a></li><li><a href="#オプション" data-id="オプション">オプション</a></li><li><a href="#画像サイズの指定任意" data-id="画像サイズの指定任意">画像サイズの指定（任意）</a></li></ol></li><li><a href="#てがろぐで使う" data-id="てがろぐで使う">てがろぐで使う</a></li></ol></nav>
 <div class="doc-body">
