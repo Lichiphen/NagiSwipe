@@ -49,6 +49,7 @@ The admin panel can be shown in Japanese or English (see [Admin panel language](
   - [Work pages (share links, v0.3.0 and later)](#work-pages-share-links-v030-and-later)
   - [Hotlink protection (advanced, v0.3.0 and later)](#hotlink-protection-advanced-v030-and-later)
   - [Plugins (guest mode)](#plugins-guest-mode)
+  - [Two-step login (v0.9.1 and later, optional)](#two-step-login-v091-and-later-optional)
   - [Troubleshooting](#troubleshooting)
   - [Protecting the data folder](#protecting-the-data-folder)
   - [Tighter IP restriction for the admin panel (optional)](#tighter-ip-restriction-for-the-admin-panel-optional)
@@ -310,6 +311,26 @@ PHP plugins placed in `nagimanga/plugins/` add features (only the files placed t
 - Your own login (secret URL + password + IP restriction) is unchanged.
 - Deleting the file closes the entrance and locks out guests who are inside.
 
+### Two-step login (v0.9.1 and later, optional)
+
+Logging in can ask for the 6-digit verification code from an authenticator app on your phone as well as the password. Someone who learns the password still cannot log in without your phone. It is off by default.
+
+1. Open Settings → "Common and safety" → "Set up two-step login".
+2. Scan the QR code on the screen with an authenticator app. On an iPhone, the built-in Passwords app works (iOS 18 or later; on iOS 17 and earlier, Settings → Passwords). Google Authenticator, Microsoft Authenticator, 1Password and others work too.
+   - If the page is open on your phone, "Add to the authenticator app on this phone" opens the app.
+   - If scanning does not work, type the key shown (32 letters and digits) by hand.
+3. Enter the 6-digit code from the app and the admin password, then press "Confirm and turn on".
+4. **The 8 recovery codes are shown only once.** Save them. If you lose your phone, each one works once in place of a verification code.
+
+- A verification code works only once (the same code cannot log in again). A phone clock that is about 30 seconds off is accepted.
+- Full-width digits (a Japanese phone keyboard) and spaces in between are accepted.
+- Wrong codes count like wrong passwords (locked for 15 minutes after 5).
+- Turning it on or off logs out the other devices.
+- The key is kept encrypted in `data/config.php`.
+
+> [!NOTE]
+> The QR code is made inside this program (`lib/qrcode.php`); the key is never sent to another service. QR Code is a registered trademark of DENSO WAVE INCORPORATED.
+
 ### Troubleshooting
 
 | Problem | What to do |
@@ -318,6 +339,7 @@ PHP plugins placed in `nagimanga/plugins/` add features (only the files placed t
 | You forgot the login URL | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
 | Too many wrong logins | Wait 15 minutes (the login screen says "Not Found" meanwhile) |
+| You lost the phone for two-step login | Enter one of the recovery codes you saved in the code field. Without them, open `data/config.php` with FTP and delete the entry that starts with `'totp' =>` (two-step login turns off) |
 | The admin panel says the data folder can be seen from the internet | See "Protecting the data folder" below |
 | An EPUB cannot be imported | Check that it has no DRM, is not text only, and is within the upload limit (shown in the admin panel) |
 
@@ -370,7 +392,7 @@ Picture locations in `manifest.json` are relative to the place of `manifest.json
 ## Security approach
 
 - **The public side is read only.** All `read.php` can do is "list a work's pages", "check a password" and "return a picture". Every odd request gets the same "Not Found", telling nothing about what exists.
-- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after 5 failures; at most 40 per hour overall) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
+- **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after 5 failures; at most 40 per hour overall; when turned on, then a code from an authenticator app) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
 - **Uploaded pictures are always redrawn.** Whether a file is a picture is judged from its contents, not its name; it is read with GD and written to a new file. Programs hidden in pictures and data such as the shooting location do not survive. File names are given anew. SVG is not accepted for manga pages. EPUB and backup ZIPs are also checked item by item before use.
 - **Programs do not run in the picture folders.** `data` cannot be seen from outside, and only `.webp` / `.jpg` are stored.
 - **Error details are not shown on screen.** So that server paths and the like do not leak. Records go to `data/logs/security.log`, which can be read on the settings page of the admin panel.
@@ -410,3 +432,5 @@ Version numbers: small fixes and additions raise the last number (0.5.0 → 0.5.
 ## License
 
 [MIT License](../LICENSE) (c) 2026 Lichiphen
+
+QR Code is a registered trademark of DENSO WAVE INCORPORATED.

@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""The two-step login (lib/totp.php, lib/qrcode.php) on a fresh install.
+
+The QR code on the setup page is read back with OpenCV (cv2) and must give the same otpauth:// address;
+the codes are made here with hmac (RFC 6238), so the server's own code is never trusted to check itself.
+Usage: python manga/dev/totp_test.py
+"""
+import argparse, base64, hashlib, hmac, html, json, re, secrets, socket, struct, sys, time, urllib.parse
+from pathlib import Path
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--port', type=int, default=5440)
+args = parser.parse_args()
+ROOT = next(p for p in Path(__file__).resolve().parents if (p / 'manga/server').is_dir())
+sys.path.insert(0, str(ROOT / 'manga/dev'))
+if hasattr(sys.stdout, 'reconfigure'): sys.stdout.reconfigure(encoding='utf-8')
+import attack_test as h
+import log_test as base
+checks = []
+def check(name, ok):
+    checks.append((name, bool(ok))); print(f"[{'PASS' if ok else 'FAIL'}] {name}", flush=True)
+PASSWORD = 'log-test-password'
+
+
+def totp(secret, step):
+    key = base64.b32decode(secret + '=' * (-len(secret) % 8))
+    digest = hmac.new(key, struct.pack('>Q', step), hashlib.sha1).digest()
+    o = digest[19] & 15
+    return '%06d' % ((struct.unpack('>I', digest[o:o + 4])[0] & 0x7FFFFFFF) % 1000000)
+
+
+def qr_text(page):
+    """Draw the SVG's modules into an image and let OpenCV read it."""
+    import numpy as np, cv2
+    svg = re.search(r'<svg class="nm-qr".*?</svg>', page, re.S).group(0)
+    box = int(re.search(r'viewBox="0 0 (\d+) ', svg).group(1))
+    img = np.full((box, box), 255, np.uint8)
+    for x, y in re.findall(r'M(\d+) (\d+)h1v1h-1z', svg): img[int(y), int(x)] = 0
+    img = cv2.resize(img, None, fx=8, fy=8, interpolation=cv2.INTER_NEAREST)
+    for det in (cv2.QRCodeDetectorAruco(), cv2.QRCodeDetector()):
+        text, *_ = det.detectAndDecode(img)
+        if text: return text
+    return ''
+
+
+def login(port, key):
+    c = h.Client(port)
+    r = c.get('/admin/index.php?k=' + key)
+    return c, c.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'password': PASSWORD})
+
+
+def run(c, csrf, key):
+    def post(data, client=c, token=None):
+        return client.post('/admin/index.php', {'csrf': token or csrf, **data})
+    def flash(client=c):
+        return client.get('/admin/index.php?p=twofactor').text
+    def step(): return int(time.time()) // 30
+    other, _ = login(args.port, key)
+    check('ほかの端末もログインしている', other.get('/admin/index.php?p=settings').status == 200)
+
+    # --- Setup page ------------------------------------------------------------------------
+    settings = c.get('/admin/index.php?p=settings&section=common').text
+    check('設定の「共通・安全」に二段階認証の欄', 'id="twofactor"' in settings and 'index.php?p=twofactor' in settings and 'オフです' in settings)
+    page = c.get('/admin/index.php?p=twofactor').text
+    check('設定画面にQRコード（SVG）', '<svg class="nm-qr"' in page and 'role="img"' in page)
+    check('QRコードの登録商標の表記', 'QRコードは株式会社デンソーウェーブの登録商標です。' in page)
+    uri = html.unescape(re.search(r'<a class="btn" href="(otpauth://[^"]+)"', page).group(1))
+    check('スマホ用に otpauth:// のボタン', uri.startswith('otpauth://totp/NagiManga:'))
+    read = qr_text(page)
+    check('QRコードを読むと同じ otpauth:// のアドレス', read == uri)
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(uri).query)
+    secret = q['secret'][0]
+    check('鍵は160ビット（Base32で32文字）', re.fullmatch(r'[A-Z2-7]{32}', secret) is not None and q['issuer'] == ['NagiManga'] and q['digits'] == ['6'] and q['period'] == ['30'])
+    check('手入力用に鍵を4文字ずつ表示', ' '.join(secret[i:i + 4] for i in range(0, 32, 4)) in page)
+    check('入力欄は数字キーボードと one-time-code', 'inputmode="numeric" autocomplete="one-time-code"' in page)
+    check('開き直しても同じ鍵（読み込み済みのアプリが使える）', secret in c.get('/admin/index.php?p=twofactor').text)
+
+    # --- Turning it on ---------------------------------------------------------------------
+    r = post({'do': 'totp_enable', 'current': PASSWORD, 'otp': '000000' if totp(secret, step()) != '000000' else '111111'})
+    check('違う確認コードではオンにならない', r.status == 303 and '確認コードが違います' in flash() and 'オフです' in c.get('/admin/index.php?p=settings&section=common').text)
+    r = post({'do': 'totp_enable', 'current': 'wrong-password', 'otp': totp(secret, step())})
+    check('パスワードが違うとオンにならない', '管理者パスワードが違います' in flash())
+    now = step()
+    r = post({'do': 'totp_enable', 'current': PASSWORD, 'otp': totp(secret, now)})
+    page = c.get('/admin/index.php?p=twofactor').text
+    codes = re.findall(r'\b[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}\b', re.search(r'<pre class="nm-recovery-codes">(.*?)</pre>', page, re.S).group(1)) if 'nm-recovery-codes' in page else []
+    check('正しいコードでオンになり、リカバリーコードを8個表示', r.status == 303 and len(codes) == 8 and 'から使っています' in page)
+    check('リカバリーコードは一度だけ表示', 'nm-recovery-codes' not in c.get('/admin/index.php?p=twofactor').text)
+    check('オンにした端末はログインしたまま', c.get('/admin/index.php?p=settings').status == 200)
+    check('ほかの端末はログアウトされる', other.get('/admin/index.php?p=settings').status != 200)
+    config = (site / 'data/config.php').read_text(encoding='utf-8')
+    check('config.php に鍵をそのまま保存しない', secret not in config and "'totp'" in config and not any(x in config for x in codes))
+
+    # --- Logging in ----------------------------------------------------------------------------
+    d, r = login(args.port, key)
+    check('パスワードのあとに確認コードの欄', r.status == 200 and 'name="otp"' in r.text and 'name="password"' not in r.text)
+    check('コードを入れるまで管理画面は開かない', d.get('/admin/index.php?p=settings').status != 200)
+    r = d.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': '12345'})
+    check('桁の違うコードは断る', '確認コードが違います' in r.text and 'name="otp"' in r.text)
+    r = d.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': totp(secret, now)})
+    check('オンにしたときのコードはもう使えない（使い回し防止）', '確認コードが違います' in r.text)
+    nxt = step() + 1
+    wide = totp(secret, nxt).translate(str.maketrans('0123456789', '０１２３４５６７８９'))
+    r = d.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': wide[:3] + ' ' + wide[3:]})
+    check('全角数字・空白入りのコードでもログインできる（iPhoneの日本語キーボード）', r.status == 303 and d.get('/admin/index.php?p=settings').status == 200)
+
+    e, r = login(args.port, key)
+    r = e.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': totp(secret, nxt)})
+    check('同じコードで二度目のログインはできない', '確認コードが違います' in r.text)
+    r = e.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': codes[0].upper()})
+    check('リカバリーコードでログインできる', r.status == 303 and e.get('/admin/index.php?p=settings').status == 200)
+    check('リカバリーコードは残り7個', '残りのリカバリーコード：7 個' in e.get('/admin/index.php?p=twofactor').text)
+    f, r = login(args.port, key)
+    r = f.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': codes[0]})
+    check('使ったリカバリーコードは二度と使えない', '確認コードが違います' in r.text)
+
+    g = h.Client(args.port)
+    r = g.get('/admin/index.php?k=' + key)
+    r = g.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': totp(secret, step())})
+    check('パスワードを飛ばしてコードだけ送ってもログインできない', '時間が過ぎました' in r.text and g.get('/admin/index.php?p=settings').status != 200)
+    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    check('セキュリティログに記録', all(x in log for x in ('totp_enabled', 'login_password_ok', 'totp_failed', 'login_ok_recovery', 'totp_recovery_used')))
+
+    # --- New recovery codes, turning it off ---------------------------------------------------------
+    r = post({'do': 'totp_recovery', 'current': PASSWORD, 'otp': codes[1]})
+    page = c.get('/admin/index.php?p=twofactor').text
+    fresh = re.findall(r'\b[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}\b', page)
+    check('リカバリーコードを作り直せる', len(set(fresh)) == 8 and not set(fresh) & set(codes))
+    c2, r = login(args.port, key)
+    r = c2.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': codes[2]})
+    check('作り直す前のリカバリーコードは使えない', '確認コードが違います' in r.text)
+    r = post({'do': 'totp_disable', 'current': PASSWORD, 'otp': fresh[0]})
+    check('リカバリーコードで二段階認証をやめられる', r.status == 303 and 'オフです' in c.get('/admin/index.php?p=settings&section=common').text)
+    _, r = login(args.port, key)
+    check('やめたあとはパスワードだけでログイン', r.status == 303)
+
+    # --- Lockout ------------------------------------------------------------------------------------
+    page = c.get('/admin/index.php?p=twofactor').text
+    secret = urllib.parse.parse_qs(urllib.parse.urlsplit(html.unescape(re.search(r'href="(otpauth://[^"]+)"', page).group(1))).query)['secret'][0]
+    check('やめたあとは新しい鍵', secret not in config)
+    post({'do': 'totp_enable', 'current': PASSWORD, 'otp': totp(secret, step())})
+    x, r = login(args.port, key)
+    for _ in range(5):
+        r = x.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': '000000' if totp(secret, step()) != '000000' else '999999'})
+        if r.status == 404: break
+    check('確認コードを何度も間違えると404（パスワードと同じロックアウト）', h.is_404(r))
+
+
+def main():
+    global site
+    with socket.socket() as sock: sock.bind((h.HOST, args.port))
+    temp = ROOT / 'manga/dev/results' / ('totp-test-' + secrets.token_hex(4)); site = temp / 'site'
+    h.copy_server(site, ROOT / 'manga/server')
+    process = base.start(site, args.port)
+    try:
+        c, csrf, key = base.install(args.port)
+        run(c, csrf, key)
+    finally:
+        process.terminate(); process.wait(timeout=10)
+    passed = sum(ok for _, ok in checks); print(f'\n{passed} / {len(checks)} passed')
+    (temp / 'report.json').write_text(json.dumps({'passed': passed, 'total': len(checks), 'checks': checks}, ensure_ascii=False, indent=2), encoding='utf-8')
+    raise SystemExit(0 if passed == len(checks) else 1)
+
+
+if __name__ == '__main__': main()

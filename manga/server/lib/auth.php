@@ -7,7 +7,8 @@
  * Layers (each one alone answers 404):
  *   1. IP allow list (config, checked here even if .htaccess is not honoured)
  *   2. Secret login key in the URL (scanners never find the login form)
- *   3. Password + lockout after repeated failures
+ *   3. Password + lockout after repeated failures, then (when turned on) a code from an
+ *      authenticator app (lib/totp.php), counted against the same lockout
  *   4. Session bound to the browser; the owner stays signed in for 30 or 365
  *      days after logging in (setting), guests keep the short idle / absolute timeouts
  *   5. CSRF token + same-origin check on every POST
@@ -165,7 +166,9 @@ function nm_is_logged_in(): bool
 function nm_admin_version(): string
 {
     $cfg = nm_config();
-    return substr(hash('sha256', (string)($cfg['admin_hash'] ?? '')), 0, 16);
+    // Turning the two-step login on or off also logs out the other devices.
+    $since = is_array($cfg['totp'] ?? null) ? '|' . (int)($cfg['totp']['since'] ?? 0) : '';
+    return substr(hash('sha256', (string)($cfg['admin_hash'] ?? '') . $since), 0, 16);
 }
 
 function nm_login_blocked(): bool
@@ -175,35 +178,82 @@ function nm_login_blocked(): bool
         || nm_rate_count('login-all', 'all', 3600) >= NM_LOGIN_FAIL_GLOBAL;
 }
 
-function nm_try_login(string $password): bool
+/** The admin password; a wrong one counts towards the lockout. */
+function nm_password_ok(string $password): bool
 {
     $cfg = nm_config();
-    $ip = nm_client_ip();
     if ($password !== '' && password_verify($password, (string)$cfg['admin_hash'])) {
         if (password_needs_rehash((string)$cfg['admin_hash'], PASSWORD_DEFAULT)) {
             $cfg['admin_hash'] = password_hash($password, PASSWORD_DEFAULT);
             nm_save_config($cfg);
         }
-        session_regenerate_id(true);
-        $_SESSION = [
-            'nm_admin' => true,
-            'nm_fp' => nm_browser_fingerprint(),
-            'nm_login' => time(),
-            'nm_seen' => time(),
-            'nm_ver' => nm_admin_version(),
-            'nm_csrf' => bin2hex(random_bytes(32)),
-            'nm_role' => 'admin',
-        ];
-        nm_session_keep();
-        nm_rate_clear('login', $ip);
-        nm_log('login_ok');
         return true;
     }
+    nm_login_failed('login_failed');
+    return false;
+}
+
+function nm_login_failed(string $event): void
+{
+    $ip = nm_client_ip();
     nm_rate_hit('login', $ip, 900);
     nm_rate_hit('login-all', 'all', 3600);
-    nm_log('login_failed');
+    nm_log($event);
     usleep(random_int(400000, 900000));
-    return false;
+}
+
+/**
+ * Password, and the code when the two-step login is on. Returns true (logged in), false (wrong),
+ * or 'code' (the password was right; the login form asks for the code next).
+ */
+function nm_try_login(string $password): bool|string
+{
+    if (!nm_password_ok($password)) return false;
+    if (nm_totp_on()) {
+        session_regenerate_id(true);
+        $_SESSION = ['nm_2fa' => time(), 'nm_2fa_fp' => nm_browser_fingerprint()];
+        nm_log('login_password_ok');
+        return 'code';
+    }
+    nm_start_admin_session();
+    return true;
+}
+
+/** Waiting for the code after the right password (5 minutes, same browser). */
+function nm_code_pending(): bool
+{
+    return isset($_SESSION['nm_2fa']) && time() - (int)$_SESSION['nm_2fa'] < NM_TOTP_WAIT && ($_SESSION['nm_2fa_fp'] ?? '') === nm_browser_fingerprint();
+}
+
+/** The second step: true when the code (or a recovery code) is right and the login is done. */
+function nm_try_code(string $code): bool
+{
+    if (!nm_code_pending()) return false;
+    $kind = nm_totp_verify($code);
+    if ($kind === null) {
+        nm_login_failed('totp_failed');
+        return false;
+    }
+    nm_start_admin_session($kind === 'recovery' ? 'login_ok_recovery' : 'login_ok');
+    return true;
+}
+
+function nm_start_admin_session(string $event = 'login_ok'): void
+{
+    $ip = nm_client_ip();
+    session_regenerate_id(true);
+    $_SESSION = [
+        'nm_admin' => true,
+        'nm_fp' => nm_browser_fingerprint(),
+        'nm_login' => time(),
+        'nm_seen' => time(),
+        'nm_ver' => nm_admin_version(),
+        'nm_csrf' => bin2hex(random_bytes(32)),
+        'nm_role' => 'admin',
+    ];
+    nm_session_keep();
+    nm_rate_clear('login', $ip);
+    nm_log($event);
 }
 
 /**

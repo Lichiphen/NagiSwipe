@@ -320,3 +320,13 @@ details.more[open] > summary { margin-bottom: 12px; }
 .settings-toc a.settings-toc-exit:hover,.settings-toc-dialog a.settings-toc-exit:hover { border-color:var(--accent); color:var(--accent); }
 .settings-toc-exit svg { width:17px; height:17px; flex:none; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
 .settings-toc-dialog .settings-toc-exits { grid-template-columns:1fr 1fr; }
+
+/* Two-step login (p=twofactor and the code step of the login) */
+.nm-totp-setup { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; }
+.nm-qr-box { margin: 0; text-align: center; }
+.nm-qr { display: block; width: 228px; max-width: 100%; height: auto; margin: 0 auto 6px; border-radius: 6px; }
+.nm-qr-box figcaption { font-size: .78em; max-width: 228px; margin: 0 auto; }
+.nm-totp-key { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; letter-spacing: .06em; word-break: break-all; }
+.nm-otp { font-family: ui-monospace, Consolas, monospace; font-size: 1.3em; letter-spacing: .2em; max-width: 14em; }
+.nm-recovery-codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; line-height: 1.7; padding: 10px 14px; border: 1px solid var(--line, #ccc); border-radius: 8px; background: var(--bg, transparent); }
+@media (max-width: 640px) { .nm-totp-setup { grid-template-columns: 1fr; } }

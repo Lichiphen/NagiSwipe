@@ -9,6 +9,8 @@ declare(strict_types=1);
 define('NAGIMANGA', true);
 require __DIR__ . '/../lib/bootstrap.php';
 require __DIR__ . '/../lib/auth.php';
+require __DIR__ . '/../lib/totp.php';
+require __DIR__ . '/../lib/qrcode.php';
 require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
@@ -124,6 +126,7 @@ match ($page) {
     'img' => nm_admin_image(nm_str($_GET, 'id', 12), nm_str($_GET, 'f', 40), isset($_GET['full'])),
     'backup' => nm_is_guest() ? nm_view_guest_denied(nm_t('バックアップ')) : nm_view_backup(),
     'settings' => nm_is_guest() ? nm_view_guest_denied(nm_t('設定')) : nm_view_settings($cfg),
+    'twofactor' => nm_is_guest() ? nm_view_guest_denied(nm_t('二段階認証')) : nm_view_twofactor(),
     'css' => nm_is_guest() ? nm_view_guest_denied(nm_t('追加CSS')) : nl_css_view(),
     'embed' => nm_is_guest() ? nm_view_guest_denied(nm_t('設置用コード')) : nm_view_embed(),
     'update' => nm_is_guest() ? nm_view_guest_denied(nm_t('更新')) : nm_view_update($cfg),
@@ -347,22 +350,48 @@ function nm_login_page(string $method, array $cfg): void
     }
 
     $error = '';
+    $askCode = false;
     if ($method === 'POST') {
         $pre = (string)($_SESSION['nm_pre'] ?? '');
         if ($pre === '' || !hash_equals($pre, (string)($_POST['csrf'] ?? ''))) nm_not_found();
-        if (nm_try_login(nm_str($_POST, 'password', 200))) nm_redirect($publicLogin ? 'p=log' : '');
-        if (nm_login_blocked()) nm_not_found();
-        $error = '<p class="flash flash-err">' . nm_t('パスワードが違います') . '</p>';
+        if (isset($_POST['otp'])) {
+            // The second step of the two-step login (lib/totp.php)
+            if (!nm_code_pending()) {
+                $error = '<p class="flash flash-err">' . nm_t('時間が過ぎました。もう一度パスワードから入力してください') . '</p>';
+            } elseif (nm_try_code(nm_str($_POST, 'otp', 40))) {
+                nm_redirect($publicLogin ? 'p=log' : '');
+            } else {
+                if (nm_login_blocked()) nm_not_found();
+                $error = '<p class="flash flash-err">' . nm_t('確認コードが違います') . '</p>';
+                $askCode = true;
+            }
+        } else {
+            $result = nm_try_login(nm_str($_POST, 'password', 200));
+            if ($result === true) nm_redirect($publicLogin ? 'p=log' : '');
+            if ($result === 'code') $askCode = true;
+            else {
+                if (nm_login_blocked()) nm_not_found();
+                $error = '<p class="flash flash-err">' . nm_t('パスワードが違います') . '</p>';
+            }
+        }
     }
 
     $_SESSION['nm_pre'] = bin2hex(random_bytes(32));
-    nm_layout(nm_t('ログイン'), $error . '<section class="card narrow log-login-card"><h1>' . ($publicLogin ? nl_icon_html(nl_settings(), '../', 'log-login-avatar') : '') . nm_t('ログイン') . '</h1>'
-        . '<form method="post" action="' . ($publicLogin ? 'login.php' : 'index.php') . '" class="form">'
+    $form = '<form method="post" action="' . ($publicLogin ? 'login.php' : 'index.php') . '" class="form">'
         . '<input type="hidden" name="csrf" value="' . h((string)$_SESSION['nm_pre']) . '">'
-        . ($publicLogin ? '' : '<input type="hidden" name="k" value="' . h($key) . '">')
-        . '<label>' . nm_t('パスワード') . '<input type="password" name="password" autocomplete="current-password" required autofocus></label>'
-        . '<button class="btn primary">' . ($publicLogin ? nl_login_icon() : '') . nm_t('ログイン') . '</button></form>'
-        . ($publicLogin ? '<p>' . nm_t('<a href="../">LOGへ戻る</a>') . '</p>' : '') . '</section>', false);
+        . ($publicLogin ? '' : '<input type="hidden" name="k" value="' . h($key) . '">');
+    if ($askCode) {
+        // autocomplete="one-time-code": iPhone and Android offer the code from their own password app.
+        $form .= '<p>' . nm_t('認証アプリに表示されている6桁の確認コードを入力してください。') . '</p>'
+            . '<label>' . nm_t('確認コード') . '<input name="otp" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="20" required autofocus class="nm-otp"></label>'
+            . '<button class="btn primary">' . nm_t('確認してログイン') . '</button>'
+            . '<p class="note">' . nm_t('スマホをなくしたときは、保存しておいたリカバリーコード（abcd-efgh-jkmn の形）を入力できます。') . '</p></form>';
+    } else {
+        $form .= '<label>' . nm_t('パスワード') . '<input type="password" name="password" autocomplete="current-password" required autofocus></label>'
+            . '<button class="btn primary">' . ($publicLogin ? nl_login_icon() : '') . nm_t('ログイン') . '</button></form>';
+    }
+    nm_layout(nm_t('ログイン'), $error . '<section class="card narrow log-login-card"><h1>' . ($publicLogin ? nl_icon_html(nl_settings(), '../', 'log-login-avatar') : '') . nm_t('ログイン') . '</h1>'
+        . $form . ($publicLogin ? '<p>' . nm_t('<a href="../">LOGへ戻る</a>') . '</p>' : '') . '</section>', false);
 }
 
 // ===========================================================================
@@ -647,6 +676,12 @@ function nm_handle_post(array $cfg): void
         case 'settings_save_all':
             nm_settings_save_all($cfg);
 
+        // The two-step login (lib/totp.php): each change asks for the password and a code, and takes effect at once.
+        case 'totp_enable':
+        case 'totp_disable':
+        case 'totp_recovery':
+            nm_twofactor_post($do, $cfg);
+
         case 'regen_key':
             $cfg['login_key'] = nm_random_id(24);
             nm_save_config($cfg);
@@ -849,6 +884,120 @@ function nm_guest_refuse(): never
     nm_flash('err', $msg);
     $id = nm_str($_POST, 'id', 12);
     nm_redirect(nm_valid_id($id) ? 'p=work&id=' . $id : '');
+}
+
+// ===========================================================================
+// Two-step login (lib/totp.php, lib/qrcode.php)
+// ===========================================================================
+
+function nm_view_twofactor(): void
+{
+    $cfg = nm_config();
+    $t = nm_totp_config($cfg);
+    $hidden = nm_csrf_field();
+    $confirm = static fn(string $do, string $button, string $class = 'btn primary') => '<form method="post" action="index.php" class="form" autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="' . $do . '">'
+        . '<label>' . nm_t('管理者パスワード') . '<input type="password" name="current" autocomplete="current-password" required></label>'
+        . '<label>' . nm_t('確認コード（6桁）') . '<input name="otp" inputmode="numeric" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="40" required class="nm-otp"></label>'
+        . '<p><button class="' . $class . '">' . $button . '</button></p></form>';
+    $body = '<h1>' . nm_t('二段階認証') . '</h1><p><a href="index.php?p=settings&amp;section=common#twofactor">' . nm_t('← 設定へ戻る') . '</a></p>';
+
+    // Recovery codes just made: shown once
+    $codes = $_SESSION['nm_totp_codes'] ?? null;
+    unset($_SESSION['nm_totp_codes']);
+    if (is_array($codes) && $codes) {
+        $body .= '<section class="card nm-recovery"><h2>' . nm_t('リカバリーコード') . '</h2>'
+            . '<p class="warn">' . nm_t('この画面を閉じると二度と表示しません。メモアプリやパスワード管理アプリに保存するか、紙に書いて保管してください。') . '</p>'
+            . '<pre class="nm-recovery-codes">' . h(implode("\n", $codes)) . '</pre>'
+            . '<p><input class="copy-src wide" readonly value="' . h(implode(' ', $codes)) . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+            . '<p class="note">' . nm_t('スマホをなくしたり、認証アプリを消してしまったりしたときに、確認コードの代わりに使えます。1つのコードは1回だけ使えます。') . '</p></section>';
+    }
+
+    if ($t) {
+        $body .= '<section class="card"><h2>' . nm_t('いまの状態') . '</h2>'
+            . '<p><span class="badge">' . nm_t('オン') . '</span> ' . nm_t('{date} から使っています。', ['date' => h(date('Y-m-d H:i', $t['since']))]) . '</p>'
+            . '<p>' . nm_t('残りのリカバリーコード：{n} 個', ['n' => count($t['recovery'])]) . '</p>'
+            . (count($t['recovery']) <= 2 ? '<p class="warn">' . nm_t('リカバリーコードが少なくなっています。作り直してください。') . '</p>' : '')
+            . '</section>'
+            . '<section class="card"><h2>' . nm_t('リカバリーコードを作り直す') . '</h2><p>' . nm_t('新しいコードを{n}個作ります。前のコードは使えなくなります。', ['n' => NM_RECOVERY_COUNT]) . '</p>' . $confirm('totp_recovery', nm_t('作り直す'), 'btn') . '</section>'
+            . '<section class="card"><h2>' . nm_t('二段階認証をやめる') . '</h2><p>' . nm_t('やめると、パスワードだけでログインできるようになります。ほかの端末はログアウトされます。確認コードの代わりにリカバリーコードも使えます。') . '</p>' . $confirm('totp_disable', nm_t('二段階認証をやめる'), 'btn danger') . '</section>';
+        nm_layout(nm_t('二段階認証'), $body);
+        return;
+    }
+
+    // Off: one new secret per session until it is confirmed (reloading keeps the QR code the app already read)
+    if (!is_string($_SESSION['nm_totp_new'] ?? null) || nm_base32_decode($_SESSION['nm_totp_new']) === null) $_SESSION['nm_totp_new'] = nm_totp_new_secret();
+    $secret = $_SESSION['nm_totp_new'];
+    $account = (string)(parse_url(nm_base_url(), PHP_URL_HOST) ?: 'LOG');
+    $uri = nm_totp_uri($secret, $account);
+    $body .= '<section class="card"><h2>' . nm_t('二段階認証をオンにする') . '</h2>'
+        . '<p>' . nm_t('ログインのときに、パスワードに加えて、スマホの認証アプリに表示される6桁の確認コードを入力するようにします。パスワードが知られても、スマホがなければログインできません。') . '</p>'
+        . '<h3>' . nm_t('1. 認証アプリを用意する') . '</h3>'
+        . '<p>' . nm_t('iPhone は標準の「パスワード」アプリ（iOS 18 以降。iOS 17 以前は「設定」→「パスワード」）で使えます。ほかに Google Authenticator、Microsoft Authenticator、1Password などの認証アプリも使えます。') . '</p>'
+        . '<h3>' . nm_t('2. アプリに登録する') . '</h3>'
+        . '<div class="nm-totp-setup"><figure class="nm-qr-box">' . nm_qr_svg($uri, nm_t('認証アプリに読み込ませるQRコード')) . '<figcaption class="note">' . nm_t('QRコードは株式会社デンソーウェーブの登録商標です。') . '</figcaption></figure>'
+        . '<div><p>' . nm_t('パソコンでこの画面を開いているときは、スマホの認証アプリでQRコードを読み込みます。iPhone は標準のカメラで読み込み、表示された「パスワードに追加」などを押しても登録できます。') . '</p>'
+        . '<p>' . nm_t('スマホでこの画面を開いているときは、下のボタンを押すと認証アプリが開きます。') . '</p>'
+        . '<p><a class="btn" href="' . h($uri) . '">' . nm_t('このスマホの認証アプリに登録する') . '</a></p>'
+        . '<p>' . nm_t('読み込めないときは、アプリで「キーを入力」などを選び、次の鍵を入力します（種類は「時間ベース」）。') . '</p>'
+        . '<p><code class="nm-totp-key">' . h(nm_totp_grouped($secret)) . '</code></p>'
+        . '<p><input class="copy-src wide" readonly value="' . h($secret) . '" aria-label="' . nm_t('鍵') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+        . '<p class="note">' . nm_t('この鍵は確認コードを作るための秘密の文字列です。ほかの人に見せないでください。') . '</p></div></div>'
+        . '<h3>' . nm_t('3. 確認してオンにする') . '</h3>'
+        . '<p>' . nm_t('アプリに表示された6桁の確認コードと、管理者パスワードを入力してください。正しければオンになり、リカバリーコードを表示します。') . '</p>'
+        . $confirm('totp_enable', nm_t('確認してオンにする'))
+        . '<p class="note">' . nm_t('締め出されたときは、FTP で data/config.php を開き、totp の項目を消すとオフに戻ります。') . '</p></section>';
+    nm_layout(nm_t('二段階認証'), $body);
+}
+
+function nm_twofactor_post(string $do, array $cfg): never
+{
+    $back = 'p=twofactor';
+    if (nm_login_blocked()) {
+        nm_flash('err', nm_t('失敗が続いたため、しばらく待ってからやり直してください'));
+        nm_redirect($back);
+    }
+    if (!nm_password_ok(nm_str($_POST, 'current', 200))) {
+        nm_flash('err', nm_t('管理者パスワードが違います'));
+        nm_redirect($back);
+    }
+    $code = nm_str($_POST, 'otp', 40);
+    if ($do === 'totp_enable') {
+        if (nm_totp_on($cfg)) nm_redirect($back);
+        $secret = (string)($_SESSION['nm_totp_new'] ?? '');
+        $step = nm_base32_decode($secret) !== null ? nm_totp_match($secret, $code) : null;
+        if ($step === null) {
+            nm_login_failed('totp_setup_failed');
+            nm_flash('err', nm_t('確認コードが違います。スマホの時刻が合っているか確かめて、表示されている最新のコードを入力してください'));
+            nm_redirect($back);
+        }
+        $_SESSION['nm_totp_codes'] = nm_totp_enable($cfg, $secret, $step);
+        unset($_SESSION['nm_totp_new']);
+        $_SESSION['nm_ver'] = nm_admin_version();
+        nm_log('totp_enabled');
+        nm_flash('ok', nm_t('二段階認証をオンにしました（他の端末はログアウトされます）'));
+        nm_redirect($back);
+    }
+    if (!nm_totp_on($cfg)) nm_redirect($back);
+    if (nm_totp_verify($code) === null) {
+        nm_login_failed('totp_failed');
+        nm_flash('err', nm_t('確認コードが違います'));
+        nm_redirect($back);
+    }
+    $cfg = nm_config(true);
+    if ($do === 'totp_disable') {
+        nm_totp_disable($cfg);
+        $_SESSION['nm_ver'] = nm_admin_version();
+        nm_log('totp_disabled');
+        nm_flash('ok', nm_t('二段階認証をやめました（他の端末はログアウトされます）'));
+        nm_redirect('p=settings&section=common');
+    }
+    $codes = nm_recovery_codes();
+    $cfg['totp']['recovery'] = array_map('nm_recovery_hash', $codes);
+    nm_save_config($cfg);
+    $_SESSION['nm_totp_codes'] = $codes;
+    nm_log('totp_recovery_renewed');
+    nm_flash('ok', nm_t('リカバリーコードを作り直しました'));
+    nm_redirect($back);
 }
 
 function nm_view_guest_denied(string $what): void
@@ -1322,6 +1471,11 @@ function nm_view_settings(array $cfg): void
         . '<p class="note">' . nm_t('家庭の回線は IP アドレスが変わることがあります。締め出された場合は、FTP で <code>data/config.php</code> の <code>allowed_ips</code> を空にしてください。') . '</p>'
         . '<label>' . nm_t('別のサイトに埋め込む場合、そのサイトのアドレス（1 行に 1 つ。例: https://blog.example.com）') . '<textarea name="allowed_origins" rows="3">' . h(implode("\n", $cfg['allowed_origins'] ?? [])) . '</textarea></label>'
         . '</div></section>'
+
+        . '<section class="card" id="twofactor"><h2>' . nm_t('二段階認証') . '</h2>'
+        . '<p>' . (nm_totp_on($cfg) ? '<span class="badge">' . nm_t('オン') . '</span> ' . nm_t('ログインのときに、パスワードのあとで認証アプリの確認コードを入力します。') : nm_t('オフです。オンにすると、ログインのときにパスワードに加えて、スマホの認証アプリに表示される6桁の確認コードが必要になります。')) . '</p>'
+        . '<p><a class="btn" href="index.php?p=twofactor">' . (nm_totp_on($cfg) ? nm_t('二段階認証の設定を開く') : nm_t('二段階認証を設定する')) . '</a></p>'
+        . '<p class="note">' . nm_t('設定は専用の画面ですぐに変わります（「設定を保存」とは別です）。') . '</p></section>'
 
         . '<section class="card"><h2>' . nm_t('管理者パスワード') . '</h2>'
         . '<div class="form">'
