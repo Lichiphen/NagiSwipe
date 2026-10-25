@@ -324,6 +324,8 @@ window.NagiLogFormat = (() => {
     const dock = $('[data-media-dock]', panel);
     const toolsScroll = $('[data-tools-scroll]', form), tools = $('.log-compose-tools', form);
     let dockList = null, arranged = false;
+    const toBody = $('[data-to-body]', panel);
+    let bodySeen = true;
     let refs = JSON.parse(refsField.value || '{}');
     let selection = [body.value.length, body.value.length];
     let uploading = 0;
@@ -956,6 +958,7 @@ window.NagiLogFormat = (() => {
         // On phones never start in a text field: the keyboard would cover the sheet.
         if (panelBody && (open || phone.matches)) (panelBody.querySelector(phone.matches ? 'input:checked, input[type="checkbox"], input[type="radio"], button' : 'input:checked, input, button') || $('[data-sheet-close]', sheet)).focus({ preventScroll: true });
         if (!phone.matches) panelBody?.scrollIntoView({ block: 'nearest' });
+        awayCheck();
     }
     $$('[data-panel]', form).forEach(button => button.addEventListener('click', () => togglePanel(button.dataset.panel)));
     ratingFields.forEach(input => input.addEventListener('change', () => {
@@ -1280,6 +1283,7 @@ window.NagiLogFormat = (() => {
             else previewBox.after(attachments, menu);
             dock.classList.remove('is-tucked');
         }
+        awayCheck();
         placeDock(); drawMark(); toolsHint(); dockCheck(); dockCount();
     }
     wide.addEventListener('change', arrange);
@@ -1311,7 +1315,7 @@ window.NagiLogFormat = (() => {
     function dockTab(name) {
         $$('[role="tab"][data-dock-tab]', dock).forEach(tab => { const on = tab.dataset.dockTab === name; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; });
         $$('[data-dock-pane]', dock).forEach(pane => { pane.hidden = pane.dataset.dockPane !== name; });
-        dockCheck();
+        dockCheck(); awayCheck();
     }
     $$('[data-dock-tab]', dock).forEach(button => button.addEventListener('click', () => {
         dockTab(button.dataset.dockTab);
@@ -1336,7 +1340,30 @@ window.NagiLogFormat = (() => {
             const selected = (tab.dataset.composeTab === 'preview') === on;
             tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
         });
+        awayCheck();
     }
+    // 本文へ beside the heading (a PC or sideways): back to writing from the preview, an open panel, the media list
+    // or a page scrolled away from the text, with the caret where it was. It stands out while one of those is so.
+    function awayCheck() {
+        if (!toBody) return;
+        toBody.hidden = !wide.matches;
+        const away = form.classList.contains('is-previewing') || !!$('[data-panel][aria-expanded="true"]', form)
+            || (!!panel.dataset.dock && $('[data-dock-pane="post"]', dock).hidden) || !bodySeen;
+        toBody.classList.toggle('is-away', away);
+    }
+    if (toBody && 'IntersectionObserver' in window) new IntersectionObserver(entries => { bodySeen = entries.at(-1).isIntersecting; awayCheck(); }, { threshold: 0.2 }).observe(body);
+    toBody?.addEventListener('click', () => {
+        showPreview(false); closeMenu();
+        const open = $('[data-panel][aria-expanded="true"]', form);
+        if (open) togglePanel(open.dataset.panel, false);
+        if (panel.dataset.dock) { dockTab('post'); dock.classList.remove('is-tucked'); }
+        // The row of tools and the top of the text in sight, under the heading when it stays at the top.
+        const head = $('.log-compose-head', panel), at = body.getBoundingClientRect();
+        const top = getComputedStyle(head).position === 'sticky' ? head.getBoundingClientRect().bottom : 0;
+        if (at.top < top + 8 || at.top > window.innerHeight - 160) form.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        body.focus({ preventScroll: true }); body.setSelectionRange(selection[0], selection[1]);
+        awayCheck();
+    });
     // The library is read the first time its tab shows.
     function dockCheck() { if (dockList && !dockList.loaded && panel.dataset.dock && !$('[data-dock-pane="library"]', dock).hidden) dockList.load(true); }
     // The first tab's count, with a small bump when it changes, and its note while the post has no media.

@@ -449,7 +449,9 @@ function nl_editor(?array $p = null, bool $public = false): string
     $plain = $locked ? nl_lock_plain($p) : null;
     $panel = static fn(string $name, string $label) => $tool($name, $label, 'data-panel="' . $name . '" aria-expanded="false" aria-controls="log-panel-' . $name . '"');
     return '<section class="log-compose' . ($edit ? ' log-edit active' : '') . '" id="log-compose" aria-labelledby="log-compose-title"' . ($edit ? ' data-edit="1"' : '') . '>'
-        . '<div class="log-compose-head"><h2 id="log-compose-title">' . ($edit ? nm_t('投稿を編集') : nm_t('いま、何を残す？')) . '</h2><button type="button" class="btn log-close">' . nm_t('閉じる') . '</button></div>'
+        . '<div class="log-compose-head"><div class="log-compose-title"><h2 id="log-compose-title">' . ($edit ? nm_t('投稿を編集') : nm_t('いま、何を残す？')) . '</h2>'
+        // A PC or sideways: back to the text from the preview, a panel, the media list or a scrolled page.
+        . '<button type="button" class="log-to-body" data-to-body hidden>' . nm_icon('ui-pen', 'log-tool-icon') . '<span>' . nm_t('本文へ') . '</span></button></div><button type="button" class="btn log-close">' . nm_t('閉じる') . '</button></div>'
         // The dock (log-editor.js moves the post's media into its first tab while it is shown).
         . '<aside class="log-media-dock" data-media-dock aria-label="' . nm_t('メディア') . '"><div class="log-dock-tabs" role="tablist">'
         . '<button type="button" role="tab" id="log-dock-tab-post" aria-selected="true" aria-controls="log-dock-post" data-dock-tab="post">' . nl_compose_icon('upload') . '<span>' . nm_t('この投稿') . '</span><b class="log-dock-count" data-dock-count>0</b></button>'

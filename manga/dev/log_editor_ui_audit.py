@@ -69,6 +69,8 @@ CHECK = r'''() => {
     const bar = form.querySelector('.log-compose-bar'), att = form.querySelector('[data-attachments]');
     if (att && shown(att) && shown(bar) && bar.getBoundingClientRect().top > att.getBoundingClientRect().top) out.push('スマホ表示で道具の列がメディアより下にある');
   }
+  const toBody = panel.querySelector('[data-to-body]');
+  if (toBody && shown(toBody) !== form.classList.contains('is-wide')) out.push(form.classList.contains('is-wide') ? 'PC表示なのに本文へのボタンがない' : 'スマホ表示で本文へのボタンが出ている');
   const submit = form.querySelector('.log-submit');
   if (shown(ta) && shown(submit)) { const s = submit.getBoundingClientRect(), t = ta.getBoundingClientRect(); if (getComputedStyle(submit).position !== 'sticky' && s.top < t.bottom - 1) out.push('保存ボタンの行が本文欄に重なっている'); }
   const sheet = document.querySelector('.log-panel-sheet[open]');
@@ -168,6 +170,22 @@ def tools_sequence(a, page, where, wide):
         a.step(page, where, 'この投稿のタブ', lambda: q('#log-dock-tab-post').click())
         a.step(page, where, '道具の「メディア一覧から選ぶ」', lambda: q('[data-picker="media"]').click(), settle=700)
         a.step(page, where, 'この投稿のタブに戻る', lambda: q('#log-dock-tab-post').click())
+
+        def to_body():
+            q('#log-tab-preview').click(); page.wait_for_timeout(700)
+            q('#log-dock-tab-library').click(); toggle('tags')()
+            if not page.eval_on_selector('[data-to-body]', 'b => b.classList.contains("is-away")'):
+                raise AssertionError('本文へが目立っていない（プレビュー・設定・メディア一覧を開いているのに）')
+            # A phone turned sideways shows the panel as a modal sheet: it is closed first (by design).
+            if page.locator('.log-panel-sheet[open]').count():
+                page.click('.log-panel-sheet[open] [data-sheet-close]')
+            q('[data-to-body]').click(); page.wait_for_timeout(500)
+            state = page.evaluate('''() => { const f = document.querySelector('#log-compose form'), d = document.querySelector('[data-media-dock]');
+              return [f.classList.contains('is-previewing'), !!f.querySelector('[data-panel][aria-expanded=true]'), document.activeElement === f.querySelector('#log-body'),
+                !!d && d.getClientRects().length > 0 && d.querySelector('[data-dock-pane="post"]').hidden, document.querySelector('[data-to-body]').classList.contains('is-away')]; }''')
+            if state != [False, False, True, False, False]:
+                raise AssertionError(f'本文へで書く画面に戻っていない: {state}')
+        a.step(page, where, '本文へ（プレビュー・#・メディア一覧を開いてから）', to_body, settle=600)
     else:
         a.step(page, where, 'プレビュー（目）', lambda: q('[data-preview]').click(), settle=900)
         a.step(page, where, 'プレビューを閉じる（目）', lambda: q('[data-preview]').click())
