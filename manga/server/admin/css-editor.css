@@ -10,6 +10,13 @@
 .css-switch-state { font-weight: 700; }
 .css-switch-state::before { content: ""; display: inline-block; width: .7em; height: .7em; margin-right: .45em; border-radius: 50%; background: var(--muted); vertical-align: .05em; }
 .css-switch[data-on="1"] .css-switch-state::before { background: #2e9d57; }
+.css-layouts { margin: 12px 0; }
+.css-layouts fieldset { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.css-layouts legend { padding: 0 6px; font-weight: 700; }
+.css-layout-choices { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.css-layout-choice { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.css-layout-choice input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.css-layouts .note { margin: 8px 0 0; }
 .css-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .css-toolbar [hidden] { display: none; }
 .css-file-button { position: relative; overflow: hidden; }

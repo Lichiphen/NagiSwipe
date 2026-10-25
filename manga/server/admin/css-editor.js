@@ -262,6 +262,7 @@
     const restoreForm = document.getElementById('css-restore');
     const download = root.querySelector('[data-css-download]');
     const enabledForm = root.querySelector('[data-css-enabled-form]');
+    const layoutsForm = root.querySelector('[data-css-layouts-form]');
     const MAX = Number(root.dataset.max) || 262144;
     const encoder = new TextEncoder();
     let saved = root.hasAttribute('data-draft') ? null : text.value;
@@ -455,6 +456,7 @@
         setRevision(body.revision);
         if (download) download.hidden = !body.hash;
         if (restoreButton) restoreButton.hidden = !body.restorable;
+        if (body.layouts) savedLayouts = body.layouts;
         setEnabled(body.enabled);
     }
     async function save(force) {
@@ -506,10 +508,14 @@
     form.addEventListener('submit', event => { event.preventDefault(); save(); });
 
     let hasCss = root.dataset.savedHash !== '';
+    // The list layouts as saved (not as ticked): the CSS is read only while the LOG's current layout is one of them.
+    let savedLayouts = {};
+    layoutsForm?.querySelectorAll('[data-css-layout]').forEach(box => { savedLayouts[box.value] = box.checked; });
+    const layoutOn = () => !layoutsForm || savedLayouts[layoutsForm.dataset.current] !== false;
     function setEnabled(on) {
         const state = enabledForm.querySelector('[data-css-enabled-state]');
-        state.textContent = !on ? t('適用を止めています') : (hasCss ? t('公開ページに適用中') : t('保存すると公開ページに適用します'));
-        enabledForm.dataset.on = on && hasCss ? '1' : (on ? 'empty' : '0');
+        state.textContent = !on ? t('適用を止めています') : (!hasCss ? t('保存すると公開ページに適用します') : (layoutOn() ? t('公開ページに適用中') : t('今の一覧の形では読み込みません')));
+        enabledForm.dataset.on = on && hasCss && layoutOn() ? '1' : (on ? 'empty' : '0');
         enabledForm.querySelector('[data-css-enabled-value]').value = on ? '0' : '1';
         enabledForm.querySelector('[data-css-enabled-button]').textContent = on ? t('適用を止める') : t('公開ページに適用する');
     }
@@ -521,6 +527,16 @@
         try {
             const { response, body } = await send(new FormData(enabledForm));
             if (response.ok && body.ok) { setEnabled(body.enabled); say(body.message, 'ok'); } else say(body.error || t('保存できませんでした'), 'error');
+        } catch (e) { say(t('通信できませんでした。時間をおいて、もう一度お試しください'), 'error'); }
+        button.disabled = false;
+    });
+    layoutsForm?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const button = layoutsForm.querySelector('[data-css-layouts-save]');
+        button.disabled = true;
+        try {
+            const { response, body } = await send(new FormData(layoutsForm));
+            if (response.ok && body.ok) { savedLayouts = body.layouts; setEnabled(body.enabled); say(body.message, 'ok'); } else say(body.error || t('保存できませんでした'), 'error');
         } catch (e) { say(t('通信できませんでした。時間をおいて、もう一度お試しください'), 'error'); }
         button.disabled = false;
     });

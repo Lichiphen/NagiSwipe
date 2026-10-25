@@ -319,6 +319,11 @@ window.NagiLogFormat = (() => {
     const slot = $('[data-compose-slot]');
     const collapsed = slot?.classList.contains('log-compose-collapsed');
     const modalPanel = () => panel.classList.contains('active') && (mobile.matches || !!slot);
+    // A PC or a device turned sideways: the tool row above the text, the preview as a tab, the media dock on the left.
+    const wide = window.matchMedia('(orientation: landscape) and (min-width: 640px)');
+    const dock = $('[data-media-dock]', panel);
+    const toolsScroll = $('[data-tools-scroll]', form), tools = $('.log-compose-tools', form);
+    let dockList = null, arranged = false;
     let refs = JSON.parse(refsField.value || '{}');
     let selection = [body.value.length, body.value.length];
     let uploading = 0;
@@ -407,8 +412,7 @@ window.NagiLogFormat = (() => {
         if (!at.size) return;
         const cs = getComputedStyle(body);
         COPIED.forEach(name => { markLayer.style[name] = cs[name]; });
-        markLayer.style.left = (body.offsetLeft + body.clientLeft) + 'px'; markLayer.style.top = (body.offsetTop + body.clientTop) + 'px';
-        markLayer.style.width = body.clientWidth + 'px'; markLayer.style.height = body.clientHeight + 'px';
+        placeMarks();
         const text = body.value, nodes = [];
         let from = 0;
         for (const m of text.matchAll(MARK_RE)) {
@@ -435,8 +439,20 @@ window.NagiLogFormat = (() => {
         markLayer.replaceChildren(...nodes);
         markLayer.scrollTop = body.scrollTop;
     }
+    // The layer lies exactly over the text box. Anything above it in the form (the tool row and its panels on a PC,
+    // a chip, a message) moves the box without resizing it, so the form's own size changes place the layer again.
+    function placeMarks() {
+        if (markLayer.hidden) return;
+        markLayer.style.left = (body.offsetLeft + body.clientLeft) + 'px'; markLayer.style.top = (body.offsetTop + body.clientTop) + 'px';
+        markLayer.style.width = body.clientWidth + 'px'; markLayer.style.height = body.clientHeight + 'px';
+    }
     body.addEventListener('scroll', () => { markLayer.scrollTop = body.scrollTop; });
-    if ('ResizeObserver' in window) new ResizeObserver(() => drawMark()).observe(body);
+    // (In the full-screen editor the form can be held at the dock's height, so the tool zone is watched as well.)
+    if ('ResizeObserver' in window) {
+        new ResizeObserver(() => drawMark()).observe(body);
+        const moved = new ResizeObserver(placeMarks);
+        [form, $('[data-toolzone]', form), $('[data-compose-tabs]', form)].forEach(el => el && moved.observe(el));
+    }
     // Dragging a band: the line under the pointer is found from the layer, which is laid out like the text.
     const caretAt = (x, y) => {
         if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); return p ? [p.offsetNode, p.offset] : null; }
@@ -554,7 +570,7 @@ window.NagiLogFormat = (() => {
         // A group with no pictures lives only while its mark is in the text.
         const { at } = view(); groups = groups.filter(g => g.ids.length || at.has(g.n));
         renderAttachments(); renderChips(); drawMark();
-        $('[data-preview-body]', form).hidden = true; $('[data-preview]', form).setAttribute('aria-pressed', 'false');
+        showPreview(false);
         $('[data-character-count]', form).textContent = t('{n}文字', { n: Array.from(body.value).length });
         dirty = snapshot() !== initial;
         fab?.classList.toggle('log-fab-draft', dirty);
@@ -683,6 +699,7 @@ window.NagiLogFormat = (() => {
         }));
         attachments.replaceChildren(...nodes);
         attachments.hidden = !rows.length;
+        dockCount();
     }
     // The dialog for one video or audio file, with its full record read fresh (its revision may have moved on).
     async function openAV(id, video) {
@@ -842,10 +859,20 @@ window.NagiLogFormat = (() => {
         if (menuFor === id) { closeMenu(); return; }
         closeMenu(); menuFor = id;
         $$('[data-rate]', menu).forEach(b => b.setAttribute('aria-checked', String(b.dataset.rate === mediaRating(id))));
-        const box = form.getBoundingClientRect(), at = button.getBoundingClientRect();
         menu.hidden = false;
-        menu.style.left = Math.max(0, Math.min(at.left - box.left, box.width - menu.offsetWidth)) + 'px';
-        menu.style.top = (at.bottom - box.top + 6) + 'px';
+        // Under the button, kept inside the screen. When the screen ends first the page scrolls a little to make room
+        // (a phone held upright), or, when that would hide the button, the menu goes above it (a phone turned sideways).
+        let at;
+        const short = () => at.bottom + 6 + menu.offsetHeight - (window.innerHeight - 8);
+        const place = below => {
+            const box = (menu.offsetParent || form).getBoundingClientRect();
+            at = button.getBoundingClientRect();
+            menu.style.left = Math.max(8 - box.left, Math.min(at.left - box.left, box.width - menu.offsetWidth, window.innerWidth - 8 - box.left - menu.offsetWidth)) + 'px';
+            menu.style.top = (below ? at.bottom - box.top + 6 : at.top - box.top - 6 - menu.offsetHeight) + 'px';
+        };
+        place(true);
+        if (short() > 0 && at.top - short() >= 8) { menu.scrollIntoView({ block: 'nearest' }); place(true); }
+        if (short() > 9 && at.top - 6 - menu.offsetHeight >= 8) place(false);
         button.setAttribute('aria-expanded', 'true');
         $('[data-rate][aria-checked="true"]', menu)?.focus();
     }
@@ -994,6 +1021,8 @@ window.NagiLogFormat = (() => {
         accessibility(open);
         if (open) body.focus(); else previousFocus?.focus();
         checkFab();
+        if (arranged) arrange();
+        if (open) { toolsHint(); toolsNudge(); }
     }
     fab.addEventListener('click', () => setPanel(true));
     $('[data-compose-open]')?.addEventListener('click', () => setPanel(true));
@@ -1022,7 +1051,8 @@ window.NagiLogFormat = (() => {
     });
     mobile.addEventListener('change', () => accessibility(panel.classList.contains('active')));
     document.addEventListener('keydown', e => {
-        if (e.defaultPrevented || picker.open || saved?.open || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
+        // Escape in a dialog (装飾, a picker, the phone's sheet) closes only that dialog, not the editor.
+        if (e.defaultPrevented || document.querySelector('dialog[open]') || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
         if (e.key === 'Escape' && !menu.hidden) { closeMenu(true); return; }
         if (e.key === 'Escape' && !panel.dataset.edit) setPanel(false);
         if (e.key === 'Tab' && modalPanel()) {
@@ -1064,6 +1094,8 @@ window.NagiLogFormat = (() => {
         uploading++;
         uploadQueue = uploadQueue.then(async () => {
             setPanel(true);
+            // The dock shows where the new media go.
+            if (panel.dataset.dock) dockTab('post');
             // The whole batch goes to one place, chosen now and shown (an empty band) while the files are sent.
             const place = target(), where = placeText(place);
             say(t('{where}に置きます。アップロードしています…', { where })); showPlace(place.g);
@@ -1087,6 +1119,8 @@ window.NagiLogFormat = (() => {
             if (place.created && !place.g.ids.length) { body.value = removeMarkOf(body.value, place.g.n); rememberSelection(); changed(); }
             if (errors.length) say(errors.join(' / '), true);
             else if (added) { say(t('{where}に置きました。サムネイルや本文の帯をドラッグすると、場所を変えられます。', { where })); showPlace(place.g); }
+            // New uploads join the top of the dock's list (unless it shows a search).
+            if (added && dockList?.loaded && !dockList.search.value) dockList.load(true);
         }).finally(() => { uploading--; });
         await uploadQueue;
     }
@@ -1104,7 +1138,7 @@ window.NagiLogFormat = (() => {
     });
     document.addEventListener('dragleave', e => { if (!e.relatedTarget) panel.classList.remove('dragover'); });
     document.addEventListener('drop', e => {
-        if (pageDrag) { if (form.contains(e.target)) e.preventDefault(); return; }
+        if (pageDrag) { if (panel.contains(e.target)) e.preventDefault(); return; }
         if (!e.dataTransfer?.files.length) return;
         e.preventDefault(); panel.classList.remove('dragover'); upload(e.dataTransfer.files);
     });
@@ -1113,61 +1147,78 @@ window.NagiLogFormat = (() => {
         if (files.length) { e.preventDefault(); upload(files); }
     });
 
-    let kind = 'media', catalogPage = 1, generation = 0, searchTimer;
-    const grid = $('.log-picker-grid', picker), search = $('[data-picker-search]', picker), more = $('[data-picker-more]', picker), pickerStatus = $('[data-picker-status]', picker);
-    async function loadCatalog(reset) {
-        const currentGeneration = ++generation;
-        if (reset) { catalogPage = 1; grid.replaceChildren(); }
-        more.disabled = true; pickerStatus.textContent = t('読み込み中…');
-        try {
-            const response = await fetch(adminUrl('index.php?p=log_' + kind + '_json&page=' + catalogPage + '&q=' + encodeURIComponent(search.value)), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
-            // A login page instead of the list (the session ended in another tab, or it expired): say so instead of a JSON error.
-            if (response.redirected || !(response.headers.get('Content-Type') || '').includes('application/json')) throw Object.assign(new Error(t('ログインが切れた可能性があります。ログインし直してから、もう一度お試しください。')), { login: true });
-            if (!response.ok) throw new Error(t('一覧を読めませんでした。ログインを確認してください。'));
-            const result = await response.json();
-            if (currentGeneration !== generation) return;
-            result.items.forEach(item => {
-                const button = document.createElement('button'); button.type = 'button';
-                let img;
-                if (item.thumb) { img = document.createElement('img'); img.src = adminUrl(item.thumb); img.alt = ''; img.loading = 'lazy'; }
-                else { img = document.createElement('span'); img.className = 'log-picker-kind'; img.append(kindMark(item.kind)); }
-                const label = document.createElement('span'); label.textContent = item.title || item.alt || t('画像');
-                button.append(img, label);
-                if (item.locked) { const badge = document.createElement('small'); badge.textContent = t('パスワード付き'); button.append(badge); }
-                button.addEventListener('click', () => {
-                    if (kind === 'manga') {
-                        // An old post may already use this label for another work.
-                        let tag = item.tag;
-                        if (refs[tag] && refs[tag] !== item.id) tag = tag.slice(0, -1) + ' #' + item.id + ']';
-                        refs[tag] = item.id; insert('\n' + tag + '\n');
-                    } else {
-                        mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '', kind: item.kind || 'image' };
-                        if (!allImages().includes(item.id)) { const place = target(); addImage(item.id, place); say(t('{where}に置きました。', { where: placeText(place) })); showPlace(place.g); }
-                        else say(t('そのメディアはもう入っています。'));
-                    }
-                    picker.close(); body.focus();
-                });
-                grid.append(button);
-            });
-            more.hidden = !result.more; pickerStatus.textContent = grid.children.length ? t('選ぶと、本文のカーソル位置に入ります。') : t('見つかりませんでした。');
-        } catch (e) {
-            if (currentGeneration !== generation) return;
-            pickerStatus.textContent = e.message;
-            if (e.login && document.documentElement.dataset.publicLogin) { const a = document.createElement('a'); a.href = adminUrl('login.php'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = t('ログイン画面を開く'); pickerStatus.append(' ', a); }
+    // A picked work or medium goes into the text at the caret (a medium to the place target() chooses).
+    function pick(item, kind) {
+        if (kind === 'manga') {
+            // An old post may already use this label for another work.
+            let tag = item.tag;
+            if (refs[tag] && refs[tag] !== item.id) tag = tag.slice(0, -1) + ' #' + item.id + ']';
+            refs[tag] = item.id; insert('\n' + tag + '\n');
+            return;
         }
-        finally { if (currentGeneration === generation) more.disabled = false; }
+        mediaInfo[item.id] = { thumb: item.thumb, alt: item.alt, rating: item.rating || '', kind: item.kind || 'image' };
+        if (!allImages().includes(item.id)) { const place = target(); addImage(item.id, place); say(t('{where}に置きました。', { where: placeText(place) })); showPlace(place.g); }
+        else say(t('そのメディアはもう入っています。'));
     }
+    // A list of the media library or the works: in the dialog (both), and in the dock on a PC or sideways (media only).
+    function catalog(box, picked) {
+        const list = { kind: 'media', page: 1, generation: 0, loaded: false, search: $('[data-picker-search]', box) };
+        const grid = $('[data-picker-grid]', box), more = $('[data-picker-more]', box), note = $('[data-picker-status]', box);
+        let timer;
+        list.load = async reset => {
+            const current = ++list.generation;
+            list.loaded = true;
+            if (reset) { list.page = 1; grid.replaceChildren(); }
+            more.disabled = true; note.textContent = t('読み込み中…');
+            try {
+                const response = await fetch(adminUrl('index.php?p=log_' + list.kind + '_json&page=' + list.page + '&q=' + encodeURIComponent(list.search.value)), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+                // A login page instead of the list (the session ended in another tab, or it expired): say so instead of a JSON error.
+                if (response.redirected || !(response.headers.get('Content-Type') || '').includes('application/json')) throw Object.assign(new Error(t('ログインが切れた可能性があります。ログインし直してから、もう一度お試しください。')), { login: true });
+                if (!response.ok) throw new Error(t('一覧を読めませんでした。ログインを確認してください。'));
+                const result = await response.json();
+                if (current !== list.generation) return;
+                const kind = list.kind;
+                result.items.forEach(item => {
+                    const button = document.createElement('button'); button.type = 'button';
+                    let img;
+                    if (item.thumb) { img = document.createElement('img'); img.src = adminUrl(item.thumb); img.alt = ''; img.loading = 'lazy'; }
+                    else { img = document.createElement('span'); img.className = 'log-picker-kind'; img.append(kindMark(item.kind)); }
+                    const label = document.createElement('span'); label.textContent = item.title || item.alt || t('画像');
+                    button.append(img, label);
+                    button.title = label.textContent;
+                    if (item.locked) { const badge = document.createElement('small'); badge.textContent = t('パスワード付き'); button.append(badge); }
+                    button.addEventListener('click', () => { pick(item, kind); picked(); });
+                    grid.append(button);
+                });
+                more.hidden = !result.more; note.textContent = grid.children.length ? t('選ぶと、本文のカーソル位置に入ります。') : t('見つかりませんでした。');
+            } catch (e) {
+                if (current !== list.generation) return;
+                note.textContent = e.message;
+                if (e.login && document.documentElement.dataset.publicLogin) { const a = document.createElement('a'); a.href = adminUrl('login.php'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = t('ログイン画面を開く'); note.append(' ', a); }
+            }
+            finally { if (current === list.generation) more.disabled = false; }
+        };
+        list.search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => list.load(true), 250); });
+        more.addEventListener('click', () => { list.page++; list.load(false); });
+        return list;
+    }
+    const pickerList = catalog(picker, () => { picker.close(); body.focus(); });
+    // The dock stays open beside the editor, so a pick leaves it as it is and goes back to the text.
+    dockList = catalog(dock, () => body.focus({ preventScroll: true }));
     $$('[data-picker]', form).forEach(button => button.addEventListener('click', () => {
-        kind = button.dataset.picker; search.value = ''; $('#log-picker-title').textContent = kind === 'manga' ? t('漫画を選ぶ') : t('メディアを選ぶ');
-        picker.showModal(); loadCatalog(true);
+        if (button.dataset.picker === 'media' && panel.dataset.dock) {
+            dock.classList.remove('is-tucked'); dockTab('library'); dockList.search.focus({ preventScroll: true });
+            dock.classList.remove('is-called'); void dock.offsetWidth; dock.classList.add('is-called');
+            return;
+        }
+        pickerList.kind = button.dataset.picker; pickerList.search.value = ''; $('#log-picker-title').textContent = pickerList.kind === 'manga' ? t('漫画を選ぶ') : t('メディアを選ぶ');
+        picker.showModal(); pickerList.load(true);
     }));
     $('[data-picker-close]', picker).addEventListener('click', () => picker.close());
-    picker.addEventListener('close', () => { generation++; });
-    search.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => loadCatalog(true), 250); });
-    more.addEventListener('click', () => { catalogPage++; loadCatalog(false); });
-    $('[data-preview]', form).addEventListener('click', async () => {
-        const preview = $('[data-preview-body]', form), toggle = $('[data-preview]', form);
-        if (!preview.hidden) { preview.hidden = true; toggle.setAttribute('aria-pressed', 'false'); return; }
+    picker.addEventListener('close', () => { pickerList.generation++; });
+    dock.addEventListener('animationend', () => dock.classList.remove('is-called'));
+    async function openPreview() {
+        const preview = $('[data-preview-body]', form);
         try {
             const data = new FormData(form); data.set('do', 'log_preview'); data.set('body', compose());
             const result = await request(data);
@@ -1177,11 +1228,146 @@ window.NagiLogFormat = (() => {
                 // Links to a heading of the post (the table of contents) stay on this page.
                 if (el.hasAttribute(attr) && !el.getAttribute(attr).startsWith('#')) el.setAttribute(attr, adminUrl(el.getAttribute(attr)));
             }));
-            preview.hidden = false; toggle.setAttribute('aria-pressed', 'true');
+            showPreview(true);
             window.NagiSwipe?.init();
             window.NagiLogEmbeds?.load(preview);
         } catch (e) { say(e.message, true); }
+    }
+    $('[data-preview]', form).addEventListener('click', () => { if (form.classList.contains('is-previewing')) showPreview(false); else openPreview(); });
+    // 書く / プレビュー tabs (shown on a PC or sideways); the eye on the tool row switches them too.
+    const tabs = $$('[data-compose-tab]', form);
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (tab.dataset.composeTab === 'preview') { if (!form.classList.contains('is-previewing')) openPreview(); }
+            else { showPreview(false); body.focus(); }
+        });
+        tab.addEventListener('keydown', e => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+            e.preventDefault();
+            const next = tabs[(tabs.indexOf(tab) + 1) % tabs.length];
+            next.focus(); next.click();
+        });
     });
+    // On a PC or sideways, the tool row and its panels sit above the text and the preview takes the text's place;
+    // on a phone held upright they go back under the text, where they are in the page, and the post's media follow
+    // them so the tools stay right under the text.
+    const toolzone = $('[data-toolzone]', form), previewBox = $('[data-preview-body]', form);
+    const toolzoneHome = document.createComment('tools'), previewHome = document.createComment('preview');
+    toolzone.before(toolzoneHome); previewBox.before(previewHome);
+    // The dock: the post's media (its first tab, moved out of the form) and the media library, on the left on a PC
+    // or sideways. Beside the full-screen editor and on the edit page it is a column ("grid"); beside the top page's
+    // editor it floats in the margin ("float"), tucks away while the page scrolls down and comes back on the way up.
+    const attachmentsHome = document.createComment('attachments'), menuHome = document.createComment('menu');
+    attachments.before(attachmentsHome); menu.before(menuHome);
+    function dockMode() {
+        if (!wide.matches) return '';
+        if (panel.classList.contains('active')) return 'grid';
+        if (!slot || collapsed) return '';
+        const card = panel.getBoundingClientRect();
+        return card.width && card.left >= 236 ? 'float' : '';
+    }
+    function arrange() {
+        arranged = true;
+        form.classList.toggle('is-wide', wide.matches);
+        if (wide.matches) { $('[data-compose-tabs]', form).before(toolzone); markLayer.after(previewBox); }
+        else { toolzoneHome.after(toolzone); previewHome.after(previewBox); }
+        const mode = dockMode(), after = mode ? null : wide.matches ? attachmentsHome : previewBox;
+        if (panel.dataset.dock !== mode || (after && after.nextSibling !== attachments)) {
+            closeMenu();
+            panel.dataset.dock = mode;
+            if (mode) { $('[data-dock-pane="post"]', dock).append(attachments); dock.append(menu); }
+            else if (wide.matches) { attachmentsHome.after(attachments); menuHome.after(menu); }
+            else previewBox.after(attachments, menu);
+            dock.classList.remove('is-tucked');
+        }
+        placeDock(); drawMark(); toolsHint(); dockCheck(); dockCount();
+    }
+    wide.addEventListener('change', arrange);
+    let resizeTicking = false;
+    window.addEventListener('resize', () => { if (!resizeTicking) { resizeTicking = true; requestAnimationFrame(() => { resizeTicking = false; arrange(); }); } });
+    function placeDock() {
+        if (panel.dataset.dock !== 'float') return;
+        const card = panel.getBoundingClientRect(), width = Math.min(300, card.left - 40);
+        dock.style.setProperty('--log-dock-width', width + 'px');
+        dock.style.setProperty('--log-dock-left', (card.left - 24 - width) + 'px');
+        dock.style.setProperty('--log-dock-top', Math.max(16, card.top) + 'px');
+    }
+    let lastScroll = window.scrollY, scrollTick = false;
+    window.addEventListener('scroll', () => {
+        if (panel.dataset.dock !== 'float' || scrollTick) return;
+        scrollTick = true;
+        requestAnimationFrame(() => {
+            scrollTick = false;
+            const y = window.scrollY, moved = y - lastScroll;
+            if (Math.abs(moved) > 8) {
+                const tuck = moved > 0 && y > 60;
+                if (tuck && !dock.classList.contains('is-tucked')) closeMenu();
+                dock.classList.toggle('is-tucked', tuck);
+                lastScroll = y;
+            }
+            placeDock();
+        });
+    }, { passive: true });
+    function dockTab(name) {
+        $$('[role="tab"][data-dock-tab]', dock).forEach(tab => { const on = tab.dataset.dockTab === name; tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; });
+        $$('[data-dock-pane]', dock).forEach(pane => { pane.hidden = pane.dataset.dockPane !== name; });
+        dockCheck();
+    }
+    $$('[data-dock-tab]', dock).forEach(button => button.addEventListener('click', () => {
+        dockTab(button.dataset.dockTab);
+        if (button.dataset.dockTab === 'library' && !button.matches('[role="tab"]')) dockList.search.focus({ preventScroll: true });
+    }));
+    const dockTabs = $$('[role="tab"][data-dock-tab]', dock);
+    dockTabs.forEach(tab => tab.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const next = dockTabs[(dockTabs.indexOf(tab) + 1) % dockTabs.length];
+        next.focus(); next.click();
+    }));
+    $('[data-dock-upload]', dock).addEventListener('click', () => uploadInput.click());
+    arrange();
+    // The preview opened from the eye or the tab. As a tab it keeps the text's height and scrolls inside.
+    function showPreview(on) {
+        const preview = $('[data-preview-body]', form);
+        if (on && !form.classList.contains('is-previewing')) preview.style.setProperty('--log-preview-height', Math.max(body.offsetHeight, 320) + 'px');
+        preview.hidden = !on; form.classList.toggle('is-previewing', on);
+        $('[data-preview]', form).setAttribute('aria-pressed', String(on));
+        $$('[data-compose-tab]', form).forEach(tab => {
+            const selected = (tab.dataset.composeTab === 'preview') === on;
+            tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
+        });
+    }
+    // The library is read the first time its tab shows.
+    function dockCheck() { if (dockList && !dockList.loaded && panel.dataset.dock && !$('[data-dock-pane="library"]', dock).hidden) dockList.load(true); }
+    // The first tab's count, with a small bump when it changes, and its note while the post has no media.
+    function dockCount() {
+        const count = $('[data-dock-count]', dock), n = String(allImages().length);
+        if (count.textContent !== n) {
+            const first = !dock.dataset.counted;
+            count.textContent = n; dock.dataset.counted = '1';
+            if (!first) { count.classList.remove('is-bump'); void count.offsetWidth; count.classList.add('is-bump'); }
+        }
+        $('[data-dock-empty]', dock).hidden = !attachments.hidden;
+    }
+    // The tool row scrolls sideways when it does not fit: a fade and an arrow show at the end that has more.
+    function toolsHint() {
+        if (!tools) return;
+        const rest = tools.scrollWidth - tools.clientWidth;
+        toolsScroll.classList.toggle('can-start', tools.scrollLeft > 2);
+        toolsScroll.classList.toggle('can-end', rest > 2 && tools.scrollLeft < rest - 2);
+    }
+    // The first time in a tab, the row moves a little and back, so it shows that it scrolls.
+    function toolsNudge() {
+        if (!toolsScroll?.classList.contains('can-end') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        try { if (sessionStorage.getItem('nagilog-tools-nudged')) return; sessionStorage.setItem('nagilog-tools-nudged', '1'); } catch { return; }
+        setTimeout(() => { tools.scrollTo({ left: 48, behavior: 'smooth' }); setTimeout(() => tools.scrollTo({ left: 0, behavior: 'smooth' }), 650); }, 400);
+    }
+    tools.addEventListener('scroll', toolsHint, { passive: true });
+    if ('ResizeObserver' in window) new ResizeObserver(toolsHint).observe(tools);
+    $$('[data-tools-step]', toolsScroll).forEach(button => button.addEventListener('click', () => {
+        tools.scrollBy({ left: +button.dataset.toolsStep * tools.clientWidth * 0.7, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }));
+    toolsHint();
     form.addEventListener('submit', async e => {
         e.preventDefault();
         if (saving) return;

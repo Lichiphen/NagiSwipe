@@ -439,6 +439,13 @@ The posting box has the text, the media of the text, chips for set items and one
 | #, folder, warning triangle, ? | Opens recent hashtags, categories, content warnings or help below the tool row, one at a time. |
 | Eye | Opens and closes the preview. |
 
+On a PC or a device turned sideways, the tool row sits above the text box, and what #, the folder and the others open appears under it (above the text). The preview is switched with the "書く" (write) and "プレビュー" (preview) tabs above the text box and shows in the text box's place at about the same height (a long post scrolls inside the frame). The eye switches it too.
+A "Media" panel stays open on the left: as a column left of the text when the posting screen is open full screen and on the edit page, and floating in the left margin beside the posting box on the top page (not shown when the margin is too narrow). The floating panel tucks away upwards while scrolling down and comes back when scrolling up.
+- "この投稿" (this post), the tab shown first: the media groups in the text (thumbnails, reordering, content warnings, +) are listed here instead of under the text box. The number on the tab is how many media are in the post. With none yet, it offers buttons to add files or open the media list.
+- "メディア一覧" (media list): search pictures, video and audio by description, and press one to put it at the cursor in the text. "Choose from the media list" on the tool row moves to this tab's search. Uploads join the top of the list.
+With the column on the left, the text box is taller and "Save draft" and "Post" stay at the bottom of the screen.
+On a phone held upright, the tool row sits right under the text box and the preview opens under the row. The thumbnails of the media in the post come under the row (and the preview). Tools that do not fit scroll sideways, and the end with more shows a see-through fade and an arrow (pressing the arrow scrolls too). The eye stays at the right end.
+
 Setting a category or content warning shows it as a chip under the text. Pressing a chip opens that setting.
 Pictures, video and audio (media) line up as thumbnails under the text box, like a social media post. The text box does not show media tags.
 Media are shown one row per **group**, such as "メディア1" and "メディア2" (media 1, media 2), and each group's place in the text can be chosen.
@@ -922,6 +929,7 @@ Adjust the look of the public LOG with your own CSS.
 | Editor | Line numbers and colors. About 0.3 seconds after you stop typing, the syntax is checked; pressing an error or warning in the list moves to its place. Tab indents (press Esc first to move to the next field). Ctrl+S (⌘S on a Mac) saves too |
 | Save | "Save" puts it on the public pages. If saving fails, your text stays on the screen |
 | On and off | "Turn off" takes it off the public pages and keeps the saved text |
+| Per list layout | Ticking "ミニブログのとき" (with the mini blog) and "タイルのとき" (with tiles) chooses, for each List layout setting, whether the CSS is loaded. With an unticked layout it is loaded on no page (lists, posts and fixed pages alike). Both are on at first |
 | Download and restore | Download the saved CSS as a .css file. "Go back to the earlier save" swaps in the text saved before |
 
 The additional CSS is never used in the admin. If the public design breaks, you can still fix it or turn it off from the editor page.

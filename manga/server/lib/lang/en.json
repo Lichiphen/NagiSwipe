@@ -1708,5 +1708,22 @@
   "超えたら、その IP アドレスをロックする時間": "How long to lock that IP address after that",
   "リカバリーコードでログイン": "Log in with a recovery code",
   "リカバリーコードを使う": "Use a recovery code",
-  "リカバリーコード（確認コードの代わり）": "Recovery code (instead of the verification code)"
+  "リカバリーコード（確認コードの代わり）": "Recovery code (instead of the verification code)",
+  "タイルのとき": "With tiles",
+  "ミニブログのとき": "With the mini blog",
+  "メディア": "Media",
+  "メディアを検索": "Search media",
+  "一覧の形ごとの適用": "Use per list layout",
+  "一覧の形ごとの適用を保存しました": "Saved which list layouts use the CSS",
+  "一覧の形ごとの適用を保存しました。今の一覧の形（{layout}）では追加CSSを読み込みません": "Saved which list layouts use the CSS. With the current layout ({layout}) the additional CSS is not loaded",
+  "今の一覧の形では読み込みません": "Not loaded with the current list layout",
+  "今の一覧の形（{layout}）では読み込まない設定です（{size}）。": "Set not to load with the current list layout ({layout}) ({size}).",
+  "今の設定": "Current",
+  "本文の表示": "Text view",
+  "設定の「一覧の形」がチェックした形のときだけ、追加CSSを公開ページ（一覧・記事・固定ページのすべて）に読み込みます。タイル用とミニブログ用でCSSを分けたいときや、一覧の形を試しに切り替えるときに使います。": "The additional CSS is loaded on the public pages (lists, posts and fixed pages alike) only while the List layout setting is one of the ticked layouts. Use it to keep CSS written for the tiles away from the mini blog, or when trying another list layout.",
+  "説明文で探す": "Search by description",
+  "この投稿": "This post",
+  "この投稿のメディアはまだありません。": "This post has no media yet.",
+  "ファイルをここへドロップするか、追加してください。": "Drop files here, or add them.",
+  "一覧から選ぶ": "Choose from the list"
 }

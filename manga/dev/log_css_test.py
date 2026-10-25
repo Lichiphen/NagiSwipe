@@ -213,6 +213,33 @@ def run(site, c, csrf):
     check('止めても保存内容とrevisionはそのまま', state()['hash'] == chash('.two{a:b}') and (store / f'{chash(".two{a:b}")}.css').exists())
     post({'do': 'log_css_enabled', 'enabled': '1'})
     check('もう一度適用できる', link(pub.get('/').text) == chash('.two{a:b}'))
+
+    # --- Per list layout (mini blog / tiles) -----------------------------------------------------
+    page = c.get('/admin/index.php?p=css').text
+    check('一覧の形ごとの適用欄（初めは両方オン・今の設定に印）', 'data-css-layouts-form data-current="stream"' in page and page.count('name="layouts[]"') == 2 and len(re.findall(r'value="(?:stream|grid)" checked', page)) == 2)
+
+    def display(layout):
+        return post({'do': 'log_display_settings', 'layout': layout, 'related_by': 'both', 'related_order': 'random'}, headers={})
+    r = post({'do': 'log_css_layouts', 'layouts[]': 'grid'})
+    body = json.loads(r.text)
+    check('ミニブログだけ外すと、ミニブログの公開ページから外れ配信も404', r.status == 200 and body['layouts'] == {'stream': False, 'grid': True} and body['active'] is False
+          and link(pub.get('/').text) is None and pub.get(f'/?css={state()["hash"]}').status == 404 and 'tag=nagilog' in (r.getheader('X-LiteSpeed-Purge') or ''))
+    check('外しても保存内容・オンオフ・revisionはそのまま', state()['hash'] == chash('.two{a:b}') and state()['enabled'] is True)
+    check('編集ページに「今の一覧の形では読み込みません」', '今の一覧の形では読み込みません' in c.get('/admin/index.php?p=css').text)
+    display('grid')
+    check('一覧の形をタイルにすると読み込む', link(pub.get('/').text) == chash('.two{a:b}'))
+    post({'do': 'log_css_layouts'})
+    check('両方外すとタイルでも読み込まない', link(pub.get('/').text) is None)
+    display('stream')
+    r = post({'do': 'log_css_layouts', 'layouts[]': 'stream'})
+    check('ミニブログに戻して付け直すと読み込む', json.loads(r.text)['active'] is True and link(pub.get('/').text) == chash('.two{a:b}'))
+    r = post({'do': 'log_css_layouts', 'layouts[]': '../x'})
+    check('知らない形の値は無視（両方オフになるだけ）', r.status == 200 and json.loads(r.text)['layouts'] == {'stream': False, 'grid': False})
+    save('.layout-kept{a:b}')
+    check('CSSを保存しても一覧の形ごとの設定は変わらない', '\'stream\' => false' in (store / 'state.php').read_text(encoding='utf-8'))
+    post({'do': 'log_css_layouts', 'layouts[]': 'stream'})
+    save('.two{a:b}')
+    check('戻した後のCSSを配信', link(pub.get('/').text) == chash('.two{a:b}'))
     dl = c.get('/admin/index.php?p=css&download=1')
     check('保存したCSSをダウンロード（text/css・添付）', dl.status == 200 and dl.getheader('Content-Type') == 'text/css; charset=UTF-8' and 'attachment' in dl.getheader('Content-Disposition') and dl.body == b'.two{a:b}')
     r = post({'do': 'log_css_save', 'css': '.a{b c}', 'revision': str(state()['revision'])}, headers={})
@@ -236,7 +263,7 @@ def run(site, c, csrf):
     zipped = c.post('/admin/index.php', {'csrf': csrf, 'do': 'log_backup'}).body
     with zipfile.ZipFile(io.BytesIO(zipped)) as z:
         mark = json.loads(z.read('backup.json'))
-    check('LOGのバックアップに追加CSSと適用の設定が入る', mark.get('custom_css') == {'enabled': False, 'css': '/* バックアップ */\n.backup{a:b}\n'})
+    check('LOGのバックアップに追加CSSと適用の設定が入る', mark.get('custom_css') == {'enabled': False, 'css': '/* バックアップ */\n.backup{a:b}\n', 'layouts': {'stream': True, 'grid': False}})
 
     def edited(fn):
         out = io.BytesIO()

@@ -40,13 +40,29 @@ function nl_css_file(string $hash): string
     return nl_css_dir() . '/' . $hash . '.css';
 }
 function nl_css_hash(string $css): string { return $css === '' ? '' : substr(hash('sha256', $css), 0, 16); }
-/** revision counts saves of the text; switching it on or off does not change it. previous: null when nothing was saved before. */
+/**
+ * revision counts saves of the text; switching it on or off does not change it. previous: null when nothing was saved before.
+ * layouts: for each list layout (NL_LAYOUTS), whether the CSS is used while the LOG is set to it; older states use it with both.
+ */
 function nl_css_state_read(): array
 {
     $s = nl_read_record(nl_css_dir() . '/state.php') ?? [];
     $hash = static fn($v) => is_string($v) && ($v === '' || preg_match(NL_CSS_HASH_PATTERN, $v)) ? $v : null;
     return ['revision' => max(0, (int)($s['revision'] ?? 0)), 'enabled' => (bool)($s['enabled'] ?? true), 'hash' => $hash($s['hash'] ?? '') ?? '',
-        'previous' => $hash($s['previous'] ?? null), 'updated' => max(0, (int)($s['updated'] ?? 0)), 'size' => max(0, (int)($s['size'] ?? 0))];
+        'previous' => $hash($s['previous'] ?? null), 'updated' => max(0, (int)($s['updated'] ?? 0)), 'size' => max(0, (int)($s['size'] ?? 0)),
+        'layouts' => nl_css_layouts($s['layouts'] ?? null)];
+}
+/** Every layout on, unless the stored list says otherwise. */
+function nl_css_layouts(mixed $raw): array
+{
+    $out = [];
+    foreach (NL_LAYOUTS as $layout => $_) $out[$layout] = !is_array($raw) || !array_key_exists($layout, $raw) || (bool)$raw[$layout];
+    return $out;
+}
+/** Whether the public pages load the CSS now: switched on, saved, and on for the LOG's current list layout. */
+function nl_css_active(array $state): bool
+{
+    return $state['enabled'] && $state['hash'] !== '' && ($state['layouts'][nl_settings()['layout']] ?? true);
 }
 function nl_css_state(): array { return nl_memo('custom-css', 'nl_css_state_read'); }
 function nl_css_read(string $hash): string
@@ -235,7 +251,7 @@ function nl_css_save(mixed $css, int $revision): array
         $hash = nl_css_store($css);
         $state = ['revision' => $revision + 1, 'enabled' => $old['enabled'], 'hash' => $hash,
             // The text before this one, for "restore"; saving the same text again keeps it.
-            'previous' => $old['revision'] === 0 ? null : ($old['hash'] === $hash ? $old['previous'] : $old['hash']), 'updated' => time(), 'size' => strlen($css)];
+            'previous' => $old['revision'] === 0 ? null : ($old['hash'] === $hash ? $old['previous'] : $old['hash']), 'updated' => time(), 'size' => strlen($css), 'layouts' => $old['layouts']];
         nl_css_write_state($state);
         nm_log('custom_css_saved', $hash === '' ? 'empty' : $hash);
         return $state;
@@ -251,6 +267,17 @@ function nl_css_set_enabled(bool $enabled): array
         return $state;
     });
 }
+/** The list layouts the CSS is used with ($on: layout => bool). */
+function nl_css_set_layouts(array $on): array
+{
+    return nm_with_lock('custom-css', static function () use ($on): array {
+        $state = nl_css_state_read();
+        $state['layouts'] = nl_css_layouts($on);
+        nl_write_record(nl_css_dir() . '/state.php', $state);
+        nm_log('custom_css_layouts', implode(',', array_keys(array_filter($state['layouts']))) ?: 'none');
+        return $state;
+    });
+}
 /** Swap the text in use with the one saved before it. */
 function nl_css_restore_previous(int $revision): array
 {
@@ -259,7 +286,7 @@ function nl_css_restore_previous(int $revision): array
         if ($old['revision'] !== $revision) throw new NlCssConflict($old['revision']);
         $prev = $old['previous'];
         if ($prev === null || ($prev !== '' && !is_file(nl_css_file($prev)))) throw new UnexpectedValueException(nm_t('戻せる保存がありません'));
-        $state = ['revision' => $revision + 1, 'enabled' => $old['enabled'], 'hash' => $prev, 'previous' => $old['hash'], 'updated' => time(), 'size' => strlen(nl_css_read($prev))];
+        $state = ['revision' => $revision + 1, 'enabled' => $old['enabled'], 'hash' => $prev, 'previous' => $old['hash'], 'updated' => time(), 'size' => strlen(nl_css_read($prev)), 'layouts' => $old['layouts']];
         nl_css_write_state($state);
         nm_log('custom_css_restored', $prev === '' ? 'empty' : $prev);
         return $state;
@@ -273,7 +300,9 @@ function nl_css_restore_plan(array $mark): ?array
     if (!is_array($c) || !is_bool($c['enabled'] ?? null) || !is_string($c['css'] ?? null)) throw new UnexpectedValueException(nm_t('追加CSSの設定が壊れています'));
     $css = nl_css_input($c['css']);
     if (nl_css_errors($css)) throw new UnexpectedValueException(nm_t('追加CSSの設定が壊れています'));
-    return ['enabled' => $c['enabled'], 'css' => $css];
+    // Backups made before the per-layout switch have no list: the CSS is used with every layout.
+    if (isset($c['layouts']) && !is_array($c['layouts'])) throw new UnexpectedValueException(nm_t('追加CSSの設定が壊れています'));
+    return ['enabled' => $c['enabled'], 'css' => $css, 'layouts' => nl_css_layouts($c['layouts'] ?? null)];
 }
 /** Inside the restore: returns the state file's old text for the rollback, or false when nothing changed. */
 function nl_css_restore_apply(?array $plan, bool $overwrite): string|false|null
@@ -286,28 +315,28 @@ function nl_css_restore_apply(?array $plan, bool $overwrite): string|false|null
         $before = is_file($file) ? (string)file_get_contents($file) : null;
         $hash = nl_css_store($plan['css']);
         nl_css_write_state(['revision' => $old['revision'] + 1, 'enabled' => $plan['enabled'], 'hash' => $hash,
-            'previous' => $old['revision'] === 0 ? null : ($old['hash'] === $hash ? $old['previous'] : $old['hash']), 'updated' => time(), 'size' => strlen($plan['css'])]);
+            'previous' => $old['revision'] === 0 ? null : ($old['hash'] === $hash ? $old['previous'] : $old['hash']), 'updated' => time(), 'size' => strlen($plan['css']), 'layouts' => $plan['layouts']]);
         return $before;
     });
 }
 function nl_css_backup(): array
 {
     $state = nl_css_state_read();
-    return ['enabled' => $state['enabled'], 'css' => nl_css_read($state['hash'])];
+    return ['enabled' => $state['enabled'], 'css' => nl_css_read($state['hash']), 'layouts' => $state['layouts']];
 }
 
-/** The <link> after the LOG's own stylesheets, or nothing while it is off or empty. */
+/** The <link> after the LOG's own stylesheets, or nothing while it is off, empty or off for the current list layout. */
 function nl_css_link(): string
 {
     $state = nl_css_state();
-    if (!$state['enabled'] || $state['hash'] === '' || !is_file(nl_css_file($state['hash']))) return '';
+    if (!nl_css_active($state) || !is_file(nl_css_file($state['hash']))) return '';
     return '<link rel="stylesheet" href="./?css=' . $state['hash'] . '" data-nl-custom-css>';
 }
 /** ./?css=<hash>: the CSS in use as text/css. The hash in the URL is the cache key; the stored text is never run as PHP. */
 function nl_css_serve(string $hash, bool $public): never
 {
     $state = nl_css_state();
-    if (!$state['enabled'] || $state['hash'] === '') nm_not_found();
+    if (!nl_css_active($state)) nm_not_found();
     $css = nl_css_read($state['hash']);
     if ($css === '') nm_not_found();
     header('Content-Type: text/css; charset=UTF-8');
@@ -333,10 +362,10 @@ function nl_css_reply(array $state, string $message): never
 }
 function nl_css_public_state(array $state): array
 {
-    return ['revision' => $state['revision'], 'enabled' => $state['enabled'], 'hash' => $state['hash'], 'size' => $state['size'], 'updated' => $state['updated'],
+    return ['revision' => $state['revision'], 'enabled' => $state['enabled'], 'layouts' => $state['layouts'], 'active' => nl_css_active($state), 'hash' => $state['hash'], 'size' => $state['size'], 'updated' => $state['updated'],
         'updated_text' => $state['updated'] ? nl_date($state['updated'], 'Y/m/d H:i') : '', 'restorable' => $state['previous'] !== null, 'css' => nl_css_read($state['hash'])];
 }
-/** log_css_save / log_css_enabled / log_css_restore (guests and bad CSRF tokens were turned away before this). */
+/** log_css_save / log_css_enabled / log_css_layouts / log_css_restore (guests and bad CSRF tokens were turned away before this). */
 function nl_css_handle_post(string $do): never
 {
     try {
@@ -348,6 +377,11 @@ function nl_css_handle_post(string $do): never
             case 'log_css_enabled':
                 $on = nm_str($_POST, 'enabled', 1) === '1';
                 nl_css_reply(nl_css_set_enabled($on), $on ? nm_t('追加CSSを公開ページに適用しました') : nm_t('追加CSSの適用を止めました。保存した内容はそのままです'));
+            case 'log_css_layouts':
+                $on = [];
+                foreach (NL_LAYOUTS as $layout => $_) $on[$layout] = in_array($layout, (array)($_POST['layouts'] ?? []), true);
+                $state = nl_css_set_layouts($on);
+                nl_css_reply($state, nl_css_active($state) || !$state['enabled'] || $state['hash'] === '' ? nm_t('一覧の形ごとの適用を保存しました') : nm_t('一覧の形ごとの適用を保存しました。今の一覧の形（{layout}）では追加CSSを読み込みません', ['layout' => nm_t(NL_LAYOUTS[nl_settings()['layout']])]));
             case 'log_css_restore':
                 nl_css_reply(nl_css_restore_previous((int)nm_str($_POST, 'revision', 10)), nm_t('直前に保存した追加CSSに戻しました'));
         }
@@ -368,7 +402,8 @@ function nl_css_handle_post(string $do): never
 function nl_css_settings_card(): string
 {
     $state = nl_css_state();
-    $status = $state['hash'] === '' ? nm_t('まだ追加CSSはありません。') : ($state['enabled'] ? nm_t('公開ページに適用しています（{size}）。', ['size' => nl_css_size_text($state['size'])]) : nm_t('保存した追加CSSの適用を止めています（{size}）。', ['size' => nl_css_size_text($state['size'])]));
+    $status = $state['hash'] === '' ? nm_t('まだ追加CSSはありません。') : (!$state['enabled'] ? nm_t('保存した追加CSSの適用を止めています（{size}）。', ['size' => nl_css_size_text($state['size'])])
+        : (nl_css_active($state) ? nm_t('公開ページに適用しています（{size}）。', ['size' => nl_css_size_text($state['size'])]) : nm_t('今の一覧の形（{layout}）では読み込まない設定です（{size}）。', ['layout' => nm_t(NL_LAYOUTS[nl_settings()['layout']]), 'size' => nl_css_size_text($state['size'])])));
     return '<section class="card" id="log-custom-css"><h2>' . nm_t('追加CSS') . '</h2><p>' . nm_t('公開LOGの見た目を、自分で書いたCSSで調整できます。管理画面には適用しません。') . '</p><p class="note">' . h($status) . '</p>'
         . '<p><a class="btn" href="index.php?p=css">' . nm_t('追加CSSを編集') . '</a></p></section>';
 }
@@ -397,8 +432,9 @@ function nl_css_view(): void
         . '<p class="css-back"><a href="index.php?p=settings&amp;section=log#log-custom-css">' . nm_t('設定に戻る') . '</a></p><h1>' . nm_t('追加CSS') . '</h1>'
         . '<p>' . nm_t('公開LOGのページに、LOG本体とテーマのCSSのあとで読み込みます。管理画面には適用しないため、見た目が崩れてもここから直したり、適用を止めたりできます。') . '</p>'
         . '<form class="css-switch" method="post" action="index.php" data-css-enabled-form>' . $csrf . '<input type="hidden" name="do" value="log_css_enabled"><input type="hidden" name="enabled" value="' . ($state['enabled'] ? '0' : '1') . '" data-css-enabled-value>'
-        . '<span class="css-switch-state" data-css-enabled-state>' . (!$state['enabled'] ? nm_t('適用を止めています') : ($state['hash'] === '' ? nm_t('保存すると公開ページに適用します') : nm_t('公開ページに適用中'))) . '</span>'
+        . '<span class="css-switch-state" data-css-enabled-state>' . (!$state['enabled'] ? nm_t('適用を止めています') : ($state['hash'] === '' ? nm_t('保存すると公開ページに適用します') : (nl_css_active($state) ? nm_t('公開ページに適用中') : nm_t('今の一覧の形では読み込みません')))) . '</span>'
         . '<button class="btn" data-css-enabled-button>' . ($state['enabled'] ? nm_t('適用を止める') : nm_t('公開ページに適用する')) . '</button></form>'
+        . nl_css_layouts_form($state, $csrf)
         . '<form class="css-form" method="post" action="index.php" data-css-form>' . $csrf . '<input type="hidden" name="do" value="log_css_save"><input type="hidden" name="revision" value="' . $state['revision'] . '" data-css-revision>'
         . '<div class="css-toolbar"><button class="btn primary" data-css-save>' . nm_t('保存') . '</button>'
         . '<label class="btn css-file-button">' . nm_t('CSSファイルを選ぶ') . '<input type="file" accept=".css,text/css" data-css-file></label>'
@@ -415,6 +451,18 @@ function nl_css_view(): void
         . '<noscript><p class="note">' . nm_t('JavaScriptが無効なため、色分け・構文チェック・ファイルのドロップは使えません。入力欄に書いて「保存」を押すと、サーバーで構文を確かめてから保存します。') . '</p></noscript></section>'
         . nl_css_help_card() . nl_css_catalog_card();
     nm_layout(nm_t('追加CSS'), $body, true, '<link rel="stylesheet" href="' . nm_asset('css-editor.css') . '"><script src="' . nm_asset('css-editor.js') . '" defer></script>');
+}
+/** Which list layouts load the CSS: a sheet written for the tiles can be kept away from the mini blog, and the other way round. */
+function nl_css_layouts_form(array $state, string $csrf): string
+{
+    $current = nl_settings()['layout'];
+    $names = ['stream' => nm_t('ミニブログのとき'), 'grid' => nm_t('タイルのとき')];
+    $boxes = '';
+    foreach (NL_LAYOUTS as $layout => $_) $boxes .= '<label class="css-layout-choice"><input type="checkbox" name="layouts[]" value="' . h($layout) . '"' . ($state['layouts'][$layout] ? ' checked' : '') . ' data-css-layout>'
+        . '<span>' . h($names[$layout] ?? nm_t(NL_LAYOUTS[$layout])) . '</span>' . ($layout === $current ? '<small class="badge">' . nm_t('今の設定') . '</small>' : '') . '</label>';
+    return '<form class="css-layouts" method="post" action="index.php" data-css-layouts-form data-current="' . h($current) . '">' . $csrf . '<input type="hidden" name="do" value="log_css_layouts">'
+        . '<fieldset><legend>' . nm_t('一覧の形ごとの適用') . '</legend><div class="css-layout-choices">' . $boxes . '<button class="btn" data-css-layouts-save>' . nm_t('保存') . '</button></div>'
+        . '<p class="note">' . nm_t('設定の「一覧の形」がチェックした形のときだけ、追加CSSを公開ページ（一覧・記事・固定ページのすべて）に読み込みます。タイル用とミニブログ用でCSSを分けたいときや、一覧の形を試しに切り替えるときに使います。') . '</p></fieldset></form>';
 }
 function nl_css_help_card(): string
 {

@@ -136,6 +136,106 @@
 }
 .log-preview { border-top:1px solid var(--log-line); margin-top:16px; padding-top:16px; }
 .log-preview[hidden] { display:none; }
+/* The tool row scrolls sideways when it does not fit (phones): a see-through fade and an arrow at the end that has more. */
+.log-compose-scroll { position:relative; display:flex; flex:1; min-width:0; }
+.log-tools-hint { position:absolute; top:0; bottom:0; z-index:1; display:none; align-items:center; width:46px; padding:0 2px; border:0; border-radius:10px; color:var(--log-accent); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.log-tools-hint.is-end { right:0; justify-content:flex-end; background:linear-gradient(to right,color-mix(in srgb,var(--log-bg) 0%,transparent),color-mix(in srgb,var(--log-bg) 78%,transparent) 50%,var(--log-bg) 88%); }
+.log-tools-hint.is-start { left:0; justify-content:flex-start; background:linear-gradient(to left,color-mix(in srgb,var(--log-bg) 0%,transparent),color-mix(in srgb,var(--log-bg) 78%,transparent) 50%,var(--log-bg) 88%); }
+.log-compose-scroll.can-end > .is-end,.log-compose-scroll.can-start > .is-start { display:flex; }
+.log-tools-hint svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+.log-tools-hint.is-end svg { animation:log-tools-more 1.4s ease-in-out 3; }
+@keyframes log-tools-more { 0%,100% { transform:none; } 50% { transform:translateX(3px); } }
+/* The eye stays at the right end, apart from the scrolling row. */
+.log-compose-bar > .log-tool[data-preview] { margin-left:2px; }
+.log-compose-scroll.can-end + .log-tool[data-preview] { box-shadow:-1px 0 0 var(--log-line); border-radius:0 10px 10px 0; }
+@media(prefers-reduced-motion:reduce) { .log-tools-hint.is-end svg { animation:none; } }
+/* 書く / プレビュー tabs: only on a PC or a device turned sideways (form.is-wide, set by log-editor.js). */
+.log-compose-tabs { display:none; }
+.log-compose form.is-wide .log-compose-tabs { display:flex; gap:2px; }
+.log-compose-tabs button { display:inline-flex; align-items:center; gap:6px; margin-bottom:-1px; padding:7px 14px; border:1px solid transparent; border-bottom:0; border-radius:10px 10px 0 0; background:none; color:var(--log-muted); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.log-compose-tabs button:hover { color:var(--log-accent); }
+.log-compose-tabs button[aria-selected="true"] { position:relative; z-index:2; border-color:var(--log-field); background:var(--log-card); color:var(--log-accent); }
+.log-compose-tabs button:focus-visible { outline:2px solid var(--log-accent); outline-offset:-2px; }
+.log-compose-tabs .log-tool-icon { width:17px; height:17px; }
+.log-compose form.is-wide textarea[name="body"] { border-top-left-radius:0; }
+.log-compose form.is-wide .log-preview { height:var(--log-preview-height,320px); margin:0; padding:16px 20px; border:1px solid var(--log-field); border-radius:0 12px 12px; overflow:auto; overscroll-behavior:contain; }
+.log-compose form.is-wide.is-previewing textarea[name="body"],.log-compose form.is-wide.is-previewing .log-mark-layer,.log-compose form.is-wide.is-previewing .log-attachments { display:none; }
+/* Above the text: the row first, then the panel it opens. */
+.log-compose form.is-wide .log-compose-toolzone .log-compose-bar { margin:0 0 10px; }
+.log-compose form.is-wide .log-compose-toolzone .log-compose-panel { margin:0 0 10px; }
+/*
+ * The media dock (log-editor.js sets .log-compose[data-dock] on a PC or sideways): the post's media in its first tab, the
+ * media library in the second. "grid": a column left of the full-screen editor or the edit page's form.
+ * "float": in the margin left of the top page's editor; it tucks up while scrolling down and comes back on the way up.
+ */
+.log-media-dock { display:none; }
+.log-compose[data-dock="grid"],.log-compose[data-dock="float"] { --log-dock:clamp(220px,24vw,320px); }
+.log-compose[data-dock="grid"] { display:grid; grid-template-columns:var(--log-dock) minmax(0,1fr); grid-template-rows:auto 1fr; grid-template-areas:"dock head" "dock form"; column-gap:24px; align-content:start; }
+.log-compose[data-dock="grid"] > .log-compose-head { grid-area:head; margin-bottom:12px; }
+.log-compose[data-dock="grid"] > form { grid-area:form; min-width:0; }
+.log-compose:is([data-dock="grid"],[data-dock="float"]) > .log-media-dock { display:flex; flex-direction:column; gap:10px; min-height:0; padding:12px; box-sizing:border-box; border:1px solid var(--log-line); border-radius:16px; background:var(--log-bg); box-shadow:0 12px 32px #0000001c; }
+.log-compose[data-dock="grid"] > .log-media-dock { grid-area:dock; position:sticky; top:0; align-self:start; max-height:calc(var(--log-viewport-height,100dvh) - 48px); }
+.log-compose[data-dock="float"] > .log-media-dock { position:fixed; z-index:30; top:var(--log-dock-top,16px); left:var(--log-dock-left,16px); width:var(--log-dock-width,280px); max-height:calc(100dvh - var(--log-dock-top,16px) - 16px);
+    transition:transform .55s cubic-bezier(.18,1.3,.4,1),opacity .25s ease,visibility 0s; }
+.log-compose[data-dock="float"] > .log-media-dock.is-tucked { transform:translateY(calc(-100% - var(--log-dock-top,16px) - 24px)); opacity:0; visibility:hidden; pointer-events:none;
+    transition:transform .26s cubic-bezier(.55,0,.8,.2),opacity .2s ease .06s,visibility 0s linear .26s; }
+.log-compose.dragover > .log-media-dock { outline:3px dashed var(--log-cyan); outline-offset:-6px; }
+.log-media-dock { container-type:inline-size; }
+/* A narrow dock (the top page's margin) drops the tab icons so both names fit. */
+@container (max-width:280px) { .log-dock-tabs .log-tool-icon { display:none; } .log-dock-tabs button { gap:4px; padding:5px 4px; font-size:12px; } .log-dock-tabs button > span { white-space:normal; line-height:1.25; text-align:center; } }
+.log-dock-tabs { display:flex; gap:3px; padding:3px; border:1px solid var(--log-line); border-radius:11px; background:var(--log-card); }
+.log-dock-tabs button { flex:1 1 0; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-width:0; padding:6px 8px; border:0; border-radius:8px; background:none; color:var(--log-muted); font:inherit; font-size:12.5px; font-weight:700; white-space:nowrap; cursor:pointer; transition:background-color .15s ease,color .15s ease; }
+.log-dock-tabs button > span { overflow:hidden; text-overflow:ellipsis; }
+.log-dock-tabs button:hover { color:var(--log-accent); }
+.log-dock-tabs button[aria-selected="true"] { background:var(--log-accent); color:var(--log-on-accent); }
+.log-dock-tabs button:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-dock-tabs .log-tool-icon,.log-dock-empty .log-tool-icon { flex:none; width:16px; height:16px; }
+.log-dock-count { flex:none; min-width:18px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:color-mix(in srgb,currentColor 20%,transparent); font-size:11px; line-height:18px; text-align:center; }
+.log-dock-count.is-bump { animation:log-dock-bump .5s cubic-bezier(.18,1.6,.4,1); }
+@keyframes log-dock-bump { 40% { transform:scale(1.5); } }
+.log-dock-pane { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0; }
+.log-dock-pane[hidden] { display:none; }
+.log-dock-pane[data-dock-pane="post"] { margin:0 -6px; padding:2px 6px 4px; overflow-y:auto; overscroll-behavior:contain; }
+.log-dock-empty { display:grid; justify-items:center; gap:4px; padding:22px 10px; border:1.5px dashed var(--log-line); border-radius:12px; color:var(--log-muted); font-size:13px; text-align:center; }
+.log-dock-empty[hidden] { display:none; }
+.log-dock-empty p { margin:0; }
+.log-dock-empty .note { font-size:11.5px; }
+.log-dock-empty-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-top:8px; }
+.log-dock-empty-actions .btn { display:inline-flex; align-items:center; gap:4px; min-height:0; padding:5px 10px; border-radius:999px; font-size:12px; }
+/* The post's media in the dock: each group as a small card, its thumbnails wrapped instead of scrolled sideways. */
+.log-media-dock .log-attachments { gap:10px; margin-top:0; }
+.log-media-dock .log-att-group { gap:8px; padding:8px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); }
+.log-media-dock .log-att-head { font-size:11.5px; }
+.log-media-dock .log-att-action { padding:2px 8px; }
+.log-media-dock .log-att-row { flex-wrap:wrap; overflow:visible; padding:0; }
+.log-media-dock .log-att-thumb,.log-media-dock .log-att-add { width:72px; height:72px; }
+.log-media-dock .log-att-new { justify-self:stretch; justify-content:center; padding:6px 10px; font-size:12px; }
+.log-media-dock input[type="search"] { width:100%; box-sizing:border-box; margin:0; }
+.log-media-dock .note { margin:0; font-size:11.5px; line-height:1.5; }
+.log-media-dock .note:empty { display:none; }
+.log-dock-grid { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(64px,1fr)); align-content:start; gap:8px; margin:0 -4px; padding:2px 4px; overflow-y:auto; overscroll-behavior:contain; }
+.log-dock-grid button { display:grid; gap:4px; min-width:0; padding:4px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-card); color:var(--log-text); font:inherit; font-size:11px; line-height:1.4; text-align:left; cursor:pointer; }
+.log-dock-grid button:hover { border-color:var(--log-accent); }
+.log-dock-grid button:focus-visible { outline:2px solid var(--log-accent); outline-offset:1px; }
+.log-dock-grid img,.log-dock-grid .log-picker-kind { display:grid; place-items:center; width:100%; height:auto; aspect-ratio:1; object-fit:cover; border-radius:7px; background:var(--log-bg); }
+.log-dock-grid button > span:not(.log-picker-kind) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.log-dock-grid small { color:var(--log-muted); font-size:10px; }
+.log-media-dock [data-picker-more] { flex:none; min-height:0; padding:6px 10px; font-size:12px; }
+.log-media-dock [data-picker-more][hidden] { display:none; }
+.log-media-dock.is-called { animation:log-placed-row 1.2s ease-out; }
+/* With the dock beside it, the editor gets a taller text box and keeps 下書き保存・投稿する in reach at the bottom. */
+.log-compose[data-dock="grid"] form.is-wide textarea[name="body"] { min-height:max(240px,40vh); }
+.log-compose[data-dock="grid"] .log-submit { position:sticky; bottom:0; z-index:2; margin-top:12px; padding:12px 0; border-top:1px solid var(--log-line); background:var(--log-card); box-shadow:0 24px 0 var(--log-card); }
+/* Full-screen editor on a PC: the dock and the 760px column sit in the middle together. */
+@media(min-width:901px) {
+    body .log-compose-slot .log-compose[data-dock="grid"] { padding-left:max(16px,calc((100vw - 760px - var(--log-dock) - 24px) / 2)); padding-right:max(16px,calc((100vw - 760px - var(--log-dock) - 24px) / 2)); }
+    /* The edit page keeps the editor in the page: the dock follows the page's scroll. */
+    .log-compose.log-edit[data-dock="grid"] > .log-media-dock { top:16px; max-height:calc(100dvh - 32px); }
+}
+@media(prefers-reduced-motion:reduce) {
+    .log-media-dock.is-called,.log-dock-count.is-bump { animation:none; }
+    .log-compose[data-dock="float"] > .log-media-dock,.log-compose[data-dock="float"] > .log-media-dock.is-tucked,.log-dock-tabs button { transition:none; }
+}
 .log-fab { display:none; position:fixed; right:max(24px,calc((100% - 1060px) / 2 + 24px)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:20; border:0; border-radius:999px; padding:15px 25px; background:var(--log-cyan); color:var(--log-on-accent); font:700 16px/1.5 system-ui,sans-serif; box-shadow:0 6px 20px #0e749044; cursor:pointer; }
 .log-fab.log-fab-draft::after { content:""; position:absolute; top:3px; right:5px; width:12px; height:12px; border:2px solid var(--log-card); border-radius:50%; background:#e8a33a; }
 .log-login-avatar { display:grid; place-items:center; flex-shrink:0; width:32px; height:32px; border-radius:50%; object-fit:cover; background:var(--log-bg); color:var(--log-cyan); font-weight:700; font-size:15px; }
@@ -196,7 +296,7 @@
     .log-compose { position:fixed; inset:0; z-index:100; width:100%; height:100dvh; height:var(--log-viewport-height,100dvh); margin:0; border:0; border-radius:0; padding:calc(16px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); overflow-y:auto; overscroll-behavior:contain; visibility:hidden; transform:translateY(100%); }
     body.log-ready .log-compose { transition:transform .3s cubic-bezier(.16,1,.3,1); }
     .log-compose.active { visibility:visible; transform:translateY(0); }
-    .log-compose.active .log-compose-head { position:sticky; top:calc(-16px - env(safe-area-inset-top)); background:var(--log-card); z-index:1; padding:12px 0; }
+    .log-compose.active .log-compose-head { position:sticky; top:calc(-16px - env(safe-area-inset-top)); background:var(--log-card); z-index:4; padding:12px 0; }
     .log-close { display:block; }
     .log-compose textarea { min-height:200px; }
     .log-compose .log-submit { padding-bottom:16px; }
@@ -244,7 +344,8 @@
 }
 .log-compose-slot .log-compose.active { position:fixed; inset:0; z-index:100; width:100%; height:var(--log-viewport-height,100dvh); margin:0; padding:24px max(16px,calc((100vw - 760px)/2)); border:0; border-radius:0; overflow-y:auto; overscroll-behavior:contain; visibility:visible; transform:none; }
 .log-compose-slot .log-compose.active .log-close { display:block; }
-.log-compose-slot .log-compose.active .log-compose-head { position:sticky; top:-24px; background:var(--log-card); padding:12px 0; z-index:1; }
+/* Above the bands over the text (.log-mark-layer), which scroll under it. */
+.log-compose-slot .log-compose.active .log-compose-head { position:sticky; top:-24px; background:var(--log-card); padding:12px 0; z-index:4; }
 body.log-composing { overflow:hidden; }
 .log-bulk-mode .log-compose-slot .log-fab.log-fab-visible,.log-bulk-mode .log-compose-slot .log-fab-admin { display:none; }
 .log-delete-dialog { width:min(480px,calc(100% - 32px)); padding:24px; border:1px solid var(--log-line); border-radius:16px; background:var(--log-card); color:var(--log-text); box-shadow:0 24px 90px #0005; }
