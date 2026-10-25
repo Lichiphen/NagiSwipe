@@ -69,6 +69,14 @@ CHECK = r'''() => {
     const bar = form.querySelector('.log-compose-bar'), att = form.querySelector('[data-attachments]');
     if (att && shown(att) && shown(bar) && bar.getBoundingClientRect().top > att.getBoundingClientRect().top) out.push('スマホ表示で道具の列がメディアより下にある');
   }
+  const previewSheet = document.querySelector('.log-preview-sheet[open]');
+  if (previewSheet) {
+    const foot = previewSheet.querySelector('.log-preview-sheet-foot').getBoundingClientRect(), r = previewSheet.getBoundingClientRect();
+    if (r.top > 1 || r.bottom < innerHeight - 1 || r.width < innerWidth - 1) out.push('全画面のプレビューが画面いっぱいでない');
+    if (foot.bottom > innerHeight + 1 || foot.top < innerHeight - foot.height - 2) out.push('プレビューの閉じるが画面の下にない');
+    if (form.classList.contains('is-wide')) out.push('PC表示なのに全画面のプレビューが開いている');
+  }
+  if (!previewSheet && document.documentElement.classList.contains('log-preview-open')) out.push('プレビューを閉じたのにページのスクロールが止まったまま');
   const toBody = panel.querySelector('[data-to-body]');
   if (toBody && shown(toBody) !== form.classList.contains('is-wide')) out.push(form.classList.contains('is-wide') ? 'PC表示なのに本文へのボタンがない' : 'スマホ表示で本文へのボタンが出ている');
   const submit = form.querySelector('.log-submit');
@@ -187,8 +195,10 @@ def tools_sequence(a, page, where, wide):
                 raise AssertionError(f'本文へで書く画面に戻っていない: {state}')
         a.step(page, where, '本文へ（プレビュー・#・メディア一覧を開いてから）', to_body, settle=600)
     else:
-        a.step(page, where, 'プレビュー（目）', lambda: q('[data-preview]').click(), settle=900)
-        a.step(page, where, 'プレビューを閉じる（目）', lambda: q('[data-preview]').click())
+        a.step(page, where, 'プレビュー（目・全画面）', lambda: q('[data-preview]').click(), settle=900)
+        a.step(page, where, 'プレビューを下までスクロール', lambda: page.evaluate("document.querySelector('.log-preview-sheet').scrollTo(0, 99999)"), settle=500)
+        a.step(page, where, 'プレビューを閉じる（下の閉じる）', lambda: q('[data-preview-close]').click())
+        a.step(page, where, 'プレビューをEscで閉じる', lambda: (q('[data-preview]').click(), page.wait_for_timeout(800), page.keyboard.press('Escape')))
         a.step(page, where, '道具の列を右の端へ', lambda: q('.log-tools-hint.is-end').click(), settle=700)
         a.step(page, where, '道具の列を左の端へ', lambda: q('.log-tools-hint.is-start').click(), settle=700)
     a.step(page, where, '漫画を選ぶ（モーダル）', lambda: q('[data-picker="manga"]').click(), settle=600)

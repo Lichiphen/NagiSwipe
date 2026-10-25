@@ -326,6 +326,16 @@ window.NagiLogFormat = (() => {
     let dockList = null, arranged = false;
     const toBody = $('[data-to-body]', panel);
     let bodySeen = true;
+    // Phones held upright: the preview opens over the whole screen at the size readers see, with 閉じる kept at the
+    // bottom. It sits outside the editor (a phone's full-screen editor moves with a transform) and is not modal, so
+    // the image viewer opened from it still comes on top; Escape and Tab are handled here instead.
+    const previewBox = $('[data-preview-body]', form);
+    const previewSheet = document.createElement('dialog');
+    previewSheet.className = 'log-preview-sheet';
+    previewSheet.setAttribute('aria-labelledby', 'log-preview-sheet-title');
+    previewSheet.innerHTML = '<div class="log-preview-sheet-head"><h2 id="log-preview-sheet-title">' + icon('tool-preview', 'log-tool-icon') + t('プレビュー') + '</h2><p>' + t('公開したときの大きさで表示しています') + '</p></div>'
+        + '<div class="log-preview-sheet-body"></div><div class="log-preview-sheet-foot"><button type="button" class="btn primary" data-preview-close>' + icon('close', 'log-tool-icon') + t('閉じて編集に戻る') + '</button></div>';
+    document.body.append(previewSheet);
     let refs = JSON.parse(refsField.value || '{}');
     let selection = [body.value.length, body.value.length];
     let uploading = 0;
@@ -1221,7 +1231,7 @@ window.NagiLogFormat = (() => {
     picker.addEventListener('close', () => { pickerList.generation++; });
     dock.addEventListener('animationend', () => dock.classList.remove('is-called'));
     async function openPreview() {
-        const preview = $('[data-preview-body]', form);
+        const preview = previewBox;
         try {
             const data = new FormData(form); data.set('do', 'log_preview'); data.set('body', compose());
             const result = await request(data);
@@ -1254,9 +1264,9 @@ window.NagiLogFormat = (() => {
     // On a PC or sideways, the tool row and its panels sit above the text and the preview takes the text's place;
     // on a phone held upright they go back under the text, where they are in the page, and the post's media follow
     // them so the tools stay right under the text.
-    const toolzone = $('[data-toolzone]', form), previewBox = $('[data-preview-body]', form);
-    const toolzoneHome = document.createComment('tools'), previewHome = document.createComment('preview');
-    toolzone.before(toolzoneHome); previewBox.before(previewHome);
+    const toolzone = $('[data-toolzone]', form);
+    const toolzoneHome = document.createComment('tools'), previewHome = document.createComment('preview'), mediaHome = document.createComment('media');
+    toolzone.before(toolzoneHome); previewBox.before(previewHome); previewBox.after(mediaHome);
     // The dock: the post's media (its first tab, moved out of the form) and the media library, on the left on a PC
     // or sideways. Beside the full-screen editor and on the edit page it is a column ("grid"); beside the top page's
     // editor it floats in the margin ("float"), tucks away while the page scrolls down and comes back on the way up.
@@ -1272,15 +1282,16 @@ window.NagiLogFormat = (() => {
     function arrange() {
         arranged = true;
         form.classList.toggle('is-wide', wide.matches);
+        if (wide.matches && previewSheet.open) previewSheet.close();
         if (wide.matches) { $('[data-compose-tabs]', form).before(toolzone); markLayer.after(previewBox); }
-        else { toolzoneHome.after(toolzone); previewHome.after(previewBox); }
-        const mode = dockMode(), after = mode ? null : wide.matches ? attachmentsHome : previewBox;
+        else { toolzoneHome.after(toolzone); if (!previewSheet.open) previewHome.after(previewBox); }
+        const mode = dockMode(), after = mode ? null : wide.matches ? attachmentsHome : mediaHome;
         if (panel.dataset.dock !== mode || (after && after.nextSibling !== attachments)) {
             closeMenu();
             panel.dataset.dock = mode;
             if (mode) { $('[data-dock-pane="post"]', dock).append(attachments); dock.append(menu); }
             else if (wide.matches) { attachmentsHome.after(attachments); menuHome.after(menu); }
-            else previewBox.after(attachments, menu);
+            else mediaHome.after(attachments, menu);
             dock.classList.remove('is-tucked');
         }
         awayCheck();
@@ -1332,7 +1343,7 @@ window.NagiLogFormat = (() => {
     arrange();
     // The preview opened from the eye or the tab. As a tab it keeps the text's height and scrolls inside.
     function showPreview(on) {
-        const preview = $('[data-preview-body]', form);
+        const preview = previewBox;
         if (on && !form.classList.contains('is-previewing')) preview.style.setProperty('--log-preview-height', Math.max(body.offsetHeight, 320) + 'px');
         preview.hidden = !on; form.classList.toggle('is-previewing', on);
         $('[data-preview]', form).setAttribute('aria-pressed', String(on));
@@ -1340,8 +1351,34 @@ window.NagiLogFormat = (() => {
             const selected = (tab.dataset.composeTab === 'preview') === on;
             tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
         });
+        if (on && !wide.matches && !previewSheet.open) {
+            previewBox.classList.replace('log-preview', 'log-post'); $('.log-preview-sheet-body', previewSheet).append(previewBox);
+            document.documentElement.classList.add('log-preview-open');
+            previewSheet.show(); previewSheet.scrollTop = 0;
+            $('[data-preview-close]', previewSheet).focus({ preventScroll: true });
+        } else if (!on && previewSheet.open) previewSheet.close();
         awayCheck();
     }
+    previewSheet.addEventListener('close', () => {
+        previewBox.classList.replace('log-post', 'log-preview');
+        document.documentElement.classList.remove('log-preview-open');
+        // Turned sideways while it was open: the preview stays, as the tab beside 書く.
+        if (wide.matches) { markLayer.after(previewBox); return; }
+        previewHome.after(previewBox);
+        if (form.classList.contains('is-previewing')) showPreview(false);
+        $('[data-preview]', form).focus({ preventScroll: true });
+    });
+    $('[data-preview-close]', previewSheet).addEventListener('click', () => previewSheet.close());
+    previewSheet.addEventListener('keydown', e => {
+        // Escape over the image or manga viewer opened from the preview closes only that viewer.
+        if (e.defaultPrevented || window.NagiSwipe?.isOpen || document.querySelector('.nm-viewer:not([hidden])')) return;
+        if (e.key === 'Escape') { e.preventDefault(); previewSheet.close(); return; }
+        if (e.key !== 'Tab') return;
+        const focusable = $$('a[href],button:not(:disabled),input,summary,iframe,[tabindex]:not([tabindex="-1"])', previewSheet).filter(el => el.getClientRects().length);
+        const first = focusable[0], last = focusable.at(-1);
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     // 本文へ beside the heading (a PC or sideways): back to writing from the preview, an open panel, the media list
     // or a page scrolled away from the text, with the caret where it was. It stands out while one of those is so.
     function awayCheck() {

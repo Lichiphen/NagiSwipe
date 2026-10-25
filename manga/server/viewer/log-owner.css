@@ -682,7 +682,23 @@ a.log-list-where:hover { text-decoration:underline; }
 .log-panel-sheet-body { overflow-y:auto; padding:14px 16px calc(22px + env(safe-area-inset-bottom)); }
 .log-panel-sheet .log-compose-panel { margin:0; padding:0; border:0; background:none; }
 .log-panel-sheet .log-compose-panel > .log-panel-title:first-child,.log-panel-sheet .log-rating > legend.log-panel-title { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+/* Phones held upright: the preview over the whole screen, at the size of the post on the public page, with 閉じる kept at the bottom. */
+html.log-preview-open,html.log-preview-open body { overflow:hidden; }
+.log-preview-sheet { position:fixed; inset:0; z-index:200; box-sizing:border-box; width:100%; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:var(--log-bg); color:var(--log-text); overflow-y:auto; overscroll-behavior:contain; }
+.log-preview-sheet[open] { display:flex; flex-direction:column; animation:log-sheet-up .28s cubic-bezier(.16,1,.3,1); }
+.log-preview-sheet-head { padding:calc(14px + env(safe-area-inset-top)) 16px 12px; }
+.log-preview-sheet-head h2 { display:flex; align-items:center; gap:6px; margin:0; color:var(--log-accent); font-size:15px; }
+.log-preview-sheet-head h2 .log-tool-icon { width:20px; height:20px; }
+.log-preview-sheet-head p { margin:2px 0 0; color:var(--log-muted); font-size:12px; }
+/* While it is open the preview is a .log-post: on a phone it runs edge to edge like the posts on the public page. */
+.log-preview-sheet-body { flex:1 0 auto; padding:0 0 16px; }
+.log-preview-sheet .log-post { margin:0; border-radius:0; border-left:0; border-right:0; box-shadow:none; }
+@media(min-width:901px) { .log-preview-sheet-body { width:100%; max-width:760px; margin:0 auto; padding:0 16px 24px; box-sizing:border-box; }.log-preview-sheet .log-post { border:1px solid var(--log-line); border-radius:var(--log-radius); box-shadow:var(--log-shadow); } }
+.log-preview-sheet-foot { position:sticky; bottom:0; z-index:5; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--log-line); background:color-mix(in srgb,var(--log-card) 90%,transparent); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:0 -10px 28px #0000001f; }
+.log-preview-sheet-foot .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:50px; border-radius:14px; font-size:16px; font-weight:700; }
+.log-preview-sheet-foot .log-tool-icon { width:20px; height:20px; stroke-width:2.2; }
 @media(prefers-reduced-motion:reduce) {
+    .log-preview-sheet[open] { animation:none; }
     .log-panel-sheet[open],.log-panel-sheet::backdrop { animation:none; }
 }
 /* Back links above the editors: a chevron button; 記事ページに戻る appears only when the editor was opened from a public page. */
