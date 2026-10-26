@@ -1089,21 +1089,21 @@ LOG用のバックアップZIPには、追加CSSと適用のオン・オフを�
 | `.log-toc-sheet` | 目次のボタンで開くシート | 記事のページ・固定ページ | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
 | `.log-code-block` | 記事・固定ページのコードブロックの枠。中に pre.log-md-code と COPY ボタン | 記事のページ・固定ページ | `.log-code-block pre { font-size: 13px; }` | v0.8.2 |
 | `.log-code-copy` | コードブロックの右上の COPY ボタン（コピーしたあとは .is-copied） | 記事のページ・固定ページ | `.log-code-copy { color: var(--log-accent); }` | v0.8.2 |
-| `.markdown-alert` | 注意書きの箱（> [!NOTE] など。GitHubと同じクラス名） | 記事のページ・固定ページ | `.markdown-alert { border-radius: 4px; }` | 次のバージョン |
-| `.markdown-alert-note` | 補足（NOTE）の箱 | 記事のページ・固定ページ | `.markdown-alert-note { --alert: #0969da; }` | 次のバージョン |
-| `.markdown-alert-tip` | ヒント（TIP）の箱 | 記事のページ・固定ページ | `.markdown-alert-tip { --alert: #1a7f37; }` | 次のバージョン |
-| `.markdown-alert-important` | 重要（IMPORTANT）の箱 | 記事のページ・固定ページ | `.markdown-alert-important { --alert: #8250df; }` | 次のバージョン |
-| `.markdown-alert-warning` | 注意（WARNING）の箱 | 記事のページ・固定ページ | `.markdown-alert-warning { --alert: #9a6700; }` | 次のバージョン |
-| `.markdown-alert-caution` | 警告（CAUTION）の箱 | 記事のページ・固定ページ | `.markdown-alert-caution { --alert: #d1242f; }` | 次のバージョン |
-| `.markdown-alert-title` | 注意書きの見出し（アイコンと「補足」などの文字） | 記事のページ・固定ページ | `.markdown-alert-title { font-size: 15px; }` | 次のバージョン |
-| `.log-mermaid` | 図の枠（```mermaid で書いたフローチャート・シーケンス図） | 記事のページ・固定ページ | `.log-mermaid { background: var(--log-bg); }` | 次のバージョン |
-| `.log-mermaid-zoom` | 図の右上の「拡大」ボタン | 記事のページ・固定ページ | `.log-mermaid-zoom { color: var(--log-accent); }` | 次のバージョン |
-| `.log-mermaid-sheet` | 「拡大」で開く、画面いっぱいの図 | 記事のページ・固定ページ | `.log-mermaid-sheet { background: var(--log-card); }` | 次のバージョン |
-| `.log-dg` | 描いた図（SVG）。--dg-edge（枠と矢印の色）・--dg-line（線の色）・--dg-box（箱の色）・--dg-ink（文字の色）で色を変えられます | 記事のページ・固定ページ | `.log-dg { --dg-edge: #e0607e; }` | 次のバージョン |
-| `.log-frame` | ページ埋込（[ページ埋込]URL[/ページ埋込]）の全体。--frame-width で枠の幅を変えられます | 記事のページ・固定ページ | `.log-frame { --frame-width: 100%; }` | 次のバージョン |
-| `.log-frame-stage` | ページ埋込の枠（読み込む前は表紙、押すとページ） | 記事のページ・固定ページ | `.log-frame-stage { border-radius: 0; }` | 次のバージョン |
-| `.log-frame-play` | ページ埋込の表紙の「ページを読み込む」ステッカー | 記事のページ・固定ページ | `.log-frame-play { transform: none; }` | 次のバージョン |
-| `.log-frame-bar` | ページ埋込の下の行（別のタブで開くリンクと「全画面」ボタン） | 記事のページ・固定ページ | `.log-frame-bar { font-size: 13px; }` | 次のバージョン |
+| `.markdown-alert` | 注意書きの箱（> [!NOTE] など。GitHubと同じクラス名） | 記事のページ・固定ページ | `.markdown-alert { border-radius: 4px; }` | v0.11.0 |
+| `.markdown-alert-note` | 補足（NOTE）の箱 | 記事のページ・固定ページ | `.markdown-alert-note { --alert: #0969da; }` | v0.11.0 |
+| `.markdown-alert-tip` | ヒント（TIP）の箱 | 記事のページ・固定ページ | `.markdown-alert-tip { --alert: #1a7f37; }` | v0.11.0 |
+| `.markdown-alert-important` | 重要（IMPORTANT）の箱 | 記事のページ・固定ページ | `.markdown-alert-important { --alert: #8250df; }` | v0.11.0 |
+| `.markdown-alert-warning` | 注意（WARNING）の箱 | 記事のページ・固定ページ | `.markdown-alert-warning { --alert: #9a6700; }` | v0.11.0 |
+| `.markdown-alert-caution` | 警告（CAUTION）の箱 | 記事のページ・固定ページ | `.markdown-alert-caution { --alert: #d1242f; }` | v0.11.0 |
+| `.markdown-alert-title` | 注意書きの見出し（アイコンと「補足」などの文字） | 記事のページ・固定ページ | `.markdown-alert-title { font-size: 15px; }` | v0.11.0 |
+| `.log-mermaid` | 図の枠（```mermaid で書いたフローチャート・シーケンス図） | 記事のページ・固定ページ | `.log-mermaid { background: var(--log-bg); }` | v0.11.0 |
+| `.log-mermaid-zoom` | 図の右上の「拡大」ボタン | 記事のページ・固定ページ | `.log-mermaid-zoom { color: var(--log-accent); }` | v0.11.0 |
+| `.log-mermaid-sheet` | 「拡大」で開く、画面いっぱいの図 | 記事のページ・固定ページ | `.log-mermaid-sheet { background: var(--log-card); }` | v0.11.0 |
+| `.log-dg` | 描いた図（SVG）。--dg-edge（枠と矢印の色）・--dg-line（線の色）・--dg-box（箱の色）・--dg-ink（文字の色）で色を変えられます | 記事のページ・固定ページ | `.log-dg { --dg-edge: #e0607e; }` | v0.11.0 |
+| `.log-frame` | ページ埋込（[ページ埋込]URL[/ページ埋込]）の全体。--frame-width で枠の幅を変えられます | 記事のページ・固定ページ | `.log-frame { --frame-width: 100%; }` | v0.11.0 |
+| `.log-frame-stage` | ページ埋込の枠（読み込む前は表紙、押すとページ） | 記事のページ・固定ページ | `.log-frame-stage { border-radius: 0; }` | v0.11.0 |
+| `.log-frame-play` | ページ埋込の表紙の「ページを読み込む」ステッカー | 記事のページ・固定ページ | `.log-frame-play { transform: none; }` | v0.11.0 |
+| `.log-frame-bar` | ページ埋込の下の行（別のタブで開くリンクと「全画面」ボタン） | 記事のページ・固定ページ | `.log-frame-bar { font-size: 13px; }` | v0.11.0 |
 
 **CSS変数**
 

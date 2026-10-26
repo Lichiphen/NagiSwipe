@@ -751,7 +751,7 @@
     "page"
    ],
    "example": ".markdown-alert { border-radius: 4px; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-note",
@@ -764,7 +764,7 @@
     "page"
    ],
    "example": ".markdown-alert-note { --alert: #0969da; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-tip",
@@ -777,7 +777,7 @@
     "page"
    ],
    "example": ".markdown-alert-tip { --alert: #1a7f37; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-important",
@@ -790,7 +790,7 @@
     "page"
    ],
    "example": ".markdown-alert-important { --alert: #8250df; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-warning",
@@ -803,7 +803,7 @@
     "page"
    ],
    "example": ".markdown-alert-warning { --alert: #9a6700; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-caution",
@@ -816,7 +816,7 @@
     "page"
    ],
    "example": ".markdown-alert-caution { --alert: #d1242f; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".markdown-alert-title",
@@ -829,7 +829,7 @@
     "page"
    ],
    "example": ".markdown-alert-title { font-size: 15px; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-mermaid",
@@ -842,7 +842,7 @@
     "page"
    ],
    "example": ".log-mermaid { background: var(--log-bg); }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-mermaid-zoom",
@@ -855,7 +855,7 @@
     "page"
    ],
    "example": ".log-mermaid-zoom { color: var(--log-accent); }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-mermaid-sheet",
@@ -868,7 +868,7 @@
     "page"
    ],
    "example": ".log-mermaid-sheet { background: var(--log-card); }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-dg",
@@ -881,7 +881,7 @@
     "page"
    ],
    "example": ".log-dg { --dg-edge: #e0607e; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-frame",
@@ -894,7 +894,7 @@
     "page"
    ],
    "example": ".log-frame { --frame-width: 100%; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-frame-stage",
@@ -907,7 +907,7 @@
     "page"
    ],
    "example": ".log-frame-stage { border-radius: 0; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-frame-play",
@@ -920,7 +920,7 @@
     "page"
    ],
    "example": ".log-frame-play { transform: none; }",
-   "since": "next"
+   "since": "0.11.0"
   },
   {
    "name": ".log-frame-bar",
@@ -933,7 +933,7 @@
     "page"
    ],
    "example": ".log-frame-bar { font-size: 13px; }",
-   "since": "next"
+   "since": "0.11.0"
   }
  ],
  "variables": [
@@ -1442,7 +1442,7 @@
    ]
   },
   {
-   "version": "next",
+   "version": "0.11.0",
    "added": [
     ".markdown-alert",
     ".markdown-alert-note",

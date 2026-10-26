@@ -1092,21 +1092,21 @@ The list of this version:
 | `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
 | `.log-code-block` | The frame of a code block in an article or page; holds pre.log-md-code and the COPY button | Post pages, Fixed pages | `.log-code-block pre { font-size: 13px; }` | v0.8.2 |
 | `.log-code-copy` | The COPY button on the top right corner of a code block (.is-copied after copying) | Post pages, Fixed pages | `.log-code-copy { color: var(--log-accent); }` | v0.8.2 |
-| `.markdown-alert` | An alert box (> [!NOTE] and the rest, with GitHub's class names) | Post pages, Fixed pages | `.markdown-alert { border-radius: 4px; }` | Next version |
-| `.markdown-alert-note` | The NOTE box | Post pages, Fixed pages | `.markdown-alert-note { --alert: #0969da; }` | Next version |
-| `.markdown-alert-tip` | The TIP box | Post pages, Fixed pages | `.markdown-alert-tip { --alert: #1a7f37; }` | Next version |
-| `.markdown-alert-important` | The IMPORTANT box | Post pages, Fixed pages | `.markdown-alert-important { --alert: #8250df; }` | Next version |
-| `.markdown-alert-warning` | The WARNING box | Post pages, Fixed pages | `.markdown-alert-warning { --alert: #9a6700; }` | Next version |
-| `.markdown-alert-caution` | The CAUTION box | Post pages, Fixed pages | `.markdown-alert-caution { --alert: #d1242f; }` | Next version |
-| `.markdown-alert-title` | The title of an alert box (its icon and name) | Post pages, Fixed pages | `.markdown-alert-title { font-size: 15px; }` | Next version |
-| `.log-mermaid` | The frame of a diagram (a flowchart or sequence diagram written in ```mermaid) | Post pages, Fixed pages | `.log-mermaid { background: var(--log-bg); }` | Next version |
-| `.log-mermaid-zoom` | The Enlarge button on the top right corner of a diagram | Post pages, Fixed pages | `.log-mermaid-zoom { color: var(--log-accent); }` | Next version |
-| `.log-mermaid-sheet` | The diagram over the whole screen, opened by Enlarge | Post pages, Fixed pages | `.log-mermaid-sheet { background: var(--log-card); }` | Next version |
-| `.log-dg` | A drawn diagram (SVG). Its colors follow --dg-edge (frames and strong arrows), --dg-line (lines), --dg-box (boxes) and --dg-ink (words) | Post pages, Fixed pages | `.log-dg { --dg-edge: #e0607e; }` | Next version |
-| `.log-frame` | A page embed ([Embed]URL[/Embed]) as a whole. --frame-width sets the width of its frame | Post pages, Fixed pages | `.log-frame { --frame-width: 100%; }` | Next version |
-| `.log-frame-stage` | The frame of a page embed (its cover, then the page once pressed) | Post pages, Fixed pages | `.log-frame-stage { border-radius: 0; }` | Next version |
-| `.log-frame-play` | The Load the page sticker on a page embed’s cover | Post pages, Fixed pages | `.log-frame-play { transform: none; }` | Next version |
-| `.log-frame-bar` | The row under a page embed (the link to open it in a new tab and the Full screen button) | Post pages, Fixed pages | `.log-frame-bar { font-size: 13px; }` | Next version |
+| `.markdown-alert` | An alert box (> [!NOTE] and the rest, with GitHub's class names) | Post pages, Fixed pages | `.markdown-alert { border-radius: 4px; }` | v0.11.0 |
+| `.markdown-alert-note` | The NOTE box | Post pages, Fixed pages | `.markdown-alert-note { --alert: #0969da; }` | v0.11.0 |
+| `.markdown-alert-tip` | The TIP box | Post pages, Fixed pages | `.markdown-alert-tip { --alert: #1a7f37; }` | v0.11.0 |
+| `.markdown-alert-important` | The IMPORTANT box | Post pages, Fixed pages | `.markdown-alert-important { --alert: #8250df; }` | v0.11.0 |
+| `.markdown-alert-warning` | The WARNING box | Post pages, Fixed pages | `.markdown-alert-warning { --alert: #9a6700; }` | v0.11.0 |
+| `.markdown-alert-caution` | The CAUTION box | Post pages, Fixed pages | `.markdown-alert-caution { --alert: #d1242f; }` | v0.11.0 |
+| `.markdown-alert-title` | The title of an alert box (its icon and name) | Post pages, Fixed pages | `.markdown-alert-title { font-size: 15px; }` | v0.11.0 |
+| `.log-mermaid` | The frame of a diagram (a flowchart or sequence diagram written in ```mermaid) | Post pages, Fixed pages | `.log-mermaid { background: var(--log-bg); }` | v0.11.0 |
+| `.log-mermaid-zoom` | The Enlarge button on the top right corner of a diagram | Post pages, Fixed pages | `.log-mermaid-zoom { color: var(--log-accent); }` | v0.11.0 |
+| `.log-mermaid-sheet` | The diagram over the whole screen, opened by Enlarge | Post pages, Fixed pages | `.log-mermaid-sheet { background: var(--log-card); }` | v0.11.0 |
+| `.log-dg` | A drawn diagram (SVG). Its colors follow --dg-edge (frames and strong arrows), --dg-line (lines), --dg-box (boxes) and --dg-ink (words) | Post pages, Fixed pages | `.log-dg { --dg-edge: #e0607e; }` | v0.11.0 |
+| `.log-frame` | A page embed ([Embed]URL[/Embed]) as a whole. --frame-width sets the width of its frame | Post pages, Fixed pages | `.log-frame { --frame-width: 100%; }` | v0.11.0 |
+| `.log-frame-stage` | The frame of a page embed (its cover, then the page once pressed) | Post pages, Fixed pages | `.log-frame-stage { border-radius: 0; }` | v0.11.0 |
+| `.log-frame-play` | The Load the page sticker on a page embed’s cover | Post pages, Fixed pages | `.log-frame-play { transform: none; }` | v0.11.0 |
+| `.log-frame-bar` | The row under a page embed (the link to open it in a new tab and the Full screen button) | Post pages, Fixed pages | `.log-frame-bar { font-size: 13px; }` | v0.11.0 |
 
 **CSS variables**
 
