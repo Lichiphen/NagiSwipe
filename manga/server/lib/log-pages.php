@@ -444,7 +444,7 @@ function nl_page_help(): string
     ];
     $body = '';
     foreach ($rows as [$code, $note]) $body .= '<tr><td><code>' . str_replace('&lt;br&gt;', '<br>', h($code)) . '</code></td><td>' . h($note) . '</td></tr>';
-    return '<details class="log-page-help"><summary>' . nm_t('Markdownの書き方') . '</summary><table class="table"><tbody>' . $body . '</tbody></table><p class="note">' . nm_t('改行はそのまま改行になり、空行で段落が分かれます。HTMLのタグは文字として表示します。') . '</p></details>';
+    return '<details class="log-page-help" id="log-page-help"><summary>' . nm_t('Markdownの書き方') . '</summary><table class="table"><tbody>' . $body . '</tbody></table><p class="note">' . nm_t('改行はそのまま改行になり、空行で段落が分かれます。HTMLのタグは文字として表示します。') . '</p></details>';
 }
 function nl_view_page_edit(string $id): void
 {
@@ -456,10 +456,22 @@ function nl_view_page_edit(string $id): void
     $layouts = '';
     $notes = ['sidebar' => nm_t('投稿のページと同じ、右にサイドバーのある形です。'), 'wide' => nm_t('サイドバーを出さず、本文を全幅で表示します。表の多いページに。'), 'narrow' => nm_t('サイドバーを出さず、本文の列だけを中央に寄せます。規約やポリシーの読みやすい幅です。')];
     foreach (NL_PAGE_LAYOUTS as $key => $label) $layouts .= '<label class="log-page-layout-choice"><input type="radio" name="layout" value="' . $key . '"' . ($p['layout'] === $key ? ' checked' : '') . '><span class="log-page-layout-figure is-' . $key . '" aria-hidden="true"><i></i><i></i></span><span><b>' . h(nm_t($label)) . '</b><small>' . h($notes[$key]) . '</small></span></label>';
-    $tool = static fn(string $attrs, string $label, string $text) => '<button type="button" class="btn log-md-tool" ' . $attrs . ' title="' . h($label) . '" aria-label="' . h($label) . '">' . $text . '</button>';
+    // The same row of icon tools as the post editor (lib/log-admin.php nl_editor); log-pages.js moves it above the text on a PC.
+    $tool = static fn(string $name, string $label, string $attrs) => '<button type="button" class="log-tool" ' . $attrs . ' aria-label="' . h($label) . '" title="' . h($label) . '">' . nl_compose_icon($name) . '</button>';
     $public = $p['id'] !== '' && $p['status'] === 'published';
     nm_layout($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ'), '<p class="crumb crumb-back">' . nm_t('<a href="index.php?p=log_pages">固定ページの一覧へ戻る</a>') . '</p>'
-        . '<section class="card log-page-editor"><h1>' . ($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ')) . '</h1>'
+        . '<section class="card log-page-editor"><div class="log-page-editor-head"><h1>' . ($p['id'] !== '' ? nm_t('固定ページを編集') : nm_t('新しい固定ページ')) . '</h1>'
+        // A PC or sideways: back to the text from the preview, the picture list or a scrolled page.
+        . '<button type="button" class="log-to-body" data-to-body hidden>' . nm_icon('ui-pen', 'log-tool-icon') . '<span>' . nm_t('本文へ') . '</span></button></div>'
+        // The dock on a PC or sideways (log-pages.js moves the strip of the page's pictures into its first tab).
+        . '<aside class="log-media-dock" data-media-dock aria-label="' . nm_t('画像') . '"><div class="log-dock-tabs" role="tablist">'
+        . '<button type="button" role="tab" id="log-page-dock-tab-page" aria-selected="true" aria-controls="log-page-dock-page" data-dock-tab="page">' . nl_compose_icon('upload') . '<span>' . nm_t('このページ') . '</span><b class="log-dock-count" data-dock-count>0</b></button>'
+        . '<button type="button" role="tab" id="log-page-dock-tab-library" aria-selected="false" aria-controls="log-page-dock-library" tabindex="-1" data-dock-tab="library">' . nl_compose_icon('media') . '<span>' . nm_t('画像一覧') . '</span></button></div>'
+        . '<div class="log-dock-pane" id="log-page-dock-page" role="tabpanel" aria-labelledby="log-page-dock-tab-page" data-dock-pane="page"><div class="log-dock-empty" data-dock-empty hidden><p>' . nm_t('このページの画像はまだありません。') . '</p>'
+        . '<p class="note">' . nm_t('ファイルをここへドロップするか、追加してください。') . '</p><div class="log-dock-empty-actions"><button type="button" class="btn" data-dock-upload>' . nl_compose_icon('upload') . nm_t('追加') . '</button><button type="button" class="btn" data-dock-tab="library">' . nl_compose_icon('media') . nm_t('一覧から選ぶ') . '</button></div></div></div>'
+        . '<div class="log-dock-pane" id="log-page-dock-library" role="tabpanel" aria-labelledby="log-page-dock-tab-library" data-dock-pane="library" hidden>'
+        . '<label class="sr-only" for="log-page-dock-search">' . nm_t('画像を検索') . '</label><input type="search" id="log-page-dock-search" data-pick-search placeholder="' . nm_t('画像の説明で探す') . '" autocomplete="off">'
+        . '<p class="note" data-pick-status role="status" aria-live="polite"></p><div class="log-dock-grid" data-pick-grid></div><button type="button" class="btn" data-pick-more hidden>' . nm_t('さらに表示') . '</button></div></aside>'
         . '<form method="post" action="index.php" class="form" data-page-editor>' . nl_csrf_field() . '<input type="hidden" name="do" value="log_page_save"><input type="hidden" name="page_id" value="' . h($p['id']) . '"><input type="hidden" name="revision" value="' . (int)$p['revision'] . '">'
         . '<label>' . nm_t('タイトル') . '<input name="title" maxlength="' . NL_PAGE_TITLE_MAX . '" required value="' . h($p['title']) . '" placeholder="' . nm_t('例：プライバシーポリシー') . '"></label>'
         . '<label>' . nm_t('URL名（半角英小文字・数字・ハイフン）') . '<span class="log-page-slug"><span aria-hidden="true">' . (nl_pretty() ? './' : './?pg=') . '</span><input name="slug" maxlength="40" pattern="[a-z0-9](?:[a-z0-9\-]{0,38}[a-z0-9])?" value="' . h($p['slug']) . '" placeholder="privacy" autocapitalize="off" spellcheck="false"></span></label>'
@@ -469,13 +481,23 @@ function nl_view_page_edit(string $id): void
         . '<label>' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"></label>'
         . '<p class="note">' . nm_t('読者にはタイトルとパスワードの入力欄だけを見せ、正しいパスワードを入れた人にだけ本文を表示します。開いた人のブラウザーには、パスワードではなく、このページを読める印をクッキーで{days}日間残します。', ['days' => NL_LOCK_DAYS]) . '</p></fieldset>'
         . '<fieldset class="log-page-layouts"><legend>' . nm_t('ページの幅（PC）') . '</legend>' . $layouts . '<p class="note">' . nm_t('スマホでは、どの形でもサイドバーを「MENU」の中に出します。') . '</p></fieldset>'
-        . '<div class="log-md-toolbar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '">' . $tool('data-md="bold"', nm_t('太字'), '<b>B</b>') . $tool('data-md="italic"', nm_t('斜体'), '<i>I</i>') . $tool('data-md="link"', nm_t('リンク'), nm_t('リンク'))
-        . '<button type="button" class="btn log-md-tool" data-md-menu aria-haspopup="dialog" title="' . nm_t('装飾（見出し・箇条書き・引用など）') . '">' . nm_t('装飾') . '</button>'
-        . '<button type="button" class="btn log-md-tool" data-md-upload>' . nl_compose_icon('upload') . '<span>' . nm_t('画像を追加') . '</span></button><button type="button" class="btn log-md-tool" data-md-pick aria-haspopup="dialog">' . nl_ui_icon('images') . '<span>' . nm_t('画像一覧から選ぶ') . '</span></button><input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'
-        . '<button type="button" class="btn log-md-tool" data-md-preview aria-pressed="false">' . nl_ui_icon('view') . '<span>' . nm_t('プレビュー') . '</span></button></div>'
-        . '<label class="log-page-body-label">' . nm_t('本文（Markdown）') . '<textarea name="body" rows="22" maxlength="' . NL_PAGE_BODY_MAX . '" spellcheck="false" data-md-body placeholder="' . nm_t('## はじめに&#10;このサイトでは…') . '">' . h($p['body']) . '</textarea></label>'
+        // Phones held upright: the row right under the text, scrolling sideways with a fade and an arrow where it has more.
+        // A PC or sideways (log-pages.js): the row above the text and 書く / プレビュー tabs, the preview in the text's place.
+        . '<label class="log-page-body-label" for="log-page-body">' . nm_t('本文（Markdown）') . '</label>'
+        . '<div class="log-compose-tabs" role="tablist" aria-label="' . nm_t('本文の表示') . '" data-compose-tabs><button type="button" role="tab" id="log-page-tab-write" aria-selected="true" aria-controls="log-page-body" data-compose-tab="write">' . nm_icon('ui-pen', 'log-tool-icon') . nm_t('書く') . '</button>'
+        . '<button type="button" role="tab" id="log-page-tab-preview" aria-selected="false" aria-controls="log-page-preview" tabindex="-1" data-compose-tab="preview">' . nl_compose_icon('preview') . nm_t('プレビュー') . '</button></div>'
+        . '<textarea id="log-page-body" name="body" rows="22" maxlength="' . NL_PAGE_BODY_MAX . '" spellcheck="false" data-md-body placeholder="' . nm_t('## はじめに&#10;このサイトでは…') . '">' . h($p['body']) . '</textarea>'
+        . '<div class="log-page-preview" id="log-page-preview" data-md-preview-body hidden></div>'
+        . '<div class="log-compose-toolzone" data-toolzone><div class="log-compose-bar" role="toolbar" aria-label="' . nm_t('Markdownの入力') . '"><div class="log-compose-scroll" data-tools-scroll>'
+        . '<button type="button" class="log-tools-hint is-start" data-tools-step="-1" tabindex="-1" aria-hidden="true">' . nm_icon('prev') . '</button><div class="log-compose-tools">'
+        . $tool('upload', nm_t('画像を追加'), 'data-md-upload') . $tool('media', nm_t('画像一覧から選ぶ'), 'data-md-pick aria-haspopup="dialog"')
+        . '<span class="log-tool-sep" aria-hidden="true"></span>' . $tool('bold', nm_t('太字'), 'data-md="bold"') . $tool('italic', nm_t('斜体'), 'data-md="italic"') . $tool('link', nm_t('リンク'), 'data-md="link"')
+        . $tool('format', nm_t('装飾（見出し・箇条書き・引用など）'), 'data-md-menu aria-haspopup="dialog"')
+        . '<span class="log-tool-sep" aria-hidden="true"></span>' . $tool('help', nm_t('Markdownの書き方'), 'data-md-help aria-expanded="false" aria-controls="log-page-help"')
+        . '</div><button type="button" class="log-tools-hint is-end" data-tools-step="1" tabindex="-1" aria-hidden="true">' . nm_icon('next') . '</button></div>' . $tool('preview', nm_t('プレビュー'), 'data-md-preview aria-pressed="false"') . '</div></div>'
+        . '<input type="file" data-md-upload-input accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" multiple hidden>'
         . '<div class="log-page-images" data-md-images aria-label="' . nm_t('本文の画像') . '"></div>'
-        . '<div class="log-page-preview log-page-body" data-md-preview-body hidden></div><p class="note" role="status" aria-live="polite" data-md-status>' . nm_t('画像はこの枠のどこへドロップしても、本文へ貼り付けても追加できます。カーソルの位置に入ります。') . '</p>'
+        . '<p class="note" role="status" aria-live="polite" data-md-status>' . nm_t('画像はこの枠のどこへドロップしても、本文へ貼り付けても追加できます。カーソルの位置に入ります。') . '</p>'
         . nl_page_help()
         . '<div class="log-submit"><button class="btn" name="status" value="draft">' . nm_t('下書き保存') . '</button><button class="btn primary" name="status" value="published">' . nm_t('公開して保存') . '</button></div></form>'
         . '<dialog class="log-page-picker" aria-labelledby="log-page-picker-title" data-md-picker><div class="log-page-picker-head"><h2 id="log-page-picker-title">' . nm_t('画像一覧から選ぶ') . '</h2><button type="button" class="btn" data-pick-close>' . nm_t('閉じる') . '</button></div>'

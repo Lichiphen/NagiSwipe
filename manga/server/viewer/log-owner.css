@@ -158,19 +158,19 @@
 .log-compose-bar > .log-tool[data-preview] { margin-left:2px; }
 .log-compose-scroll.can-end + .log-tool[data-preview] { box-shadow:-1px 0 0 var(--log-line); border-radius:0 10px 10px 0; }
 @media(prefers-reduced-motion:reduce) { .log-tools-hint.is-end svg { animation:none; } }
-/* 書く / プレビュー tabs: only on a PC or a device turned sideways (form.is-wide, set by log-editor.js). */
+/* 書く / プレビュー tabs: only on a PC or a device turned sideways (form.is-wide, set by log-editor.js and log-pages.js). */
 .log-compose-tabs { display:none; }
-.log-compose form.is-wide .log-compose-tabs { display:flex; gap:2px; }
+:is(.log-compose,.log-page-editor) form.is-wide .log-compose-tabs { display:flex; gap:2px; }
 .log-compose-tabs button { display:inline-flex; align-items:center; gap:6px; margin-bottom:-1px; padding:7px 14px; border:1px solid transparent; border-bottom:0; border-radius:10px 10px 0 0; background:none; color:var(--log-muted); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .log-compose-tabs button:hover { color:var(--log-accent); }
 .log-compose-tabs button[aria-selected="true"] { position:relative; z-index:2; border-color:var(--log-field); background:var(--log-card); color:var(--log-accent); }
 .log-compose-tabs button:focus-visible { outline:2px solid var(--log-accent); outline-offset:-2px; }
 .log-compose-tabs .log-tool-icon { width:17px; height:17px; }
-.log-compose form.is-wide textarea[name="body"] { border-top-left-radius:0; }
+:is(.log-compose,.log-page-editor) form.is-wide textarea[name="body"] { border-top-left-radius:0; }
 .log-compose form.is-wide .log-preview { height:var(--log-preview-height,320px); margin:0; padding:16px 20px; border:1px solid var(--log-field); border-radius:0 12px 12px; overflow:auto; overscroll-behavior:contain; }
 .log-compose form.is-wide.is-previewing textarea[name="body"],.log-compose form.is-wide.is-previewing .log-mark-layer,.log-compose form.is-wide.is-previewing .log-attachments { display:none; }
 /* Above the text: the row first, then the panel it opens. */
-.log-compose form.is-wide .log-compose-toolzone .log-compose-bar { margin:0 0 10px; }
+:is(.log-compose,.log-page-editor) form.is-wide .log-compose-toolzone .log-compose-bar { margin:0 0 10px; }
 .log-compose form.is-wide .log-compose-toolzone .log-compose-panel { margin:0 0 10px; }
 /*
  * The media dock (log-editor.js sets .log-compose[data-dock] on a PC or sideways): the post's media in its first tab, the
@@ -182,7 +182,7 @@
 .log-compose[data-dock="grid"] { display:grid; grid-template-columns:var(--log-dock) minmax(0,1fr); grid-template-rows:auto 1fr; grid-template-areas:"dock head" "dock form"; column-gap:24px; align-content:start; }
 .log-compose[data-dock="grid"] > .log-compose-head { grid-area:head; margin-bottom:12px; }
 .log-compose[data-dock="grid"] > form { grid-area:form; min-width:0; }
-.log-compose:is([data-dock="grid"],[data-dock="float"]) > .log-media-dock { display:flex; flex-direction:column; gap:10px; min-height:0; padding:12px; box-sizing:border-box; border:1px solid var(--log-line); border-radius:16px; background:var(--log-bg); box-shadow:0 12px 32px #0000001c; }
+.log-compose:is([data-dock="grid"],[data-dock="float"]) > .log-media-dock,.log-page-editor[data-dock="grid"] > .log-media-dock { display:flex; flex-direction:column; gap:10px; min-height:0; padding:12px; box-sizing:border-box; border:1px solid var(--log-line); border-radius:16px; background:var(--log-bg); box-shadow:0 12px 32px #0000001c; }
 .log-compose[data-dock="grid"] > .log-media-dock { grid-area:dock; position:sticky; top:0; align-self:start; max-height:calc(var(--log-viewport-height,100dvh) - 48px); }
 .log-compose[data-dock="float"] > .log-media-dock { position:fixed; z-index:30; top:var(--log-dock-top,16px); left:var(--log-dock-left,16px); width:var(--log-dock-width,280px); max-height:calc(100dvh - var(--log-dock-top,16px) - 16px);
     transition:transform .55s cubic-bezier(.18,1.3,.4,1),opacity .25s ease,visibility 0s; }
@@ -204,7 +204,7 @@
 @keyframes log-dock-bump { 40% { transform:scale(1.5); } }
 .log-dock-pane { display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0; }
 .log-dock-pane[hidden] { display:none; }
-.log-dock-pane[data-dock-pane="post"] { margin:0 -6px; padding:2px 6px 4px; overflow-y:auto; overscroll-behavior:contain; }
+.log-dock-pane:is([data-dock-pane="post"],[data-dock-pane="page"]) { margin:0 -6px; padding:2px 6px 4px; overflow-y:auto; overscroll-behavior:contain; }
 .log-dock-empty { display:grid; justify-items:center; gap:4px; padding:22px 10px; border:1.5px dashed var(--log-line); border-radius:12px; color:var(--log-muted); font-size:13px; text-align:center; }
 .log-dock-empty[hidden] { display:none; }
 .log-dock-empty p { margin:0; }
@@ -229,8 +229,8 @@
 .log-dock-grid img,.log-dock-grid .log-picker-kind { display:grid; place-items:center; width:100%; height:auto; aspect-ratio:1; object-fit:cover; border-radius:7px; background:var(--log-bg); }
 .log-dock-grid button > span:not(.log-picker-kind) { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .log-dock-grid small { color:var(--log-muted); font-size:10px; }
-.log-media-dock [data-picker-more] { flex:none; min-height:0; padding:6px 10px; font-size:12px; }
-.log-media-dock [data-picker-more][hidden] { display:none; }
+.log-media-dock :is([data-picker-more],[data-pick-more]) { flex:none; min-height:0; padding:6px 10px; font-size:12px; }
+.log-media-dock :is([data-picker-more],[data-pick-more])[hidden] { display:none; }
 .log-media-dock.is-called { animation:log-placed-row 1.2s ease-out; }
 /* With the dock beside it, the editor gets a taller text box and keeps 下書き保存・投稿する in reach at the bottom. */
 .log-compose[data-dock="grid"] form.is-wide textarea[name="body"] { min-height:max(240px,40vh); }
@@ -581,22 +581,36 @@ a.log-list-where:hover { text-decoration:underline; }
 .log-page-layout-figure.is-narrow { justify-content:center; }
 .log-page-layout-figure.is-narrow i:first-child { width:24px; }
 .log-page-layout-figure.is-narrow i:last-child { display:none; }
-.log-md-toolbar { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-.log-md-toolbar .btn { min-height:36px; padding:5px 11px; }
-.log-md-toolbar .btn .log-ui-icon { width:17px; height:17px; }
-.log-md-toolbar [data-md-upload] { margin-left:auto; }
-.log-md-toolbar [aria-pressed="true"] { border-color:var(--log-accent); color:var(--log-accent); }
-.log-page-body-label textarea { min-height:420px; font:14.5px/1.75 ui-monospace,SFMono-Regular,Consolas,"Hiragino Sans",monospace; tab-size:4; }
-.log-page-body-label textarea.is-over { outline:3px dashed var(--log-cyan); outline-offset:-6px; }
+/*
+ * The fixed page editor, laid out like the post editor (log-pages.js): on a phone held upright the tool row comes right
+ * under the text; on a PC or sideways (form.is-wide) it sits above it, the preview is a tab in the text's place and the
+ * page's pictures and 画像一覧 stay in a dock on the left (.log-page-editor[data-dock="grid"]).
+ */
+.log-page-editor-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:0 0 12px; }
+.log-page-editor-head h1 { margin:0; }
+.form .log-page-body-label { display:block; margin-bottom:-4px; }
+.log-page-editor textarea[name="body"] { min-height:420px; padding:14px 16px; border-radius:12px; font:14.5px/1.75 ui-monospace,SFMono-Regular,Consolas,"Hiragino Sans",monospace; tab-size:4; }
+.log-page-editor .log-compose-bar { margin-top:0; }
+.log-page-editor form:not(.is-wide) .log-compose-tabs + textarea { margin-top:0; }
+.log-page-editor form.is-wide .log-compose-tabs { margin-bottom:-12px; }
+.log-page-editor form.is-wide .log-compose-toolzone { margin-bottom:-12px; }
 .log-page-preview { padding:20px; border:1px dashed var(--log-line); border-radius:10px; background:var(--log-card); }
+.log-page-preview[hidden] { display:none; }
 .log-page-preview > h1 { margin:0 0 18px; font-size:1.5rem; }
+.log-page-editor form.is-wide .log-page-preview { height:var(--log-preview-height,420px); box-sizing:border-box; margin:0; padding:18px 22px; border:1px solid var(--log-field); border-radius:0 12px 12px; overflow:auto; overscroll-behavior:contain; }
+.log-page-editor form.is-wide.is-previewing textarea[name="body"] { display:none; }
+.log-page-editor[data-dock="grid"] { display:grid; grid-template-columns:var(--log-dock) minmax(0,1fr); column-gap:24px; align-items:start; --log-dock:clamp(220px,24vw,300px); }
+.log-page-editor[data-dock="grid"] > :not(.log-media-dock) { grid-column:2; min-width:0; }
+.log-page-editor[data-dock="grid"] > .log-media-dock { grid-column:1; grid-row:1 / span 8; position:sticky; top:16px; max-height:calc(100dvh - 32px); }
+.log-page-editor[data-dock="grid"] .log-submit { position:sticky; bottom:0; z-index:2; margin-top:0; padding:12px 0; border-top:1px solid var(--log-line); background:var(--card,var(--log-card)); box-shadow:0 16px 0 var(--card,var(--log-card)); }
+.log-media-dock .log-page-images { gap:8px; padding:6px 6px 2px 2px; }
+.log-media-dock .log-page-image-thumb,.log-media-dock .log-page-image-add { width:70px; height:70px; }
 .log-page-help summary { cursor:pointer; color:var(--log-muted); }
 .log-page-help table { margin-top:10px; font-size:13px; }
 .log-page-help td { vertical-align:top; }
 .log-page-help code { white-space:nowrap; }
 @media(max-width:700px) {
     .log-page-layouts { grid-template-columns:minmax(0,1fr); }
-    .log-md-toolbar [data-md-upload] { margin-left:0; }
 }
 .log-topmenu-list { display:grid; gap:8px; margin:0 0 12px; }
 .log-topmenu-edit-row { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); min-width:0; }
