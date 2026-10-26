@@ -369,6 +369,7 @@
             const { html } = await send(data);
             fill(html); showPreview(true);
             window.NagiSwipe?.init();
+            window.NagiLogEmbeds?.load?.(preview);
             say(t('プレビューです。公開ページでは、ページの幅の設定に合わせて表示します。'));
         } catch (e) { say(e.message, true); }
     }

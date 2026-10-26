@@ -86,9 +86,62 @@ function nl_embed_detect(string $url): ?array
     return null;
 }
 
-/** Short name for excerpts and titles, e.g. "YouTube"; '' when the line is not an embed. */
+/*
+ * Page embeds: [ページ埋込]URL[/ページ埋込] (or [Embed]…[/Embed]) alone on a line puts any page in a frame, e.g. a game
+ * that fills its window. [ページ埋込 4:3] picks another shape. The frame goes through embed.php, a page of this site that
+ * opens only URLs signed here (nl_frame_sig()), so the page's own CSP never has to list the other site.
+ */
+const NL_FRAME_LINE = '/\A[ \t]*\[(ページ埋込|ページ埋め込み|embed)(?:[ \t]+(\d{1,2})[:：](\d{1,2}))?\][ \t]*(\S{1,2000}?)[ \t]*\[\/\1\][ \t]*\z/iu';
+/** The tags alone, which excerpts and search snippets leave out. */
+const NL_FRAME_MARK = '/\[\/?(?:ページ埋込|ページ埋め込み|embed)(?:[ \t]+\d{1,2}[:：]\d{1,2})?\]/iu';
+const NL_FRAME_SHAPES = ['16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16', '21:9'];
+/** An http(s) URL that can go in a frame, with its origin for the frame's CSP; null for anything else. */
+function nl_frame_target(string $url): ?array
+{
+    if (!preg_match('~\Ahttps?://[^\s<>"\[\]]+\z~i', $url) || !filter_var($url, FILTER_VALIDATE_URL)) return null;
+    $parts = parse_url($url);
+    $host = strtolower((string)($parts['host'] ?? ''));
+    if (isset($parts['user']) || isset($parts['pass']) || !preg_match('/\A[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\z/', $host)) return null;
+    return ['url' => $url, 'host' => $host, 'origin' => strtolower((string)$parts['scheme']) . '://' . $host . (isset($parts['port']) ? ':' . (int)$parts['port'] : '')];
+}
+/** The URL and shape of a page embed line, or null when the line is not one. An unknown shape is 16:9. */
+function nl_frame_parse(string $line): ?array
+{
+    if (!preg_match(NL_FRAME_LINE, $line, $m) || !($f = nl_frame_target($m[4]))) return null;
+    $shape = ($m[2] ?? '') !== '' ? (int)$m[2] . ':' . (int)$m[3] : '';
+    return $f + ['shape' => in_array($shape, NL_FRAME_SHAPES, true) ? $shape : '16:9'];
+}
+function nl_frame_sig(string $url): string { return substr(hash_hmac('sha256', 'log-frame|' . $url, (string)(nm_config()['secret'] ?? '')), 0, 32); }
+/**
+ * The page embed: a cover with the page's title (and picture, from its blog card) that loads the page only when pressed,
+ * since a game can be heavy on a phone. viewer/log-embed.js loads it and handles 全画面; without scripts the cover is a link.
+ */
+function nl_frame_html(array $f, bool $admin = false): string
+{
+    $src = ($admin ? '../' : './') . 'embed.php?u=' . rawurlencode($f['url']) . '&s=' . nl_frame_sig($f['url']);
+    $card = function_exists('nl_card_load') ? nl_card_load($f['url']) : null;
+    $title = $card && !empty($card['ok']) ? (string)$card['title'] : '';
+    $img = '';
+    if ($card && is_array($card['image'] ?? null) && preg_match(NM_PAGE_PATTERN, (string)($card['image']['f'] ?? ''))) {
+        $img = '<img src="' . h(($admin ? '../' : './') . '?card=' . nl_card_key($f['url']) . '&v=' . (int)$card['fetched']) . '" alt="" loading="lazy" width="' . (int)$card['image']['w'] . '" height="' . (int)$card['image']['h'] . '">';
+    }
+    $open = ' href="' . h($f['url']) . '" target="_blank" rel="noopener noreferrer"';
+    return '<figure class="log-frame is-' . str_replace(':', 'x', $f['shape']) . '" data-frame><div class="log-frame-stage">'
+        . '<a class="log-frame-start"' . $open . ' data-frame-src="' . h($src) . '" data-frame-title="' . h($title !== '' ? $title : $f['host']) . '">' . $img
+        . '<span class="log-frame-play">' . nm_icon('p-play', 'log-frame-icon') . '<span>' . nm_t('ページを読み込む') . '</span></span>'
+        . '<span class="log-frame-text"><strong>' . h($title !== '' ? $title : $f['host']) . '</strong>' . ($title !== '' ? '<small>' . h($f['host']) . '</small>' : '') . '</span></a>'
+        . '<button type="button" class="log-frame-close" data-frame-close>' . nm_icon('close', 'log-frame-icon') . '<span>' . nm_t('閉じる') . '</span></button></div>'
+        . '<figcaption class="log-frame-bar"><a class="log-frame-open"' . $open . '>' . h(nm_t('{name}で開く', ['name' => $f['host']])) . ' ↗</a>'
+        . '<button type="button" class="log-frame-full" data-frame-full hidden>' . nm_icon('p-full', 'log-frame-icon') . '<span>' . nm_t('全画面') . '</span></button></figcaption></figure>';
+}
+
+/** Short name for excerpts and titles, e.g. "YouTube"; '' when the line is not an embed. A page embed is named by its card title or host. */
 function nl_embed_name(string $line): string
 {
+    if ($f = nl_frame_parse($line)) {
+        $card = function_exists('nl_card_load') ? nl_card_load($f['url']) : null;
+        return $card && !empty($card['ok']) && (string)$card['title'] !== '' ? (string)$card['title'] : $f['host'];
+    }
     $e = nl_embed_detect($line);
     return $e ? nm_t(NL_EMBED_NAMES[$e['type']]) : '';
 }

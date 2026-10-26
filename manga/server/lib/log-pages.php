@@ -143,10 +143,13 @@ function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids, bool $
             continue;
         }
         $after = false;
-        if (preg_match('/\A {0,3}(`{3,}|~{3,})/', $line, $fence)) {
+        if (preg_match('/\A {0,3}(`{3,}|~{3,})[ \t]*([^\s`]*)/', $line, $fence)) {
             $flush(); $code = [];
             for ($i++; $i < $n && !preg_match('/\A {0,3}' . preg_quote($fence[1], '/') . '\s*\z/', $lines[$i]); $i++) $code[] = $lines[$i];
-            $out .= '<pre class="log-md-code"><code>' . h(implode("\n", $code)) . '</code></pre>';
+            // ```mermaid is drawn as a diagram by viewer/log-mermaid.js; the source stays as text until then (and without scripts).
+            $out .= strtolower($fence[2]) === 'mermaid'
+                ? '<div class="log-mermaid" data-mermaid><pre class="log-mermaid-source"><code>' . h(implode("\n", $code)) . '</code></pre></div>'
+                : '<pre class="log-md-code"><code>' . h(implode("\n", $code)) . '</code></pre>';
             continue;
         }
         if (preg_match($post ? '/\A {0,3}(#{2,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*\z/u' : '/\A {0,3}(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*\z/u', $line, $m)) {
@@ -160,6 +163,12 @@ function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids, bool $
             $flush(); $quote = [];
             for (; $i < $n && preg_match('/\A {0,3}> ?(.*)\z/u', $lines[$i], $q); $i++) $quote[] = $q[1];
             $i--;
+            // GitHub's alerts: > [!NOTE] (TIP, IMPORTANT, WARNING, CAUTION) alone on the first line.
+            if (preg_match('/\A\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*\z/i', $quote[0], $alert)) {
+                $rest = array_slice($quote, 1);
+                $out .= nl_md_alert(strtolower($alert[1]), $depth < 8 ? nl_md_blocks($rest, $admin, $depth + 1, $ids, $post) : h(implode("\n", $rest)));
+                continue;
+            }
             $out .= '<blockquote>' . ($depth < 8 ? nl_md_blocks($quote, $admin, $depth + 1, $ids, $post) : h(implode("\n", $quote))) . '</blockquote>';
             continue;
         }
@@ -169,6 +178,7 @@ function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids, bool $
             $out .= $html;
             continue;
         }
+        if (($frame = nl_frame_parse($line)) !== null) { $flush(); $out .= nl_frame_html($frame, $admin); continue; }
         if (preg_match(NL_MD_ITEM, $line, $item) && ($item[3] ?? '') !== '' || preg_match('/\A *[-*+]\z/', $line)) {
             $flush();
             [$html, $i] = nl_md_list($lines, $i, $admin, $depth, $ids, $post);
@@ -179,6 +189,24 @@ function nl_md_blocks(array $lines, bool $admin, int $depth, array &$ids, bool $
     }
     $flush(false);
     return $out;
+}
+/** GitHub's alert kinds: the Japanese title and the icon (the same drawings as the documentation site's boxes). */
+const NL_MD_ALERTS = [
+    'note' => ['補足', '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>'],
+    'tip' => ['ヒント', '<path d="M9.2 18.2h5.6M10 21h4M12 3.5a6 6 0 0 0-3.6 10.8c.6.5.9 1.2.9 2V16h5.4v-.7c0-.8.3-1.5.9-2A6 6 0 0 0 12 3.5Z"/>'],
+    'important' => ['重要', '<path d="M5 4.5h14v11H11l-4 4v-4H5Z"/><path d="M12 7.5v4M12 13.8v.1"/>'],
+    'warning' => ['注意', '<path d="M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13.1a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3Z"/><path d="M12 9.5v4.2M12 16.9v.1"/>'],
+    'caution' => ['警告', '<path d="M8.3 3.5h7.4l5.3 5.3v7.4l-5.3 5.3H8.3L3 16.2V8.8Z"/><path d="M12 8v4.6M12 15.8v.1"/>'],
+];
+/** The alert's first line (> [!NOTE]), which descriptions and search snippets leave out. */
+const NL_MD_ALERT_MARK = '/^ {0,3}>?[ \t]*\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*$/mi';
+/** An alert box with GitHub's class names (.markdown-alert.markdown-alert-note .markdown-alert-title), so CSS written for GitHub fits. */
+function nl_md_alert(string $kind, string $body): string
+{
+    [$label, $icon] = NL_MD_ALERTS[$kind];
+    // Other languages use GitHub's own titles (Note, Tip…): "警告" already means Warning elsewhere in the table.
+    $title = nm_lang() === 'ja' ? $label : ucfirst($kind);
+    return '<div class="markdown-alert markdown-alert-' . $kind . '" role="note"><p class="markdown-alert-title"><svg class="markdown-alert-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $icon . '</svg><span>' . h($title) . '</span></p>' . $body . '</div>';
 }
 /** Column alignments of a table's second row (|---|:--:|), or null when the row is not one. */
 function nl_md_table_rule(string $line): ?array
@@ -398,7 +426,7 @@ function nl_md_image_origins(string $html): string
 /** Plain text of a page for its description: Markdown marks and URLs removed. */
 function nl_page_excerpt(array $p, int $length = 120): string
 {
-    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '$1', '', '', '', ''], nl_ruby_plain($p['body']));
+    $text = (string)preg_replace([NL_MD_ALERT_MARK, NL_FRAME_MARK, '/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '', '', '$1', '', '', '', ''], nl_ruby_plain($p['body']));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
     return mb_strlen($text) > $length ? rtrim(mb_substr($text, 0, $length - 1)) . '…' : $text;
 }
@@ -438,9 +466,12 @@ function nl_page_help(): string
         [nm_t('[文字](https://example.com/)'), nm_t('リンク。./privacy や ./?pg=privacy のようなサイト内のURLも使えます')],
         [nm_t('![説明](./?media=…)'), nm_t('画像。「画像を追加」かドロップで入ります')],
         ['> ' . nm_t('引用'), nm_t('引用')],
+        ['> [!NOTE]<br>> ' . nm_t('本文'), nm_t('注意書きの箱（GitHubと同じ書き方）。NOTE・TIP・IMPORTANT・WARNING・CAUTION の5種類')],
         [nm_t('| 項目 | 内容 |<br>|---|---|<br>| a | b |'), nm_t('表（2行目は区切り）')],
         ['---', nm_t('区切り線')],
         [nm_t('`コード` / ```'), nm_t('コード。``` で囲むと複数行')],
+        ['```mermaid', nm_t('Mermaidの図（フローチャート・シーケンス図など）。画面の幅に合わせて表示し、「拡大」で大きく見られます')],
+        [nm_t('[ページ埋込]URL[/ページ埋込]'), nm_t('ほかのページ（ゲームなど）を枠に入れて表示。押すと読み込み、「全画面」で画面いっぱいにできます。[ページ埋込 4:3] のように書くと枠の形を変えられます')],
     ];
     $body = '';
     foreach ($rows as [$code, $note]) $body .= '<tr><td><code>' . str_replace('&lt;br&gt;', '<br>', h($code)) . '</code></td><td>' . h($note) . '</td></tr>';

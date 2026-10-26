@@ -134,6 +134,41 @@ html[data-log-theme="light-paper"] .log-site-title > a { font-family:"Yu Mincho"
 .embeddedinstagram .instagram-media,.embeddedinstagram iframe { width:100%!important; max-width:540px!important; min-width:0!important; margin:0 auto!important; border-radius:12px!important; }
 .log-embed-video video { display:block; width:100%; max-width:100%; height:auto; border-radius:calc(var(--log-radius) * .6); background:#000; }
 .log-embed-video figure { margin:0; display:grid; gap:8px; }.log-embed-video figcaption { color:var(--log-muted); font-size:13px; text-align:center; }
+/*
+ * Page embeds ([ページ埋込]URL[/ページ埋込]): a dark screen in the chosen shape, never taller than most of the window, with
+ * the page's title and a sticker to press. Pressed, the page takes its place; 全画面 fills the screen (or the window on an iPhone).
+ */
+.log-frame { --w:16; --h:9; --frame-width:min(100%, calc(78svh * var(--w) / var(--h))); margin:16px 0 20px; }.log-frame + br { display:none; }
+.log-frame.is-4x3 { --w:4; --h:3; }.log-frame.is-3x2 { --w:3; --h:2; }.log-frame.is-1x1 { --w:1; --h:1; }.log-frame.is-2x3 { --w:2; --h:3; }
+.log-frame.is-3x4 { --w:3; --h:4; }.log-frame.is-9x16 { --w:9; --h:16; }.log-frame.is-21x9 { --w:21; --h:9; }
+.log-frame-stage { position:relative; width:var(--frame-width); aspect-ratio:var(--w) / var(--h); margin:0 auto; overflow:hidden; border-radius:calc(var(--log-radius) * .6); background:#0d1018; box-shadow:0 0 0 1px var(--log-line), 0 4px 0 color-mix(in srgb,var(--log-accent) 20%,transparent); }
+.log-frame-stage iframe { position:absolute; inset:0; display:block; width:100%; height:100%; border:0; background:#000; }
+.log-site .log-frame-start,.log-frame-start { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:18px; overflow:hidden; color:#fff; text-align:center; text-decoration:none;
+    background:radial-gradient(110% 80% at 50% 0%, color-mix(in srgb,var(--log-accent) 42%,#0d1018), #0d1018 72%); }
+.log-site .log-frame-start:hover { text-decoration:none; }
+.log-frame-start::before { content:""; position:absolute; inset:10px; border:1.5px dashed #ffffff38; border-radius:calc(var(--log-radius) * .45); pointer-events:none; }
+.log-frame-start img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.42; filter:saturate(.9); }
+.log-frame-play { position:relative; display:inline-flex; align-items:center; gap:8px; padding:9px 20px 9px 15px; border:3px solid #fff; border-radius:999px; background:var(--log-accent); color:var(--log-on-accent); font-size:15px; font-weight:750; line-height:1.3;
+    box-shadow:0 4px 0 #00000040, 0 10px 24px #00000040; transform:rotate(-3deg); transition:transform .2s ease; }
+.log-frame-start:hover .log-frame-play,.log-frame-start:focus-visible .log-frame-play { transform:rotate(0) scale(1.06); }
+.log-frame-start:focus-visible { outline:3px solid #fff; outline-offset:-6px; }
+.log-frame-play .log-frame-icon { width:18px; height:18px; fill:currentColor; stroke:none; }
+.log-frame-text { position:relative; display:flex; flex-direction:column; gap:2px; max-width:92%; text-shadow:0 1px 8px #000c; }
+.log-frame-text strong { font-size:16px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.log-frame-text small { font-size:12px; opacity:.78; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.log-frame-icon { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.log-frame-bar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 12px; width:var(--frame-width); margin:8px auto 0; font-size:12px; line-height:1.6; }
+.log-frame-open { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--log-muted); }
+.log-frame-full,.log-frame-close { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 12px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-text); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.log-frame-full[hidden] { display:none; }
+.log-frame-full:hover { color:var(--log-accent); border-color:var(--log-accent); }
+.log-frame-full:focus-visible,.log-frame-close:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+/* The close button shows only over the full screen, small in the corner so the page keeps most of it. */
+.log-frame-close { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(8px + env(safe-area-inset-right)); z-index:1; display:none; border-color:#ffffff40; background:#000000a6; color:#fff; }
+.log-frame.is-full .log-frame-close,.log-frame.is-cover .log-frame-close { display:inline-flex; }
+.log-frame.is-full .log-frame-stage,.log-frame.is-cover .log-frame-stage { width:100%; aspect-ratio:auto; border-radius:0; box-shadow:none; background:#000; }
+.log-frame.is-cover .log-frame-stage { position:fixed; inset:0; z-index:230; height:100dvh; }
+html.log-frame-covered,html.log-frame-covered body { overflow:hidden; }
 /* Blog cards from OGP: title, description and site on the left, the page image on the right. */
 .log-site .log-card,.log-card { display:flex; align-items:stretch; max-width:640px; margin:14px 0 18px; border:1px solid var(--log-line); border-radius:calc(var(--log-radius) * .75); background:var(--log-card); color:var(--log-text); text-decoration:none; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
 .log-card + br { display:none; }.log-site .log-card:hover { border-color:var(--log-accent); box-shadow:0 6px 20px #0000001a; text-decoration:none; }.log-card:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
@@ -559,6 +594,84 @@ html[data-log-theme^="dark"] .log-code-copy.is-copied { color:#8fe0b5; border-co
 .log-code-copy.is-copied .log-code-icon-copy { display:none; }.log-code-copy.is-copied .log-code-icon-done { display:block; animation:log-share-pop .25s ease; }
 @media(prefers-reduced-motion:reduce) { .log-code-copy { transition:none; }.log-code-copy.is-copied .log-code-icon-done { animation:none; } }
 @media print { .log-code-copy { display:none; } }
+/*
+ * Alerts (> [!NOTE] … [!CAUTION]; GitHub's class names, so CSS written for GitHub still finds them), drawn the LOG's way:
+ * a soft dashed card with its title as a round sticker stuck on the top edge, a little tilted, with a white rim.
+ */
+.markdown-alert { --alert:#2f6fd6; --alert-ink:#fff; position:relative; margin:30px 0 1em; padding:24px 18px 14px; border:2px dashed color-mix(in srgb,var(--alert) 38%,var(--log-line)); border-radius:max(10px,var(--log-radius,16px)); background:color-mix(in srgb,var(--alert) 6%,var(--log-card)); overflow-wrap:anywhere; }
+.markdown-alert-note { --alert:#2f6fd6; }.markdown-alert-tip { --alert:#1a8a4a; }.markdown-alert-important { --alert:#7c4ddb; }.markdown-alert-warning { --alert:#b86a00; }.markdown-alert-caution { --alert:#d1343a; }
+html[data-log-theme^="dark"] .markdown-alert { --alert:#7fb0ff; --alert-ink:#10192d; }html[data-log-theme^="dark"] .markdown-alert-tip { --alert:#5fcf8c; }html[data-log-theme^="dark"] .markdown-alert-important { --alert:#b99cff; }html[data-log-theme^="dark"] .markdown-alert-warning { --alert:#f0b04d; }html[data-log-theme^="dark"] .markdown-alert-caution { --alert:#ff8a8f; }
+.markdown-alert-title { position:absolute; top:0; left:14px; display:inline-flex; align-items:center; gap:6px; margin:0 !important; padding:4px 14px 4px 6px; transform:translateY(-55%) rotate(-3deg); transform-origin:left center; border:3px solid var(--log-card); border-radius:999px; background:color-mix(in srgb,var(--alert) 88%,#000); color:var(--alert-ink); box-shadow:0 3px 0 color-mix(in srgb,var(--alert) 30%,transparent),0 6px 14px #0000001f; font-size:13px; font-weight:800; line-height:1.4; letter-spacing:.08em; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
+html[data-log-theme^="dark"] .markdown-alert-title { background:var(--alert); }
+.markdown-alert:hover .markdown-alert-title { transform:translateY(-58%) rotate(1deg) scale(1.04); }
+/* The icon sits in its own white circle, like a badge on the sticker. */
+.markdown-alert-icon { flex:none; box-sizing:border-box; width:24px; height:24px; padding:3px; border-radius:50%; background:var(--log-card); color:color-mix(in srgb,var(--alert) 88%,#000); fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+html[data-log-theme^="dark"] .markdown-alert-icon { color:var(--alert); }
+.markdown-alert > :last-child { margin-bottom:0; }.log-page-body .markdown-alert { margin:32px 0 1.15em; }
+.markdown-alert blockquote,.markdown-alert code { background:var(--log-card); }
+@media(prefers-reduced-motion:reduce) { .markdown-alert-title { transition:none; }.markdown-alert:hover .markdown-alert-title { transform:translateY(-55%) rotate(-3deg); } }
+/* Diagrams (```mermaid, drawn by viewer/log-mermaid.js): fitted to the column, 拡大 on the frame's corner like COPY. */
+.log-mermaid { position:relative; margin:22px 0 .5em; padding:20px 14px 14px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); }
+.log-page-body .log-mermaid { margin:26px 0 1.15em; }
+.log-mermaid-view { overflow-x:auto; overscroll-behavior-x:contain; }
+.log-mermaid-view svg { display:block; max-width:100%; height:auto; margin:0 auto; overflow:visible; }
+/*
+ * The diagrams drawn by log-mermaid.js, in the LOG's look: boxes are small cards with a short shadow under them like a
+ * sticker, lines are soft and round-ended, notes are tilted sticky notes, and a frame's kind sits in a round tag.
+ */
+.log-dg { --dg-ink:var(--log-text); --dg-line:color-mix(in srgb,var(--log-muted) 75%,var(--log-card)); --dg-box:var(--log-card); --dg-edge:var(--log-accent); font-family:inherit; }
+.log-dg-text { fill:var(--dg-ink); font-size:14px; font-weight:500; }
+.log-dg-text.is-small { font-size:13px; }
+.log-dg-text.is-muted { fill:var(--log-muted); }
+.log-dg-text.is-tag { fill:var(--log-on-accent); font-size:12px; font-weight:700; letter-spacing:.06em; }
+.log-dg-text.is-number { fill:var(--log-on-accent); font-size:11px; font-weight:700; }
+.log-dg-node > :first-child { fill:var(--dg-box); stroke:var(--dg-edge); stroke-width:1.6; filter:drop-shadow(0 3px 0 color-mix(in srgb,var(--dg-edge) 22%,transparent)); }
+.log-dg-node.is-diamond > :first-child { fill:color-mix(in srgb,var(--dg-edge) 9%,var(--dg-box)); }
+.log-dg-node.is-circle > :first-child,.log-dg-node.is-stadium > :first-child { fill:color-mix(in srgb,var(--dg-edge) 6%,var(--dg-box)); }
+.log-dg-line { fill:none; stroke:var(--dg-edge); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-edge { fill:none; stroke:var(--dg-line); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-edge.is-dotted { stroke-dasharray:2 6; }
+.log-dg-edge.is-thick { stroke:var(--dg-edge); stroke-width:3.2; }
+.log-dg-head { fill:var(--dg-line); }.log-dg-head.is-strong { fill:var(--dg-edge); }
+.log-dg-head-open { fill:none; stroke:var(--dg-line); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-head-ring { fill:var(--dg-box); stroke:var(--dg-line); stroke-width:1.8; }
+.log-dg-edge-label rect { fill:var(--dg-box); stroke:color-mix(in srgb,var(--dg-line) 55%,transparent); stroke-width:1; }
+/* Sequence diagrams: people as cards (an actor's corners round), dashed lives, messages in the text color. */
+.log-dg-actor rect { fill:var(--dg-box); stroke:var(--dg-edge); stroke-width:1.6; filter:drop-shadow(0 3px 0 color-mix(in srgb,var(--dg-edge) 22%,transparent)); }
+.log-dg-actor.is-actor rect { fill:color-mix(in srgb,var(--dg-edge) 9%,var(--dg-box)); }
+.log-dg-life { fill:none; stroke:var(--log-line); stroke-width:1.6; stroke-dasharray:4 5; stroke-linecap:round; }
+.log-dg-message .log-dg-line { stroke:var(--dg-ink); stroke-width:1.5; }
+.log-dg-message.is-dashed .log-dg-line { stroke-dasharray:5 5; }
+.log-dg-message .log-dg-head { fill:var(--dg-ink); }.log-dg-message .log-dg-head-open { stroke:var(--dg-ink); }
+.log-dg-number { fill:var(--dg-edge); }
+.log-dg-note rect { --note:#d9a400; fill:color-mix(in srgb,var(--note) 16%,var(--dg-box)); stroke:color-mix(in srgb,var(--note) 45%,var(--log-line)); stroke-width:1.2; transform-box:fill-box; transform-origin:center; transform:rotate(-1deg); filter:drop-shadow(0 2px 3px #0000001a); }
+.log-dg-frame rect { fill:color-mix(in srgb,var(--dg-edge) 3%,transparent); stroke:color-mix(in srgb,var(--dg-edge) 40%,var(--log-line)); stroke-width:1.4; stroke-dasharray:6 4; }
+.log-dg-frame.is-rect rect,.log-dg-frame.is-box rect { fill:color-mix(in srgb,var(--dg-edge) 6%,transparent); stroke-dasharray:none; stroke:var(--log-line); }
+.log-dg-frame-tag { fill:var(--dg-edge); }
+.log-dg-frame-split { fill:none; stroke:color-mix(in srgb,var(--dg-edge) 35%,var(--log-line)); stroke-width:1.2; stroke-dasharray:6 4; }
+.log-mermaid-source { margin:0; padding:0; border:0; background:none; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--log-muted); }
+.log-mermaid-source[hidden] { display:none; }
+.log-mermaid-error { display:grid; gap:2px; margin:0 0 10px; padding:8px 12px; border-radius:10px; background:color-mix(in srgb,#b86a00 9%,var(--log-card)); color:var(--log-text); font-size:13px; line-height:1.6; }
+.log-mermaid-error small { color:var(--log-muted); font-size:11.5px; overflow-wrap:anywhere; }
+.log-mermaid-zoom { position:absolute; top:0; right:12px; z-index:1; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 11px; transform:translateY(-50%); border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-muted); box-shadow:0 2px 8px #0000001f; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.log-mermaid-zoom:hover { color:var(--log-accent); border-color:var(--log-accent); }.log-mermaid-zoom:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-mermaid-icon { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+/* 拡大: the diagram over the whole screen, scrolled both ways; the bar keeps the zoom and 閉じる in reach. */
+html.log-mermaid-open,html.log-mermaid-open body { overflow:hidden; }
+.log-mermaid-sheet { position:fixed; inset:0; z-index:220; box-sizing:border-box; width:100%; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:var(--log-bg); color:var(--log-text); }
+.log-mermaid-sheet[open] { display:flex; flex-direction:column; }
+.log-mermaid-sheet::backdrop { background:#10192d80; }
+.log-mermaid-sheet-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:calc(10px + env(safe-area-inset-top)) 14px 10px; border-bottom:1px solid var(--log-line); background:var(--log-card); }
+.log-mermaid-sheet-tools { display:flex; align-items:center; gap:4px; padding:3px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-bg); }
+.log-mermaid-sheet button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:40px; height:38px; padding:0 12px; border:0; border-radius:999px; background:none; color:var(--log-text); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.log-mermaid-sheet button:hover { color:var(--log-accent); }.log-mermaid-sheet button:focus-visible { outline:2px solid var(--log-accent); outline-offset:1px; }
+.log-mermaid-sheet .log-mermaid-level { min-width:64px; font-variant-numeric:tabular-nums; }
+.log-mermaid-sheet .log-mermaid-sheet-close { border:1px solid var(--log-line); background:var(--log-card); }
+.log-mermaid-sheet .log-mermaid-icon { width:18px; height:18px; }
+.log-mermaid-stage { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; padding:16px; box-sizing:border-box; outline:none; }
+.log-mermaid-figure { display:flex; align-items:center; justify-content:center; width:max-content; min-width:100%; min-height:100%; padding-bottom:env(safe-area-inset-bottom); }
+.log-mermaid-figure svg { display:block; flex:none; padding:16px; box-sizing:content-box; border-radius:12px; background:var(--log-card); }
+@media print { .log-mermaid-zoom { display:none; } }
 .log-md-table { max-width:100%; overflow-x:auto; }
 .log-md-table table { width:100%; border-collapse:collapse; font-size:.94em; line-height:1.7; }
 .log-md-table th,.log-md-table td { padding:9px 12px; border:1px solid var(--log-line); text-align:left; vertical-align:top; }

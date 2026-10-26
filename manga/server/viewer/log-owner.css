@@ -235,9 +235,16 @@
 /* With the dock beside it, the editor gets a taller text box and keeps 下書き保存・投稿する in reach at the bottom. */
 .log-compose[data-dock="grid"] form.is-wide textarea[name="body"] { min-height:max(240px,40vh); }
 .log-compose[data-dock="grid"] .log-submit { position:sticky; bottom:0; z-index:2; margin-top:12px; padding:12px 0; border-top:1px solid var(--log-line); background:var(--log-card); box-shadow:0 24px 0 var(--log-card); }
-/* Full-screen editor on a PC: the dock and the 760px column sit in the middle together. */
+/*
+ * The editors' widths, shared by the full-screen editor on the public pages and the post / fixed page edit pages in the
+ * admin (main.log-editor-main, from nl_is_editor_view()). A wide PC (1600px and up) gets the wider step; the lists stay as they are.
+ */
+:root { --log-editor-column:760px; --log-editor-page:1100px; }
+@media(min-width:1600px) { :root { --log-editor-column:960px; --log-editor-page:1440px; } }
+.main.log-editor-main { max-width:var(--log-editor-page); }
+/* Full-screen editor on a PC: the dock and the text column sit in the middle together. */
 @media(min-width:901px) {
-    body .log-compose-slot .log-compose[data-dock="grid"] { padding-left:max(16px,calc((100vw - 760px - var(--log-dock) - 24px) / 2)); padding-right:max(16px,calc((100vw - 760px - var(--log-dock) - 24px) / 2)); }
+    body .log-compose-slot .log-compose[data-dock="grid"] { padding-left:max(16px,calc((100vw - var(--log-editor-column) - var(--log-dock) - 24px) / 2)); padding-right:max(16px,calc((100vw - var(--log-editor-column) - var(--log-dock) - 24px) / 2)); }
     /* The edit page keeps the editor in the page: the dock follows the page's scroll. */
     .log-compose.log-edit[data-dock="grid"] > .log-media-dock { top:16px; max-height:calc(100dvh - 32px); }
 }
@@ -351,7 +358,7 @@
 @media(prefers-reduced-motion:reduce) {
     .log-compose-slot .log-fab,.log-compose-slot .log-fab-admin { transition:none; }
 }
-.log-compose-slot .log-compose.active { position:fixed; inset:0; z-index:100; width:100%; height:var(--log-viewport-height,100dvh); margin:0; padding:24px max(16px,calc((100vw - 760px)/2)); border:0; border-radius:0; overflow-y:auto; overscroll-behavior:contain; visibility:visible; transform:none; }
+.log-compose-slot .log-compose.active { position:fixed; inset:0; z-index:100; width:100%; height:var(--log-viewport-height,100dvh); margin:0; padding:24px max(16px,calc((100vw - var(--log-editor-column))/2)); border:0; border-radius:0; overflow-y:auto; overscroll-behavior:contain; visibility:visible; transform:none; }
 .log-compose-slot .log-compose.active .log-close { display:block; }
 /* Above the bands over the text (.log-mark-layer), which scroll under it. */
 .log-compose-slot .log-compose.active .log-compose-head { position:sticky; top:-24px; background:var(--log-card); padding:12px 0; z-index:4; }

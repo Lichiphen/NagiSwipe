@@ -42,9 +42,11 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
   - [Table of contents](#table-of-contents)
   - [Markdown in posts](#markdown-in-posts)
   - [Ruby (reading aids)](#ruby-reading-aids)
+  - [Alerts and diagrams (Mermaid)](#alerts-and-diagrams-mermaid)
 - [Content warnings (sensitive, R-18, R-18G)](#content-warnings-sensitive-r-18-r-18g)
 - [Embedding social media and video](#embedding-social-media-and-video)
   - [Blog cards](#blog-cards)
+  - [Page embeds](#page-embeds)
 - [Picture formats, sizes and management](#picture-formats-sizes-and-management)
   - [SVG](#svg)
 - [Video and audio](#video-and-audio)
@@ -441,6 +443,7 @@ The posting box has the text, the media of the text, chips for set items and one
 
 On a PC or a device turned sideways, the tool row sits above the text box, and what #, the folder and the others open appears under it (above the text). The preview is switched with the "書く" (write) and "プレビュー" (preview) tabs above the text box and shows in the text box's place at about the same height (a long post scrolls inside the frame). The eye switches it too.
 "本文へ" (back to the text) next to the heading closes the preview, an open panel and the media list tab, scrolls the text box into view and puts the caret back where it was. It is filled in while the preview or a panel is open, or the text box is out of sight.
+On a PC 1600px wide or more, the edit pages of posts and fixed pages are wider (1100px to 1440px). Lists such as the post list, and the posting box on the top page, stay as they are.
 A "Media" panel stays open on the left: as a column left of the text when the posting screen is open full screen and on the edit page, and floating in the left margin beside the posting box on the top page (not shown when the margin is too narrow). The floating panel tucks away upwards while scrolling down and comes back when scrolling up.
 - "この投稿" (this post), the tab shown first: the media groups in the text (thumbnails, reordering, content warnings, +) are listed here instead of under the text box. The number on the tab is how many media are in the post. With none yet, it offers buttons to add files or open the media list.
 - "メディア一覧" (media list): search pictures, video and audio by description, and press one to put it at the cursor in the text. "Choose from the media list" on the tool row moves to this tab's search. Uploads join the top of the list.
@@ -546,6 +549,29 @@ The text of posts and fixed pages, and a post's title (its first line), take rub
 - In a table `|` divides the columns, so use the full-width `｜` there. Inside code the marks stay as typed.
 - Where ruby is not supported (some RSS readers), it shows in brackets, like "親文字（おやもじ）".
 - Page titles, descriptions, search results and lists show only the base words. Search finds a post by its readings too (`漢字` and `かんじ` both find it).
+
+### Alerts and diagrams (Mermaid)
+
+Posts and fixed pages take alert boxes written as on GitHub, and diagrams written as in Mermaid.
+
+| Write | Shows |
+| --- | --- |
+| `> [!NOTE]` | 補足 (Note, blue) |
+| `> [!TIP]` | ヒント (Tip, green) |
+| `> [!IMPORTANT]` | 重要 (Important, purple) |
+| `> [!WARNING]` | 注意 (Warning, orange) |
+| `> [!CAUTION]` | 警告 (Caution, red) |
+| enclosed in ```` ```mermaid ```` | A diagram (flowcharts and sequence diagrams) |
+
+- For an alert, write the mark alone on the first line and the text on the next lines, each starting with `> `. Text after the mark on the same line makes an ordinary quote. Lower case (`[!note]`) works too.
+- An alert is a dashed box with its title (Note, Tip…) stuck on the top edge like a round sticker. The class names are GitHub's (`.markdown-alert`, `.markdown-alert-note`, `.markdown-alert-title` and so on), so CSS written for GitHub works as additional CSS. English public pages title them Note, Tip and so on.
+- The LOG draws the diagrams itself (no outside library or service). It draws two kinds; others (such as `pie`) show their source as written.
+  - Flowcharts (`graph` / `flowchart`, directions `TD` `TB` `BT` `LR` `RL`): shapes `[box]` `(rounded)` `([stadium])` `((circle))` `{diamond}` `{{hexagon}}` `[(cylinder)]` `[[double sides]]` `[/slanted/]` `>flag]`, lines `-->` `---` `-.->` `==>` `--o` `--x` `<-->`, words on lines `-->|yes|` and `-- yes -->`, and groups `A & B --> C`. Colors set with `classDef` or `style` are left out; the LOG theme colors them.
+  - Sequence diagrams (`sequenceDiagram`): `participant` and `actor` (`as` for the shown name), messages `->>` `-->>` `->` `-->` `-x` `-)`, `Note left of` / `right of` / `over`, frames `loop`, `alt` / `else`, `opt`, `par` / `and`, `critical`, `break`, and `autonumber`.
+- Diagrams shrink to the width of the text. Boxes are drawn as small cards and notes as slightly tilted sticky notes, in the LOG theme's colors. Additional CSS can change them with `.log-dg { --dg-edge: …; }`.
+- "拡大" (Enlarge) on a diagram's top right corner opens it over the whole screen, at its own size and scrollable both ways. "−" and "+" (or Ctrl + wheel, or the `-` and `+` keys) change the size, and the percentage fits it to the screen. It helps when reading a detailed diagram on a phone.
+- A diagram that cannot be drawn because of a mistake shows the line that could not be read and its source.
+- "装飾" (Format) in the posting box and the fixed page editor puts them in: "注意書き" (Alerts) and "まとまり › 図（Mermaid）" (Blocks › Diagram).
 
 ## Content warnings (sensitive, R-18, R-18G)
 
@@ -695,6 +721,23 @@ Because it reads outside pages, it has these limits:
 </details>
 
 Log backups do not include the stored cards. On the new server, saving the post again makes the card again.
+
+### Page embeds
+
+Pages not on the list above can also be shown in a frame inside the text: write `[Embed]URL[/Embed]` on a line of its own. It suits pages that fill the whole window, such as games played in the browser. It works in posts and fixed pages alike.
+
+| Notation | Shown as |
+| --- | --- |
+| `[Embed]https://example.com/game/[/Embed]` | A wide (16:9) frame |
+| `[Embed 4:3]https://example.com/game/[/Embed]` | A frame of the given shape (`16:9` `4:3` `3:2` `1:1` `2:3` `3:4` `9:16` `21:9`) |
+
+- At first a cover is shown, and the page loads only when the reader presses Load the page, so a heavy game does not load just because someone scrolled past it (a phone short of memory may close the page). The cover shows the page's title and picture, fetched as for blog cards.
+- Full screen under the frame spreads it over the whole screen. Browsers without full screen (an iPhone, for one) spread it over the window instead. Close on the top right corner goes back.
+- The frame is at most 80% of the screen's height; tall shapes get narrower to fit. A link under the frame opens the page in a new tab.
+- `[ページ埋込]URL[/ページ埋込]` works too. The Format window of the post and fixed page editors puts one in from Blocks › Page embed.
+- The page goes into the frame through this site's `embed.php`. `embed.php` opens only URLs this site signed when it drew the text, so nobody can show another page under this site's address. The public pages' CSP never needs to list the other site.
+- The page in the frame can use scripts, storage (saved games), full screen and gamepads, and can open new windows. It moves this site's page elsewhere only when the reader presses a link.
+- Pages whose site forbids frames (`X-Frame-Options` or CSP `frame-ancestors`) cannot be shown. Readers can open them from the link under the frame.
 
 ## Picture formats, sizes and management
 
@@ -1049,6 +1092,21 @@ The list of this version:
 | `.log-toc-sheet` | The sheet the table of contents button opens | Post pages, Fixed pages | `.log-toc-sheet { border-radius: 16px 16px 0 0; }` | v0.8.0 |
 | `.log-code-block` | The frame of a code block in an article or page; holds pre.log-md-code and the COPY button | Post pages, Fixed pages | `.log-code-block pre { font-size: 13px; }` | v0.8.2 |
 | `.log-code-copy` | The COPY button on the top right corner of a code block (.is-copied after copying) | Post pages, Fixed pages | `.log-code-copy { color: var(--log-accent); }` | v0.8.2 |
+| `.markdown-alert` | An alert box (> [!NOTE] and the rest, with GitHub's class names) | Post pages, Fixed pages | `.markdown-alert { border-radius: 4px; }` | Next version |
+| `.markdown-alert-note` | The NOTE box | Post pages, Fixed pages | `.markdown-alert-note { --alert: #0969da; }` | Next version |
+| `.markdown-alert-tip` | The TIP box | Post pages, Fixed pages | `.markdown-alert-tip { --alert: #1a7f37; }` | Next version |
+| `.markdown-alert-important` | The IMPORTANT box | Post pages, Fixed pages | `.markdown-alert-important { --alert: #8250df; }` | Next version |
+| `.markdown-alert-warning` | The WARNING box | Post pages, Fixed pages | `.markdown-alert-warning { --alert: #9a6700; }` | Next version |
+| `.markdown-alert-caution` | The CAUTION box | Post pages, Fixed pages | `.markdown-alert-caution { --alert: #d1242f; }` | Next version |
+| `.markdown-alert-title` | The title of an alert box (its icon and name) | Post pages, Fixed pages | `.markdown-alert-title { font-size: 15px; }` | Next version |
+| `.log-mermaid` | The frame of a diagram (a flowchart or sequence diagram written in ```mermaid) | Post pages, Fixed pages | `.log-mermaid { background: var(--log-bg); }` | Next version |
+| `.log-mermaid-zoom` | The Enlarge button on the top right corner of a diagram | Post pages, Fixed pages | `.log-mermaid-zoom { color: var(--log-accent); }` | Next version |
+| `.log-mermaid-sheet` | The diagram over the whole screen, opened by Enlarge | Post pages, Fixed pages | `.log-mermaid-sheet { background: var(--log-card); }` | Next version |
+| `.log-dg` | A drawn diagram (SVG). Its colors follow --dg-edge (frames and strong arrows), --dg-line (lines), --dg-box (boxes) and --dg-ink (words) | Post pages, Fixed pages | `.log-dg { --dg-edge: #e0607e; }` | Next version |
+| `.log-frame` | A page embed ([Embed]URL[/Embed]) as a whole. --frame-width sets the width of its frame | Post pages, Fixed pages | `.log-frame { --frame-width: 100%; }` | Next version |
+| `.log-frame-stage` | The frame of a page embed (its cover, then the page once pressed) | Post pages, Fixed pages | `.log-frame-stage { border-radius: 0; }` | Next version |
+| `.log-frame-play` | The Load the page sticker on a page embed’s cover | Post pages, Fixed pages | `.log-frame-play { transform: none; }` | Next version |
+| `.log-frame-bar` | The row under a page embed (the link to open it in a new tab and the Full screen button) | Post pages, Fixed pages | `.log-frame-bar { font-size: 13px; }` | Next version |
 
 **CSS variables**
 
@@ -1341,9 +1399,12 @@ The Markdown that can be used in the text is below. Line breaks stay line breaks
 | `[text](https://…)` / `[text](./?pg=terms)` / `[mail](mailto:…)` | Links. `javascript:` and the like do not become links |
 | `![description](./?media=…)` | Pictures. Log pictures can be zoomed with NagiSwipe, and replacing them shows the new picture |
 | `> quote` | Quotes |
+| `> [!NOTE]`, then `> text` on the next lines | An alert box (TIP, IMPORTANT, WARNING and CAUTION too; see [Alerts and diagrams](#alerts-and-diagrams-mermaid)) |
 | `\| item \| details \|` followed by a line `\| --- \| :-: \|` | Tables (`:-:` centers, `--:` aligns right) |
 | `---` | A dividing line |
 | enclosed in ```` ``` ```` | Code over several lines |
+| enclosed in ```` ```mermaid ```` | A diagram (flowchart or sequence diagram; see [Alerts and diagrams](#alerts-and-diagrams-mermaid)) |
+| `[Embed]URL[/Embed]` | Another page (a game, say) in a frame (see [Page embeds](#page-embeds)) |
 
 The edit screen's tool row has the same icons as the posting box: "画像を追加" (add pictures), "画像一覧から選ぶ" (choose from the picture list), bold, italic, links, "装飾" (Format, the same window as in the posting box) for headings, bullets, numbers, quotes, tables, dividing lines, strikethrough, code and ruby, "Markdownの書き方" (?, the Markdown table), and the preview (the eye) at the right end.
 It is laid out like the posting box too. On a PC or a phone turned sideways the tool row sits above the text, and the text box has "書く" (Write) and "プレビュー" (Preview) tabs; the preview keeps the text box's height and scrolls inside. A media dock on the left has "このページ" (this page: the pictures in the text, with a count) and "画像一覧" (the picture list: search by description, choose, and it goes in at the cursor). "本文へ" (back to the text) beside the heading leaves the preview or the list. "下書き保存" and "公開して保存" stay at the bottom of the screen.

@@ -125,9 +125,25 @@ window.NagiLogFormat = (() => {
             put(body, end, end, text, text.length, text.length);
             return;
         }
-        if (kind === 'code') {
-            const code = picked.replace(/\n$/, '') || t('コード');
-            put(body, start, end, lead + '```\n' + code + '\n```' + tail, lead.length + 4, lead.length + 4 + code.length);
+        if (kind === 'code' || kind === 'mermaid') {
+            // A Mermaid diagram starts from a small flowchart when nothing is chosen.
+            const code = picked.replace(/\n$/, '') || (kind === 'mermaid' ? 'flowchart LR\n  A[' + t('書く') + '] --> B[' + t('公開') + ']' : t('コード'));
+            const open = kind === 'mermaid' ? '```mermaid\n' : '```\n';
+            put(body, start, end, lead + open + code + '\n```' + tail, lead.length + open.length, lead.length + open.length + code.length);
+            return;
+        }
+        // A page embed around the chosen URL; with none, the URL to type is chosen.
+        if (kind === 'frame') {
+            const url = /^https?:\/\/\S+$/.test(picked.trim()) ? picked.trim() : 'https://';
+            const tag = frameTag(), open = '[' + tag + ']';
+            put(body, start, end, lead + open + url + '[/' + tag + ']' + tail, lead.length + open.length, lead.length + open.length + url.length);
+            return;
+        }
+        // GitHub's alerts: > [!NOTE] on the first line, the chosen lines (or a sample) quoted under it.
+        if (kind in ALERTS) {
+            const mark = '> [!' + kind.toUpperCase() + ']\n> ';
+            const text = (picked.replace(/\n$/, '') || t('ここに書きます')).split('\n').join('\n> ');
+            put(body, start, end, lead + mark + text + tail, lead.length + mark.length, lead.length + mark.length + text.length);
             return;
         }
         const a = t('項目'), b = t('内容'), cell = picked.trim() || 'a';
@@ -135,6 +151,11 @@ window.NagiLogFormat = (() => {
         const at = text.lastIndexOf('| ' + cell) + 2;
         put(body, start, end, text, at, at + cell.length);
     }
+    // The alert kinds with their titles: Japanese on a Japanese admin, GitHub's own (Note, Tip…) otherwise, as on the public pages.
+    const ALERTS = { note: '補足', tip: 'ヒント', important: '重要', warning: '注意', caution: '警告' };
+    const alertTitle = kind => document.documentElement.lang === 'ja' ? ALERTS[kind] : kind[0].toUpperCase() + kind.slice(1);
+    // [ページ埋込] on a Japanese admin, [Embed] otherwise; the pages read both.
+    const frameTag = () => document.documentElement.lang === 'ja' ? 'ページ埋込' : 'Embed';
     const ACTIONS = {
         bold: (body, range) => wrap(body, range, '**', t('太字にする文字')),
         italic: (body, range) => wrap(body, range, '*', t('斜体にする文字')),
@@ -148,6 +169,9 @@ window.NagiLogFormat = (() => {
         table: (body, range) => block(body, range, 'table'),
         rule: (body, range) => block(body, range, 'rule'),
         codeblock: (body, range) => block(body, range, 'code'),
+        mermaid: (body, range) => block(body, range, 'mermaid'),
+        frame: (body, range) => block(body, range, 'frame'),
+        ...Object.fromEntries(Object.keys(ALERTS).map(kind => [kind, (body, range) => block(body, range, kind)])),
     };
     function apply(name, body, range = [body.selectionStart, body.selectionEnd], options = {}) {
         const h = /^h([234])$/.exec(name);
@@ -199,7 +223,8 @@ window.NagiLogFormat = (() => {
         const names = { 2: t('見出し２'), 3: t('見出し３'), 4: t('見出し４') };
         if (levels.length) dialog.append(group(t('見出し'), levels.map(n => ['h' + n, names[n], '#'.repeat(n) + ' '])));
         dialog.append(group(t('文字'), [['strike', t('取り消し線'), '~~ ~~'], ['code', t('コード'), '` `'], ['ruby', t('ルビ（読み仮名）'), '|漢字《かんじ》']]));
-        dialog.append(group(t('まとまり'), [['list', t('箇条書き'), '- '], ['ordered', t('番号付きリスト'), '1. '], ['quote', t('引用'), '> '], ['table', t('表'), '| |'], ['rule', t('区切り線'), '---'], ['codeblock', t('コードブロック'), '```']]));
+        dialog.append(group(t('まとまり'), [['list', t('箇条書き'), '- '], ['ordered', t('番号付きリスト'), '1. '], ['quote', t('引用'), '> '], ['table', t('表'), '| |'], ['rule', t('区切り線'), '---'], ['codeblock', t('コードブロック'), '```'], ['mermaid', t('図（Mermaid）'), '```mermaid'], ['frame', t('ページ埋込'), '[' + frameTag() + ']URL']]));
+        dialog.append(group(t('注意書き'), Object.keys(ALERTS).map(kind => [kind, alertTitle(kind), '> [!' + kind.toUpperCase() + ']'])));
         dialog.showModal();
         dialog.querySelector('.log-format-choice')?.focus();
     }

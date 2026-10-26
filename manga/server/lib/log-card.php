@@ -24,13 +24,18 @@ function nl_card_load(string $url): ?array
     return is_array($c) && ($c['url'] ?? '') === $url ? $c : null;
 }
 
-/** Own-line URLs in a body that are neither embeds nor already fresh cards. */
-function nl_card_targets(string $body): array
+/**
+ * Own-line URLs in a body that are neither embeds nor already fresh cards, and the pages of page embeds
+ * ([ページ埋込]URL[/ページ埋込], whose cover shows the card's title and picture). $framesOnly: a fixed page, which has no cards.
+ */
+function nl_card_targets(string $body, bool $framesOnly = false): array
 {
-    preg_match_all('/' . NL_EMBED_PATTERN . '/i', str_replace("\r", '', $body), $m);
+    $body = str_replace("\r", '', $body);
+    $urls = [];
+    if (!$framesOnly) { preg_match_all('/' . NL_EMBED_PATTERN . '/i', $body, $m); $urls = array_map('trim', $m[0]); }
+    foreach (explode("\n", $body) as $line) if (str_contains($line, '[/') && ($f = nl_frame_parse($line))) $urls[] = $f['url'];
     $out = [];
-    foreach ($m[0] as $line) {
-        $url = trim($line);
+    foreach ($urls as $url) {
         if (nl_embed_detect($url) || !filter_var($url, FILTER_VALIDATE_URL) || isset($out[$url])) continue;
         $c = nl_card_load($url);
         if ($c && time() - (int)$c['fetched'] < ($c['ok'] ? NL_CARD_TTL : NL_CARD_RETRY)) continue;
@@ -41,11 +46,11 @@ function nl_card_targets(string $body): array
 }
 
 /** Fetch and store cards for a body before it is saved or previewed. Failures only mean "no card". */
-function nl_cards_prepare(string $body): void
+function nl_cards_prepare(string $body, bool $framesOnly = false): void
 {
     $deadline = microtime(true) + NL_CARD_BUDGET;
-    nl_embeds_prepare($body, $deadline);
-    foreach (nl_card_targets($body) as $url) {
+    if (!$framesOnly) nl_embeds_prepare($body, $deadline);
+    foreach (nl_card_targets($body, $framesOnly) as $url) {
         if (microtime(true) > $deadline) break;
         try { $card = nl_card_fetch($url, $deadline); }
         catch (Throwable) { $card = null; }

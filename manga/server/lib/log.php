@@ -585,8 +585,8 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
  */
 function nl_excerpt(array $p, int $length = 120): string
 {
-    // Markdown marks: code blocks go, a link keeps its words, line marks (## - 1. >), table rules and emphasis marks are dropped.
-    $text = (string)preg_replace(['/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '/^ {0,3}(?:#{2,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$/mu', '/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/mu'], ['', '', '$1', '', '', ''], nl_ruby_plain(nl_post_parts($p)['body']));
+    // Markdown marks: alert marks and code blocks go, a link keeps its words, line marks (## - 1. >), table rules and emphasis marks are dropped.
+    $text = (string)preg_replace([NL_MD_ALERT_MARK, NL_FRAME_MARK, '/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '/^ {0,3}(?:#{2,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$/mu', '/^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/mu'], ['', '', '', '', '$1', '', '', ''], nl_ruby_plain(nl_post_parts($p)['body']));
     $text = (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u', '~https?://[^\s<>"\[\]]+~u'], '', $text);
     $text = str_replace(['**', '~~', '`', '*', '|'], ['', '', '', '', ' '], (string)preg_replace(NL_HASHTAG_PATTERN, '', $text));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
@@ -637,7 +637,7 @@ function nl_search_text(array $p, array $categories): string
 }
 function nl_search_body(array $p): string
 {
-    return str_replace('**', '', (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u'], ['', '$1'], nl_ruby_plain((string)$p['body'])));
+    return str_replace('**', '', (string)preg_replace(['/\[Image:[a-f0-9]{16}\]/', '/\[Manga([^\]\r\n]+)\]/u', NL_FRAME_MARK], ['', '$1', ' '], nl_ruby_plain((string)$p['body'])));
 }
 /** What search looks through: the body without ruby marks, then the readings (検索 is found by けんさく too). */
 function nl_search_hay(array $p): string

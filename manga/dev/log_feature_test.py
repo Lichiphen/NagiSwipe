@@ -245,6 +245,34 @@ def run(c, csrf, port):
     found = lambda q: has(public.get("/?q=" + urllib.parse.quote(q)).text, pid_ruby)
     check("ルビ: 親文字でも読み仮名でも検索で見つかる", found("東京都の夜空") and found("とうきょうと") and found("花火大会") and found("よぞら"))
 
+    # GitHub alerts (> [!NOTE] … [!CAUTION]) with GitHub's class names; ```mermaid as a diagram frame, its script only where one is.
+    pid_alert = save("注意書きと図\n> [!NOTE]\n> 補足の**本文**\n\n> [!caution]\n> 消せません\n\n> [!NOTE] 同じ行の文\n\n```mermaid\nflowchart LR\n  A[<b>x</b>] --> B\n```", status="published")
+    page = public.get("/?id=" + pid_alert).text
+    body = page.split('class="log-body"')[1].split('<footer')[0]
+    description = page.split('name="description" content="')[1].split('"')[0]
+    check("注意書き: GitHubと同じクラス名と見出し", '<div class="markdown-alert markdown-alert-note" role="note"><p class="markdown-alert-title"><svg class="markdown-alert-icon"' in body and '<span>補足</span></p>補足の<strong>本文</strong></div>' in body)
+    check("注意書き: 小文字の [!caution] も警告の箱、印の行に文があればふつうの引用", 'markdown-alert-caution' in body and '<span>警告</span>' in body and '<blockquote>[!NOTE] 同じ行の文</blockquote>' in body)
+    check("注意書き: 説明文に印を出さない", '[!NOTE]\n' not in description and '[!caution]' not in description and '補足の本文' in description)
+    check("Mermaid: 図の枠に元の文を入れ、HTMLは文字のまま", '<div class="log-mermaid" data-mermaid><pre class="log-mermaid-source"><code>flowchart LR\n  A[&lt;b&gt;x&lt;/b&gt;] --&gt; B</code></pre></div>' in body and 'log-md-code' not in body)
+    check("Mermaid: 図のある記事だけ図のスクリプトを読む", 'viewer/log-mermaid.js?v=' in page and 'viewer/log-mermaid.js' not in public.get("/?id=" + pid_ruby).text)
+
+    # Page embeds: [ページ埋込]URL[/ページ埋込] alone on a line is a cover that loads the page through embed.php, which opens only signed URLs.
+    pid_frame = save("ゲームを貼る\n[ページ埋込 9:16]https://game.example/play/?a=1&b=2[/ページ埋込]\n[ページ埋込 5:4]https://game.example/[/ページ埋込]\n[Embed]https://game.example/en/[/Embed]\n文の途中の [ページ埋込]https://game.example/x/[/ページ埋込] は文字\n[ページ埋込]javascript:alert(1)[/ページ埋込]", status="published")
+    page = public.get("/?id=" + pid_frame).text
+    body = page.split('class="log-body"')[1].split('<footer')[0]
+    description = page.split('name="description" content="')[1].split('"')[0]
+    src = re.search(r'data-frame-src="\./embed\.php\?u=([^"&]+)&amp;s=([a-f0-9]{32})"', body)
+    check("ページ埋込: 形を選んだ表紙、知らない形は16:9、英語の書き方も", '<figure class="log-frame is-9x16" data-frame>' in body and body.count('<figure class="log-frame is-16x9" data-frame>') == 2
+          and src is not None and urllib.parse.unquote(src.group(1)) == "https://game.example/play/?a=1&b=2")
+    check("ページ埋込: 文の途中とhttp(s)でないURLは埋め込まない", body.count('class="log-frame ') == 3 and '[ページ埋込]javascript:alert(1)[/ページ埋込]' in body and 'href="javascript' not in body)
+    check("ページ埋込: 説明文に印を出さない", 'ページ埋込' not in description and 'Embed]' not in description)
+    framed = public.get("/embed.php?u=" + src.group(1) + "&s=" + src.group(2))
+    csp = framed.getheader("Content-Security-Policy") or ""
+    check("ページ埋込: embed.phpは署名したURLだけを枠に入れ、CSPはその相手だけ", framed.status == 200 and 'src="https://game.example/play/?a=1&amp;b=2"' in framed.text
+          and "frame-src https://game.example;" in csp and "frame-ancestors 'self'" in csp and 'sandbox="allow-scripts allow-same-origin' in framed.text)
+    other = urllib.parse.quote("https://evil.example/", safe="")
+    check("ページ埋込: 署名の違うURL・署名なしは開かない", public.get("/embed.php?u=" + other + "&s=" + src.group(2)).status == 404 and public.get("/embed.php?u=" + other).status == 404)
+
 
 def main():
     RESULTS.mkdir(exist_ok=True)

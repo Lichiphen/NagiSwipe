@@ -200,7 +200,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($logUi
-            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script><script src="' . nm_asset('../viewer/log-code.js') . '" defer></script>'
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script><script src="' . nm_asset('../viewer/log-code.js') . '" defer></script><script src="' . nm_asset('../viewer/log-mermaid.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage
@@ -213,7 +213,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
               . '<script src="' . nm_asset('../viewer/NagiManga.js') . '" defer></script>' : '')
         . $head
         . '</head><body><header class="top"><span class="brand">' . nl_ui_icon() . '<span>NagiManga / LOG</span></span>' . $navHtml . '</header>'
-        . '<main class="main' . ($logPage ? ' log-admin-main' : '') . '">' . $banner . $flash . $body . '</main>'
+        . '<main class="main' . ($logPage ? ' log-admin-main' . (nl_is_editor_view(nm_str($_GET, 'p', 20)) ? ' log-editor-main' : '') : '') . '">' . $banner . $flash . $body . '</main>'
         . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
 }
 

@@ -76,7 +76,70 @@
         }));
         return loading.get(src);
     }
+    // Page embeds ([ページ埋込]URL[/ページ埋込]): the page loads only when the reader presses its cover, since a game can be
+    // heavy on a phone. 全画面 uses the browser's full screen, or covers the window where there is none (an iPhone).
+    const FRAME_ALLOW = 'autoplay; gamepad; clipboard-write; screen-wake-lock';
+    function startFrame(box) {
+        const old = box.querySelector('.log-frame-stage iframe');
+        if (old) return old;
+        const start = box.querySelector('.log-frame-start');
+        const frame = document.createElement('iframe');
+        frame.src = start.dataset.frameSrc; frame.title = start.dataset.frameTitle || '';
+        frame.allow = FRAME_ALLOW; frame.allowFullscreen = true;
+        start.replaceWith(frame);
+        box.querySelector('[data-frame-full]')?.removeAttribute('hidden');
+        frame.focus({ preventScroll: true });
+        return frame;
+    }
+    const fullElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    let covered = null, coverOpener = null;
+    function cover(box, on) {
+        if (on) {
+            covered = box;
+            box.style.minHeight = box.offsetHeight + 'px';
+            box.classList.add('is-cover');
+            document.documentElement.classList.add('log-frame-covered');
+            box.querySelector('.log-frame-close')?.focus();
+        } else if (covered) {
+            covered.classList.remove('is-cover');
+            covered.style.minHeight = '';
+            document.documentElement.classList.remove('log-frame-covered');
+            covered = null;
+            coverOpener?.focus(); coverOpener = null;
+        }
+    }
+    function goFull(box, opener) {
+        const frame = startFrame(box), stage = box.querySelector('.log-frame-stage');
+        const request = stage.requestFullscreen || stage.webkitRequestFullscreen;
+        coverOpener = opener;
+        if (!request || !(document.fullscreenEnabled || document.webkitFullscreenEnabled)) { cover(box, true); return; }
+        Promise.resolve(request.call(stage)).then(() => frame.focus(), () => cover(box, true));
+    }
+    function leaveFull() {
+        if (covered) { cover(null, false); return; }
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (fullElement()) exit?.call(document);
+    }
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(type => document.addEventListener(type, () => {
+        const stage = fullElement();
+        document.querySelectorAll('.log-frame.is-full').forEach(box => { if (box !== stage?.closest('.log-frame')) box.classList.remove('is-full'); });
+        if (stage?.classList.contains('log-frame-stage')) stage.closest('.log-frame').classList.add('is-full');
+        else { coverOpener?.focus(); coverOpener = null; }
+    }));
+    document.addEventListener('click', event => {
+        const start = event.target.closest?.('.log-frame-start');
+        // A middle or Ctrl click still opens the page in a new tab.
+        if (start && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+            event.preventDefault(); startFrame(start.closest('.log-frame'));
+            return;
+        }
+        const full = event.target.closest?.('[data-frame-full]');
+        if (full) { goFull(full.closest('.log-frame'), full); return; }
+        if (event.target.closest?.('[data-frame-close]')) leaveFull();
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && covered) { event.preventDefault(); cover(null, false); } });
     function load(root = document) {
+        root.querySelectorAll('.log-frame [data-frame-full][hidden]').forEach(button => { button.hidden = false; });
         fitFrames(root);
         if (document.documentElement.dataset.embedScripts === 'off') return;
         providers.forEach(p => {

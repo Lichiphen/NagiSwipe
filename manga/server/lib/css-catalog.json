@@ -739,6 +739,201 @@
    ],
    "example": ".log-code-copy { color: var(--log-accent); }",
    "since": "0.8.2"
+  },
+  {
+   "name": ".markdown-alert",
+   "purpose": {
+    "ja": "注意書きの箱（> [!NOTE] など。GitHubと同じクラス名）",
+    "en": "An alert box (> [!NOTE] and the rest, with GitHub's class names)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert { border-radius: 4px; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-note",
+   "purpose": {
+    "ja": "補足（NOTE）の箱",
+    "en": "The NOTE box"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-note { --alert: #0969da; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-tip",
+   "purpose": {
+    "ja": "ヒント（TIP）の箱",
+    "en": "The TIP box"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-tip { --alert: #1a7f37; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-important",
+   "purpose": {
+    "ja": "重要（IMPORTANT）の箱",
+    "en": "The IMPORTANT box"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-important { --alert: #8250df; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-warning",
+   "purpose": {
+    "ja": "注意（WARNING）の箱",
+    "en": "The WARNING box"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-warning { --alert: #9a6700; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-caution",
+   "purpose": {
+    "ja": "警告（CAUTION）の箱",
+    "en": "The CAUTION box"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-caution { --alert: #d1242f; }",
+   "since": "next"
+  },
+  {
+   "name": ".markdown-alert-title",
+   "purpose": {
+    "ja": "注意書きの見出し（アイコンと「補足」などの文字）",
+    "en": "The title of an alert box (its icon and name)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".markdown-alert-title { font-size: 15px; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-mermaid",
+   "purpose": {
+    "ja": "図の枠（```mermaid で書いたフローチャート・シーケンス図）",
+    "en": "The frame of a diagram (a flowchart or sequence diagram written in ```mermaid)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-mermaid { background: var(--log-bg); }",
+   "since": "next"
+  },
+  {
+   "name": ".log-mermaid-zoom",
+   "purpose": {
+    "ja": "図の右上の「拡大」ボタン",
+    "en": "The Enlarge button on the top right corner of a diagram"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-mermaid-zoom { color: var(--log-accent); }",
+   "since": "next"
+  },
+  {
+   "name": ".log-mermaid-sheet",
+   "purpose": {
+    "ja": "「拡大」で開く、画面いっぱいの図",
+    "en": "The diagram over the whole screen, opened by Enlarge"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-mermaid-sheet { background: var(--log-card); }",
+   "since": "next"
+  },
+  {
+   "name": ".log-dg",
+   "purpose": {
+    "ja": "描いた図（SVG）。--dg-edge（枠と矢印の色）・--dg-line（線の色）・--dg-box（箱の色）・--dg-ink（文字の色）で色を変えられます",
+    "en": "A drawn diagram (SVG). Its colors follow --dg-edge (frames and strong arrows), --dg-line (lines), --dg-box (boxes) and --dg-ink (words)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-dg { --dg-edge: #e0607e; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-frame",
+   "purpose": {
+    "ja": "ページ埋込（[ページ埋込]URL[/ページ埋込]）の全体。--frame-width で枠の幅を変えられます",
+    "en": "A page embed ([Embed]URL[/Embed]) as a whole. --frame-width sets the width of its frame"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-frame { --frame-width: 100%; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-frame-stage",
+   "purpose": {
+    "ja": "ページ埋込の枠（読み込む前は表紙、押すとページ）",
+    "en": "The frame of a page embed (its cover, then the page once pressed)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-frame-stage { border-radius: 0; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-frame-play",
+   "purpose": {
+    "ja": "ページ埋込の表紙の「ページを読み込む」ステッカー",
+    "en": "The Load the page sticker on a page embed’s cover"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-frame-play { transform: none; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-frame-bar",
+   "purpose": {
+    "ja": "ページ埋込の下の行（別のタブで開くリンクと「全画面」ボタン）",
+    "en": "The row under a page embed (the link to open it in a new tab and the Full screen button)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-frame-bar { font-size: 13px; }",
+   "since": "next"
   }
  ],
  "variables": [
@@ -919,7 +1114,31 @@
   "is-veiled",
   "is-yes",
   "selected",
-  "today"
+  "today",
+  "log-mermaid-open",
+  "is-actor",
+  "is-dashed",
+  "is-small",
+  "is-tag",
+  "is-number",
+  "is-strong",
+  "is-rect",
+  "is-box",
+  "is-circle",
+  "is-diamond",
+  "is-stadium",
+  "is-dotted",
+  "is-thick",
+  "is-full",
+  "is-cover",
+  "log-frame-covered",
+  "is-4x3",
+  "is-3x2",
+  "is-1x1",
+  "is-2x3",
+  "is-3x4",
+  "is-9x16",
+  "is-21x9"
  ],
  "internal": [
   "btn",
@@ -1126,15 +1345,67 @@
   "log-video-volume",
   "note",
   "sr-only",
-  "twitter-tweet"
+  "twitter-tweet",
+  "markdown-alert-icon",
+  "log-mermaid-view",
+  "log-mermaid-source",
+  "log-mermaid-error",
+  "log-mermaid-icon",
+  "log-mermaid-sheet-bar",
+  "log-mermaid-sheet-tools",
+  "log-mermaid-sheet-close",
+  "log-mermaid-level",
+  "log-mermaid-stage",
+  "log-mermaid-figure",
+  "log-dg-actor",
+  "log-dg-edge",
+  "log-dg-edge-label",
+  "log-dg-frame",
+  "log-dg-frame-split",
+  "log-dg-frame-tag",
+  "log-dg-head",
+  "log-dg-head-open",
+  "log-dg-head-ring",
+  "log-dg-life",
+  "log-dg-line",
+  "log-dg-message",
+  "log-dg-node",
+  "log-dg-note",
+  "log-dg-number",
+  "log-dg-text",
+  "log-frame-start",
+  "log-frame-text",
+  "log-frame-icon",
+  "log-frame-open",
+  "log-frame-full",
+  "log-frame-close"
  ],
  "dynamic": [
+  "is-box",
   "is-center",
+  "is-circle",
+  "is-diamond",
+  "is-dotted",
   "is-numbers",
+  "is-rect",
   "is-right",
   "is-simple",
+  "is-stadium",
+  "is-thick",
   "log-layout-narrow",
-  "log-layout-wide"
+  "log-layout-wide",
+  "markdown-alert-caution",
+  "markdown-alert-important",
+  "markdown-alert-note",
+  "markdown-alert-tip",
+  "markdown-alert-warning",
+  "is-4x3",
+  "is-3x2",
+  "is-1x1",
+  "is-2x3",
+  "is-3x4",
+  "is-9x16",
+  "is-21x9"
  ],
  "history": [
   {
@@ -1168,6 +1439,26 @@
    "added": [
     ".log-code-block",
     ".log-code-copy"
+   ]
+  },
+  {
+   "version": "next",
+   "added": [
+    ".markdown-alert",
+    ".markdown-alert-note",
+    ".markdown-alert-tip",
+    ".markdown-alert-important",
+    ".markdown-alert-warning",
+    ".markdown-alert-caution",
+    ".markdown-alert-title",
+    ".log-mermaid",
+    ".log-mermaid-zoom",
+    ".log-mermaid-sheet",
+    ".log-dg",
+    ".log-frame",
+    ".log-frame-stage",
+    ".log-frame-play",
+    ".log-frame-bar"
    ]
   }
  ]

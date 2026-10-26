@@ -204,6 +204,8 @@ function nl_handle_post(string $do): never
                 nl_settings_update([nl_footer_input()]);
                 nm_flash('ok', nm_t('フッターを保存しました')); nm_redirect('p=settings&section=log#log-footer');
             case 'log_page_save':
+                // Page embeds show the page's title on their cover: fetched here, outside the save lock, as for posts.
+                if (is_string($_POST['body'] ?? null) && strlen($_POST['body']) <= NL_PAGE_BODY_MAX && mb_check_encoding($_POST['body'], 'UTF-8')) nl_cards_prepare($_POST['body'], true);
                 $page = nl_page_save(nm_str($_POST, 'page_id', 14), nl_revision_input(), nl_page_input(['title' => nm_str($_POST, 'title', 1000), 'slug' => nm_str($_POST, 'slug', 200), 'body' => is_string($_POST['body'] ?? null) ? $_POST['body'] : '', 'layout' => nm_str($_POST, 'layout', 10), 'status' => nm_str($_POST, 'status', 10)]),
                     isset($_POST['lock_form']) ? [nm_str($_POST, 'lock', 1) === '1', nm_str($_POST, 'lock_password', NL_LOCK_MAX * 4)] : null);
                 nm_flash('ok', $page['status'] === 'published' ? nm_t('固定ページを公開しました') : nm_t('固定ページを下書きとして保存しました'));
@@ -213,6 +215,7 @@ function nl_handle_post(string $do): never
             case 'log_page_preview':
                 $body = is_string($_POST['body'] ?? null) ? $_POST['body'] : '';
                 if (strlen($body) > NL_PAGE_BODY_MAX || !mb_check_encoding($body, 'UTF-8')) throw new UnexpectedValueException(nm_t('本文は200KB以内にしてください'));
+                nl_cards_prepare($body, true);
                 nm_json(['html' => '<h1>' . h(trim(nm_str($_POST, 'title', 1000)) ?: nm_t('（タイトル）')) . '</h1>' . nl_toc(nl_markdown($body, true))]);
             case 'log_page_delete':
                 nl_page_delete(nm_str($_POST, 'page_id', 14), nl_revision_input());
@@ -490,7 +493,7 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<label class="log-panel-check"><input type="checkbox" name="lock" value="1" data-lock-toggle' . ($locked ? ' checked' : '') . '>' . nm_t('この記事にパスワードをかける') . '</label>'
         . '<label class="log-panel-field">' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" data-lock-field></label>'
         . '<p class="note">' . nm_t('読者には、タイトル（1行目）とパスワードの入力欄だけを見せます。本文・画像・説明文は、正しいパスワードを入れた人にだけ表示します。開いた人のブラウザーには、パスワードではなく、この記事を読める印をクッキーで{days}日間残します。パスワードを変えると、開いていた人もまた入力が必要になります。', ['days' => NL_LOCK_DAYS]) . '</p></div>'
-        . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>' . nm_t('1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」「斜体」「リンク」のボタンで飾れます。') . '</li><li>' . nm_t('「装飾」ボタンで、見出し・箇条書き・番号付きリスト・引用・表・区切り線・取り消し線・コード・ルビを入れられます。本文はMarkdownで、## で見出し２、### で見出し３、#### で見出し４です（# が1つだけならハッシュタグ）。ルビは |漢字《かんじ》 と書きます。') . '</li><li>' . nm_t('見出しが{n}つ以上ある記事には、記事のページで最初の見出し２の上に目次が出ます。', ['n' => NL_TOC_MIN]) . '</li><li>' . nm_t('画像・動画・音声はここへドロップ、または貼り付けでも追加できます。本文の下に並ぶサムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。×で外せます（スマホは長押ししてから動かします）。') . '</li><li>' . nm_t('追加したメディアは、本文のカーソル位置に「〔メディア1〕」のような行で置きます。置いた場所は光って知らせます。まとまりの＋から追加すると、そのまとまりに入ります。本文の中の帯をドラッグすると、その行を動かせます。') . '</li><li>' . nm_t('動画（MP4・MOV・WebM）と音声（MP3・M4A・OGG・WAV・FLAC）も、画像と同じように追加できます。大きなファイルは分けて送ります。音声は波形とジャケット、動画は最初のほうのコマを表紙にします。') . '</li><li>' . nm_t('URLだけを1行に貼ると、YouTubeやX、Amazon Music、SoundCloudなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。') . '</li><li>' . nm_t('閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。') . '</li></ul></div></div>'
+        . '<div class="log-compose-panel" id="log-panel-help" data-panel-body="help" hidden><ul class="log-help-list"><li>' . nm_t('1行目はタイトル、2行目以降は本文です。選んだ文字は「太字」「斜体」「リンク」のボタンで飾れます。') . '</li><li>' . nm_t('「装飾」ボタンで、見出し・箇条書き・番号付きリスト・引用・表・区切り線・取り消し線・コード・ルビを入れられます。本文はMarkdownで、## で見出し２、### で見出し３、#### で見出し４です（# が1つだけならハッシュタグ）。ルビは |漢字《かんじ》 と書きます。') . '</li><li>' . nm_t('見出しが{n}つ以上ある記事には、記事のページで最初の見出し２の上に目次が出ます。', ['n' => NL_TOC_MIN]) . '</li><li>' . nm_t('「装飾」の「注意書き」で、GitHubと同じ > [!NOTE] などの注意書きの箱を、「図（Mermaid）」で ```mermaid の図を入れられます。図は画面の幅に合わせて表示し、「拡大」で画面いっぱいに大きく見られます。') . '</li><li>' . nm_t('[ページ埋込]URL[/ページ埋込] を1行に書くと、ほかのページ（ゲームなど）を枠に入れて表示します。読者が押すと読み込み、「全画面」で画面いっぱいにできます。[ページ埋込 4:3] のように書くと枠の形を変えられます。') . '</li><li>' . nm_t('画像・動画・音声はここへドロップ、または貼り付けでも追加できます。本文の下に並ぶサムネイルをドラッグすると、並べ替えや別のまとまりへの移動ができます。×で外せます（スマホは長押ししてから動かします）。') . '</li><li>' . nm_t('追加したメディアは、本文のカーソル位置に「〔メディア1〕」のような行で置きます。置いた場所は光って知らせます。まとまりの＋から追加すると、そのまとまりに入ります。本文の中の帯をドラッグすると、その行を動かせます。') . '</li><li>' . nm_t('動画（MP4・MOV・WebM）と音声（MP3・M4A・OGG・WAV・FLAC）も、画像と同じように追加できます。大きなファイルは分けて送ります。音声は波形とジャケット、動画は最初のほうのコマを表紙にします。') . '</li><li>' . nm_t('URLだけを1行に貼ると、YouTubeやX、Amazon Music、SoundCloudなどは埋め込み、ほかのページはOGPのカードで表示します。文の途中のURLは普通のリンクです。') . '</li><li>' . nm_t('閲覧注意を付けると、読者にはセンシティブは画像をぼかし、R-18・R-18Gは本文を折りたたんで表示します。') . '</li></ul></div></div>'
         . '<div class="log-preview" id="log-preview" data-preview-body hidden></div>'
         . '<input type="hidden" name="title" value="">'
         . '<p class="log-status" role="status" aria-live="polite"></p><div class="log-submit"><span class="note" data-character-count></span><button class="btn" name="status" value="draft">' . nm_t('下書き保存') . '</button><button class="btn primary" name="status" value="published">' . (!nl_settings()['public'] ? nm_t('メモを保存') : ($edit ? nm_t('公開して保存') : nm_t('投稿する'))) . '</button></div></form></section>'
@@ -604,6 +607,9 @@ function nl_admin_search_where(array $p, array $terms, array $publicIds, int $pu
     foreach ($p['categories'] ?? [] as $id) if (isset($cats[$id])) $names .= '<span class="log-list-cat">' . nl_search_mark($cats[$id], $terms) . '</span>';
     return '<span class="log-list-found">' . ($snippet !== '' ? '<span class="log-list-snippet">' . $snippet . '</span>' : '') . '<span class="log-list-meta">' . $where . $names . '</span></span>';
 }
+/** The pages that are an editor (a post, a fixed page): on a wide PC they get the wider column (--log-editor-* in log-owner.css). */
+const NL_EDITOR_VIEWS = ['log_edit', 'log_page'];
+function nl_is_editor_view(string $view): bool { return in_array($view, NL_EDITOR_VIEWS, true); }
 function nl_view_edit(string $id): void
 {
     $p = nl_load_post($id);

@@ -200,6 +200,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?php if ($owner || $more || str_contains($postsHtml . $relatedHtml, 'data-veil=')): ?><script src="<?= nl_public_asset('viewer/log-veil.js') ?>" defer></script><?php endif; ?>
 <?php if ($tocRail !== ''): ?><script src="<?= nl_public_asset('viewer/log-toc.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner || $more || str_contains($postsHtml, 'log-md-code')): ?><script src="<?= nl_public_asset('viewer/log-code.js') ?>" defer></script><?php endif; ?>
+<?php if ($owner || $more || str_contains($postsHtml, 'log-mermaid')): ?><script src="<?= nl_public_asset('viewer/log-mermaid.js') ?>" defer></script><?php endif; ?>
 <?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && !$fixed && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
