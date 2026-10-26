@@ -326,7 +326,7 @@ Logging in can ask for the 6-digit verification code from an authenticator app o
 4. **The 8 recovery codes are shown only once.** Save them. If you lose your phone, each one works once in place of a verification code.
 
 - A verification code works only once (the same code cannot log in again). A phone clock that is about 30 seconds off is accepted.
-- Full-width digits (a Japanese phone keyboard) and spaces in between are accepted.
+- The code box takes half-width digits only: full-width digits (a Japanese keyboard) become half-width, and letters, signs and spaces in between are dropped. On a PC with the Japanese input method on, nothing stays unconverted: only half-width digits show.
 - Wrong codes count like wrong passwords (by default, locked for 15 minutes after 5).
 - Turning it on or off logs out the other devices.
 - The key is kept encrypted in `data/config.php`.

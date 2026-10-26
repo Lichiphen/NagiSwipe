@@ -307,11 +307,23 @@
 
     // --- Verification code boxes: half-width digits only -------------------------
     // A Japanese keyboard types full-width digits (０-９): turn them into 0-9 and drop anything else, up to 6.
+    // A letter or sign typed directly never gets in. On a PC the input method (日本語入力 on) would hold its text
+    // unconverted until Enter: the box is cleaned while it composes, which ends the composition, so only
+    // half-width digits ever show. Phones get the number pad and are cleaned once the word is done.
+    const halfDigits = value => value.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '').slice(0, 6);
+    const finePointer = window.matchMedia('(pointer: fine)');
     $$('[data-otp-digits]').forEach(box => {
-        box.addEventListener('input', () => {
-            if (box.value === '' || /^[0-9]{0,6}$/.test(box.value)) return;
-            box.value = box.value.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)).replace(/[^0-9]/g, '').slice(0, 6);
+        const clean = () => {
+            const value = halfDigits(box.value);
+            if (value === box.value) return;
+            const at = halfDigits(box.value.slice(0, box.selectionStart ?? box.value.length)).length;
+            box.value = value; box.setSelectionRange(at, at);
+        };
+        box.addEventListener('beforeinput', e => {
+            if (!e.isComposing && e.inputType === 'insertText' && e.data?.length === 1 && !/[0-9０-９]/.test(e.data)) e.preventDefault();
         });
+        box.addEventListener('input', e => { if (!e.isComposing || finePointer.matches) clean(); });
+        box.addEventListener('compositionend', () => setTimeout(clean));
     });
 
     // --- Copy buttons -------------------------------------------------------

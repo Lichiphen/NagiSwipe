@@ -333,7 +333,7 @@ details.more[open] > summary { margin-bottom: 12px; }
 .nm-otp { font-family: ui-monospace, Consolas, monospace; font-size: 1.3em; letter-spacing: .2em; max-width: 14em; }
 /* The 6-digit box: large, centred digits with room between them, easy to read back from the app */
 .nm-otp[data-otp-digits] { display: block; width: 100%; max-width: 15em; margin: 6px auto 0; padding: 12px 10px 12px calc(10px + .45em); font-size: 1.9em; font-weight: 600;
-  letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; border-radius: 12px; }
+  letter-spacing: .45em; text-align: center; font-variant-numeric: tabular-nums; border-radius: 12px; ime-mode: disabled; }
 .nm-otp[data-otp-digits]::placeholder { color: var(--muted); opacity: .45; letter-spacing: .45em; }
 .log-login-card .form label:has(> .nm-otp[data-otp-digits]) { text-align: center; }
 .nm-recovery-codes { font-family: ui-monospace, Consolas, monospace; font-size: 1.05em; line-height: 1.7; padding: 10px 14px; border: 1px solid var(--line, #ccc); border-radius: 8px; background: var(--bg, transparent); }
