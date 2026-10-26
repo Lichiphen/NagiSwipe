@@ -1749,6 +1749,6 @@
   "ページを読み込む": "Load the page",
   "ページ埋込": "Page embed",
   "[ページ埋込]URL[/ページ埋込]": "[Embed]URL[/Embed]",
-  "ほかのページ（ゲームなど）を枠に入れて表示。押すと読み込み、「全画面」で画面いっぱいにできます。[ページ埋込 4:3] のように書くと枠の形を変えられます": "Shows another page (a game, say) in a frame. It loads when pressed, and Full screen fills the screen. Write [Embed 4:3] and so on for another shape",
-  "[ページ埋込]URL[/ページ埋込] を1行に書くと、ほかのページ（ゲームなど）を枠に入れて表示します。読者が押すと読み込み、「全画面」で画面いっぱいにできます。[ページ埋込 4:3] のように書くと枠の形を変えられます。": "[Embed]URL[/Embed] on a line of its own shows another page (a game, say) in a frame. It loads when the reader presses it, and Full screen fills the screen. Write [Embed 4:3] and so on for another shape."
+  "ほかのページ（ゲームなど）を枠に入れて表示。押すと読み込み、「全画面」で画面いっぱいにできます。枠は16:9で、[ページ埋込 9:16] のように書くと形を変えられます（16:9・4:3・3:2・1:1・2:3・3:4・9:16・21:9）": "Shows another page (a game, say) in a frame. It loads when pressed, and Full screen fills the screen. The frame is 16:9; write [Embed 9:16] and so on for another shape (16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16, 21:9)",
+  "[ページ埋込]URL[/ページ埋込] を1行に書くと、ほかのページ（ゲームなど）を枠に入れて表示します。読者が押すと読み込み、「全画面」で画面いっぱいにできます。枠は16:9で、[ページ埋込 9:16] のように書くと形を変えられます（16:9・4:3・3:2・1:1・2:3・3:4・9:16・21:9）。": "[Embed]URL[/Embed] on a line of its own shows another page (a game, say) in a frame. It loads when the reader presses it, and Full screen fills the screen. The frame is 16:9; write [Embed 9:16] and so on for another shape (16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16, 21:9)."
 }
