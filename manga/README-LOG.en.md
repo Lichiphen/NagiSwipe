@@ -249,7 +249,8 @@ The administrator password is 10 characters or more. The first setup turns on a 
 "Icon + Log in" on the public log leads to `admin/login.php`.
 Since v0.10.0 a new install starts with "secret login URL only", which hides this link and closes `admin/login.php`. For the LOG, bookmark the "For NagiLog" URL, the login URL with `&p=log` added (shown under Login URL in the settings). The login page also lets you choose whether NagiLog or NagiManga opens after logging in.
 Either way in is guarded by the password (or a passkey), the IP restriction and the limit on attempts.
-Five failed logins within 15 minutes from the same IP address block logins for a while.
+Five failed logins within 15 minutes from the same IP address block logins for a while (IPv6 counts its first /64 as one).
+After 40 failures an hour across the whole site, browsers new to the site wait for a while. A browser that has logged in before (one with the owner’s mark), passkeys and allowed IP addresses still get in meanwhile.
 
 You stay logged in for 30 days from the last login, even after closing the browser.
 "Keep me logged in for" under "Settings → Common and security" can make it 1 year (365 days).
@@ -1588,6 +1589,7 @@ If it stays inside the public folder, deny HTTP access to `data/` with `.htacces
 Where `.htaccess` cannot be used, as on nginx, move the storage outside or deny access in the server settings.
 
 The log's internal records are PHP files that give 404 when opened directly, but picture files have no PHP processing.
+The security log (`logs/security.log.php`) and the setup key made only at first (`setup-key.php`) are PHP files that give 404 too.
 
 > [!CAUTION]
 > If the storage can be reached over HTTP, knowing a picture's real path gets around authentication and the bot measures.
@@ -1717,6 +1719,7 @@ python manga/dev/log_av_test.py
 python manga/dev/preview_test.py
 python manga/dev/log_css_test.py
 python manga/dev/log_css_browser_test.py
+python manga/dev/hardening_test.py
 python manga/dev/css_catalog_check.py
 python manga/dev/build_release.py
 ```
@@ -1752,6 +1755,16 @@ It makes 40 posts for 11 pages of paging and measures the 3 paging styles, micro
 ```text
 python manga/dev/contrast_audit.py
 ```
+
+On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were added and checked:
+
+| Check | Result |
+| --- | --- |
+| Hardening (`dev/hardening_test.py`) | 23 checks passed. After 40 failures from 8 IP addresses, a browser with the owner’s mark, an allowed IP and the owner on the attacker’s (locked) IP still log in, while unmarked browsers wait; a forged mark, and a stolen mark after 5 failures, do not help. Changing address inside one IPv6 /64 still stops at 5, another /64 counts apart; the limit of 60 an hour per work, with readers who already opened it still reading. The current password cannot be guessed on from a logged-in screen. The log is an empty 404 without `.htaccess`, and old logs move into it |
+| Security (`dev/attack_test.py`) | 205 checks passed. The setup key (no key, a wrong key, 10 failures, unreadable without `.htaccess`); updates without a signature, a swapped ZIP, another key, an old version’s signature and a broken signature are refused |
+| Passkeys (`dev/passkey_test.py`) | 46 checks passed. A passkey still logs in while the site-wide limit holds |
+| Updating an old install | v0.11.1, installed and updated to v0.12.0 with its own updater: still logged in, given the mark, old log carried over (7 checks) |
+| Existing tests | LOG 204, sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, way in 32, two-step login 49, preview 7, translations 3519 passed |
 
 ## Sources and writing
 

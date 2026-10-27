@@ -363,7 +363,9 @@ Log in without the password, with a passkey saved in Proton Pass, the iPhone Pas
 | You do not know the setup key | Open `data/setup-key.php` with FTP (if it is not there, opening the admin panel again makes it) |
 | You forgot the login URL (with the secret login URL only, there is no other way in) | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
-| Too many wrong logins | Wait for the lock time you set (15 minutes by default); the login screen says "Not Found" meanwhile. In a hurry, delete the contents of `data/ratelimit` with FTP |
+| Too many wrong logins | Wait for the lock time you set (15 minutes by default); the login screen says "Not Found" meanwhile. A browser you logged in with before, or a passkey, still gets in. In a hurry, delete the contents of `data/ratelimit` with FTP |
+| "There have been many failed logins…" and the password is not taken | Other people’s failures across the site are many. A browser you logged in with before, a passkey or an allowed IP address still gets in. Wait up to 1 hour, or delete the contents of `data/ratelimit` with FTP |
+| The update stops with "no signature" or "signature does not match" | The author’s signature could not be checked, so it stopped to be safe (nothing changed). Wait for the GitHub release to be fixed, or upload the ZIP of the official release over the files by hand |
 | You lost the phone for two-step login | Enter one of the recovery codes you saved in the code field. Without them, open `data/config.php` with FTP and delete the entry that starts with `'totp' =>` (two-step login turns off) |
 | A passkey does not work or is lost | Log in with the password (and the code), then delete it or register again in Settings → Passkeys. To remove all, open `data/config.php` with FTP and delete the entry that starts with `'passkeys' =>` |
 | The admin panel says the data folder can be seen from the internet | See "Protecting the data folder" below |
@@ -388,7 +390,7 @@ The `data` folder is hidden from outside with `.htaccess`. On servers where `.ht
 - Work folder names are made from the secret key and cannot be guessed from public IDs.
 - Each folder has an empty `index.html`, so folder listings are not shown.
 
-The log's internal records are PHP files that give 404 when opened directly. Protecting static pictures needs the storage place or server settings above.
+The log's internal records, the security log (`data/logs/security.log.php`) and the setup key (`data/setup-key.php`) are PHP files that give 404 when opened directly. Protecting static pictures needs the storage place or server settings above.
 
 ### Tighter IP restriction for the admin panel (optional)
 
@@ -435,7 +437,9 @@ python dev/attack_test.py
 
 <details><summary>What the attack tests check</summary>
 
-What it covers: PHP disguised as a picture, uploads of `.htaccess` / SVG / HTML, pixel bombs, escaping folders with `../`, ZIP slip and ZIP bombs, malicious EPUBs (XXE, DRM, paths pointing outside the book), CSRF, XSS, forged, tampered, expired and reused viewing keys, brute force (including forged `X-Forwarded-For`), getting around the IP restriction, odd Host headers, changes by guests (19 kinds) and information leaks on servers where `.htaccess` does not work. The results are written to `dev/results/attack-report.md`.
+What it covers: PHP disguised as a picture, uploads of `.htaccess` / SVG / HTML, pixel bombs, escaping folders with `../`, ZIP slip and ZIP bombs, malicious EPUBs (XXE, DRM, paths pointing outside the book), CSRF, XSS, forged, tampered, expired and reused viewing keys, brute force (including forged `X-Forwarded-For`), getting around the IP restriction, the setup key, unsigned or swapped update packages, odd Host headers, changes by guests (19 kinds) and information leaks on servers where `.htaccess` does not work. The results are written to `dev/results/attack-report.md`.
+
+[`dev/hardening_test.py`](dev/hardening_test.py) tries attacks from many IP addresses (made with `X-Forwarded-For`): that the owner is not shut out by the site-wide limit, that IPv6 counts per /64, the limit per work, guessing the password from a logged-in screen, and the log without `.htaccess`.
 
 </details>
 
@@ -446,6 +450,8 @@ dev\serve.cmd              # http://127.0.0.1:5190 (data in dev/data)
 python dev/seed.py         # registers sample works and makes dev/results/demo.html
 python dev/build_release.py  # the release ZIP (dev/results/nagimanga-vX.Y.Z.zip)
 python dev/i18n_test.py    # checks the admin panel translations (server/lib/lang/*.json) for gaps
+python dev/hardening_test.py  # checks lockouts, IPv6, the limit per work and the log
+python dev/release_sign.py keygen  # makes the release signing keys (once; they stay outside the repository)
 python ../site/build.py    # rebuilds the documentation site from the READMEs
 ```
 

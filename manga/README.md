@@ -361,7 +361,9 @@ Proton Pass、iPhone の「パスワード」アプリ（iCloud キーチェー�
 | セットアップの鍵が分からない | FTP で `data/setup-key.php` を開く（ないときは、管理画面をもう一度開くと作られます） |
 | ログイン URL を忘れた（秘密のログイン URL だけにしているとき、ほかに入口はありません） | FTP で `data/config.php` を開き、`login_key` の値を `admin/index.php?k=` の後ろに付けて開く |
 | IP アドレスが変わって締め出された | FTP で `data/config.php` の `allowed_ips` を `array ( )` にする（`admin/.htaccess` で IP 制限を書いた場合はその行も） |
-| ログインを何度も間違えた | 設定したロックの時間（初期設定は 15 分）待つ。その間はログイン画面も「Not Found」になります。急ぐときは、FTP で `data/ratelimit` フォルダの中身を消す |
+| ログインを何度も間違えた | 設定したロックの時間（初期設定は 15 分）待つ。その間はログイン画面も「Not Found」になります。前にログインしたブラウザーやパスキーなら入れます。急ぐときは、FTP で `data/ratelimit` フォルダの中身を消す |
+| 「ログインの失敗が多いため…」と出てパスワードで入れない | ほかの人の失敗がサイト全体で多いときの表示です。前にログインしたブラウザー、パスキー、許可した IP アドレスからなら入れます。最長 1 時間待つか、FTP で `data/ratelimit` フォルダの中身を消す |
+| 「署名がない」「署名が一致しない」と出て更新できない | 配布元の署名を確かめられなかったため、安全のため止めています（何も変わっていません）。GitHub のリリースが直るのを待つか、公式のリリースの ZIP を手動で上書きアップロードしてください |
 | 二段階認証のスマホをなくした | 確認コードの欄に、保存しておいたリカバリーコードを入れる。リカバリーコードもないときは、FTP で `data/config.php` を開き、`'totp' =>` から始まる項目を消す（二段階認証がオフに戻ります） |
 | パスキーを使えない・なくした | パスワード（と確認コード）でログインし、設定 → 「パスキー」で削除・登録し直す。すべて消すには、FTP で `data/config.php` を開き、`'passkeys' =>` から始まる項目を消す |
 | 管理画面に「data フォルダがインターネットから見える状態です」と出る | 下の「data フォルダを守る」を参照 |
@@ -386,7 +388,7 @@ Proton Pass、iPhone の「パスワード」アプリ（iCloud キーチェー�
 - 作品フォルダの名前は秘密の鍵から作ってあり、公開 ID からは推測できません。
 - 各フォルダには空の `index.html` を置いてあり、中身の一覧は表示されません。
 
-LOGの内部記録は直接開くと404になるPHP形式です。静的な画像の保護には、上記の保存先・サーバー設定が必要です。
+LOGの内部記録、セキュリティログ（`data/logs/security.log.php`）、セットアップの鍵（`data/setup-key.php`）は、直接開くと404になるPHP形式です。静的な画像の保護には、上記の保存先・サーバー設定が必要です。
 
 ### 管理画面の IP 制限をさらに固くする（任意）
 
@@ -433,7 +435,9 @@ python dev/attack_test.py
 
 <details><summary>攻撃テストで確かめていること</summary>
 
-主な内容: 画像に偽装した PHP、`.htaccess` / SVG / HTML のアップロード、ピクセル数の爆弾、`../` によるフォルダの抜け出し、ZIP スリップと ZIP 爆弾、悪意のある EPUB（XXE・DRM・本の外を指すパス）、CSRF、XSS、閲覧用の鍵の偽造・改ざん・期限切れ・使い回し、総当たり（`X-Forwarded-For` の偽装を含む）、IP 制限の回避、おかしな Host ヘッダー、ゲストによる変更（19 種類）、`.htaccess` が効かないサーバーでの情報漏れ。結果は `dev/results/attack-report.md` に書き出されます。
+主な内容: 画像に偽装した PHP、`.htaccess` / SVG / HTML のアップロード、ピクセル数の爆弾、`../` によるフォルダの抜け出し、ZIP スリップと ZIP 爆弾、悪意のある EPUB（XXE・DRM・本の外を指すパス）、CSRF、XSS、閲覧用の鍵の偽造・改ざん・期限切れ・使い回し、総当たり（`X-Forwarded-For` の偽装を含む）、IP 制限の回避、セットアップの鍵、署名のない・差し替えた更新ファイル、おかしな Host ヘッダー、ゲストによる変更（19 種類）、`.htaccess` が効かないサーバーでの情報漏れ。結果は `dev/results/attack-report.md` に書き出されます。
+
+[`dev/hardening_test.py`](dev/hardening_test.py) は、多くの IP アドレスからの攻撃（`X-Forwarded-For` で再現）を試します。全体の上限があっても持ち主が締め出されないこと、IPv6 を /64 で数えること、作品ごとの上限、ログイン中の画面からのパスワードの当てずっぽう、`.htaccess` がないときのログです。
 
 </details>
 
@@ -444,6 +448,8 @@ dev\serve.cmd              # http://127.0.0.1:5190 （データは dev/data）
 python dev/seed.py         # 見本の作品を登録し、dev/results/demo.html を作る
 python dev/build_release.py  # 配布用 ZIP（dev/results/nagimanga-vX.Y.Z.zip）を作る
 python dev/i18n_test.py    # 管理画面の訳（server/lib/lang/*.json）に漏れがないか確かめる
+python dev/hardening_test.py  # 締め出し・IPv6・作品ごとの上限・ログの守りを確かめる
+python dev/release_sign.py keygen  # リリースの署名の鍵を作る（最初の 1 回だけ。鍵はリポジトリの外）
 python ../site/build.py    # ドキュメントサイトを README から作り直す
 ```
 

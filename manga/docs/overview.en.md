@@ -59,7 +59,7 @@ A tool that adds **a screen for reading manga (a viewer)** to your own website o
 | **No database** | Databases can break when misused and make moving servers hard. NagiManga runs on pictures and small text files (JSON) alone, so copying a folder is enough to move or back up. |
 | **Stored in a readable form** | A work's information is written in a file format called JSON that Notepad can open. Even if NagiManga can no longer be used, the pictures and their order can be taken out (chapter 7). |
 | **No outside parts** | It uses no libraries (parts) made by others. If a part's author stops updating it, or a flaw is found in a part, it does not affect NagiManga. |
-| **Several layers of defense** | The admin panel is guarded by five locks, including the place (IP address), a secret URL and a password; if any one does not match, it pretends not to exist. Uploaded pictures are always redrawn, so harmful programs hidden in pictures do not survive. It is checked by 132 kinds of tests of normal use and reproduced attacks. |
+| **Several layers of defense** | The admin panel is guarded by five locks, including the place (IP address), a secret URL and a password; if any one does not match, it pretends not to exist. Uploaded pictures are always redrawn, so harmful programs hidden in pictures do not survive. It is checked by more than 200 tests of normal use and reproduced attacks. Updates carry the author’s signature, so even a taken-over GitHub cannot slip in swapped contents. |
 | **You can show a demo** | Place one plugin, and visitors can look around the admin panel "view only". Changes and deletion are firmly stopped by the program itself. |
 | **Free and open to change** | MIT license. Use it commercially or personally, read the inside and change it. |
 
@@ -114,14 +114,15 @@ Browsers change year by year, but NagiManga uses only standard features every br
 | JSON files | Storing a work's information (title, order and so on) | To store it without a database, in a form Notepad can read. |
 | `password_hash` (comes with PHP) | Storing and checking passwords | Stores not the password itself but a form that cannot be turned back. |
 | sodium or openssl (comes with PHP) | Letting the admin panel show reader passwords | They are not stored as plain text but encrypted with the server's secret key. Without either, only showing them is unavailable; the rest works. |
-| HMAC-SHA256 | Viewing keys, naming work folders | A widely used way of making marks that nobody without the secret key can make or guess. |
+| Ed25519 signatures | Checking that an update comes from the author | Signed with a key kept only on the author’s PC, checked by the site with the public key. NagiManga checks it by itself where PHP has no sodium. |
+| HMAC-SHA256 | Viewing keys, naming work folders, the owner’s browser mark | A widely used way of making marks that nobody without the secret key can make or guess. |
 | `.htaccess` (Apache) | Hiding folders such as `data` from outside | Usable on many rental servers. The README also covers servers where it does not work. |
 
 ### For development and testing (not placed on the server)
 
 | Technology | What for |
 |---|---|
-| Python 3 (standard features only) | A test that tries 132 kinds of attacks and behaviors together (`dev/attack_test.py`) |
+| Python 3 (standard features only) | Tests that try attacks and behaviors together (`dev/attack_test.py`, `dev/hardening_test.py`), signing releases (`dev/release_sign.py`) |
 | PHP's built-in development server | Checking on your own computer (`dev/serve.cmd`) |
 
 ## 7. The shape of the data (for the day NagiManga cannot be used)
