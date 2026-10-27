@@ -389,7 +389,7 @@ def run_update(adm, csrf, data_dir):
     bad_packages = {
         "フォルダの外へ書く（../）": make_package("9.9.9", extra={"nagimanga/../evil.php": b"<?php echo 'PWNED';"}),
         "フォルダの外へ書く（lib/../../）": make_package("9.9.9", extra={"nagimanga/lib/../../evil2.php": b"<?php echo 1;"}),
-        "実行できる別の拡張子（.phtml）": make_package("9.9.9", extra={"nagimanga/admin/shell.phtml": b"<?php system($_GET['c']);"}),
+        "実行できる別の拡張子（.phtml）": make_package("9.9.9", extra={"nagimanga/admin/shell.phtml": b"<?php echo 'NAGI-TEST';"}),
         "隠しファイル（.user.ini）": make_package("9.9.9", extra={"nagimanga/.user.ini": b"auto_prepend_file=x"}),
         "バージョンが一致しない": make_package("9.9.8"),
         "必要なファイルがない": make_package("9.9.9", drop=("read.php",)),
@@ -579,11 +579,11 @@ def run(data_dir):
     oks = [upload(f"{i:03d}.png", png(60, 90, seed=i))["ok"] for i in (3, 1, 2)]
     check("正常な PNG を 3 枚アップロード", all(oks))
 
-    poly = png(40, 60, extra_after_iend=b"<?php echo 'PWNED'; system($_GET['c']); ?>")
+    poly = png(40, 60, extra_after_iend=b"<?php echo 'PWNED'; ?>")
     res = upload("evil.php.png", poly)
     check("PHP を末尾に仕込んだ PNG は描き直して受理", res.get("ok") is True)
 
-    check("GIF ヘッダ + PHP（偽画像）は拒否", upload("shell.php", b"GIF89a\x01\x00\x01\x00<?php system($_GET['c']); ?>", "image/gif").get("ok") is False)
+    check("GIF ヘッダ + PHP（偽画像）は拒否", upload("shell.php", b"GIF89a\x01\x00\x01\x00<?php echo 'NAGI-TEST'; ?>", "image/gif").get("ok") is False)
     check(".htaccess のアップロードは拒否", upload(".htaccess", b"AddType application/x-httpd-php .png\n", "text/plain").get("ok") is False)
     check("SVG（スクリプト入り）は拒否", upload("x.svg", b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', "image/svg+xml").get("ok") is False)
     check("HTML は拒否", upload("x.html", b"<html><script>alert(1)</script></html>", "image/png").get("ok") is False)
@@ -811,7 +811,7 @@ def run(data_dir):
           and not list(data_dir.rglob("evil*.php")))
     fake = {"id": "QQQQQQQQQQQQ", "title": "x", "pages": [{"f": "p0001_deadbeef.webp", "w": 1, "h": 1}]}
     txt = restore(evil_zip([("works/QQQQQQQQQQQQ/work.json", json.dumps(fake)),
-                            ("works/QQQQQQQQQQQQ/pages/p0001_deadbeef.webp", "<?php system($_GET['c']); ?>")]))
+                            ("works/QQQQQQQQQQQQ/pages/p0001_deadbeef.webp", "<?php echo 'NAGI-TEST'; ?>")]))
     check("画像に偽装した PHP を含む ZIP は復元しない", "画像の中身が正しくありません" in txt and not list(data_dir.rglob("p0001_deadbeef.webp")))
     txt = restore(evil_zip([("works/RRRRRRRRRRRR/work.json", json.dumps({"id": "RRRRRRRRRRRR", "title": "y", "pages": []})),
                             ("works/RRRRRRRRRRRR/shell.php", "<?php echo 1;"), ("works/RRRRRRRRRRRR/.htaccess", "x")]))
@@ -921,7 +921,7 @@ def run(data_dir):
                                      container='<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles>'
                                                '<rootfile full-path="../../config.php"/></rootfiles></container>'))
     check("目録の場所を外に向けても読まない", eid is None, msg)
-    fake = make_epub([(svg_page("a.png"), "a.png", b"\x89PNG\r\n\x1a\n<?php system($_GET['c']); ?>")])
+    fake = make_epub([(svg_page("a.png"), "a.png", b"\x89PNG\r\n\x1a\n<?php echo 'NAGI-TEST'; ?>")])
     eid, msg = import_epub(fake)
     check("画像に偽装した PHP だけの EPUB は作品を作らない", eid is None and "取り込める画像がありません" in msg, msg)
     bombbuf = io.BytesIO()
@@ -962,7 +962,7 @@ def run(data_dir):
     check("小容量版の画像が取れる（WebP・長期キャッシュ）", anon.get("/" + lp[0]["light"]["src"]).status == 200)
     check("別の作品のページを指定して小容量版は付けられない", up_light(lfiles[0], work=wid_b).get("ok") is False)
     check("存在しないページには付けられない", up_light("p0999_deadbeef.webp").get("ok") is False)
-    check("画像でないものは小容量版にも使えない", up_light(lfiles[2], data=b"GIF89a<?php system('x'); ?>").get("ok") is False)
+    check("画像でないものは小容量版にも使えない", up_light(lfiles[2], data=b"GIF89a<?php echo 'NAGI-TEST'; ?>").get("ok") is False)
     check("管理画面に「小」の印と件数が出る", 'class="page-light"' in adm.get(f"/admin/index.php?p=work&id={lid}").text
           and "<strong>2 / 3</strong>" in adm.get(f"/admin/index.php?p=work&id={lid}").text)
 

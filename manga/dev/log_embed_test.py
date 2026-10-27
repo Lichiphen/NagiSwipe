@@ -134,7 +134,7 @@ def run(site,other_site,c,csrf,other,ot):
     r=upload('broken.gif',gif(truncate=True),'image/gif')
     broken=json.loads(r.text)['media'] if r.status==200 else {}
     check('壊れたGIFはGIFとして残さない',r.status!=200 or not broken.get('f','').endswith('.gif'))
-    r=upload('poly.gif',gif(tail=b'\n<?php system($_GET[1]); ?>'*3),'image/gif')
+    r=upload('poly.gif',gif(tail=b"\n<?php echo 'NAGI-TEST'; ?>"*3),'image/gif')
     poly=json.loads(r.text)['media'] if r.status==200 else {}
     pb=pub.get('/?media='+poly.get('id','')+'&v=1') if poly else None
     save('偽装の確認\n[Image:'+poly.get('id','')+']')
