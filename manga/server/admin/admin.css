@@ -357,8 +357,37 @@ details.more[open] > summary { margin-bottom: 12px; }
 .nm-passkey-login + .flash + .form { border-top: 1px solid var(--line); padding-top: 12px; }
 
 /* Login: NagiLog or NagiManga after logging in */
-.nm-login-to { border: 0; margin: 0 0 14px; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.nm-login-to { border: 0; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .nm-login-to legend { padding: 0; margin-bottom: 6px; font-weight: 600; font-size: .92em; }
 .nm-recovery-login { margin-top: 14px; }
 .nm-recovery-login summary { cursor: pointer; color: var(--muted); font-size: .92em; }
 .nm-recovery-login[open] summary { margin-bottom: 8px; }
+
+/* Setup: which screen a login opens, as two large buttons */
+.nm-home-pick { border: 0; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.nm-home-pick legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+label.nm-home-card { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 18px 18px 18px 52px; border: 2px solid var(--line); border-radius: 14px; background: var(--card); cursor: pointer; min-height: 88px; justify-content: center; }
+.nm-home-card input { position: absolute; left: 18px; top: 50%; width: 20px; height: 20px; margin: -10px 0 0; accent-color: var(--accent); }
+.nm-home-card:hover { border-color: var(--accent); }
+.nm-home-card:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.nm-home-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nm-home-name { font-size: 1.2em; font-weight: 700; }
+.nm-home-text { font-size: .92em; opacity: .8; line-height: 1.5; }
+.nm-home-note { margin-top: 6px; }
+/* The two-step reminder after a login */
+.nm-twofa-nudge { width: min(520px, calc(100% - 32px)); }
+.nm-twofa-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 10px; }
+.nm-twofa-actions .btn { justify-content: center; text-align: center; padding-block: 12px; }
+.nm-twofa-later { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.nm-twofa-later form { margin: 0; }
+@media (max-width: 520px) { .nm-twofa-actions { grid-template-columns: 1fr; } }
+.nm-login-to label.nm-home-card { min-height: 72px; padding: 12px 12px 12px 44px; }
+.nm-login-to .nm-home-card input { left: 14px; }
+.nm-login-to .nm-home-name { font-size: 1.05em; }
+/* Setup: why the key is asked for, and where to find it */
+.nm-setup-help { margin: 18px 0 4px; padding: 14px 16px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--bg); }
+.nm-setup-help > p { margin: 0 0 10px; line-height: 1.7; }
+.nm-setup-help summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.nm-setup-help ol { margin: 10px 0 8px; padding-left: 1.5em; line-height: 1.75; }
+.nm-setup-help li + li { margin-top: 4px; }
+.nm-setup-help .note { margin: 0; }

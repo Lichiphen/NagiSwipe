@@ -138,11 +138,14 @@ nagimanga/
 
 Open `https://your-site/nagimanga/admin/` in a browser.
 
-1. Open `data/setup-key.php` with FTP (or the server's file manager). The server made it when the admin panel was first opened.
+1. Open `data/setup-key.php` with FTP (or the server's file manager). The server made it when the admin panel was first opened. The setup screen also shows how, under "How to find the setup key".
 2. Paste the "setup key" written in it (20 characters, like `ABCDE-FGHJK-LMNPQ-RSTUV`) into the field on the screen. Lower case and spaces do not matter.
 3. Choose the administrator password (10 characters or more).
+4. Under "What you will mostly use", pick **NagiLog** (a diary, blog or photos) or **NagiManga** (manga) with the large buttons. It is the screen that opens first after you log in. Either way you can use both, and you can switch on the login page at any time.
 
 - Turn on "allow the admin panel only from the current IP address" whenever you can.
+
+![The setup screen. Fields for the setup key and the administrator password, and large buttons for choosing NagiLog or NagiManga](docs/images/setup.jpg)
 
 > [!IMPORTANT]
 > Only whoever installed the site can read the key, over FTP (it cannot be read from the web). Even if someone else or a bot opens a freshly uploaded site first, they cannot set it up without the key. `data/setup-key.php` is deleted when the setup is done. The "within 30 minutes" limit of v0.11 and earlier is gone.
@@ -150,7 +153,18 @@ Open `https://your-site/nagimanga/admin/` in a browser.
 > [!IMPORTANT]
 > When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.10.0 the setup ticks "Log in only from the secret login URL" by default. Then `admin/login.php` and the address without `k=` say "Not Found", and the LOG shows no Log in link. Settings → "Common and safety" → "Way in to log in" opens the LOG’s Log in link (`admin/login.php`) again (installs from v0.9 and earlier keep it open). The IP restriction and the limit on attempts apply to both.
 >
-> The login page lets you choose what opens after logging in (NagiLog or NagiManga); the choice is kept for next time. The login URL with `&p=log` added (shown as "For NagiLog" under Login URL in the settings) starts with NagiLog chosen.
+> The login page lets you choose what opens after logging in (NagiLog or NagiManga) with large buttons; the choice is kept for next time. A browser that has not chosen yet starts with what you picked under "What you will mostly use" in the setup. The login URL with `&p=log` added (shown as "For NagiLog" on the finished screen and under Login URL in the settings) starts with NagiLog chosen.
+
+#### After the first login: two-step login
+
+While neither a passkey nor the two-step login (codes from an authenticator app) is set up, every login shows a dialog that suggests adding one. With either of them, a known password is no longer enough to log in. Set one up here if you can.
+
+- **Register a passkey**: log in with a fingerprint, face or PIN.
+- **Set up an authenticator app**: use the 6-digit codes of the iPhone Passwords app, Google Authenticator and the like.
+- **Later**: closes it for now. It comes back at the next login.
+- **Don’t show this again**: never shows it again. You can still set either up later under Two-step login or Passkeys in the settings.
+
+![The dialog after logging in, with the buttons Register a passkey and Set up an authenticator app, and Later and Don’t show this again](docs/images/setup-twofa.jpg)
 
 ### 3. Checks after installing
 

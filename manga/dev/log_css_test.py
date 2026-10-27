@@ -341,7 +341,8 @@ def run(site, c, csrf):
     subprocess.run([sys.executable, str(tmp / 'manga/dev/css_catalog_check.py'), '--write-docs'], capture_output=True, cwd=tmp)
     (tmp / 'manga/server/data/log/custom-css').mkdir(parents=True, exist_ok=True)
     (tmp / 'manga/server/data/log/custom-css/0123456789abcdef.css').write_text('.mine{a:b}', encoding='utf-8')
-    r = subprocess.run([sys.executable, str(tmp / 'manga/dev/build_release.py')], capture_output=True, text=True, encoding='utf-8', cwd=tmp)
+    # Only the ZIP's contents matter here: no release signature (the signing key may be kept off this PC).
+    r = subprocess.run([sys.executable, str(tmp / 'manga/dev/build_release.py'), '--unsigned'], capture_output=True, text=True, encoding='utf-8', cwd=tmp)
     out = tmp / f'manga/dev/results/nagimanga-v{version}.zip'
     names = zipfile.ZipFile(out).namelist() if out.exists() else []
     check('配布ZIPを作れて、編集画面のファイルと一覧を含む', r.returncode == 0 and all(f'nagimanga/{n}' in names for n in ('admin/css-editor.js', 'admin/css-editor.css', 'lib/log-css.php', 'lib/css-catalog.json')), r.stdout[-300:] + r.stderr[-300:])

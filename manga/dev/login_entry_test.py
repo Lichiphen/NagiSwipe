@@ -25,10 +25,15 @@ def run(site):
     c = h.Client(args.port)
     r = c.get('/admin/index.php')
     check('セットアップ画面に「秘密のログイン URL からだけ」（最初からチェック）', re.search(r'<input type="checkbox" name="secret_login" value="1" checked>', r.text) is not None)
-    r = c.post('/admin/index.php', {'csrf': h.csrf_of(r.text), 'setup_key': h.setup_key(args.port), 'password': PASSWORD, 'password2': PASSWORD, 'secret_login': '1'})
+    check('セットアップ画面に、お断りの一言と鍵の見つけ方（最初から開いた手順）', 'お手数をおかけします。' in r.text and '<details open><summary>セットアップの鍵の見つけ方</summary>' in r.text and '「表示/編集」' in r.text)
+    check('セットアップ画面で、おもに使うもの（NagiLog / NagiManga）を大きなボタンで選べる',
+          '<label class="nm-home-card"><input type="radio" name="home" value="log" required>' in r.text and '<input type="radio" name="home" value="manga" required>' in r.text)
+    r = c.post('/admin/index.php', {'csrf': h.csrf_of(r.text), 'setup_key': h.setup_key(args.port), 'password': PASSWORD, 'password2': PASSWORD, 'secret_login': '1', 'home': 'manga'})
     key = re.search(r'index.php\?k=([A-Za-z0-9]+)', r.text).group(1)
     check('セットアップ完了の画面に NagiLog 用の URL も', f'index.php?k={key}&amp;p=log' in r.text and '「ログイン」のリンクは出ません' in r.text)
-    check('config.php に login_entry = secret', "'login_entry' => 'secret'" in (site / 'data/config.php').read_text(encoding='utf-8'))
+    check('NagiManga を選ぶと、NagiManga の URL が先（ボタンも NagiManga へ）', r.text.index(f'index.php?k={key}"') < r.text.index(f'index.php?k={key}&amp;p=log') and f'class="btn primary" href="http://127.0.0.1:{args.port}/admin/index.php?k={key}"' in r.text)
+    cfg = (site / 'data/config.php').read_text(encoding='utf-8')
+    check('config.php に login_entry = secret と home = manga', "'login_entry' => 'secret'" in cfg and "'home' => 'manga'" in cfg)
 
     # --- Secret URL only ---------------------------------------------------------------------------
     pub = h.Client(args.port)
@@ -52,6 +57,30 @@ def run(site):
     page = f.get(f'/admin/index.php?k={key}&p=log').text
     r = f.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(page), 'password': PASSWORD, 'p': 'manga'})
     check('NagiManga を選ぶと NagiManga の画面へ', r.status == 303 and r.getheader('Location') == 'index.php' and f.cookies.get('nm_land') == 'manga')
+
+    # --- The two-step reminder after a login ------------------------------------------------------------
+    page = f.get('/admin/index.php').text
+    check('ログインして最初の画面に、二段階認証をすすめるダイアログ（パスキー・認証アプリへのボタン）',
+          '<dialog class="settings-leave-dialog nm-twofa-nudge" data-open' in page and 'href="index.php?p=passkeys"' in page and 'href="index.php?p=twofactor"' in page)
+    check('ダイアログは1回のログインで1度だけ', 'nm-twofa-nudge' not in f.get('/admin/index.php').text and 'nm-twofa-nudge' not in f.get('/admin/index.php?p=log').text)
+    page = d.get('/admin/index.php?p=log').text
+    check('別のログインでは、また表示する', 'nm-twofa-nudge' in page)
+    r = d.post('/admin/index.php', {'csrf': h.csrf_of(page), 'do': 'twofa_nudge_off', 'back': 'log'})
+    check('「今後は表示しない」で、元の画面へ戻り、設定に記録する', r.status == 303 and r.getheader('Location') == 'index.php?p=log' and "'twofa_nudge' => 'off'" in (site / 'data/config.php').read_text(encoding='utf-8'))
+    g = h.Client(args.port)
+    page = g.get('/admin/index.php?k=' + key).text
+    g.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(page), 'password': PASSWORD, 'p': 'manga'})
+    check('「今後は表示しない」のあとは、新しくログインしても出さない', 'nm-twofa-nudge' not in g.get('/admin/index.php').text)
+    r = h.Client(args.port).post('/admin/index.php', {'csrf': 'x', 'do': 'twofa_nudge_off'})
+    check('ログインしていない人の「今後は表示しない」は 404', h.is_404(r))
+
+    # --- The site's own choice when the browser has none -----------------------------------------------------
+    cfg = (site / 'data/config.php').read_text(encoding='utf-8')
+    (site / 'data/config.php').write_text(cfg.replace("'home' => 'manga'", "'home' => 'log'"), encoding='utf-8')
+    check('セットアップで NagiLog を選んだサイトは、初めてのブラウザーでも NagiLog が選ばれている', 'name="p" value="log" form="nm-login-form" checked>' in h.Client(args.port).get('/admin/index.php?k=' + key).text)
+    e = h.Client(args.port); e.cookies = {'nm_land': 'manga'}
+    check('ブラウザーで選んだ画面（cookie）のほうを優先する', 'name="p" value="manga" form="nm-login-form" checked>' in e.get('/admin/index.php?k=' + key).text)
+    (site / 'data/config.php').write_text(cfg, encoding='utf-8')
 
     # --- Settings: the public entrance again ----------------------------------------------------------
     settings = d.get('/admin/index.php?p=settings&section=common').text

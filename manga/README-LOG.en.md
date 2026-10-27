@@ -238,8 +238,8 @@ HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
 1. Download [the release ZIP (`nagimanga-v0.9.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
-2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password.
-3. Bookmark the admin URL that is shown.
+2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
+3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
 5. Under "LOG" in the settings, choose the audience, site name, introduction, name, design and icon.
 6. Check that `data` cannot be read from outside, and that pictures and manga are shown.

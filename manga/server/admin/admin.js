@@ -14,6 +14,9 @@
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+    // Dialogs the page asks to show at once (the two-step reminder after a login).
+    $$('dialog[data-open]').forEach(d => d.showModal());
+
     // Keep edits in each settings tab while switching between modules.
     const settingsTabs = $('[data-settings-tabs]');
     if (settingsTabs) {

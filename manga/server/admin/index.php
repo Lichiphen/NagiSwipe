@@ -192,6 +192,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         $g = $guest ? nm_guest_config() : null;
         if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
     }
+    if ($nav) $body .= nm_twofa_nudge();
     $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
     $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
     echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . (nm_public_login() ? ' data-public-login="1"' : '') . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
@@ -228,6 +229,29 @@ function nm_csrf_field(): string
 function nm_flash(string $type, string $msg): void
 {
     $_SESSION['nm_flash'][] = [$type, $msg];
+}
+
+/**
+ * Once per login, while neither a passkey nor the two-step login is on: a dialog that asks the owner to add one
+ * (admin.js opens dialog[data-open]). "今後は表示しない" turns it off for good (config twofa_nudge).
+ */
+function nm_twofa_nudge(): string
+{
+    $cfg = nm_config() ?? [];
+    $p = nm_str($_GET, 'p', 20);
+    if (nm_is_guest() || !empty($_SESSION['nm_twofa_asked']) || ($cfg['twofa_nudge'] ?? '') === 'off'
+        || nm_totp_config($cfg) || nm_passkeys($cfg) || in_array($p, ['twofactor', 'passkeys'], true)) return '';
+    $_SESSION['nm_twofa_asked'] = 1;
+    return '<dialog class="settings-leave-dialog nm-twofa-nudge" data-open aria-labelledby="nm-twofa-title">'
+        . '<h2 id="nm-twofa-title">' . nm_t('ログインをもう一段、守りませんか') . '</h2>'
+        . '<p>' . nm_t('いまは、パスワードだけで管理画面に入れます。パスワードが知られると、ほかの人にも入られてしまいます。') . '</p>'
+        . '<p>' . nm_t('パスキー（指紋・顔・PINでログイン）か、スマホの認証アプリの確認コードを足すと、パスワードが知られてもログインされません。') . '</p>'
+        . '<div class="nm-twofa-actions"><a class="btn primary" href="index.php?p=passkeys">' . nm_t('パスキーを登録する') . '</a>'
+        . '<a class="btn primary" href="index.php?p=twofactor">' . nm_t('認証アプリを設定する') . '</a></div>'
+        . '<div class="nm-twofa-later"><form method="dialog"><button class="btn">' . nm_t('あとで') . '</button></form>'
+        . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="twofa_nudge_off"><input type="hidden" name="back" value="' . h($p) . '">'
+        . '<button class="link">' . nm_t('今後は表示しない') . '</button></form></div>'
+        . '<p class="note">' . nm_t('あとからでも、設定の「二段階認証」「パスキー」から設定できます。') . '</p></dialog>';
 }
 
 function nm_redirect(string $query = ''): never
@@ -322,6 +346,8 @@ function nm_setup(string $method): void
             // base_url stays empty: share tags follow the address the admin is opened with
             if (!empty($_POST['lock_ip'])) $cfg['allowed_ips'] = [$ip];
             $cfg['login_entry'] = empty($_POST['secret_login']) ? 'public' : 'secret';
+            // The screen a login opens when the browser has no choice of its own yet (nm_land); both stay usable.
+            $cfg['home'] = nm_str($_POST, 'home', 10) === 'log' ? 'log' : 'manga';
             nm_save_config($cfg);
             @unlink(NM_DATA . '/' . NM_SETUP_KEY_FILE);
             nm_ensure_dir(NM_DATA . '/works');
@@ -330,14 +356,16 @@ function nm_setup(string $method): void
             nm_log('setup_done');
 
             $login = nm_base_url() . '/admin/index.php?k=' . $cfg['login_key'];
+            // The chosen screen's URL first; the other one under it.
+            $isLog = $cfg['home'] === 'log';
             $_SESSION = [];
             nm_layout(nm_t('セットアップ完了'), '<section class="card"><h1>' . nm_t('セットアップが完了しました') . '</h1>'
                 . '<p>' . (nm_public_login($cfg) ? nm_t('<strong>次の URL をブックマークしてください。</strong>LOGのメニューにある「ログイン」からも、パスワードで入れます。') : nm_t('<strong>次の URL をブックマークしてください。</strong>管理画面には、この URL からだけ入れます（LOGに「ログイン」のリンクは出ません）。')) . '</p>'
-                . '<p><input class="copy-src wide" readonly value="' . h($login) . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
-                . '<p class="note">' . nm_t('NagiLog 用（ログインすると LOG・投稿の画面が開きます）') . '</p>'
-                . '<p><input class="copy-src wide" readonly value="' . h($login . '&p=log') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+                . '<p><input class="copy-src wide" readonly value="' . h($isLog ? $login . '&p=log' : $login) . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
+                . '<p class="note">' . ($isLog ? nm_t('NagiManga 用（ログインすると漫画の画面が開きます）') : nm_t('NagiLog 用（ログインすると LOG・投稿の画面が開きます）')) . '</p>'
+                . '<p><input class="copy-src wide" readonly value="' . h($isLog ? $login : $login . '&p=log') . '"> <button type="button" class="btn js-copy">' . nm_t('コピー') . '</button></p>'
                 . '<p class="note">' . nm_t('忘れた場合は、FTP で {config} の {key} を確認し、{url} の後ろに付けてください。', ['config' => '<code>data/config.php</code>', 'key' => '<code>login_key</code>', 'url' => '<code>admin/index.php?k=</code>']) . '</p>'
-                . '<p><a class="btn primary" href="' . h($login) . '">' . nm_t('ログイン画面へ') . '</a></p></section>', false);
+                . '<p><a class="btn primary" href="' . h($isLog ? $login . '&p=log' : $login) . '">' . nm_t('ログイン画面へ') . '</a></p></section>', false);
             return;
         }
     }
@@ -369,10 +397,20 @@ function nm_setup(string $method): void
         . '<form method="post" action="index.php" class="form">'
         . '<input type="hidden" name="csrf" value="' . h((string)$_SESSION['nm_pre']) . '">'
         . ($setupKey === '' ? '<p class="flash flash-err">' . nm_t('セットアップの鍵を作れませんでした。FTP で data フォルダを書き込み可能（755 など）にしてから、このページを開き直してください') . '</p>' : '')
-        . '<p>' . nm_t('設置した本人か確かめるため、サーバーが作った「セットアップの鍵」を入力します。FTP（またはサーバーのファイルマネージャー）で {file} を開き、書いてある鍵（例: ABCDE-FGHJK-LMNPQ-RSTUV）をコピーしてください。', ['file' => $keyAt]) . '</p>'
+        . '<div class="nm-setup-help"><p><strong>' . nm_t('お手数をおかけします。') . '</strong>' . nm_t('設置したばかりのサイトを狙った乗っ取りが増えているため、セキュリティを厳重にしています。設置した本人か確かめるため、最初の一度だけ、サーバーの中に作られた「セットアップの鍵」を入力してください。') . '</p>'
+        . '<details open><summary>' . nm_t('セットアップの鍵の見つけ方') . '</summary><ol>'
+        . '<li>' . nm_t('ファイルをアップロードしたときと同じ FTP ソフト（FileZilla など）か、レンタルサーバーの管理画面にある「ファイルマネージャー」を開きます。') . '</li>'
+        . '<li>' . nm_t('アップロードしたフォルダの中から、{file} を探します。', ['file' => $keyAt]) . '</li>'
+        . '<li>' . nm_t('ファイルの中身を表示します。FTP ソフトでは、右クリックして「表示/編集」を選ぶか、パソコンにダウンロードしてメモ帳で開きます。ファイルマネージャーでは、ファイルをクリックするか「編集」を選びます。') . '</li>'
+        . '<li>' . nm_t('{example} の形をした 1 行をコピーして、下の「セットアップの鍵」の欄に貼り付けます。小文字や前後の空白が混ざってもかまいません。', ['example' => '<code>ABCDE-FGHJK-LMNPQ-RSTUV</code>']) . '</li></ol>'
+        . '<p class="note">' . nm_t('ファイルが見つからないときは、このページを開き直すと作られます。鍵はほかの人に教えないでください。セットアップが終わると、ファイルは自動で消えます。') . '</p></details></div>'
         . '<label>' . nm_t('セットアップの鍵') . '<input name="setup_key" autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="100" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"></label>'
         . '<label>' . nm_t('管理者パスワード（10 文字以上）') . '<input type="password" name="password" autocomplete="new-password" required minlength="10"></label>'
         . '<label>' . nm_t('もう一度') . '<input type="password" name="password2" autocomplete="new-password" required minlength="10"></label>'
+        . '<fieldset class="nm-home-pick"><legend>' . nm_t('おもに使うもの') . '</legend>'
+        . '<label class="nm-home-card"><input type="radio" name="home" value="log" required><span class="nm-home-name">NagiLog</span><span class="nm-home-text">' . nm_t('日記・ブログ・写真・お知らせを載せる') . '</span></label>'
+        . '<label class="nm-home-card"><input type="radio" name="home" value="manga" required><span class="nm-home-name">NagiManga</span><span class="nm-home-text">' . nm_t('漫画を載せて、スワイプで読んでもらう') . '</span></label></fieldset>'
+        . '<p class="note nm-home-note">' . nm_t('ログインしたときに最初に開く画面です。どちらを選んでも両方使えて、ログイン画面でいつでも切り替えられます。') . '</p>'
         . '<label class="check"><input type="checkbox" name="lock_ip" value="1" checked> ' . nm_t('今の IP アドレス（{ip}）からだけ管理画面を開けるようにする（推奨。あとで設定から変更できます）', ['ip' => h($ip)]) . '</label>'
         . '<label class="check"><input type="checkbox" name="secret_login" value="1" checked> ' . nm_t('秘密のログイン URL からだけログインできるようにする（推奨。LOGの「ログイン」リンクと login.php を使いません。あとで設定から変更できます）') . '</label>'
         . '<button class="btn primary">' . nm_t('セットアップする') . '</button></form>'
@@ -414,6 +452,7 @@ function nm_login_page(string $method, array $cfg): void
     $asked = nm_str($_POST, 'p', 20);
     if ($asked === '') $asked = nm_str($_GET, 'p', 20);
     if ($asked === '') $asked = nm_str($_COOKIE, 'nm_land', 10);
+    if ($asked === '' && ($cfg['home'] ?? '') === 'log') $asked = 'log';
     $after = $asked === 'log' ? 'p=log' : '';
     $error = '';
     $askCode = false;
@@ -458,8 +497,8 @@ function nm_login_page(string $method, array $cfg): void
         . ($publicLogin ? '' : '<input type="hidden" name="k" value="' . h($key) . '">');
     // The choice stays out of the form markup (form="…") so the passkey button above it uses the same radio buttons.
     $land = '<fieldset class="nm-login-to"><legend>' . nm_t('ログインしたら開く画面') . '</legend>'
-        . '<label class="check"><input type="radio" name="p" value="log" form="nm-login-form"' . ($after !== '' ? ' checked' : '') . '>' . nm_t('NagiLog（LOG・投稿）') . '</label>'
-        . '<label class="check"><input type="radio" name="p" value="manga" form="nm-login-form"' . ($after === '' ? ' checked' : '') . '>' . nm_t('NagiManga（漫画）') . '</label></fieldset>';
+        . '<label class="nm-home-card"><input type="radio" name="p" value="log" form="nm-login-form"' . ($after !== '' ? ' checked' : '') . '><span class="nm-home-name">NagiLog</span><span class="nm-home-text">' . nm_t('LOG・投稿') . '</span></label>'
+        . '<label class="nm-home-card"><input type="radio" name="p" value="manga" form="nm-login-form"' . ($after === '' ? ' checked' : '') . '><span class="nm-home-name">NagiManga</span><span class="nm-home-text">' . nm_t('漫画') . '</span></label></fieldset>';
     if ($askCode) {
         // autocomplete="one-time-code": iPhone and Android offer the code from their own password app.
         $land = '';
@@ -808,6 +847,13 @@ function nm_handle_post(array $cfg): void
 
         case 'settings_save_all':
             nm_settings_save_all($cfg);
+
+        case 'twofa_nudge_off':
+            $cfg['twofa_nudge'] = 'off';
+            nm_save_config($cfg);
+            nm_flash('ok', nm_t('今後は表示しません。設定の「二段階認証」「パスキー」から、いつでも設定できます'));
+            $back = nm_str($_POST, 'back', 20);
+            nm_redirect(preg_match('/^[a-z_]+$/', $back) && $back !== 'img' && !str_ends_with($back, '_json') ? 'p=' . $back : '');
 
         // The two-step login (lib/totp.php): each change asks for the password and a code, and takes effect at once.
         case 'totp_enable':
