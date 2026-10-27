@@ -1574,7 +1574,7 @@ Bots disguising their User-Agent as a normal browser and fetching little by litt
 It is not a mechanism that prevents every saving of published pictures either.
 Set up measures against large-scale fetching on the server or CDN side too if needed.
 
-Hotlink protection, which keeps the LOG’s pictures from showing when they are pasted into other sites’ pages or forums, is on from the start for sites set up from v0.12.0. Earlier sites turn it on with Turn it on in the notice on the LOG admin, or under "NagiMANGA → Advanced → Hotlink protection" in the settings. Link cards for a pasted URL, opening the URL directly and RSS readers still get the pictures. A link-exchange banner and the like can be set to Allow other sites to show it, picture by picture, in the media list. See [the NagiManga README](README.en.md#hotlink-protection-advanced-v030-and-later) for details.
+Hotlink protection, which keeps the LOG’s pictures from showing when they are pasted into other sites’ pages or forums, is on from the start for sites set up from v0.12.0. Earlier sites turn it on with Turn it on in the notice on the LOG admin, or under "NagiMANGA → Advanced → Hotlink protection" in the settings. Link cards for a pasted URL, opening the URL directly and RSS readers still get the pictures. Share images (the shared OGP image and the first picture a post shares on its card) show on other sites’ pages too. A link-exchange banner and the like can be set to Allow other sites to show it, picture by picture, in the media list. See [the NagiManga README](README.en.md#hotlink-protection-advanced-v030-and-later) for details.
 
 ## Protecting the storage
 

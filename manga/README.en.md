@@ -329,6 +329,7 @@ With "設定 → 上級者向けの設定 → 直リンク防止" (Settings → 
 
 - **Sites set up from v0.12.0 have it on from the start.** Sites set up earlier keep it off after updating; pressing **Turn it on** in the notice on the LOG admin and the work list is all it takes (Not now makes the notice go away).
 - The picture of the link card (OGP) shown when the URL is pasted into X, LINE and the like still appears: the services that make cards fetch the picture without a page. Opening the URL directly and RSS readers fetching it work the same way.
+- **Share images (OGP) are left out of hotlink protection.** The shared OGP image and the picture a post shares on its card (its first picture, or the cover of a video or sound file) show on other sites’ pages too, so OGP checkers and blog cards on pages that introduce yours show the picture. Thumbnails and a post’s second and later pictures stay protected.
 - The LOG’s own pages, pages that embed the LOG (`embed.php`) and sites on the allow list still show them.
 - **For a picture you want other sites to show, such as a link-exchange banner**, tick "Allow other sites to show it" for that picture in the media list and save. Only that picture is left out of hotlink protection. Put the picture in a published post or fixed page (a links page, say).
 - For an RSS reader that shows pictures inside the browser, such as Feedly, add that site (for example `https://feedly.com`) to the allow list.

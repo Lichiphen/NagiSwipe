@@ -1846,7 +1846,7 @@ function nm_view_settings(array $cfg): void
         . '<p class="note">' . nm_t('共有リンクで開く個別ページ、リンクのカード用の表紙は、オンでもそのまま使えます。サイト単位（例: https://note.com）で書いてください。ブラウザは、ほかのサイトからの読み込みでは URL の途中（/ユーザー名/ など）を送らないため、途中までの一致では判定できません。') . '</p>'
         . $block('advanced')
         . '<label class="check"><input type="checkbox" name="hotlink" value="1"' . (!empty($cfg['hotlink']) ? ' checked' : '') . '> ' . nm_t('漫画の画像に直リンク防止を使う') . '</label>'
-        . '<label class="check"><input type="checkbox" name="hotlink_log" value="1"' . (!empty($cfg['hotlink_log']) ? ' checked' : '') . '> ' . nm_t('LOGの画像・動画・音声に直リンク防止を使う（ほかのサイトのページに貼られたときだけ表示しません。URL を直接開いたとき、リンクのカード、RSS リーダーではそのまま表示します。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます）') . '</label>'
+        . '<label class="check"><input type="checkbox" name="hotlink_log" value="1"' . (!empty($cfg['hotlink_log']) ? ' checked' : '') . '> ' . nm_t('LOGの画像・動画・音声に直リンク防止を使う（ほかのサイトのページに貼られたときだけ表示しません。URL を直接開いたとき、リンクのカード、RSS リーダーではそのまま表示します。OGP 画像はほかのサイトのページからも表示します。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます）') . '</label>'
         . '<label>' . nm_t('ほかに読み込みを許可するサイト（1 行に 1 つ）') . '<textarea name="hotlink_allow" rows="3">' . h(implode("\n", $cfg['hotlink_allow'] ?? [])) . '</textarea></label>'
         . '</div>'
         . '</details></section>'

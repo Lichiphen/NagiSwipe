@@ -485,6 +485,32 @@ function nl_media_public(string $id): bool { return nl_media_access($id) > 0; }
  * Who may load a LOG picture: 0 only the owner, 1 everyone, 2 this reader only (only locked posts or pages
  * show it, and this browser opened one of them with the password).
  */
+/** The posts whose summaries list this media (checked again against each post by the callers). */
+function nl_media_post_ids(string $id): array
+{
+    $refs = nl_memo('media-refs', static function (): array {
+        $refs = [];
+        foreach (nl_post_summaries() as $p) foreach ($p['media'] ?? [] as $mid) $refs[$mid][] = $p['id'];
+        return $refs;
+    });
+    return $refs[$id] ?? [];
+}
+/**
+ * Whether this file is a share image (og:image): the shared OGP image, or the picture (a video's or audio file's
+ * cover) a published post shares. Hotlink protection leaves it out, so a site introducing the page shows its card.
+ */
+function nl_media_is_og(array $m, bool $thumb, bool $cover): bool
+{
+    if ($thumb || $cover !== nl_is_av($m)) return false;
+    if ($m['id'] === (string)(nl_settings()['og_image'] ?? '')) return !nl_is_svg($m);
+    foreach (nl_media_post_ids($m['id']) as $pid) {
+        $p = nl_load_post($pid);
+        if (!$p || $p['status'] !== 'published') continue;
+        $choice = nl_og_choice($p);
+        if ($choice && $choice[0] === 'media' && $choice[1]['id'] === $m['id']) return true;
+    }
+    return false;
+}
 function nl_media_access(string $id): int
 {
     $s = nl_settings();
@@ -497,13 +523,8 @@ function nl_media_access(string $id): int
         if (!nl_is_locked($page)) return 1;
         if (nl_unlocked($page)) $access = 2;
     }
-    $refs = nl_memo('media-refs', static function (): array {
-        $refs = [];
-        foreach (nl_post_summaries() as $p) foreach ($p['media'] ?? [] as $mid) $refs[$mid][] = $p['id'];
-        return $refs;
-    });
     // Never trust cached visibility alone after unpublishing/deletion.
-    foreach ($refs[$id] ?? [] as $pid) {
+    foreach (nl_media_post_ids($id) as $pid) {
         $p = nl_load_post($pid);
         if (!$p || $p['status'] !== 'published' || !in_array($id, $p['media'], true)) continue;
         if (!nl_is_locked($p)) return 1;
@@ -533,8 +554,9 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
     $m = nl_load_media($id);
     $access = $admin ? 1 : nl_media_access($id);
     if (!$m || $access === 0) nm_not_found();
-    // Hotlink protection for the LOG (its own switch, hotlink_log); a picture marked for other sites (a banner) is left out.
-    if (!$admin && empty($m['hotlink_free']) && !empty(nm_config()['hotlink_log']) && !nm_hotlink_ok(nm_config(), true)) nm_not_found();
+    // Hotlink protection for the LOG (its own switch, hotlink_log); a picture marked for other sites (a banner) and the
+    // share images (og:image, shown by sites that introduce a page) are left out.
+    if (!$admin && empty($m['hotlink_free']) && !empty(nm_config()['hotlink_log']) && !nm_hotlink_ok(nm_config(), true) && !nl_media_is_og($m, $thumb, $cover)) nm_not_found();
     // A picture only an opened lock shows stays in this browser's own cache.
     $cache = ($access === 2 ? 'private' : 'public') . ', max-age=' . NL_MEDIA_MAX_AGE;
     $av = nl_is_av($m);

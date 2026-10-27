@@ -146,50 +146,60 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("画像入り投稿のOGPを設定", "./?media=" + mid in public.get("/?id=" + image_pid).text)
 
     # Hotlink protection for the LOG: its own switch (on for new sites), only another site's page is turned away.
+    # A second picture of a post (not its share image) shows the turning away; the first is the post's og:image.
+    share = json.loads(post({"do": "log_upload"}, files={"image": ("share.png", helper.png(60, 40, seed=3), "image/png")}).text)["media"]
+    hot = json.loads(post({"do": "log_upload"}, files={"image": ("inner.png", helper.png(50, 50, seed=4), "image/png")}).text)["media"]
+    hid = hot["id"]
+    hot_pid = json.loads(post(payload(body="直リンクの確認\n" + share["tag"] + "\n" + hot["tag"])).text)["id"]
+    hot_url = "/?media=" + hid + "&format=png"
     host = f"127.0.0.1:{c.port}"
     evil = {"Referer": "https://evil.example/", "Sec-Fetch-Site": "cross-site"}
     cfg_path = site / "data/config.php"
     check("直リンク防止（LOG）: 新しく設置したサイトでは最初からオン", "'hotlink_log' => true" in cfg_path.read_text(encoding="utf-8"))
     check("直リンク防止（LOG）: ほかのサイトのページ・掲示板に貼られた画像・サムネイルは 404",
-          public.get(public_media_url, headers=evil).status == 404 and public.get(public_media_url + "&thumb=1", headers=evil).status == 404
-          and public.get(public_media_url, headers={"Referer": "https://evil.example/post"}).status == 404
-          and public.get(public_media_url, headers={"Sec-Fetch-Site": "cross-site"}).status == 404)
-    check("直リンク防止（LOG）: よく似た名前のサイトも 404", public.get(public_media_url, headers={"Referer": f"http://127.0.0.1.evil.example:{c.port}/"}).status == 404)
+          public.get(hot_url, headers=evil).status == 404 and public.get(hot_url + "&thumb=1", headers=evil).status == 404
+          and public.get(hot_url, headers={"Referer": "https://evil.example/post"}).status == 404
+          and public.get(hot_url, headers={"Sec-Fetch-Site": "cross-site"}).status == 404)
+    check("直リンク防止（LOG）: 記事のOGP画像（共有したときの紹介画像）はほかのサイトのページからも読める",
+          public.get(public_media_url, headers=evil).status == 200 and "./?media=" + share["id"] in public.get("/?id=" + hot_pid).text
+          and public.get("/?media=" + share["id"] + "&format=png", headers=evil).status == 200)
+    check("直リンク防止（LOG）: OGP画像でもサムネイルは 404", public.get(public_media_url + "&thumb=1", headers=evil).status == 404)
+    check("直リンク防止（LOG）: よく似た名前のサイトも 404", public.get(hot_url, headers={"Referer": f"http://127.0.0.1.evil.example:{c.port}/"}).status == 404)
     check("直リンク防止（LOG）: LOGのページからは読める",
-          public.get(public_media_url, headers={"Sec-Fetch-Site": "same-origin"}).status == 200
-          and public.get(public_media_url, headers={"Referer": f"http://{host}/?id={image_pid}"}).status == 200)
+          public.get(hot_url, headers={"Sec-Fetch-Site": "same-origin"}).status == 200
+          and public.get(hot_url, headers={"Referer": f"http://{host}/?id={hot_pid}"}).status == 200)
     check("直リンク防止（LOG）: URL を直接開いたとき・リンクのカードや RSS の取得（ページなし）は読める",
-          public.get(public_media_url, headers={"Sec-Fetch-Site": "none"}).status == 200 and public.get(public_media_url).status == 200)
-    check("直リンク防止（LOG）: 管理画面の画像は対象外", c.get("/admin/" + media["url"], headers=evil).status == 200)
+          public.get(hot_url, headers={"Sec-Fetch-Site": "none"}).status == 200 and public.get(hot_url).status == 200)
+    check("直リンク防止（LOG）: 管理画面の画像は対象外", c.get("/admin/" + hot["url"], headers=evil).status == 200)
     post({"do": "settings_advanced", "hotlink_log": "1", "hotlink_allow": "https://note.com"})
     check("直リンク防止（LOG）: 許可リストのサイトからは読める（漫画の直リンク防止はオフのまま）",
-          public.get(public_media_url, headers={"Referer": "https://note.com/x", "Sec-Fetch-Site": "cross-site"}).status == 200 and "'hotlink' => false" in cfg_path.read_text(encoding="utf-8"))
+          public.get(hot_url, headers={"Referer": "https://note.com/x", "Sec-Fetch-Site": "cross-site"}).status == 200 and "'hotlink' => false" in cfg_path.read_text(encoding="utf-8"))
     # One picture for other sites (a link-exchange banner)
-    rev = re.search(r'data-media-card="' + mid + r'" data-revision="([0-9]+)"', c.get("/admin/index.php?p=log_media").text).group(1)
+    rev = re.search(r'data-media-card="' + hid + r'" data-revision="([0-9]+)"', c.get("/admin/index.php?p=log_media").text).group(1)
     page = c.get("/admin/index.php?p=log_media").text
     check("画像一覧に「ほかのサイトにも貼れるようにする」", 'name="hotlink_free" value="1"' in page)
-    post({"do": "log_media_alt", "media": mid, "revision": rev, "alt": "バナー", "rating": "", "hotlink_set": "1", "hotlink_free": "1"})
-    check("「ほかのサイトにも貼れる」画像は、ほかのサイトのページからも読める", public.get(public_media_url, headers=evil).status == 200)
-    rev = re.search(r'data-media-card="' + mid + r'" data-revision="([0-9]+)"', c.get("/admin/index.php?p=log_media").text).group(1)
-    post({"do": "log_media_alt", "media": mid, "revision": rev, "alt": "バナー", "rating": "", "hotlink_set": "1"})
-    check("チェックを外すと、また 404", public.get(public_media_url, headers=evil).status == 404)
+    post({"do": "log_media_alt", "media": hid, "revision": rev, "alt": "バナー", "rating": "", "hotlink_set": "1", "hotlink_free": "1"})
+    check("「ほかのサイトにも貼れる」画像は、ほかのサイトのページからも読める", public.get(hot_url, headers=evil).status == 200)
+    rev = re.search(r'data-media-card="' + hid + r'" data-revision="([0-9]+)"', c.get("/admin/index.php?p=log_media").text).group(1)
+    post({"do": "log_media_alt", "media": hid, "revision": rev, "alt": "バナー", "rating": "", "hotlink_set": "1"})
+    check("チェックを外すと、また 404", public.get(hot_url, headers=evil).status == 404)
     # Manga's switch and the LOG's are apart: manga on, the LOG off.
     post({"do": "settings_advanced", "hotlink": "1", "hotlink_allow": ""})
-    check("漫画の直リンク防止だけオンなら、LOGの画像はほかのサイトからも読める", public.get(public_media_url, headers=evil).status == 200)
+    check("漫画の直リンク防止だけオンなら、LOGの画像はほかのサイトからも読める", public.get(hot_url, headers=evil).status == 200)
     # A site set up before 0.12.0 (no hotlink_log): a one-click notice in the LOG admin.
     text = cfg_path.read_text(encoding="utf-8")
     cfg_path.write_text(re.sub(r"\n  'hotlink_log' => (?:true|false),", "", text), encoding="utf-8")
     page = c.get("/admin/index.php?p=log").text
     check("0.12.0 より前のサイトには、LOGの管理画面にワンクリックでオンにするお知らせ",
           "hotlink-banner" in page and 'value="hotlink_log_on"' in page and 'value="hotlink_log_off"' in page and "hotlink-banner" in c.get("/admin/index.php").text)
-    check("更新しただけでは、LOGの画像はこれまでどおり（オフ）", public.get(public_media_url, headers=evil).status == 200)
+    check("更新しただけでは、LOGの画像はこれまでどおり（オフ）", public.get(hot_url, headers=evil).status == 200)
     r = post({"do": "hotlink_log_on", "back": "log"})
     check("「オンにする」で直リンク防止がオンになり、LOGの画面へ戻る", r.status == 303 and r.getheader("Location") == "index.php?p=log"
-          and public.get(public_media_url, headers=evil).status == 404 and "hotlink-banner" not in c.get("/admin/index.php?p=log").text)
+          and public.get(hot_url, headers=evil).status == 404 and "hotlink-banner" not in c.get("/admin/index.php?p=log").text)
     text = cfg_path.read_text(encoding="utf-8")
     cfg_path.write_text(re.sub(r"\n  'hotlink_log' => (?:true|false),", "", text), encoding="utf-8")
     post({"do": "hotlink_log_off", "back": "log"})
-    check("「今はしない」でオフのまま、お知らせは消える", public.get(public_media_url, headers=evil).status == 200 and "hotlink-banner" not in c.get("/admin/index.php?p=log").text)
+    check("「今はしない」でオフのまま、お知らせは消える", public.get(hot_url, headers=evil).status == 200 and "hotlink-banner" not in c.get("/admin/index.php?p=log").text)
     check("ログインしていない人のワンクリックは 404", public.post("/admin/index.php", {"csrf": "x", "do": "hotlink_log_on"}).status == 404)
     post({"do": "settings_advanced", "hotlink_log": "1", "hotlink_allow": ""})
     check("使用中の画像を削除しない", "公開した画像" in public.get("/?id=" + image_pid).text and post({"do": "log_media_delete", "media": mid, "revision": 1}).status == 303 and public.get(public_media_url).status == 200)
