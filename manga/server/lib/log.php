@@ -533,6 +533,8 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
     $m = nl_load_media($id);
     $access = $admin ? 1 : nl_media_access($id);
     if (!$m || $access === 0) nm_not_found();
+    // Hotlink protection for the LOG (its own switch, hotlink_log); a picture marked for other sites (a banner) is left out.
+    if (!$admin && empty($m['hotlink_free']) && !empty(nm_config()['hotlink_log']) && !nm_hotlink_ok(nm_config(), true)) nm_not_found();
     // A picture only an opened lock shows stays in this browser's own cache.
     $cache = ($access === 2 ? 'private' : 'public') . ', max-age=' . NL_MEDIA_MAX_AGE;
     $av = nl_is_av($m);

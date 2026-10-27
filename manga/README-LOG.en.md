@@ -1574,6 +1574,8 @@ Bots disguising their User-Agent as a normal browser and fetching little by litt
 It is not a mechanism that prevents every saving of published pictures either.
 Set up measures against large-scale fetching on the server or CDN side too if needed.
 
+Hotlink protection, which keeps the LOG’s pictures from showing when they are pasted into other sites’ pages or forums, is on from the start for sites set up from v0.12.0. Earlier sites turn it on with Turn it on in the notice on the LOG admin, or under "NagiMANGA → Advanced → Hotlink protection" in the settings. Link cards for a pasted URL, opening the URL directly and RSS readers still get the pictures. A link-exchange banner and the like can be set to Allow other sites to show it, picture by picture, in the media list. See [the NagiManga README](README.en.md#hotlink-protection-advanced-v030-and-later) for details.
+
 ## Protecting the storage
 
 The storage is `data/`, shared with NagiManga.
@@ -1760,11 +1762,13 @@ On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were a
 
 | Check | Result |
 | --- | --- |
-| Hardening (`dev/hardening_test.py`) | 23 checks passed. After 40 failures from 8 IP addresses, a browser with the owner’s mark, an allowed IP and the owner on the attacker’s (locked) IP still log in, while unmarked browsers wait; a forged mark, and a stolen mark after 5 failures, do not help. Changing address inside one IPv6 /64 still stops at 5, another /64 counts apart; the limit of 60 an hour per work, with readers who already opened it still reading. The current password cannot be guessed on from a logged-in screen. The log is an empty 404 without `.htaccess`, and old logs move into it |
+| Hardening (`dev/hardening_test.py`) | 25 checks passed. After 40 failures from 8 IP addresses, a browser with the owner’s mark, an allowed IP and the owner on the attacker’s (locked) IP still log in, while unmarked browsers wait; a forged mark, and a stolen mark after 5 failures, do not help. Changing address inside one IPv6 /64 still stops at 5, another /64 counts apart; the limit of 60 an hour per work, with readers who already opened it still reading. The current password cannot be guessed on from a logged-in screen. The log and the record of the update check are empty 404s without `.htaccess`, and old logs and `check.json` move into them |
 | Security (`dev/attack_test.py`) | 205 checks passed. The setup key (no key, a wrong key, 10 failures, unreadable without `.htaccess`); updates without a signature, a swapped ZIP, another key, an old version’s signature and a broken signature are refused |
 | Passkeys (`dev/passkey_test.py`) | 46 checks passed. A passkey still logs in while the site-wide limit holds |
 | Updating an old install | v0.11.1, installed and updated to v0.12.0 with its own updater: still logged in, given the mark, old log carried over (7 checks) |
-| Existing tests | LOG 204, sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, way in 32, two-step login 49, preview 7, translations 3519 passed |
+| Setup and way in (`dev/login_entry_test.py`) | 43 checks passed. The setup screen’s apology and how to find the key; the screen chosen under What you will mostly use shows on the login page and the finished screen. The two-step reminder shows once per login, and not again after Don’t show this again |
+| Hotlink protection for the LOG (`dev/log_test.py`) | LOG 220 checks passed. On from the start for new sites: pictures and thumbnails used by another site’s page give 404, while the LOG’s pages, allowed sites, opening the URL directly, and card and RSS fetchers still get them. A picture allowed on other sites is left out. It works apart from the manga switch. On earlier sites, Turn it on and Not now in the notice work |
+| Existing tests | sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, two-step login 49, preview 7, translations 3559 passed |
 
 ## Sources and writing
 

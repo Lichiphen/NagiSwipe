@@ -1019,7 +1019,6 @@
   "直リンク防止": "Hotlink protection",
   "直リンク防止をオフにしました": "Hotlink protection turned off",
   "直リンク防止をオンにしました": "Hotlink protection turned on",
-  "直リンク防止を使う": "Use hotlink protection",
   "確認のため、タイトル「{title}」を入力": "To confirm, type the title {title}",
   "確認のタイトルが一致しないため、削除しませんでした": "The confirmation title did not match, so nothing was deleted",
   "確認用のパスワードが一致しません": "The confirmation password does not match",
@@ -1777,5 +1776,13 @@
   "アップロードしたフォルダの中から、{file} を探します。": "In the folder you uploaded, find {file}.",
   "ファイルの中身を表示します。FTP ソフトでは、右クリックして「表示/編集」を選ぶか、パソコンにダウンロードしてメモ帳で開きます。ファイルマネージャーでは、ファイルをクリックするか「編集」を選びます。": "Show what is in the file. In an FTP app, right-click it and choose View/Edit, or download it to your computer and open it in a text editor. In a file manager, click the file or choose Edit.",
   "{example} の形をした 1 行をコピーして、下の「セットアップの鍵」の欄に貼り付けます。小文字や前後の空白が混ざってもかまいません。": "Copy the line shaped like {example} and paste it into the Setup key field below. Lower case and spaces around it do not matter.",
-  "ファイルが見つからないときは、このページを開き直すと作られます。鍵はほかの人に教えないでください。セットアップが終わると、ファイルは自動で消えます。": "If the file is not there, opening this page again makes it. Do not tell anyone the key. The file is deleted when the setup is done."
+  "ファイルが見つからないときは、このページを開き直すと作られます。鍵はほかの人に教えないでください。セットアップが終わると、ファイルは自動で消えます。": "If the file is not there, opening this page again makes it. Do not tell anyone the key. The file is deleted when the setup is done.",
+  "LOGの画像・動画・音声に直リンク防止を使う（ほかのサイトのページに貼られたときだけ表示しません。URL を直接開いたとき、リンクのカード、RSS リーダーではそのまま表示します。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます）": "Use hotlink protection for the LOG’s pictures, videos and sound (they are refused only when another site’s page shows them; opening the URL directly, link cards and RSS readers still get them. For a link-exchange banner and the like, choose Allow other sites to show it for that picture in the media list)",
+  "LOGの画像の直リンク防止がオフです。オンにすると、ほかのサイトのページや掲示板に画像を貼られても表示せず、通信量の無駄を防げます。URL を貼ったときのリンクのカードの画像は、これまでどおり表示します。": "Hotlink protection for the LOG’s pictures is off. With it on, pictures pasted into other sites’ pages or forums are not shown, which saves wasted traffic. The picture of the link card shown when someone pastes a URL still appears.",
+  "オンにする": "Turn it on",
+  "今はしない": "Not now",
+  "LOGの画像の直リンク防止をオンにしました。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます": "Hotlink protection for the LOG’s pictures is on. For a link-exchange banner and the like, choose Allow other sites to show it for that picture in the media list",
+  "直リンク防止はオフのままです。設定の「NagiMANGA → 上級者向けの設定」から、いつでもオンにできます": "Hotlink protection stays off. You can turn it on any time under NagiMANGA → Advanced in the settings",
+  "漫画の画像に直リンク防止を使う": "Use hotlink protection for manga pictures",
+  "ほかのサイトにも貼れるようにする（バナーなど）": "Allow other sites to show it (banners and the like)"
 }

@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiLog", "item": "https://nagiswipe.pages.dev/nagilog.html"}]}</script>
 <script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=df7cdbd98c" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=75528db4d6" defer></script>
 </head>
 <body class="page-nagilog has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -405,6 +405,7 @@
 <p>設定の「共通・安全 → 画像収集BOTへの対策」で、収集ツール名と取得回数の上限を調整できます。既定では、画像収集ツールを示すUser-Agentと、同じIPからの大量取得を404で拒否します。LOG画像と漫画画像に共通で適用します。文章の閲覧やAIを一律に拒否する設定ではありません。</p>
 <p>既定の上限は、10秒区間に120件、1分区間に300件です。上限を超えたIPからの画像取得は5分間拒否します。同じ回線を使う人や、画像の多い漫画の閲覧も回数に含まれます。正当な閲覧に影響があるときは、上限や収集ツール名を調整してください。</p>
 <p>User-Agentを普通のブラウザに偽装し、少量ずつ取るBOTや、IPを分散するBOTは完全には見分けられません。公開された画像の保存をすべて防ぐ仕組みでもありません。大規模な取得への対策は、必要に応じてサーバーやCDN側にも設けてください。</p>
+<p>ほかのサイトのページや掲示板にLOGの画像を貼られても表示しない「直リンク防止」は、v0.12.0 から新しく設置したサイトでは最初からオンです。それより前のサイトは、LOGの管理画面のお知らせで「オンにする」を押すか、設定の「NagiMANGA → 上級者向けの設定 → 直リンク防止」でオンにします。URL を貼ったときのリンクのカード、URL を直接開いたとき、RSS リーダーの取得では表示します。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます。詳しくは <a href="nagimanga.html#直リンク防止上級者向けv030-以降">NagiManga の README</a> にあります。</p>
 <h2 id="保存先を守る"><span class="ch-num" aria-hidden="true">31</span>保存先を守る<a class="anchor" href="#保存先を守る" aria-label="この見出しへのリンク">#</a></h2>
 <p>保存先はNagiMangaと共通の <code>data/</code> です。公開フォルダの外へ移す方法を推奨します。たとえば、サーバー上の<code>/home/you/nagimanga-data</code> に保存先を移し、<code>lib/paths.php</code> を次の内容で作ります。</p>
 <pre><code class="language-php">&lt;?php return &#x27;/home/you/nagimanga-data&#x27;;</code></pre>

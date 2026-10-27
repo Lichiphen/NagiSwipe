@@ -211,15 +211,27 @@ function nm_release_notes_html(string $md): string
     return $html;
 }
 
+/**
+ * A PHP file that stops before its data, like the security log: a server that ignores data/.htaccess answers
+ * an empty 404 instead of the version this site runs. Up to 0.12.0 it was update/check.json.
+ */
 function nm_update_cache_file(): string
 {
-    return NM_DATA . '/update/check.json';
+    return NM_DATA . '/update/check.php';
+}
+
+function nm_update_cache_clear(): void
+{
+    @unlink(nm_update_cache_file());
+    @unlink(NM_DATA . '/update/check.json');
 }
 
 /** Last known status without touching the network. */
 function nm_update_cached(): ?array
 {
-    $st = nm_read_json(nm_update_cache_file());
+    $raw = is_file(nm_update_cache_file()) ? (string)@file_get_contents(nm_update_cache_file()) : '';
+    $st = str_starts_with($raw, NM_LOG_HEAD) ? json_decode(substr($raw, strlen(NM_LOG_HEAD)), true) : null;
+    if (!is_array($st)) $st = null;
     return ($st && ($st['current'] ?? '') === NM_VERSION) ? $st : null;
 }
 
@@ -260,7 +272,9 @@ function nm_update_status(bool $force = false): array
         nm_log('update_check_failed', $e->getMessage());
     }
     try {
-        nm_write_json(nm_update_cache_file(), $st);
+        nm_write_atomic(nm_update_cache_file(), NM_LOG_HEAD . json_encode($st, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "
+");
+        @unlink(NM_DATA . '/update/check.json');
     } catch (Throwable) {
         // A read-only data folder only costs a fresh check next time
     }
@@ -508,7 +522,7 @@ function nm_update_apply(): array
             nm_log('update_failed', $e->getMessage());
             return ['ok' => false, 'msg' => nm_t('更新の途中で失敗したため、元に戻しました')];
         }
-        @unlink(nm_update_cache_file());
+        nm_update_cache_clear();
         nm_update_prune();
         nm_log('update_applied', NM_VERSION . ' -> ' . $st['latest']);
         return ['ok' => true, 'msg' => nm_t('NagiManga を {v} に更新しました', ['v' => $st['latest']]), 'version' => $st['latest']];
@@ -548,7 +562,7 @@ function nm_update_rollback(string $name): array
             return ['ok' => false, 'msg' => nm_t('元に戻せませんでした')];
         }
         nm_rmdir_recursive(nm_update_backup_root() . '/' . $name);
-        @unlink(nm_update_cache_file());
+        nm_update_cache_clear();
         nm_log('update_rolled_back', $known[$name]['to'] . ' -> ' . $known[$name]['from']);
         return ['ok' => true, 'msg' => nm_t('NagiManga {v} に戻しました', ['v' => $known[$name]['from']])];
     });

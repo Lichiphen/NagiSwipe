@@ -51,7 +51,7 @@ if (!$work || empty($work['pages'])) nm_not_found();
 // Link cards: any site may fetch the cover of a public work (it is one small image)
 if ($method === 'GET' && $action === 'o') nm_serve_og_image($work);
 // Hotlink protection (settings > advanced): pages only for this site and the listed ones
-if (!nm_hotlink_ok($cfg)) nm_not_found();
+if (!empty($cfg['hotlink']) && !nm_hotlink_ok($cfg)) nm_not_found();
 
 match (true) {
     $method === 'GET' && $action === 'm' => nm_serve_manifest($work, nm_str($_GET, 't', 80)),
@@ -73,27 +73,6 @@ function nm_cors(array $cfg): void
         header('Access-Control-Max-Age: 600');
     }
     header('Vary: Origin');
-}
-
-/**
- * Hotlink protection. Off by default. When on, the manifest, unlock and page
- * images answer only this site, the sites listed for embedding and the extra
- * allow list; everything else gets the same 404.
- */
-function nm_hotlink_ok(array $cfg): bool
-{
-    if (empty($cfg['hotlink'])) return true;
-    $site = (string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '');
-    if ($site === 'same-origin' || $site === 'same-site') return true;
-    $from = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
-    if ($from === '' || $from === 'null') $from = (string)($_SERVER['HTTP_REFERER'] ?? '');
-    $u = parse_url($from);
-    if (!is_array($u) || empty($u['host']) || !in_array($u['scheme'] ?? '', ['http', 'https'], true)) return false;
-    $host = strtolower($u['host']) . (isset($u['port']) ? ':' . $u['port'] : '');
-    if ($host === strtolower((string)($_SERVER['HTTP_HOST'] ?? ''))) return true;
-    $origin = strtolower($u['scheme']) . '://' . $host;
-    $allow = array_merge($cfg['allowed_origins'] ?? [], $cfg['hotlink_allow'] ?? []);
-    return in_array($origin, array_map('strtolower', $allow), true);
 }
 
 /** This install's public address (settings, or the address read.php is called with). */

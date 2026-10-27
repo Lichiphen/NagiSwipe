@@ -4,6 +4,7 @@ Hardening from the 0.11.1 security review, attacked over HTTP on a throw-away in
   - the site-wide login limit no longer shuts the owner out (browser mark, allow list)
   - IPv6 counts per /64, and each locked work has an hourly limit for everyone together
   - the security log is a PHP file (empty 404 without .htaccess), old logs move into it
+  - the update check record is a PHP file too (an old check.json goes)
 Many addresses come from X-Forwarded-For, with 127.0.0.1 set as a trusted proxy.
 
     python dev/hardening_test.py
@@ -175,10 +176,20 @@ def run(site, owner, csrf, key):
           tries <= 11 and r.status == 200 and "admin_password_changed" not in (data / "logs" / "security.log.php").read_text(encoding="utf-8"))
 
     # --- Security log --------------------------------------------------------------------------------
+    # The update check: an old check.json goes, the new one is a PHP file (nothing reachable, no network here).
+    upd = data / "update"
+    upd.mkdir(exist_ok=True)
+    (upd / "check.json").write_text('{"current": "0.11.1"}', encoding="utf-8")
+    php(site, "putenv('NAGIMANGA_UPDATE_API=http://127.0.0.1:9/none'); require '" + (site / "lib/update.php").as_posix() + "'; nm_update_status(true); echo json_encode(nm_update_cached() !== null);")
+    cache = (upd / "check.php").read_text(encoding="utf-8") if (upd / "check.php").exists() else ""
+    check("更新の確認の記録は PHP 形式（古い check.json は消える）", cache.startswith("<?php http_response_code(404); exit; __halt_compiler();\n") and not (upd / "check.json").exists()
+          and php(site, "require '" + (site / "lib/update.php").as_posix() + "'; echo json_encode(nm_update_cached()['current'] ?? '');") == php(site, "echo json_encode(NM_VERSION);"))
     raw = base.start(site, args.port + 1, raw=True)
     try:
         r = h.Client(args.port + 1).get("/data/logs/security.log.php")
         check(".htaccess を読まないサーバーでもログは空の 404", r.status == 404 and r.text.strip() == "")
+        r = h.Client(args.port + 1).get("/data/update/check.php")
+        check(".htaccess を読まないサーバーでも、更新の確認の記録（版番号）は空の 404", r.status == 404 and r.text.strip() == "")
     finally:
         raw.terminate()
         raw.wait(timeout=10)

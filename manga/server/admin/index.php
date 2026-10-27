@@ -346,6 +346,8 @@ function nm_setup(string $method): void
             // base_url stays empty: share tags follow the address the admin is opened with
             if (!empty($_POST['lock_ip'])) $cfg['allowed_ips'] = [$ip];
             $cfg['login_entry'] = empty($_POST['secret_login']) ? 'public' : 'secret';
+            // New sites keep the LOG's pictures off other sites' pages; sites set up before 0.12.0 keep theirs as they were.
+            $cfg['hotlink_log'] = true;
             // The screen a login opens when the browser has no choice of its own yet (nm_land); both stay usable.
             $cfg['home'] = nm_str($_POST, 'home', 10) === 'log' ? 'log' : 'manga';
             nm_save_config($cfg);
@@ -848,6 +850,14 @@ function nm_handle_post(array $cfg): void
         case 'settings_save_all':
             nm_settings_save_all($cfg);
 
+        case 'hotlink_log_on':
+        case 'hotlink_log_off':
+            $cfg['hotlink_log'] = $do === 'hotlink_log_on';
+            nm_save_config($cfg);
+            nm_log('settings_hotlink_changed', ($cfg['hotlink_log'] ? 'log-on' : 'log-off'));
+            nm_flash('ok', $cfg['hotlink_log'] ? nm_t('LOGの画像の直リンク防止をオンにしました。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます') : nm_t('直リンク防止はオフのままです。設定の「NagiMANGA → 上級者向けの設定」から、いつでもオンにできます'));
+            nm_redirect(nm_str($_POST, 'back', 10) === 'log' ? 'p=log' : '');
+
         case 'twofa_nudge_off':
             $cfg['twofa_nudge'] = 'off';
             nm_save_config($cfg);
@@ -971,6 +981,7 @@ function nm_settings_advanced(array $cfg): array
         $allow[] = strtolower($o);
     }
     $cfg['hotlink'] = !empty($_POST['hotlink']);
+    $cfg['hotlink_log'] = !empty($_POST['hotlink_log']);
     $cfg['hotlink_allow'] = array_values(array_unique($allow));
     return $cfg;
 }
@@ -994,7 +1005,7 @@ function nm_settings_logged(array $cfg, array $sections): void
     if (in_array('login_entry', $sections, true)) nm_log('settings_login_entry_changed', (string)$cfg['login_entry']);
     if (in_array('login_guard', $sections, true)) nm_log('settings_login_guard_changed', $cfg['login_fail_max'] . ' / ' . intdiv($cfg['login_lock'], 60) . 'min');
     if (in_array('access', $sections, true)) nm_log('settings_access_changed', implode(',', $cfg['allowed_ips']));
-    if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . implode(',', $cfg['hotlink_allow']));
+    if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . (!empty($cfg['hotlink_log']) ? 'log-on ' : 'log-off ') . implode(',', $cfg['hotlink_allow']));
 }
 
 /**
@@ -1502,7 +1513,7 @@ function nm_view_dashboard(): void
         nm_layout(nm_t('作品一覧'), '<section class="works">' . $rows . '</section>');
         return;
     }
-    nm_layout(nm_t('作品一覧'), nm_update_banner()
+    nm_layout(nm_t('作品一覧'), nm_update_banner() . nm_hotlink_log_banner()
         . '<section class="card"><h1>' . nm_t('作品を作る') . '</h1>'
         . '<form method="post" action="index.php" class="form row">' . nm_csrf_field()
         . '<input type="hidden" name="do" value="create">'
@@ -1834,7 +1845,8 @@ function nm_view_settings(array $cfg): void
         . '<p>' . nm_t('オンにすると、漫画の画像は「このサイト」「別のサイトに埋め込む場合に登録したサイト」「下に書いたサイト」のページからしか読めなくなります。画像の URL を直接開いたり、ほかのサイトに貼られたりしたときは表示しません（サーバーの通信量の節約になります）。') . '</p>'
         . '<p class="note">' . nm_t('共有リンクで開く個別ページ、リンクのカード用の表紙は、オンでもそのまま使えます。サイト単位（例: https://note.com）で書いてください。ブラウザは、ほかのサイトからの読み込みでは URL の途中（/ユーザー名/ など）を送らないため、途中までの一致では判定できません。') . '</p>'
         . $block('advanced')
-        . '<label class="check"><input type="checkbox" name="hotlink" value="1"' . (!empty($cfg['hotlink']) ? ' checked' : '') . '> ' . nm_t('直リンク防止を使う') . '</label>'
+        . '<label class="check"><input type="checkbox" name="hotlink" value="1"' . (!empty($cfg['hotlink']) ? ' checked' : '') . '> ' . nm_t('漫画の画像に直リンク防止を使う') . '</label>'
+        . '<label class="check"><input type="checkbox" name="hotlink_log" value="1"' . (!empty($cfg['hotlink_log']) ? ' checked' : '') . '> ' . nm_t('LOGの画像・動画・音声に直リンク防止を使う（ほかのサイトのページに貼られたときだけ表示しません。URL を直接開いたとき、リンクのカード、RSS リーダーではそのまま表示します。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます）') . '</label>'
         . '<label>' . nm_t('ほかに読み込みを許可するサイト（1 行に 1 つ）') . '<textarea name="hotlink_allow" rows="3">' . h(implode("\n", $cfg['hotlink_allow'] ?? [])) . '</textarea></label>'
         . '</div>'
         . '</details></section>'
@@ -1854,6 +1866,19 @@ function nm_update_banner(): string
     if (!nm_update_available($st)) return '';
     return '<p class="update-banner"><span>' . nm_t('新しいバージョン {latest} が出ています（今は {current}。NagiLogも一緒に更新します）。', ['latest' => '<strong>NagiManga ' . h((string)$st['latest']) . '</strong>', 'current' => h(NM_VERSION)]) . '</span>'
         . ' <a class="btn small primary" href="index.php?p=update">' . h(nm_t('更新画面へ')) . '</a></p>';
+}
+
+/**
+ * Sites set up before 0.12.0 have never chosen hotlink protection for the LOG (no hotlink_log in the config):
+ * one button turns it on, the other answers no; either way the notice goes. Settings > advanced changes it later.
+ */
+function nm_hotlink_log_banner(string $back = ''): string
+{
+    $cfg = nm_config() ?? [];
+    if (nm_is_guest() || array_key_exists('hotlink_log', $cfg)) return '';
+    $form = static fn(string $do, string $label, string $class) => '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="' . $do . '"><input type="hidden" name="back" value="' . h($back) . '"><button class="' . $class . '">' . $label . '</button></form>';
+    return '<div class="update-banner hotlink-banner"><span>' . nm_t('LOGの画像の直リンク防止がオフです。オンにすると、ほかのサイトのページや掲示板に画像を貼られても表示せず、通信量の無駄を防げます。URL を貼ったときのリンクのカードの画像は、これまでどおり表示します。') . '</span>'
+        . '<span class="hotlink-banner-actions">' . $form('hotlink_log_on', nm_t('オンにする'), 'btn small primary') . $form('hotlink_log_off', nm_t('今はしない'), 'btn small') . '</span></div>';
 }
 
 /** One copy field. */

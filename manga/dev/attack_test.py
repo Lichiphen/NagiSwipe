@@ -460,7 +460,8 @@ def run_update(adm, csrf, data_dir):
     check("更新: 更新ファイルの data/・plugins/・lib/paths.php は無視される",
           not (site / "plugins" / "evil.php").exists() and not (site / "lib" / "paths.php").exists()
           and not (data_dir / "works" / "x.php").exists())
-    kept = [p for p in (data_dir / "update").rglob("*") if p.is_file()]
+    # The backups (data/update/<time>/); check.php next to them is the update check, a PHP file that stops at once.
+    kept = [p for p in (data_dir / "update").rglob("*") if p.is_file() and p.parent != data_dir / "update"]
     check("更新: 更新前のファイルは data の中に .bak として保管され、PHP のまま置かれない",
           any(p.suffix == ".bak" for p in kept) and not any(p.suffix == ".php" for p in kept))
     bak = next((p for p in kept if p.name == "read.php.bak"), None)

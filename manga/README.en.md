@@ -322,6 +322,14 @@ With "設定 → 上級者向けの設定 → 直リンク防止" (Settings → 
 - Work pages of share links and the covers for link cards keep working with it on.
 - Write the allow list per site (for example `https://note.com`). Browsers do not send the path (such as `/username/`) when loading from other sites, so partial paths cannot be matched.
 
+**The LOG’s pictures, videos and sound (v0.12.0 and later)**: "Use hotlink protection for the LOG’s pictures, videos and sound" in the same place is a switch of its own, apart from manga. With it on, LOG pictures, videos and sound pasted into other sites’ pages or forums are not shown, which saves wasted traffic.
+
+- **Sites set up from v0.12.0 have it on from the start.** Sites set up earlier keep it off after updating; pressing **Turn it on** in the notice on the LOG admin and the work list is all it takes (Not now makes the notice go away).
+- The picture of the link card (OGP) shown when the URL is pasted into X, LINE and the like still appears: the services that make cards fetch the picture without a page. Opening the URL directly and RSS readers fetching it work the same way.
+- The LOG’s own pages, pages that embed the LOG (`embed.php`) and sites on the allow list still show them.
+- **For a picture you want other sites to show, such as a link-exchange banner**, tick "Allow other sites to show it" for that picture in the media list and save. Only that picture is left out of hotlink protection. Put the picture in a published post or fixed page (a links page, say).
+- For an RSS reader that shows pictures inside the browser, such as Feedly, add that site (for example `https://feedly.com`) to the allow list.
+
 ### Plugins (guest mode)
 
 PHP plugins placed in `nagimanga/plugins/` add features (only the files placed there are loaded). One plugin is included:
@@ -404,7 +412,17 @@ The `data` folder is hidden from outside with `.htaccess`. On servers where `.ht
 - Work folder names are made from the secret key and cannot be guessed from public IDs.
 - Each folder has an empty `index.html`, so folder listings are not shown.
 
-The log's internal records, the security log (`data/logs/security.log.php`) and the setup key (`data/setup-key.php`) are PHP files that give 404 when opened directly. Protecting static pictures needs the storage place or server settings above.
+The log's internal records, the security log (`data/logs/security.log.php`), the setup key (`data/setup-key.php`) and the record of the update check (`data/update/check.php`) are PHP files that give 404 when opened directly. Protecting static pictures needs the storage place or server settings above.
+
+**What stays protected when `.htaccess` does not work (v0.12.0 and later)**
+
+| | Without a working `.htaccess` | To protect it |
+|---|---|---|
+| Settings, passwords, secret keys, logs, the setup key, LOG posts | Cannot be read (PHP files that give 404) | ― |
+| Pictures and videos of works and the LOG | The storage folder names cannot be guessed, but once a real URL is known it opens without the reader password or hotlink protection | Move the storage outside the public folder, or deny it in the server settings (1 or 2 above) |
+| The LOG’s clean URLs (`/20261027123456`, `/privacy`), the 404 page, cache settings | Not available (the LOG switches to `?id=` and `?pg=` URLs by itself, so posts still open) | Upload `.htaccess` on an Apache-type server |
+
+On Apache-type servers (most rental hosting), uploading `.htaccess` turns on everything in this table.
 
 ### Tighter IP restriction for the admin panel (optional)
 

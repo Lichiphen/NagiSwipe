@@ -121,6 +121,7 @@ function nl_handle_post(string $do): never
                     if ($rating !== '' && !isset(NL_RATINGS[$rating])) throw new UnexpectedValueException(nm_t('閲覧注意を選び直してください'));
                     $rated = nl_rating($m['rating'] ?? '') !== $rating;
                     $m['rating'] = $rating;
+                    if (isset($_POST['hotlink_set'])) $m['hotlink_free'] = !empty($_POST['hotlink_free']);
                     $m['revision']++;
                     $m['updated'] = time();
                     nl_write_record(nl_media_dir($m['id']) . '/media.php', $m);
@@ -549,7 +550,7 @@ function nl_view_log(): void
     $tabs = nl_pages_tabs($taxonomy ? 'taxonomy' : 'posts');
     $header = '<div class="log-heading"><div><h1>' . nm_t('LOG・投稿') . '</h1><p class="note">' . h($s['title']) . ' · ' . ($s['public'] ? nm_t('全体公開') : nm_t('自分専用Memo')) . '</p></div><div class="log-toolbar"><a class="btn" href="../">' . nl_ui_icon($s['public'] ? 'globe' : 'lock') . '<span>' . ($s['public'] ? nm_t('公開ページ') : nm_t('自分のMemo')) . '</span></a><a class="btn" href="index.php?p=log_media">' . nl_ui_icon('images') . '<span>' . nm_t('メディア一覧・差し替え') . '</span></a>' . (!$taxonomy ? '<button type="button" class="btn primary" data-compose-open>' . nl_ui_icon() . ' ' . nm_t('新しく書く') . '</button>' : '') . '</div></div>';
     // NagiLog is updated together with NagiManga, so the same notice appears here.
-    $header = nm_update_banner() . $header;
+    $header = nm_update_banner() . nm_hotlink_log_banner('log') . $header;
     if ($taxonomy) { nm_layout(nm_t('LOGの分類'), $header . $tabs . nl_taxonomy_panel()); return; }
     $pagerQuery = 'p=log' . ($q !== '' ? '&q=' . rawurlencode($q) : '') . ($status !== '' ? '&status=' . $status : '');
     $search = '<form class="log-admin-search" role="search" method="get" action="index.php"><input type="hidden" name="p" value="log">'
@@ -688,7 +689,9 @@ function nl_view_media(): void
         if (count($posts) > 3) $list .= '<li class="note">' . nm_t('ほか{n}件', ['n' => count($posts) - 3]) . '</li>';
         $cards .= '<article class="log-media-card" data-media-card="' . h($m['id']) . '" data-revision="' . $m['revision'] . '">' . nl_veil_badge(nl_rating($m['rating'] ?? ''), 'log-veil-badge log-figure-badge') . '' . (nl_is_av($m) ? nl_av_html($m, true) : '<a class="imagelink" href="' . h(nl_media_url($m, false, true)) . '"><img src="' . h(nl_media_url($m, true, true)) . '" alt="' . h($m['alt']) . '" loading="lazy"></a>') . '<p class="note">' . h(nl_date($m['created'])) . nm_t('・') . ($count ? nm_t('{n}件で使用', ['n' => $count]) : nm_t('未使用')) . ($locations ? nm_t('（') . nl_search_mark(implode(nm_t('・'), $locations), $terms) . nm_t('）') : '') . '</p>'
             . ($list !== '' ? '<ul class="log-media-used" aria-label="' . nm_t('この画像を使っている記事') . '">' . $list . '</ul>' : '')
-            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>' . (nl_is_av($m) ? nm_t('タイトル') : nm_t('画像の説明')) . '<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? '')) . '<button class="btn small">' . nm_t('説明と閲覧注意を保存') . '</button></form>'
+            . '<form method="post" action="index.php" class="form">' . nm_csrf_field() . $back . '<input type="hidden" name="do" value="log_media_alt"><input type="hidden" name="media" value="' . h($m['id']) . '"><input type="hidden" name="revision" value="' . $m['revision'] . '"><label>' . (nl_is_av($m) ? nm_t('タイトル') : nm_t('画像の説明')) . '<input name="alt" value="' . h($m['alt']) . '" maxlength="300"></label>' . nl_rating_select(nl_rating($m['rating'] ?? ''))
+            . '<input type="hidden" name="hotlink_set" value="1"><label class="check"><input type="checkbox" name="hotlink_free" value="1"' . (!empty($m['hotlink_free']) ? ' checked' : '') . '> ' . nm_t('ほかのサイトにも貼れるようにする（バナーなど）') . '</label>'
+            . '<button class="btn small">' . nm_t('説明と閲覧注意を保存') . '</button></form>'
             . '<div class="log-media-copy"><button type="button" class="btn small" data-copy-text="' . h(nl_media_url($m)) . '" title="' . nm_t('サイドバーのHTMLやトップメニューに使えるURL') . '">' . nl_ui_icon('copy') . '<span>URL</span></button><button type="button" class="btn small" data-copy-text="' . h('![' . str_replace([']', '['], '', $m['alt']) . '](' . nl_media_url($m) . ')') . '" title="' . nm_t('固定ページの本文に貼るMarkdown') . '">' . nl_ui_icon('copy') . '<span>Markdown</span></button>' . (nl_is_svg($m) ? '<span class="badge">SVG</span>' : '') . '</div>'
             . (nl_is_av($m) ? '<div class="log-media-av"><button type="button" class="btn small" data-av-edit="' . h($m['kind']) . '" data-av="' . h(json_encode(nl_admin_media_data($m), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . '">' . ($m['kind'] === 'video' ? nm_t('再生のしかた') : nm_t('ジャケットとループ位置')) . '</button></div>' : '')
             . (nl_is_av($m) ? '' : '<label class="btn log-replace-label">' . nm_t('画像を差し替える') . '<input type="file" class="log-replace" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,image/svg+xml,.svg" hidden></label><p class="note log-drop-hint">' . nm_t('この枠に画像をドロップしても差し替えられます。') . '</p><p class="note" role="status" data-replace-status></p>')

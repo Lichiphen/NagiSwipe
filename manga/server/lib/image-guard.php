@@ -54,3 +54,27 @@ function nm_image_guard(array $cfg): void
     if ($blocked) nm_not_found();
     if (random_int(1, 100) === 1) foreach (glob(NM_DATA . '/ratelimit/image-*.php') ?: [] as $old) if (filemtime($old) < time() - 86400) @unlink($old);
 }
+
+/**
+ * Hotlink protection (settings > advanced): whether this request may have the file. The callers check their own
+ * switch first: manga pages (read.php, hotlink, off by default) and the LOG's pictures (hotlink_log, on for sites
+ * set up from 0.12.0). For manga, only this site, the sites listed for embedding and the extra allow list.
+ * $loose (the LOG): only another site's page is turned away. A request with no page behind it (an address opened
+ * by hand, a link-card or feed fetcher, a bookmark) still gets the picture.
+ */
+function nm_hotlink_ok(array $cfg, bool $loose = false): bool
+{
+    $site = (string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '');
+    if ($site === 'same-origin' || $site === 'same-site') return true;
+    if ($loose && $site === 'none') return true;
+    $from = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($from === '' || $from === 'null') $from = (string)($_SERVER['HTTP_REFERER'] ?? '');
+    if ($loose && $from === '' && $site !== 'cross-site') return true;
+    $u = parse_url($from);
+    if (!is_array($u) || empty($u['host']) || !in_array($u['scheme'] ?? '', ['http', 'https'], true)) return false;
+    $host = strtolower($u['host']) . (isset($u['port']) ? ':' . $u['port'] : '');
+    if ($host === strtolower((string)($_SERVER['HTTP_HOST'] ?? ''))) return true;
+    $origin = strtolower($u['scheme']) . '://' . $host;
+    $allow = array_merge($cfg['allowed_origins'] ?? [], $cfg['hotlink_allow'] ?? []);
+    return in_array($origin, array_map('strtolower', $allow), true);
+}
