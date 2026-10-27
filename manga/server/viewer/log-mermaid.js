@@ -42,8 +42,9 @@
     }
     const widest = (lines, measure, size, weight) => Math.max(0, ...lines.map(l => measure(l, size, weight)));
     function write(parent, lines, x, y, cls, anchor = 'middle') {
-        const text = el('text', { class: cls, x: round(x), y: round(y - (lines.length - 1) * LH / 2), 'text-anchor': anchor, 'dominant-baseline': 'central' }, parent);
-        lines.forEach((l, i) => { el('tspan', { x: round(x), dy: i ? LH : 0 }, text).textContent = l || ' '; });
+        const text = el('text', { class: cls, x: round(x), y: round(y - (lines.length - 1) * LH / 2), 'text-anchor': anchor }, parent);
+        // Safari does not pass dominant-baseline on to the tspans, so the first line is lowered by hand
+        lines.forEach((l, i) => { el('tspan', { x: round(x), dy: i ? LH : '0.36em' }, text).textContent = l || ' '; });
         return text;
     }
     // The statements of a diagram: comments (%%) and blank lines left out, each with its line number.
