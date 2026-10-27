@@ -34,7 +34,7 @@ The admin panel can be shown in Japanese or English (see [Admin panel language](
 - [Two ways to use it](#two-ways-to-use-it)
 - [With the admin panel (PHP)](#with-the-admin-panel-php)
   - [1. Upload](#1-upload)
-  - [2. Setup (within 30 minutes)](#2-setup-within-30-minutes)
+  - [2. Setup](#2-setup)
   - [3. Checks after installing](#3-checks-after-installing)
   - [4. Make a work and share it](#4-make-a-work-and-share-it)
   - [Posting to Tegalog](#posting-to-tegalog)
@@ -134,14 +134,18 @@ nagimanga/
 > [!WARNING]
 > **Do not forget to upload `.htaccess`.** Some FTP programs hide files starting with `.` and do not send them (turn on "show hidden files" to see them). There are five: in `nagimanga/`, `admin/`, `lib/`, `data/` and `plugins/`.
 
-### 2. Setup (within 30 minutes)
+### 2. Setup
 
-Open `https://your-site/nagimanga/admin/` in a browser and choose the administrator password (10 characters or more).
+Open `https://your-site/nagimanga/admin/` in a browser.
+
+1. Open `data/setup-key.php` with FTP (or the server's file manager). The server made it when the admin panel was first opened.
+2. Paste the "setup key" written in it (20 characters, like `ABCDE-FGHJK-LMNPQ-RSTUV`) into the field on the screen. Lower case and spaces do not matter.
+3. Choose the administrator password (10 characters or more).
 
 - Turn on "allow the admin panel only from the current IP address" whenever you can.
 
 > [!IMPORTANT]
-> This screen is shown **only for 30 minutes after it is first opened** (so that nobody else sets it up first). If the time has passed, delete `data/install.lock` with FTP and open it again.
+> Only whoever installed the site can read the key, over FTP (it cannot be read from the web). Even if someone else or a bot opens a freshly uploaded site first, they cannot set it up without the key. `data/setup-key.php` is deleted when the setup is done. The "within 30 minutes" limit of v0.11 and earlier is gone.
 
 > [!IMPORTANT]
 > When it is done, **the login URL** is shown. **Bookmark it.** Opening the admin panel directly gives "Not Found". Since v0.10.0 the setup ticks "Log in only from the secret login URL" by default. Then `admin/login.php` and the address without `k=` say "Not Found", and the LOG shows no Log in link. Settings → "Common and safety" → "Way in to log in" opens the LOG’s Log in link (`admin/login.php`) again (installs from v0.9 and earlier keep it open). The IP restriction and the limit on attempts apply to both.
@@ -255,6 +259,7 @@ Set it under "パスワード" on the work's page. Readers enter the password wh
 When a new version comes out, a notice appears above the work list and above "LOG・投稿" (Log and posts) when you log in ("更新" (Update) in the menu also gets a "新" (new) mark). Press the button on the update screen to update on the spot. The release notes are shown formatted (headings, lists, bold, links).
 
 - It downloads `nagimanga-vX.Y.Z.zip` from the official GitHub release and uses it only when it matches the checksum (SHA-256) GitHub publishes. The contents are checked one by one too.
+- From v0.12.0 on it also checks the author's (Lichiphen's) signature (Ed25519, `nagimanga-vX.Y.Z.zip.sig` on the release). The signing key lives only on the author's PC, never on GitHub. If the GitHub account or a release were taken over and the contents swapped, the signature would not match and nothing is updated. On servers whose PHP has no sodium, NagiManga checks it by itself.
 - Only program files are replaced. Works and settings (the `data` folder), plugins and `lib/paths.php` stay as they are.
 - The files from before the update are kept in `data/update/` (as `.bak` files that cannot run) and can be put back with "元に戻す" (Undo). The last 3 updates are kept.
 - It checks at most once every 12 hours. On the update screen you can turn off the check at login or check right away.
@@ -355,7 +360,7 @@ Log in without the password, with a passkey saved in Proton Pass, the iPhone Pas
 
 | Problem | What to do |
 |---|---|
-| The setup screen says "Not Found" (30 minutes passed) | Delete `data/install.lock` with FTP and open it again |
+| You do not know the setup key | Open `data/setup-key.php` with FTP (if it is not there, opening the admin panel again makes it) |
 | You forgot the login URL (with the secret login URL only, there is no other way in) | Open `data/config.php` with FTP and open `admin/index.php?k=` followed by the value of `login_key` |
 | Your IP address changed and you are locked out | With FTP, set `allowed_ips` in `data/config.php` to `array ( )` (and the line in `admin/.htaccess` if you wrote an IP restriction there) |
 | Too many wrong logins | Wait for the lock time you set (15 minutes by default); the login screen says "Not Found" meanwhile. In a hurry, delete the contents of `data/ratelimit` with FTP |
@@ -414,9 +419,11 @@ Picture locations in `manifest.json` are relative to the place of `manifest.json
 
 - **The public side is read only.** All `read.php` can do is "list a work's pages", "check a password" and "return a picture". Every odd request gets the same "Not Found", telling nothing about what exists.
 - **Five locks on the admin panel.** IP restriction → secret login URL → password (locked after a number of failures, for a time, both set in the settings: 5 and 15 minutes by default; at most 40 per hour overall; when turned on, then a code from an authenticator app; or, once registered, a passkey instead) → a session bound to the browser (30 days from the last login, up to 1 year in the settings) → CSRF protection on every action.
+- **Other people's failures do not shut the owner out.** A browser that has logged in gets the owner's mark (a cookie signed with the server's secret key). Marked browsers, passkeys and allowed IP addresses still get in after the overall limit (40 per hour) is reached. A marked browser is counted by browser, not by IP, and loses the mark's privilege after 5 failures. Changing the password voids every mark.
+- **IPv6 is counted by range.** Failures from IPv6 are counted per /64 (the range one line gets). A work's reader password and a locked post make everyone wait after 60 wrong answers per hour for that work or post together (readers who already opened it keep reading).
 - **Uploaded pictures are always redrawn.** Whether a file is a picture is judged from its contents, not its name; it is read with GD and written to a new file. Programs hidden in pictures and data such as the shooting location do not survive. File names are given anew. SVG is not accepted for manga pages. EPUB and backup ZIPs are also checked item by item before use.
 - **Programs do not run in the picture folders.** `data` cannot be seen from outside, and only `.webp` / `.jpg` are stored.
-- **Error details are not shown on screen.** So that server paths and the like do not leak. Records go to `data/logs/security.log`, which can be read on the settings page of the admin panel.
+- **Error details are not shown on screen.** So that server paths and the like do not leak. Records go to `data/logs/security.log.php`, which can be read on the settings page of the admin panel. Being a PHP file, it cannot be read from the web even on servers that ignore `.htaccess` (nginx and others).
 
 ### Attack tests
 

@@ -18,11 +18,11 @@ if (isset($_GET['u'])) {
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Cache-Control: no-cache');
     header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-src " . $f['origin'] . "; frame-ancestors 'self'; form-action 'none'; base-uri 'none'; object-src 'none'");
-    // The page keeps its scripts, storage and full screen; it may open new windows, but takes over this site only when the reader presses a link.
+    // The page keeps its scripts, storage and full screen; its links open in new windows, and it can never move this site's own page elsewhere.
     echo '<!doctype html><html lang="' . nm_lang() . '"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . h($f['host']) . '</title>'
         . '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style>'
         . '<iframe src="' . h($f['url']) . '" title="' . h($f['host']) . '" allow="' . NL_FRAME_ALLOW . '" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"'
-        . ' sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"></iframe></html>';
+        . ' sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe></html>';
     exit;
 }
 $key = $_GET['k'] ?? '';

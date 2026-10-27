@@ -2,7 +2,7 @@
  * ============================================================================
  * NagiManga - manga reader for NagiSwipe
  *
- * NagiManga v0.11.1
+ * NagiManga v0.12.0
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * ============================================================================
@@ -24,7 +24,7 @@
 
     if (global.NagiManga) return;
 
-    const VERSION = '0.11.1';
+    const VERSION = '0.12.0';
     // Texts of the page (#nm-i18n, only on English pages of the site); Japanese elsewhere, for example on another site.
     const I18N = (() => { try { return JSON.parse(document.getElementById('nm-i18n')?.textContent || '{}'); } catch { return {}; } })();
     const tr = (text, vars = {}) => (I18N[text] ?? text).replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);

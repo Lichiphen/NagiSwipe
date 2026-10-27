@@ -4,8 +4,11 @@
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  *
- * A release carries nagimanga-vX.Y.Z.zip with the program under "nagimanga/".
- * The package is checked against the SHA-256 GitHub publishes for the asset,
+ * A release carries nagimanga-vX.Y.Z.zip with the program under "nagimanga/",
+ * and nagimanga-vX.Y.Z.zip.sig: Lichiphen's Ed25519 signature of the version and
+ * the ZIP's SHA-256, made on the author's PC with a key GitHub never sees. The
+ * package must match the size and SHA-256 GitHub publishes and that signature
+ * (so a release swapped by someone who took over the GitHub account is refused),
  * every entry is validated, and only program files are replaced: data/, the
  * plugins and lib/paths.php are never touched. The replaced files are kept in
  * data/update/backup-* (as .bak, never runnable) so the update can be undone.
@@ -17,7 +20,17 @@ if (!defined('NAGIMANGA')) {
     exit;
 }
 
+require_once __DIR__ . '/ed25519.php';
+
 const NM_UPDATE_REPO = 'Lichiphen/NagiSwipe';
+/**
+ * Public keys whose signature a release must carry (dev/release_sign.py): the main key, and a spare kept off
+ * the author's PC for the day the main one is lost. A release signed by either is accepted.
+ */
+const NM_UPDATE_KEYS = [
+    'b58d7451c00a87065e8af150864e96d14fc7b2f16834cb9e4a8e9db081bc25da',
+    '1aefbfcdd88472189fa01dfc2e71ed850e64aed779883850fed2584e6a83ea65',
+];
 const NM_UPDATE_TTL = 43200;                 // check GitHub at most every 12 hours
 const NM_UPDATE_RETRY = 3600;                // after a failed check, try again in 1 hour
 const NM_UPDATE_ASSET = '/\Anagimanga-v([0-9]+\.[0-9]+\.[0-9]+)\.zip\z/';
@@ -30,7 +43,7 @@ const NM_UPDATE_REQUIRED = ['index.php', 'read.php', 'log.php', 'lib/bootstrap.p
     'lib/log.php', 'lib/log-taxonomy.php', 'lib/log-sidebar.php', 'lib/log-admin.php', 'lib/log-public.php', 'lib/log-backup.php', 'admin/login.php', 'admin/log-editor.js', 'admin/log-settings.js', 'admin/log-manage.js', 'viewer/log.css', 'viewer/log-owner.css', 'viewer/log-menu.js', 'viewer/log-mail.js', 'viewer/log-share.js', 'viewer/log-veil.js', 'viewer/log-new.js', 'lib/log-veil.php', 'viewer/log-pager.js', 'viewer/log-og.png',
     'viewer/NagiSwipe-main.js', 'viewer/NagiSwipe-main.css', 'lib/log-links.php', 'lib/log-embed.php', 'lib/log-embed-providers.php', 'lib/log-embed-resolve.php', 'lib/log-av.php', 'viewer/log-player.js', 'admin/log-av.js', 'embed.php', 'lib/log-card.php', 'viewer/log-embed.js',
     'lib/log-svg.php', 'lib/log-pages.php', 'lib/log-topmenu.php', 'admin/log-pages.js', 'viewer/log-topmenu.js',
-    'lib/log-url.php', 'lib/log-pins.php', 'lib/log-lock.php', 'lib/log-favicon.php', 'lib/totp.php', 'lib/qrcode.php', 'lib/passkey.php', 'admin/passkey.js',
+    'lib/log-url.php', 'lib/log-pins.php', 'lib/log-lock.php', 'lib/log-favicon.php', 'lib/totp.php', 'lib/qrcode.php', 'lib/passkey.php', 'admin/passkey.js', 'lib/ed25519.php', 'lib/update.php',
     'lib/log-og.php', 'viewer/log-loading.js', 'viewer/log-toc.js', 'viewer/log-code.js', 'viewer/log-mermaid.js', 'viewer/icons/plus.svg', 'viewer/icons/minus.svg', 'viewer/icons/ui.svg', 'viewer/icons/chevron-down.svg', 'viewer/icons/select-chevron-light.svg', 'viewer/icons/select-chevron-dark.svg', 'viewer/icons/wave.svg', 'viewer/icons/squiggle.svg', 'viewer/og-veil/sensitive.png', 'viewer/og-veil/r18.png', 'viewer/og-veil/r18g.png', 'viewer/og-veil/lock.png', 'viewer/og-veil/sensitive.en.png', 'viewer/og-veil/r18.en.png', 'viewer/og-veil/r18g.en.png', 'viewer/og-veil/lock.en.png', 'viewer/og-veil/LICENSE-font.txt',
     'viewer/link-icons/conversation.svg', 'viewer/link-icons/pictures.svg', 'viewer/link-icons/sky-network.svg',
     'viewer/link-icons/code-branch.svg', 'viewer/link-icons/film.svg', 'viewer/link-icons/mail.svg', 'viewer/link-icons/link.svg', 'viewer/link-icons/bookmark-save.svg', 'viewer/link-icons/chat-bubbles.svg', 'viewer/link-icons/share.svg', 'viewer/link-icons/copy.svg', 'viewer/link-icons/check.svg', 'viewer/link-icons/LICENSE.txt'];
@@ -51,6 +64,29 @@ function nm_update_api_url(): string
     return nm_update_dev()
         ? (string)getenv('NAGIMANGA_UPDATE_API')
         : 'https://api.github.com/repos/' . NM_UPDATE_REPO . '/releases?per_page=20';
+}
+
+/** The keys a release is checked with. A local mock (development only) brings its own test key. */
+function nm_update_keys(): array
+{
+    return nm_update_dev() && (string)getenv('NAGIMANGA_UPDATE_KEY') !== '' ? [(string)getenv('NAGIMANGA_UPDATE_KEY')] : NM_UPDATE_KEYS;
+}
+
+/** The text a release signature covers (dev/release_sign.py release_message()). */
+function nm_update_message(string $version, string $sha256): string
+{
+    return "NagiManga release\n" . $version . "\n" . $sha256 . "\n";
+}
+
+/** Whether $sigHex (the .sig asset) is a signature of this version and ZIP by one of nm_update_keys(). */
+function nm_update_signed(string $sigHex, string $version, string $sha256): bool
+{
+    $sigHex = trim($sigHex);
+    if (!preg_match('/\A[a-f0-9]{128}\z/', $sigHex)) return false;
+    foreach (nm_update_keys() as $key) {
+        if (preg_match('/\A[a-f0-9]{64}\z/', $key) && nm_ed25519_verify((string)hex2bin($sigHex), nm_update_message($version, $sha256), (string)hex2bin($key))) return true;
+    }
+    return false;
 }
 
 function nm_update_download_prefix(): string
@@ -216,7 +252,7 @@ function nm_update_status(bool $force = false): array
             : nm_t('GitHub に接続できませんでした。しばらくしてからもう一度お試しください');
         // Keep what we knew, and try again sooner than usual
         if ($cache && !empty($cache['latest'])) {
-            foreach (['latest', 'tag', 'notes', 'published', 'url', 'size', 'digest', 'page'] as $k) {
+            foreach (['latest', 'tag', 'notes', 'published', 'url', 'size', 'digest', 'sig', 'page'] as $k) {
                 if (isset($cache[$k])) $st[$k] = $cache[$k];
             }
         }
@@ -243,6 +279,12 @@ function nm_update_pick(array $releases): ?array
             $url = (string)($a['browser_download_url'] ?? '');
             if ($prefix === '' || !str_starts_with($url, $prefix)) continue;
             if ($best && version_compare($m[1], $best['latest'], '<=')) continue;
+            // Its signature: the asset of the same name plus .sig in the same release
+            $sig = '';
+            foreach ((array)($rel['assets'] ?? []) as $s) {
+                $sigUrl = is_array($s) ? (string)($s['browser_download_url'] ?? '') : '';
+                if (($s['name'] ?? '') === $a['name'] . '.sig' && str_starts_with($sigUrl, $prefix)) $sig = $sigUrl;
+            }
             $page = (string)($rel['html_url'] ?? '');
             $best = [
                 'latest' => $m[1],
@@ -252,6 +294,7 @@ function nm_update_pick(array $releases): ?array
                 'url' => $url,
                 'size' => (int)($a['size'] ?? 0),
                 'digest' => (string)($a['digest'] ?? ''),
+                'sig' => $sig,
                 'page' => str_starts_with($page, 'https://github.com/' . NM_UPDATE_REPO . '/') ? $page : '',
             ];
         }
@@ -388,6 +431,10 @@ function nm_update_apply(): array
         }
         $size = (int)$st['size'];
         if ($size <= 0 || $size > NM_UPDATE_MAX_ZIP) return ['ok' => false, 'msg' => nm_t('更新ファイルの大きさが正しくありません')];
+        if ((string)($st['sig'] ?? '') === '') {
+            nm_log('update_unsigned', (string)$st['latest']);
+            return ['ok' => false, 'msg' => nm_t('更新ファイルに配布元（Lichiphen）の署名がないため、安全のため自動更新を中止しました（何も変更していません）')];
+        }
 
         try {
             [$status, $body] = nm_update_http((string)$st['url'], NM_UPDATE_MAX_ZIP, 60, false);
@@ -398,6 +445,17 @@ function nm_update_apply(): array
         if ($status !== 200 || strlen($body) !== $size || !hash_equals($dm[1], hash('sha256', $body))) {
             nm_log('update_digest_mismatch', (string)$st['latest']);
             return ['ok' => false, 'msg' => nm_t('ダウンロードした更新ファイルが正しくないため、更新を中止しました（何も変更していません）')];
+        }
+        // The ZIP as downloaded (not GitHub's number for it) must carry the author's signature.
+        try {
+            [$sigStatus, $sig] = nm_update_http((string)$st['sig'], 1024, 20, false);
+        } catch (Throwable $e) {
+            $sigStatus = 0;
+            $sig = '';
+        }
+        if ($sigStatus !== 200 || !nm_update_signed($sig, (string)$st['latest'], hash('sha256', $body))) {
+            nm_log('update_signature_bad', (string)$st['latest']);
+            return ['ok' => false, 'msg' => nm_t('更新ファイルの署名が配布元（Lichiphen）のものと一致しないため、更新を中止しました（何も変更していません）')];
         }
 
         $root = nm_update_backup_root();

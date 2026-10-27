@@ -39,7 +39,7 @@ def check(name, ok, detail=''):
 
 def start(site, port, router=True):
     env = {k: v for k, v in os.environ.items() if k != 'NAGIMANGA_DATA'}
-    env.update(NAGIMANGA_LSCACHE_FORCE='1', NAGIMANGA_UPDATE_API=f'http://{h.HOST}:{MOCK}/releases', NAGIMANGA_UPDATE_DL=f'http://{h.HOST}:{MOCK}/dl/')
+    env.update(NAGIMANGA_LSCACHE_FORCE='1', NAGIMANGA_UPDATE_API=f'http://{h.HOST}:{MOCK}/releases', NAGIMANGA_UPDATE_DL=f'http://{h.HOST}:{MOCK}/dl/', NAGIMANGA_UPDATE_KEY=h.release_sign.public_key(h.UPDATE_SEED).hex())
     process = subprocess.Popen(h.php_cmd(port, router, site), env=env, stdout=subprocess.DEVNULL, stderr=open(site.parent / f'php-{port}.txt', 'wb'))
     for _ in range(100):
         try:

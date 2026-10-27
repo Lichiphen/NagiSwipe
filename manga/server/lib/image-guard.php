@@ -29,7 +29,7 @@ function nm_image_guard(array $cfg): void
     if (isset($cfg['image_guard_enabled']) && !$cfg['image_guard_enabled']) return;
     $ua = strtolower(substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 1000));
     foreach ($cfg['image_guard_agents'] ?? NM_IMAGE_COLLECTORS as $agent) if ($agent !== '' && str_contains($ua, strtolower($agent))) nm_not_found();
-    $file = nm_image_guard_file(nm_client_ip(), $cfg);
+    $file = nm_image_guard_file(nm_client_net(), $cfg);
     if (!is_dir(dirname($file))) nm_ensure_dir(dirname($file));
     $fh = @fopen($file, 'c+');
     if ($fh === false) throw new RuntimeException('image guard failed');

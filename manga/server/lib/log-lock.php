@@ -115,10 +115,12 @@ function nl_unlock_request(): never
     if (($site !== '' && $site !== 'same-origin') || ($site === '' && $origin !== '' && strtolower((string)(parse_url($origin, PHP_URL_HOST) ?? '') . (($port = parse_url($origin, PHP_URL_PORT)) ? ':' . $port : '')) !== strtolower($host))) nm_not_found();
     header('Cache-Control: no-store');
     nm_lscache_header(false);
-    $ip = nm_client_ip();
+    $ip = nm_client_net();
     $key = $ip . '|' . $id;
-    // 5 wrong answers per 15 minutes for one page, 30 per hour from one address (like a manga's reader password).
-    if (nm_rate_count('log-lock', $key, 900) >= 5 || nm_rate_count('log-lock-ip', $ip, 3600) >= 30) {
+    // 5 wrong answers per 15 minutes for one page, 30 per hour from one line (IPv6: per /64), and NM_UNLOCK_ALL_MAX
+    // per hour for the page from everyone (like a manga's reader password).
+    if (nm_rate_count('log-lock', $key, 900) >= 5 || nm_rate_count('log-lock-ip', $ip, 3600) >= 30
+        || nm_rate_count('log-lock-all', $id, 3600) >= NM_UNLOCK_ALL_MAX) {
         nm_log('log_unlock_blocked', $id);
         header('Location: ' . nl_lock_target($item, $page, 'wait'), true, 303);
         exit;
@@ -138,6 +140,7 @@ function nl_unlock_request(): never
     }
     nm_rate_hit('log-lock', $key, 900);
     nm_rate_hit('log-lock-ip', $ip, 3600);
+    nm_rate_hit('log-lock-all', $id, 3600);
     nm_rate_gc();
     nm_log('log_unlock_failed', $id);
     usleep(random_int(300000, 600000));

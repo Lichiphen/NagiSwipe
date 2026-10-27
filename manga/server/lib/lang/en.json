@@ -482,7 +482,6 @@
   "{releases}から {file} をダウンロードして展開します。": "Download {file} from the {releases} and extract it.",
   "この画像を使っている記事": "Posts using this image",
   "この画像を本文から外す": "Remove this image from the text",
-  "この画面は、ファイルを置いてから 30 分だけ表示されます。": "This screen is available for only 30 minutes after the files are uploaded.",
   "すでに最新のバージョンです": "Already up to date",
   "すべてのタブの設定を、このボタンでまとめて保存します。": "This button saves the settings of every tab at once.",
   "すべてのページを検索エンジンに載せない設定にしました": "All pages are now hidden from search engines",
@@ -1705,7 +1704,7 @@
   "{n} 分": "{n} minutes",
   "{n} 回": "{n} times",
   "{n} 時間": "{n} hours",
-  "パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレスごとに数えます。ロック中は、ログイン画面も「Not Found」になります。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。": "Wrong passwords, two-step codes and passkeys are counted per IP address. While an address is locked, the login screen also says Not Found. If you lock yourself out, wait, or delete the contents of the data/ratelimit folder over FTP. Addresses the IP restriction does not allow never reach the login screen, so they are not counted.",
+  "パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレス（IPv6 は /64 の範囲）ごとに数えます。ロック中は、ログイン画面も「Not Found」になります。一度ログインしたブラウザーは IP アドレスではなくブラウザーごとに数えるので、ほかの人の失敗で締め出されることはありません。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。": "Wrong passwords, codes from the two-step login and passkeys are counted per IP address (for IPv6, per /64 range). While locked, the login page also says “Not Found”. A browser that has logged in before is counted by browser instead of by IP address, so other people’s failures never shut you out. If you lock yourself out, wait for the time to pass, or delete the contents of the data/ratelimit folder with FTP. Addresses not allowed by the IP restriction never reach the login page, so they are not counted.",
   "ログインの失敗とロック": "Failed logins and lockout",
   "ログインの失敗とロックの設定を選び直してください": "Choose the failed login and lockout settings again",
   "超えたら、その IP アドレスをロックする時間": "How long to lock that IP address after that",
@@ -1750,5 +1749,14 @@
   "ページ埋込": "Page embed",
   "[ページ埋込]URL[/ページ埋込]": "[Embed]URL[/Embed]",
   "ほかのページ（ゲームなど）を枠に入れて表示。押すと読み込み、「全画面」で画面いっぱいにできます。枠は16:9で、[ページ埋込 9:16] のように書くと形を変えられます（16:9・4:3・3:2・1:1・2:3・3:4・9:16・21:9）": "Shows another page (a game, say) in a frame. It loads when pressed, and Full screen fills the screen. The frame is 16:9; write [Embed 9:16] and so on for another shape (16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16, 21:9)",
-  "[ページ埋込]URL[/ページ埋込] を1行に書くと、ほかのページ（ゲームなど）を枠に入れて表示します。読者が押すと読み込み、「全画面」で画面いっぱいにできます。枠は16:9で、[ページ埋込 9:16] のように書くと形を変えられます（16:9・4:3・3:2・1:1・2:3・3:4・9:16・21:9）。": "[Embed]URL[/Embed] on a line of its own shows another page (a game, say) in a frame. It loads when the reader presses it, and Full screen fills the screen. The frame is 16:9; write [Embed 9:16] and so on for another shape (16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16, 21:9)."
+  "[ページ埋込]URL[/ページ埋込] を1行に書くと、ほかのページ（ゲームなど）を枠に入れて表示します。読者が押すと読み込み、「全画面」で画面いっぱいにできます。枠は16:9で、[ページ埋込 9:16] のように書くと形を変えられます（16:9・4:3・3:2・1:1・2:3・3:4・9:16・21:9）。": "[Embed]URL[/Embed] on a line of its own shows another page (a game, say) in a frame. It loads when the reader presses it, and Full screen fills the screen. The frame is 16:9; write [Embed 9:16] and so on for another shape (16:9, 4:3, 3:2, 1:1, 2:3, 3:4, 9:16, 21:9).",
+  "ログインの失敗が多いため、いまはこのブラウザーからパスワードでログインできません。しばらく（最長1時間）待つか、パスキーや、前にログインしたことのあるブラウザーからログインしてください": "There have been many failed logins, so this browser cannot log in with a password right now. Wait a while (up to 1 hour), or log in with a passkey or from a browser you have logged in with before",
+  "セットアップの鍵が違います。data フォルダの setup-key.php に書いてある鍵を、そのまま貼り付けてください": "The setup key is wrong. Paste the key written in setup-key.php in the data folder as it is",
+  "{paths} で指定した data フォルダの {file}": "{file} in the data folder set in {paths}",
+  "セットアップの鍵を作れませんでした。FTP で data フォルダを書き込み可能（755 など）にしてから、このページを開き直してください": "The setup key could not be made. Make the data folder writable with FTP (755 or similar), then open this page again",
+  "設置した本人か確かめるため、サーバーが作った「セットアップの鍵」を入力します。FTP（またはサーバーのファイルマネージャー）で {file} を開き、書いてある鍵（例: ABCDE-FGHJK-LMNPQ-RSTUV）をコピーしてください。": "To make sure you are the one who installed it, enter the setup key the server made. Open {file} with FTP (or the server’s file manager) and copy the key written in it (for example ABCDE-FGHJK-LMNPQ-RSTUV).",
+  "セットアップの鍵": "Setup key",
+  "鍵はこのサーバーの中にだけあり、Web からは読めません。先に誰かがこの画面を開いても、鍵を知らなければ設定できません。": "The key is only on this server and cannot be read from the web. Even if someone else opens this page first, they cannot set it up without the key.",
+  "更新ファイルに配布元（Lichiphen）の署名がないため、安全のため自動更新を中止しました（何も変更していません）": "The update package has no signature from its author (Lichiphen), so the update was stopped to be safe (nothing was changed)",
+  "更新ファイルの署名が配布元（Lichiphen）のものと一致しないため、更新を中止しました（何も変更していません）": "The update package’s signature does not match its author (Lichiphen), so the update was stopped (nothing was changed)"
 }

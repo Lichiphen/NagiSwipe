@@ -284,10 +284,13 @@ function nm_unlock(array $work): never
     header('Cache-Control: no-store');
     if (!nm_work_is_locked($work)) nm_not_found();
 
-    $ip = nm_client_ip();
+    $ip = nm_client_net();
     $key = $ip . '|' . $work['id'];
-    // 5 wrong answers per 15 minutes per work and IP, 30 per hour per IP overall
-    if (nm_rate_count('unlock', $key, 900) >= 5 || nm_rate_count('unlock-ip', $ip, 3600) >= 30) {
+    // 5 wrong answers per 15 minutes per work and line (IPv6: per /64), 30 per hour per line overall, and
+    // NM_UNLOCK_ALL_MAX per hour for the work from everyone (many lines guessing together only wait; readers who
+    // already opened the work keep their pass).
+    if (nm_rate_count('unlock', $key, 900) >= 5 || nm_rate_count('unlock-ip', $ip, 3600) >= 30
+        || nm_rate_count('unlock-all', $work['id'], 3600) >= NM_UNLOCK_ALL_MAX) {
         nm_log('unlock_blocked', $work['id']);
         nm_json(['ok' => false, 'error' => 'rate'], 429);
     }
@@ -301,6 +304,7 @@ function nm_unlock(array $work): never
 
     nm_rate_hit('unlock', $key, 900);
     nm_rate_hit('unlock-ip', $ip, 3600);
+    nm_rate_hit('unlock-all', $work['id'], 3600);
     nm_rate_gc();
     nm_log('unlock_failed', $work['id']);
     // Constant-ish delay against fast guessing

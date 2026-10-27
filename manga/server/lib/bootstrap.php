@@ -11,7 +11,7 @@ if (!defined('NAGIMANGA')) {
     exit;
 }
 
-const NM_VERSION = '0.11.1';
+const NM_VERSION = '0.12.0';
 
 // Never show PHP errors to visitors (they reveal server paths); log them instead
 ini_set('display_errors', '0');
@@ -32,7 +32,9 @@ define('NM_DATA', (static function (): string {
     return NM_ROOT . '/data';
 })());
 
-const NM_ID_PATTERN = '/\A[A-Za-z0-9]{12}\z/';
+/** Wrong reader passwords one work or locked post accepts per hour from all visitors together; more only wait. */
+const NM_UNLOCK_ALL_MAX = 60;
+const NM_ID_PATTERN ='/\A[A-Za-z0-9]{12}\z/';
 const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif)\z/';
 require_once __DIR__ . '/image-guard.php';
 require_once __DIR__ . '/i18n.php';
@@ -185,6 +187,18 @@ function nm_client_ip(): string
         if ($last !== false && filter_var($last, FILTER_VALIDATE_IP)) return $last;
     }
     return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
+}
+
+/**
+ * Who to count in rate limits: an IPv4 address, or for IPv6 its /64, since one line gets a whole /64 and can
+ * change address at will. An IPv4 address written as IPv6 (::ffff:203.0.113.5) counts as that IPv4 address.
+ */
+function nm_client_net(?string $ip = null): string
+{
+    $ip ??= nm_client_ip();
+    if (!str_contains($ip, ':') || ($bin = @inet_pton($ip)) === false || strlen($bin) !== 16) return $ip;
+    if (str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) return (string)inet_ntop(substr($bin, 12));
+    return bin2hex(substr($bin, 0, 8)) . '::/64';
 }
 
 function nm_is_https(): bool
@@ -453,15 +467,50 @@ function nm_default_config(): array
 // Security log (rotated by size)
 // ---------------------------------------------------------------------------
 
+/**
+ * The log is a PHP file that stops before its first line: a server that ignores data/.htaccess (nginx…) answers
+ * an empty 404 instead of the addresses and logins in it. __halt_compiler() keeps PHP from even reading the lines.
+ */
+const NM_LOG_HEAD = "<?php http_response_code(404); exit; __halt_compiler();\n";
+
+function nm_log_file(): string
+{
+    return NM_DATA . '/logs/security.log.php';
+}
+
+/** Logs written before 0.12.0 (plain security.log / security.log.1) move into the PHP files once. */
+function nm_log_migrate(string $dir): void
+{
+    foreach (['security.log.1' => 'security.log.1.php', 'security.log' => 'security.log.php'] as $old => $new) {
+        if (!is_file($dir . '/' . $old)) continue;
+        $text = (string)@file_get_contents($dir . '/' . $old);
+        $now = is_file($dir . '/' . $new) ? substr((string)@file_get_contents($dir . '/' . $new), strlen(NM_LOG_HEAD)) : '';
+        if (@file_put_contents($dir . '/' . $new, NM_LOG_HEAD . $text . $now, LOCK_EX) !== false) @unlink($dir . '/' . $old);
+    }
+}
+
+/** The last $n lines, newest last. */
+function nm_log_lines(int $n): array
+{
+    $file = nm_log_file();
+    if (!is_file($file)) nm_log_migrate(dirname($file));
+    if (!is_file($file)) return [];
+    $lines = file($file, FILE_IGNORE_NEW_LINES) ?: [];
+    if (($lines[0] ?? '') . "\n" === NM_LOG_HEAD) array_shift($lines);
+    return array_slice($lines, -$n);
+}
+
 function nm_log(string $event, string $detail = ''): void
 {
     try {
         $dir = NM_DATA . '/logs';
         nm_ensure_dir($dir);
-        $file = $dir . '/security.log';
+        nm_log_migrate($dir);
+        $file = nm_log_file();
         if (is_file($file) && filesize($file) > 1024 * 1024) {
-            @rename($file, $file . '.1');
+            @rename($file, $dir . '/security.log.1.php');
         }
+        if (!is_file($file)) @file_put_contents($file, NM_LOG_HEAD, LOCK_EX);
         $line = sprintf(
             "%s\t%s\t%s\t%s\n",
             date('c'),

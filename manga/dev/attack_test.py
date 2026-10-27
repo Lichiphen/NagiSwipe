@@ -31,18 +31,23 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import release_sign  # noqa: E402  (the release signer, also used to sign the mock releases)
+
 SERVER_DIR = HERE.parent / "server"
 RESULTS = HERE / "results"
 PORT = 5191
 PORT_RAW = 5192
 MOCK_PORT = 5193   # stands in for GitHub in the self-update tests
 HOST = "127.0.0.1"
+# The self-update tests sign their packages with this throw-away key (never a release key).
+UPDATE_SEED = bytes.fromhex("4e61676954657374" * 4)
 
 results = []
 
 
 def copy_server(dest, src=SERVER_DIR):
-    """Copy server/ like a fresh install: a local run's data/ (install.lock, sessions, posts…) stays behind."""
+    """Copy server/ like a fresh install: a local run's data/ (setup key, sessions, posts…) stays behind."""
     src = Path(src)
 
     def skip(folder, names):
@@ -230,7 +235,17 @@ def to_login(res):
 # Servers
 # ---------------------------------------------------------------------------
 
+SITES = {}   # port -> web root, so a test can read the setup key there like the owner does over FTP
+
+
+def setup_key(port=PORT, data=None):
+    """The key the first-run setup asks for, from data/setup-key.php (made when the setup page is first opened)."""
+    path = (Path(data) if data else SITES[port] / "data") / "setup-key.php"
+    return re.search(r"^[A-Z2-9]{5}(?:-[A-Z2-9]{5}){3}$", path.read_text(encoding="utf-8"), re.M).group(0)
+
+
 def php_cmd(port, router, site):
+    SITES[port] = Path(site)
     php = shutil.which("php")
     ext = str(Path(php).parent / "ext")
     cmd = [php, "-n", "-d", f"extension_dir={ext}"]
@@ -248,6 +263,7 @@ def start_servers(site):
     env = {k: v for k, v in os.environ.items() if k != "NAGIMANGA_DATA"}
     env["NAGIMANGA_UPDATE_API"] = f"http://{HOST}:{MOCK_PORT}/releases"
     env["NAGIMANGA_UPDATE_DL"] = f"http://{HOST}:{MOCK_PORT}/dl/"
+    env["NAGIMANGA_UPDATE_KEY"] = release_sign.public_key(UPDATE_SEED).hex()
     procs = [subprocess.Popen(php_cmd(PORT, True, site), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
              subprocess.Popen(php_cmd(PORT_RAW, False, site), env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)]
     for port in (PORT, PORT_RAW):
@@ -327,16 +343,22 @@ def make_package(version, marker="", extra=None, drop=()):
     return buf.getvalue()
 
 
-def publish(version, pkg, digest=None):
+def publish(version, pkg, digest=None, sig=True):
+    """sig: True signs the package with the test key, bytes publishes those bytes as the .sig, None leaves it out."""
     name = f"nagimanga-v{version}.zip"
     MOCK["files"][name] = pkg
     d = "sha256:" + hashlib.sha256(pkg).hexdigest() if digest is None else digest
+    if sig is True:
+        sig = (release_sign.sign(UPDATE_SEED, release_sign.release_message(version, pkg)).hex() + "\n").encode()
+    assets = [{"name": name, "size": len(pkg), "digest": d, "browser_download_url": f"http://{HOST}:{MOCK_PORT}/dl/{name}"}]
+    if sig is not None:
+        MOCK["files"][name + ".sig"] = sig
+        assets.append({"name": name + ".sig", "size": len(sig), "digest": "", "browser_download_url": f"http://{HOST}:{MOCK_PORT}/dl/{name}.sig"})
     MOCK["releases"] = json.dumps([{
         "tag_name": "v9.0.0", "draft": False, "prerelease": False,
         "body": "テスト用のリリース<script>alert(1)</script>", "published_at": "2026-09-27T00:00:00Z",
         "html_url": "https://github.com/Lichiphen/NagiSwipe/releases/tag/v9.0.0",
-        "assets": [{"name": name, "size": len(pkg), "digest": d,
-                    "browser_download_url": f"http://{HOST}:{MOCK_PORT}/dl/{name}"}],
+        "assets": assets,
     }]).encode()
 
 
@@ -386,6 +408,26 @@ def run_update(adm, csrf, data_dir):
     t = apply()
     check("更新: 確認用の値がない更新ファイルは使わない", "確認用の値" in t and program() == before)
 
+    # GitHub taken over: a swapped ZIP comes with GitHub's (matching) SHA-256, but not with the author's signature.
+    publish("9.9.9", good, sig=None)
+    t = apply()
+    check("更新: 配布元の署名（.sig）がない更新ファイルは使わない", "署名がない" in t and program() == before)
+    swapped = make_package("9.9.9", marker="/* swapped by someone else */")
+    publish("9.9.9", swapped, sig=(release_sign.sign(UPDATE_SEED, release_sign.release_message("9.9.9", good)).hex() + "\n").encode())
+    t = apply()
+    check("更新: 差し替えた ZIP（SHA-256 は GitHub と一致）に本物の ZIP の署名を付けても拒否", "署名が配布元" in t and program() == before)
+    other_key = bytes(range(32))
+    publish("9.9.9", swapped, sig=(release_sign.sign(other_key, release_sign.release_message("9.9.9", swapped)).hex() + "\n").encode())
+    t = apply()
+    check("更新: 別の鍵で署名した ZIP は拒否", "署名が配布元" in t and program() == before)
+    old = make_package("9.9.8")
+    publish("9.9.9", old, sig=(release_sign.sign(UPDATE_SEED, release_sign.release_message("9.9.8", old)).hex() + "\n").encode())
+    t = apply()
+    check("更新: 古い版の署名付き ZIP を新しい版の名前で出しても拒否", "署名が配布元" in t and program() == before)
+    publish("9.9.9", good, sig=b"not a signature")
+    t = apply()
+    check("更新: 形の崩れた署名は拒否", "署名が配布元" in t and program() == before)
+
     bad_packages = {
         "フォルダの外へ書く（../）": make_package("9.9.9", extra={"nagimanga/../evil.php": b"<?php echo 'PWNED';"}),
         "フォルダの外へ書く（lib/../../）": make_package("9.9.9", extra={"nagimanga/lib/../../evil2.php": b"<?php echo 1;"}),
@@ -429,7 +471,7 @@ def run_update(adm, csrf, data_dir):
     embed = adm.get("/admin/index.php?p=embed").text
     check("更新: 設置用コード画面に新しいキャッシュバスターが出る",
           f"NagiManga.js?v={new_ver}" in embed and "nagimanga" in embed and "NagiSwipe-main.js" in embed)
-    check("更新: ログに残る", "update_applied" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+    check("更新: ログに残る", "update_applied" in (data_dir / "logs" / "security.log.php").read_text(encoding="utf-8"))
 
     r = adm.get("/admin/index.php?p=update")
     m = re.search(r'name="backup" value="([^"]+)"', r.text)
@@ -462,11 +504,37 @@ def run(data_dir):
     check("セットアップ画面にサーバーのパスが出ない", str(data_dir) not in r.text and "\\" not in re.sub(r"<[^>]+>", "", r.text))
     r = adm.post("/admin/index.php", {"csrf": "bad", "password": admin_pw, "password2": admin_pw})
     check("CSRF トークンなしのセットアップは拒否", is_404(r))
+    key_file = data_dir / "setup-key.php"
+    setup = setup_key(data=data_dir)
     r = adm.get("/admin/index.php")
-    r = adm.post("/admin/index.php", {"csrf": csrf_of(r.text), "password": "short", "password2": "short"})
+    check("初回に開くと data にセットアップの鍵ができ、画面には出ない", key_file.exists() and setup not in r.text
+          and "setup-key.php" in r.text and 'name="setup_key"' in r.text)
+    raw = Client(PORT_RAW)
+    r = raw.get("/data/setup-key.php")
+    check(".htaccess 無効でもセットアップの鍵は Web から読めない（空の 404）", r.status == 404 and r.text.strip() == "")
+    bot = Client()
+    r = bot.get("/admin/index.php")
+    r = bot.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": "", "password": "bot-password-123", "password2": "bot-password-123"})
+    check("鍵なしでは先に開いた人もセットアップできない", "鍵が違います" in r.text and not (data_dir / "config.php").exists())
+    wrong = "ABCDE-FGHJK-LMNPQ-RSTUV" if setup != "ABCDE-FGHJK-LMNPQ-RSTUV" else "VUTSR-QPNML-KJHGF-EDCBA"
+    r = bot.get("/admin/index.php")
+    r = bot.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": wrong, "password": "bot-password-123", "password2": "bot-password-123"})
+    check("違う鍵ではセットアップできず、鍵も変わらない", "鍵が違います" in r.text and not (data_dir / "config.php").exists() and setup_key(data=data_dir) == setup)
+    for _ in range(9):
+        r = bot.get("/admin/index.php")
+        r = bot.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": wrong, "password": "bot-password-123", "password2": "bot-password-123"})
+    r = bot.get("/admin/index.php")
+    check("鍵を 10 回間違えた相手は、正しい鍵でも 1 時間は試せない", is_404(bot.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": setup, "password": "bot-password-123", "password2": "bot-password-123"}))
+          and not (data_dir / "config.php").exists())
+    for f in (data_dir / "ratelimit").glob("*.json"):
+        f.unlink()   # the owner comes from the same 127.0.0.1 in this test
+    r = adm.get("/admin/index.php")
+    r = adm.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": setup, "password": "short", "password2": "short"})
     check("短い管理者パスワードは拒否", "10 文字以上" in r.text)
     r = adm.get("/admin/index.php")
-    r = adm.post("/admin/index.php", {"csrf": csrf_of(r.text), "password": admin_pw, "password2": admin_pw})
+    r = adm.post("/admin/index.php", {"csrf": csrf_of(r.text), "setup_key": " " + setup.lower().replace("-", " ") + " ",
+                                      "password": admin_pw, "password2": admin_pw})
+    check("鍵は小文字・空白区切りで貼っても通り、設定が終わると鍵のファイルは消える", "セットアップが完了しました" in r.text and not key_file.exists())
     m = re.search(r'index\.php\?k=([A-Za-z0-9]{24})', r.text)
     check("セットアップ完了でログイン URL が出る", bool(m))
     key = m.group(1) if m else ""
@@ -701,7 +769,7 @@ def run(data_dir):
     adm.post("/admin/index.php", {"do": "clearpw", "id": wid, "csrf": csrf})
 
     # --- Direct file access ----------------------------------------------------------------
-    direct = ["/data/config.php", "/data/", "/data/works/", "/data/logs/security.log", "/lib/bootstrap.php",
+    direct = ["/data/config.php", "/data/", "/data/works/", "/data/logs/security.log.php", "/lib/bootstrap.php",
               "/lib/", "/admin/.htaccess", "/.htaccess", "/data/probe.txt"]
     check("data / lib / .htaccess への直接アクセスは拒否", all(anon.get(u).status in (403, 404) for u in direct))
 
@@ -717,6 +785,11 @@ def run(data_dir):
     check(".htaccess 無効でもフォルダ一覧は出ない", "work.json" not in r.text and r.status in (200, 403, 404) and len(r.text) < 50)
     r = raw.get("/data/probe.txt")
     check("（参考）.htaccess 無効時は probe.txt が見える → 管理画面で警告", r.status == 200 and "nm-probe" in r.text)
+    r = raw.get("/data/logs/security.log.php")
+    check(".htaccess 無効でもセキュリティログ（IP・ログインの記録）は空の 404", r.status == 404 and r.text.strip() == ""
+          and (data_dir / "logs" / "security.log.php").read_text(encoding="utf-8").count("\t") > 3)
+    check("古い名前のログ（security.log）は残らない", not (data_dir / "logs" / "security.log").exists()
+          and "login" not in raw.get("/data/logs/security.log").text)
 
     # --- Password protection ---------------------------------------------------------------
     work_pw = "yomu-" + secrets.token_hex(3)
@@ -934,7 +1007,7 @@ def run(data_dir):
     eid, msg = import_epub(bombbuf.getvalue())
     check("展開すると巨大な画像（ZIP 爆弾）は読まない", eid is None, msg)
     check("拒否した EPUB は作品もファイルも残さない", works_count() == n1 and not list((data_dir / "tmp").glob("epub-*")))
-    check("XXE の試みはログに残る", "epub_entity_refused" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+    check("XXE の試みはログに残る", "epub_entity_refused" in (data_dir / "logs" / "security.log.php").read_text(encoding="utf-8"))
 
     # --- Light (small) versions -----------------------------------------------------------------
     r = adm.post("/admin/index.php", {"do": "create", "title": "Light", "direction": "rtl", "csrf": csrf})
@@ -1076,7 +1149,7 @@ def run(data_dir):
            for do in ("update_check", "update_apply", "update_rollback", "update_auto", "page_public", "settings_page", "settings_advanced")]
     check("ゲストは更新・元に戻す・自動確認・個別ページの公開・個別ページと上級者向けの設定を変えられない", all(upd), str(upd))
     check("ゲストの操作でデータは 1 バイトも変わらない", snapshot() == before and (data_dir / "config.php").read_bytes() == cfg_before)
-    check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log").read_text(encoding="utf-8"))
+    check("ゲストの拒否はログに残る", "guest_write_blocked" in (data_dir / "logs" / "security.log.php").read_text(encoding="utf-8"))
 
     # IP allow list: guests still enter, the admin login stays closed to other IPs
     original = cfg_file.read_text(encoding="utf-8")
@@ -1131,7 +1204,7 @@ def run(data_dir):
     r = b.get(f"/admin/index.php?k={key}")
     check("ロック中はログイン画面自体が 404", is_404(r))
 
-    log = (data_dir / "logs" / "security.log").read_text(encoding="utf-8") if (data_dir / "logs" / "security.log").exists() else ""
+    log = (data_dir / "logs" / "security.log.php").read_text(encoding="utf-8") if (data_dir / "logs" / "security.log.php").exists() else ""
     check("セキュリティログに記録される", "login_failed" in log and "unlock_failed" in log and "upload_rejected" in log)
 
 

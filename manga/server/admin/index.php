@@ -22,7 +22,10 @@ require __DIR__ . '/../lib/log-backup.php';
 require __DIR__ . '/../lib/log-admin.php';
 nm_load_plugins();
 
-const NM_SETUP_WINDOW = 1800; // first-run setup must happen within 30 min
+// First run: the form asks for a key the server writes into data/ (read over FTP), so whoever opens a fresh
+// upload first cannot claim the site. PHP that stops at once, so the key never shows on the web, even without .htaccess.
+const NM_SETUP_KEY_FILE = 'setup-key.php';
+const NM_SETUP_KEY_HEAD = "<?php http_response_code(404); exit; __halt_compiler();\n";
 // The image-popup script most sites pair with NagiManga (for the Tegalog setting line)
 const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.6.0/NagiSwipe-main.js';
 /** Blocks of the settings screen: their heading (for messages) and tab. */
@@ -252,17 +255,40 @@ function nm_detect_base_url(): string
 // Setup (first run)
 // ===========================================================================
 
+/** The setup key in data/setup-key.php, made on the first visit ('' when data/ cannot be written). */
+function nm_setup_key(): string
+{
+    $file = NM_DATA . '/' . NM_SETUP_KEY_FILE;
+    if (is_file($file) && preg_match('/^([A-HJ-NP-Z2-9]{5}(?:-[A-HJ-NP-Z2-9]{5}){3})$/m', (string)file_get_contents($file), $m)) return $m[1];
+    // 32 letters and digits without the look-alikes (I, O, 0, 1): 20 of them are 100 random bits.
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $key = '';
+    foreach (str_split(random_bytes(20)) as $i => $b) $key .= ($i && $i % 5 === 0 ? '-' : '') . $chars[ord($b) & 31];
+    $text = NM_SETUP_KEY_HEAD . "NagiManga / NagiLog setup key (セットアップの鍵):\n" . $key
+        . "\n\n管理画面の初期設定に、上の鍵を貼り付けてください。設定が終わると、このファイルは自動で消えます。\n"
+        . "Paste the key above into the first-run setup of the admin. This file is deleted when the setup is done.\n";
+    try {
+        nm_write_atomic($file, $text);
+    } catch (Throwable) {
+        return '';
+    }
+    nm_log('setup_key_made');
+    return $key;
+}
+
+/** What the owner typed, in the file's form: spaces, dashes and lower case do not matter. */
+function nm_setup_key_typed(string $typed): string
+{
+    $plain = preg_replace('/[^A-Z0-9]/', '', strtoupper($typed));
+    return strlen($plain) === 20 ? implode('-', str_split($plain, 5)) : '';
+}
+
 function nm_setup(string $method): void
 {
-    // The setup form only exists for a short time after the files were put in place
     nm_ensure_dir(NM_DATA);
-    $mark = NM_DATA . '/install.lock';
-    if (!is_file($mark)) @file_put_contents($mark, (string)time());
-    $started = (int)@file_get_contents($mark);
-    if ($started < time() - NM_SETUP_WINDOW) {
-        nm_log('setup_expired');
-        nm_not_found();
-    }
+    // Up to 0.11: the setup form closed 30 minutes after this mark. The key replaces it.
+    @unlink(NM_DATA . '/install.lock');
+    $setupKey = nm_setup_key();
 
     nm_session_start();
     $errors = [];
@@ -271,6 +297,19 @@ function nm_setup(string $method): void
     if ($method === 'POST') {
         $pre = (string)($_SESSION['nm_pre'] ?? '');
         if ($pre === '' || !hash_equals($pre, (string)($_POST['csrf'] ?? ''))) nm_not_found();
+        // 100 random bits cannot be guessed; the count only keeps a bot from hammering the form.
+        if (nm_rate_count('setup', nm_client_net(), 3600) >= 10) {
+            nm_log('setup_blocked');
+            nm_not_found();
+        }
+        $typed = nm_setup_key_typed(nm_str($_POST, 'setup_key', 100));
+        if ($setupKey === '' || $typed === '' || !hash_equals($setupKey, $typed)) {
+            nm_rate_hit('setup', nm_client_net(), 3600);
+            nm_rate_gc();
+            nm_log('setup_key_wrong');
+            usleep(random_int(300000, 600000));
+            $errors[] = nm_t('セットアップの鍵が違います。data フォルダの setup-key.php に書いてある鍵を、そのまま貼り付けてください');
+        }
 
         $pw = nm_str($_POST, 'password', 200);
         $pw2 = nm_str($_POST, 'password2', 200);
@@ -284,7 +323,7 @@ function nm_setup(string $method): void
             if (!empty($_POST['lock_ip'])) $cfg['allowed_ips'] = [$ip];
             $cfg['login_entry'] = empty($_POST['secret_login']) ? 'public' : 'secret';
             nm_save_config($cfg);
-            @unlink($mark);
+            @unlink(NM_DATA . '/' . NM_SETUP_KEY_FILE);
             nm_ensure_dir(NM_DATA . '/works');
             // Lets the admin page check that data/ is not reachable from the web
             @file_put_contents(NM_DATA . '/probe.txt', 'nm-probe');
@@ -320,17 +359,24 @@ function nm_setup(string $method): void
     }
     $err = '';
     foreach ($errors as $e) $err .= '<p class="flash flash-err">' . h($e) . '</p>';
+    // Where the key is, without the server's own path: data/ in the install, or the folder lib/paths.php names.
+    $keyAt = str_replace('\\', '/', NM_DATA) === str_replace('\\', '/', NM_ROOT) . '/data'
+        ? '<code>data/' . NM_SETUP_KEY_FILE . '</code>'
+        : nm_t('{paths} で指定した data フォルダの {file}', ['paths' => '<code>lib/paths.php</code>', 'file' => '<code>' . NM_SETUP_KEY_FILE . '</code>']);
 
     nm_layout(nm_t('セットアップ'), $err . '<section class="card"><h1>' . nm_t('NagiManga のセットアップ') . '</h1>'
         . '<table class="table">' . $rows . '</table>'
         . '<form method="post" action="index.php" class="form">'
         . '<input type="hidden" name="csrf" value="' . h((string)$_SESSION['nm_pre']) . '">'
+        . ($setupKey === '' ? '<p class="flash flash-err">' . nm_t('セットアップの鍵を作れませんでした。FTP で data フォルダを書き込み可能（755 など）にしてから、このページを開き直してください') . '</p>' : '')
+        . '<p>' . nm_t('設置した本人か確かめるため、サーバーが作った「セットアップの鍵」を入力します。FTP（またはサーバーのファイルマネージャー）で {file} を開き、書いてある鍵（例: ABCDE-FGHJK-LMNPQ-RSTUV）をコピーしてください。', ['file' => $keyAt]) . '</p>'
+        . '<label>' . nm_t('セットアップの鍵') . '<input name="setup_key" autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="100" placeholder="XXXXX-XXXXX-XXXXX-XXXXX"></label>'
         . '<label>' . nm_t('管理者パスワード（10 文字以上）') . '<input type="password" name="password" autocomplete="new-password" required minlength="10"></label>'
         . '<label>' . nm_t('もう一度') . '<input type="password" name="password2" autocomplete="new-password" required minlength="10"></label>'
         . '<label class="check"><input type="checkbox" name="lock_ip" value="1" checked> ' . nm_t('今の IP アドレス（{ip}）からだけ管理画面を開けるようにする（推奨。あとで設定から変更できます）', ['ip' => h($ip)]) . '</label>'
         . '<label class="check"><input type="checkbox" name="secret_login" value="1" checked> ' . nm_t('秘密のログイン URL からだけログインできるようにする（推奨。LOGの「ログイン」リンクと login.php を使いません。あとで設定から変更できます）') . '</label>'
         . '<button class="btn primary">' . nm_t('セットアップする') . '</button></form>'
-        . '<p class="note">' . nm_t('この画面は、ファイルを置いてから 30 分だけ表示されます。') . '</p></section>', false);
+        . '<p class="note">' . nm_t('鍵はこのサーバーの中にだけあり、Web からは読めません。先に誰かがこの画面を開いても、鍵を知らなければ設定できません。') . '</p></section>', false);
 }
 
 // ===========================================================================
@@ -354,10 +400,14 @@ function nm_login_page(string $method, array $cfg): void
         }
         nm_not_found();
     }
-    if (nm_login_blocked()) {
+    // Too many failures from this address: 404. Too many from everywhere ('busy'): the page stays for passkeys,
+    // the owner's marked browsers and the allow list, and other browsers are told to wait.
+    $block = nm_login_block();
+    if ($block === 'ip') {
         nm_log('login_blocked');
         nm_not_found();
     }
+    $busy = '<p class="flash flash-err">' . nm_t('ログインの失敗が多いため、いまはこのブラウザーからパスワードでログインできません。しばらく（最長1時間）待つか、パスキーや、前にログインしたことのあるブラウザーからログインしてください') . '</p>';
 
     // Where the login leads, chosen on the form: NagiLog or NagiManga. The page starts on what the address asks for
     // (login.php and the secret URL with &p=log: NagiLog), else on the last choice in this browser (cookie nm_land).
@@ -377,21 +427,29 @@ function nm_login_page(string $method, array $cfg): void
             if (!nm_code_pending()) {
                 $error = '<p class="flash flash-err">' . nm_t('時間が過ぎました。もう一度パスワードから入力してください') . '</p>';
             } elseif (nm_try_code(nm_str($_POST, 'otp', 40))) {
+                // The password was already right in this browser, so a site-wide wait does not stop the code.
                 nm_login_land($after);
             } else {
-                if (nm_login_blocked()) nm_not_found();
+                if (nm_login_block() === 'ip') nm_not_found();
                 $error = '<p class="flash flash-err">' . nm_t('確認コードが違います') . '</p>';
                 $askCode = true;
             }
+        } elseif ($block === 'busy') {
+            nm_log('login_busy');
+            usleep(random_int(400000, 900000));
+            $error = $busy;
         } else {
             $result = nm_try_login(nm_str($_POST, 'password', 200));
             if ($result === true) nm_login_land($after);
             if ($result === 'code') $askCode = true;
             else {
-                if (nm_login_blocked()) nm_not_found();
-                $error = '<p class="flash flash-err">' . nm_t('パスワードが違います') . '</p>';
+                $block = nm_login_block();
+                if ($block === 'ip') nm_not_found();
+                $error = $block === 'busy' ? $busy : '<p class="flash flash-err">' . nm_t('パスワードが違います') . '</p>';
             }
         }
+    } elseif ($block === 'busy') {
+        $error = $busy;
     }
 
     $_SESSION['nm_pre'] = bin2hex(random_bytes(32));
@@ -443,8 +501,8 @@ function nm_passkey_login_post(string $after): never
     try {
         $index = nm_passkey_assert($in);
     } catch (UnexpectedValueException) {
-        nm_login_failed('passkey_failed');
-        if (nm_login_blocked()) nm_not_found();
+        nm_login_failed('passkey_failed', false);
+        if (nm_login_block() === 'ip') nm_not_found();
         nm_json(['ok' => false, 'error' => nm_t('このパスキーではログインできませんでした')], 403);
     }
     // A passkey proves the device and the person: no password and no two-step code after it.
@@ -690,7 +748,11 @@ function nm_handle_post(array $cfg): void
             $cur = nm_str($_POST, 'current', 200);
             $new = nm_str($_POST, 'password', 200);
             $new2 = nm_str($_POST, 'password2', 200);
-            if (!password_verify($cur, (string)$cfg['admin_hash'])) {
+            // A wrong current password counts towards the same lockout as the login form: an open session
+            // (a borrowed PC, a stolen cookie) must not get unlimited guesses at the password it could then replace.
+            if (nm_login_blocked()) {
+                nm_flash('err', nm_t('失敗が続いたため、しばらく待ってからやり直してください'));
+            } elseif (!nm_password_ok($cur)) {
                 nm_log('admin_password_change_failed');
                 nm_flash('err', nm_t('今のパスワードが違います'));
             } elseif (mb_strlen($new) < 10 || $new !== $new2) {
@@ -963,7 +1025,7 @@ function nm_guest_enter(array $g): never
     // A logged-in admin stays admin
     if (nm_is_logged_in() && !nm_is_guest()) nm_redirect();
     // Each entrance makes a session: keep bots from filling the disk
-    if (nm_rate_hit('guest', nm_client_ip(), 3600) > 60) {
+    if (nm_rate_hit('guest', nm_client_net(), 3600) > 60) {
         nm_log('guest_rate_limited');
         nm_not_found();
     }
@@ -1625,12 +1687,8 @@ function nm_log_line_time(string $line): string
 function nm_view_settings(array $cfg): void
 {
     $login = nm_base_url() . '/admin/index.php?k=' . $cfg['login_key'];
-    $log = '';
-    $logFile = NM_DATA . '/logs/security.log';
-    if (is_file($logFile)) {
-        $lines = array_slice(file($logFile, FILE_IGNORE_NEW_LINES) ?: [], -40);
-        $log = h(implode("\n", array_map('nm_log_line_time', array_reverse($lines))));
-    }
+    $lines = nm_log_lines(40);
+    $log = $lines ? h(implode("\n", array_map('nm_log_line_time', array_reverse($lines)))) : '';
     $hidden = nm_csrf_field();
     $block = 'nl_settings_block';
 
@@ -1680,7 +1738,7 @@ function nm_view_settings(array $cfg): void
         . $block('login_guard')
         . '<label>' . nm_t('15 分のあいだに失敗してよい回数') . '<select name="login_fail_max">' . implode('', array_map(static fn($n) => '<option value="' . $n . '"' . ($n === nm_login_fail_max($cfg) ? ' selected' : '') . '>' . nm_t('{n} 回', ['n' => $n]) . '</option>', NM_LOGIN_FAIL_CHOICES)) . '</select></label>'
         . '<label>' . nm_t('超えたら、その IP アドレスをロックする時間') . '<select name="login_lock">' . implode('', array_map(static fn($s) => '<option value="' . $s . '"' . ($s === nm_login_lock($cfg) ? ' selected' : '') . '>' . ($s < 3600 ? nm_t('{n} 分', ['n' => intdiv($s, 60)]) : nm_t('{n} 時間', ['n' => intdiv($s, 3600)])) . '</option>', NM_LOGIN_LOCKS)) . '</select></label>'
-        . '<p class="note">' . nm_t('パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレスごとに数えます。ロック中は、ログイン画面も「Not Found」になります。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。') . '</p>'
+        . '<p class="note">' . nm_t('パスワード・二段階認証の確認コード・パスキーの失敗を、IP アドレス（IPv6 は /64 の範囲）ごとに数えます。ロック中は、ログイン画面も「Not Found」になります。一度ログインしたブラウザーは IP アドレスではなくブラウザーごとに数えるので、ほかの人の失敗で締め出されることはありません。自分がロックされたときは、時間がたつのを待つか、FTP で data/ratelimit フォルダの中身を消してください。IP 制限で許可していないアドレスは、そもそもログイン画面に届かないため数えません。') . '</p>'
         . '</div></section>'
 
         . nl_guard_panel()

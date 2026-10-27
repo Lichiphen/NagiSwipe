@@ -27,10 +27,9 @@ def main():
     if CRED.exists():
         key, pw = CRED.read_text(encoding="utf-8").split()[:2]
     else:
-        (DATA / "install.lock").unlink(missing_ok=True)
         pw = secrets.token_urlsafe(16)
         r = adm.get("/admin/index.php")
-        r = adm.post("/admin/index.php", {"csrf": t.csrf_of(r.text), "password": pw, "password2": pw, "lock_ip": "1"})
+        r = adm.post("/admin/index.php", {"csrf": t.csrf_of(r.text), "setup_key": t.setup_key(data=DATA), "password": pw, "password2": pw, "lock_ip": "1"})
         key = re.search(r"index\.php\?k=([A-Za-z0-9]{24})", r.text).group(1)
         CRED.write_text(f"{key}\n{pw}\n", encoding="utf-8")
         adm = t.Client(5190)

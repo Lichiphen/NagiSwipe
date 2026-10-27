@@ -38,6 +38,6 @@ $n = is_array($in) && is_int($in['n'] ?? null) ? $in['n'] : 0;
 if ($n < 1 || $n > NL_LIKE_DAILY || !$published($id)) nm_not_found();
 // The page sends one request per burst of taps; this only stops scripts hammering the counter file.
 nm_rate_gc();
-if (nm_rate_hit('log-like', nm_client_ip(), 60) > 60) nm_json(['error' => 'busy'], 429);
+if (nm_rate_hit('log-like', nm_client_net(), 60) > 60) nm_json(['error' => 'busy'], 429);
 [$count, $left] = nl_like_add($id, $n);
 nm_json(['id' => $id, 'count' => $count, 'left' => $left]);

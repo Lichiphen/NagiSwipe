@@ -25,7 +25,7 @@ def run(site):
     c = h.Client(args.port)
     r = c.get('/admin/index.php')
     check('セットアップ画面に「秘密のログイン URL からだけ」（最初からチェック）', re.search(r'<input type="checkbox" name="secret_login" value="1" checked>', r.text) is not None)
-    r = c.post('/admin/index.php', {'csrf': h.csrf_of(r.text), 'password': PASSWORD, 'password2': PASSWORD, 'secret_login': '1'})
+    r = c.post('/admin/index.php', {'csrf': h.csrf_of(r.text), 'setup_key': h.setup_key(args.port), 'password': PASSWORD, 'password2': PASSWORD, 'secret_login': '1'})
     key = re.search(r'index.php\?k=([A-Za-z0-9]+)', r.text).group(1)
     check('セットアップ完了の画面に NagiLog 用の URL も', f'index.php?k={key}&amp;p=log' in r.text and '「ログイン」のリンクは出ません' in r.text)
     check('config.php に login_entry = secret', "'login_entry' => 'secret'" in (site / 'data/config.php').read_text(encoding='utf-8'))
@@ -71,7 +71,7 @@ def run(site):
     check('login.php でも NagiManga を選べる', r.status == 303 and r.getheader('Location') == 'index.php')
     r = d.post('/admin/index.php', {'csrf': csrf, 'do': 'settings_save_all', 'tab': 'common', 'sections[]': 'login_entry', 'login_entry': 'other'}, headers={'Accept': 'application/json'})
     check('おかしな値は断る', r.status == 422)
-    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    log = (site / 'data/logs/security.log.php').read_text(encoding='utf-8')
     check('切り替えをセキュリティログに記録', 'settings_login_entry_changed\tpublic' in log)
 
     # --- Security log in Japan time ---------------------------------------------------------------
@@ -96,7 +96,7 @@ def run(site):
     bucket = lambda name: ratelimit / (hashlib.sha256(f'{name}|{h.HOST}'.encode()).hexdigest() + '.json')
     bucket('login').unlink()
     check('15 分の数え直しが過ぎても、1 時間のロックは続く', h.is_404(x.get('/admin/index.php?k=' + key)))
-    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    log = (site / 'data/logs/security.log.php').read_text(encoding='utf-8')
     check('ロックしたことと設定の変更をセキュリティログに記録', 'login_locked\t60min' in log and 'settings_login_guard_changed\t3 / 60min' in log)
     bucket('login-lock').unlink()
     page = x.get('/admin/index.php?k=' + key)

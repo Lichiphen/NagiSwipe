@@ -198,7 +198,7 @@ def run(c, csrf, key):
     client, r = passkey_login(r_)
     check('署名カウンターが戻ったパスキー（複製の疑い）は断る', r.status == 403 and not logged_in(client))
     passkey_login(a)
-    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    log = (site / 'data/logs/security.log.php').read_text(encoding='utf-8')
     check('セキュリティログに記録', all(x in log for x in ('passkey_added', 'login_ok_passkey', 'passkey_used', 'passkey_failed', 'passkey_counter')))
 
     # --- With the two-step login on, a passkey still logs in alone ---------------------------------
@@ -222,6 +222,17 @@ def run(c, csrf, key):
         check('LOGの「ログイン」（login.php）からもパスキーでログインでき、LOGの管理へ', ok_json(r) and json.loads(r.text)['redirect'] == 'index.php?p=log' and logged_in(pub))
     else:
         check('LOGの「ログイン」（login.php）が開く', False)
+
+    # --- The site-wide limit (40 failures an hour from everywhere) does not stop a passkey ------------------
+    busy =site / 'data/ratelimit' / (hashlib.sha256(b'login-all|all').hexdigest() + '.json')
+    busy.parent.mkdir(exist_ok=True)
+    busy.write_text(json.dumps([int(time.time())] * 40), encoding='utf-8')
+    f, lp = login_page()
+    r = f.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(lp.text), 'password': PASSWORD})
+    check('全体の上限の間、印のないブラウザーはパスワードでは入れない', 'しばらく' in r.text and not logged_in(f))
+    g, r = passkey_login(a)
+    check('全体の上限の間も、パスキーならログインできる', ok_json(r) and logged_in(g))
+    busy.unlink()
 
     # --- Removing --------------------------------------------------------------------------------
     r = c.post('/admin/index.php', {'csrf': csrf, 'do': 'passkey_delete', 'id': b64u(r_.id), 'current': 'wrong-password'})

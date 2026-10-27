@@ -32,7 +32,7 @@ def main():
         process=start(data,root/'launch-1.txt')
         before=h.Client(args.port).get('/admin/index.php').text
         check('空の専用データで初期設定画面を出す',not (data/'config.php').exists() and 'name="password2"' in before)
-        c,csrf,key=base.install(args.port)
+        c,csrf,key=base.install(args.port,data)
         payload=base.payload(body='起動スクリプトの記録\n次の起動でも残す本文')
         response=c.post('/admin/index.php',{'csrf':csrf,**payload}); pid=json.loads(response.text)['id']
         media=json.loads(c.post('/admin/index.php',{'csrf':csrf,'do':'log_upload'},files={'image':('persist.png',h.png(64,96),'image/png')}).text)['media']

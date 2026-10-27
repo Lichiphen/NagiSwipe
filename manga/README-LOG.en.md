@@ -238,7 +238,7 @@ HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
 1. Download [the release ZIP (`nagimanga-v0.9.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
-2. The first time, open `/nagimanga/admin/` and choose the administrator password within 30 minutes.
+2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password.
 3. Bookmark the admin URL that is shown.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
 5. Under "LOG" in the settings, choose the audience, site name, introduction, name, design and icon.
@@ -736,7 +736,7 @@ Pages not on the list above can also be shown in a frame inside the text: write 
 - The frame is at most 80% of the screen's height; tall shapes get narrower to fit. A link under the frame opens the page in a new tab.
 - `[ページ埋込]URL[/ページ埋込]` works too. The Format window of the post and fixed page editors puts one in from Blocks › Page embed.
 - The page goes into the frame through this site's `embed.php`. `embed.php` opens only URLs this site signed when it drew the text, so nobody can show another page under this site's address. The public pages' CSP never needs to list the other site.
-- The page in the frame can use scripts, storage (saved games), full screen and gamepads, and can open new windows. It moves this site's page elsewhere only when the reader presses a link.
+- The page in the frame can use scripts, storage (saved games), full screen and gamepads, and can open new windows. It can never move this site's page elsewhere (from v0.12.0, not even when the reader presses a link). Make its outside links open in a new tab (`target="_blank"`).
 - Pages whose site forbids frames (`X-Frame-Options` or CSP `frame-ancestors`) cannot be shown. Readers can open them from the link under the frame.
 
 ## Picture formats, sizes and management

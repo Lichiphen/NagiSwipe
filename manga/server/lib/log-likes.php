@@ -34,8 +34,7 @@ function nl_likes_write(array $counts): void
  */
 function nl_like_keys(string $postId): array
 {
-    $ip = nm_client_ip();
-    if (str_contains($ip, ':') && ($bin = @inet_pton($ip)) !== false) $ip = bin2hex(substr($bin, 0, 8)) . '::/64';
+    $ip = nm_client_net();
     $ua = substr(trim((string)($_SERVER['HTTP_USER_AGENT'] ?? '')), 0, 400);
     $secret = (string)(nm_config()['secret'] ?? '');
     return [substr(hash_hmac('sha256', 'log-like|' . $ip . '|' . $ua . '|' . $postId, $secret), 0, 20),

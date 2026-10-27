@@ -37,10 +37,10 @@ def start(site, port, raw=False):
     raise RuntimeError("PHP server did not start")
 
 
-def install(port):
+def install(port, data=None):
     c = helper.Client(port)
     r = c.get("/admin/index.php")
-    r = c.post("/admin/index.php", {"csrf": helper.csrf_of(r.text), "password": "log-test-password", "password2": "log-test-password"})
+    r = c.post("/admin/index.php", {"csrf": helper.csrf_of(r.text), "setup_key": helper.setup_key(port, data), "password": "log-test-password", "password2": "log-test-password"})
     key = re.search(r"index.php\?k=([A-Za-z0-9]+)", r.text).group(1)
     r = c.get("/admin/index.php?k=" + key)
     c.post("/admin/index.php", {"k": key, "csrf": helper.csrf_of(r.text), "password": "log-test-password"})

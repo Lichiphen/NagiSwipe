@@ -270,6 +270,7 @@ def run(c, csrf, port):
     csp = framed.getheader("Content-Security-Policy") or ""
     check("ページ埋込: embed.phpは署名したURLだけを枠に入れ、CSPはその相手だけ", framed.status == 200 and 'src="https://game.example/play/?a=1&amp;b=2"' in framed.text
           and "frame-src https://game.example;" in csp and "frame-ancestors 'self'" in csp and 'sandbox="allow-scripts allow-same-origin' in framed.text)
+    check("ページ埋込: 埋め込んだページはサイト全体を別のページへ移せない（リンクは新しいタブ）", 'allow-top-navigation' not in framed.text and 'allow-popups ' in framed.text)
     other = urllib.parse.quote("https://evil.example/", safe="")
     check("ページ埋込: 署名の違うURL・署名なしは開かない", public.get("/embed.php?u=" + other + "&s=" + src.group(2)).status == 404 and public.get("/embed.php?u=" + other).status == 404)
 

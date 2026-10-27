@@ -73,7 +73,7 @@ def install(data):
                 time.sleep(.05)
         else:
             raise SystemExit('PHPの開発サーバーを起動できませんでした。')
-        r = c.post('/admin/index.php', {'csrf': helper.csrf_of(r.text), 'password': PASSWORD, 'password2': PASSWORD})
+        r = c.post('/admin/index.php', {'csrf': helper.csrf_of(r.text), 'setup_key': helper.setup_key(port, data), 'password': PASSWORD, 'password2': PASSWORD})
         if not (data / 'config.php').exists():
             raise SystemExit(f'初期設定に失敗しました（HTTP {r.status}）')
         c, csrf = login(port)

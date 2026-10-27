@@ -31,7 +31,9 @@ const NM_SESSION_GC = 31708800;     // 367 days: PHP must not collect a session 
 const NM_LOGIN_FAIL_MAX = 5;        // per IP / 15 min (default; the setting allows NM_LOGIN_FAIL_CHOICES)
 const NM_LOGIN_FAIL_CHOICES = [3, 4, 5, 6, 7, 8, 9, 10];
 const NM_LOGIN_LOCKS = [900, 3600, 21600, 86400];   // how long an address is shut out: 15 min (default), 1 h, 6 h, 24 h
-const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing)
+const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing); only browsers without the owner's mark wait
+const NM_DEVICE_COOKIE = 'nm_device';   // the owner's mark: this browser has logged in before (see nm_device_id())
+const NM_DEVICE_DAYS = 400;
 
 /**
  * Whether admin/login.php (the LOG's "ログイン" link) may show the login form. "secret": only the secret login URL
@@ -172,6 +174,7 @@ function nm_is_logged_in(): bool
     }
     $_SESSION['nm_seen'] = $now;
     nm_session_keep();
+    if (!$guest && nm_device_id() === null) nm_device_mark();
     return true;
 }
 
@@ -196,12 +199,62 @@ function nm_login_lock(?array $cfg = null): int
     return in_array($s, NM_LOGIN_LOCKS, true) ? $s : NM_LOGIN_LOCKS[0];
 }
 
+// ---------------------------------------------------------------------------
+// The owner's browsers: a mark from a past login keeps the site-wide limit from shutting the owner out
+// ---------------------------------------------------------------------------
+
+/** The mark's id when this browser carries a valid one (signed with the secret key and the current password). */
+function nm_device_id(): ?string
+{
+    $raw = (string)($_COOKIE[NM_DEVICE_COOKIE] ?? '');
+    if (!preg_match('/\A([a-f0-9]{32})\.([a-f0-9]{64})\z/', $raw, $m)) return null;
+    return hash_equals(nm_device_sig($m[1]), $m[2]) ? $m[1] : null;
+}
+
+/** A new password (or turning the two-step login on or off) changes nm_admin_version(), so every old mark stops counting. */
+function nm_device_sig(string $id): string
+{
+    return hash_hmac('sha256', 'login-device|' . $id . '|' . nm_admin_version(), (string)(nm_config()['secret'] ?? ''));
+}
+
+/** A marked browser that keeps failing loses the mark's privilege, so a stolen mark cannot guess for long. */
+function nm_device_trusted(): bool
+{
+    $id = nm_device_id();
+    return $id !== null && nm_rate_count('login-device', $id, 86400) < nm_login_fail_max();
+}
+
+/** Give (or renew) the mark after a login, or to an owner signed in since before the marks existed. */
+function nm_device_mark(): void
+{
+    if (headers_sent()) return;
+    $id = nm_device_id() ?? bin2hex(random_bytes(16));
+    $value = $id . '.' . nm_device_sig($id);
+    setcookie(NM_DEVICE_COOKIE, $value, ['expires' => time() + NM_DEVICE_DAYS * 86400, 'path' => $GLOBALS['nm_session_path'] ?? session_get_cookie_params()['path'], 'secure' => nm_is_https(), 'httponly' => true, 'samesite' => 'Strict']);
+    $_COOKIE[NM_DEVICE_COOKIE] = $value;
+}
+
+/**
+ * Why this browser may not try a password now:
+ *   'ip'   too many failures from its address (IPv6: its /64): the login form answers 404 (a marked browser is
+ *          counted by its mark instead, and after too many failures there it is treated as unmarked)
+ *   'busy' the whole site saw NM_LOGIN_FAIL_GLOBAL failures within the hour: the form stays, but a password is only
+ *          taken from a marked browser or an address on the allow list; passkeys always work
+ *   ''     free to try
+ */
+function nm_login_block(): string
+{
+    if (nm_device_trusted()) return '';
+    $net = nm_client_net();
+    if (nm_rate_count('login', $net, 900) >= nm_login_fail_max() || nm_rate_count('login-lock', $net, nm_login_lock()) > 0) return 'ip';
+    $cfg = nm_config() ?? [];
+    if (!empty($cfg['allowed_ips']) && nm_ip_allowed($cfg)) return '';
+    return nm_rate_count('login-all', 'all', 3600) >= NM_LOGIN_FAIL_GLOBAL ? 'busy' : '';
+}
+
 function nm_login_blocked(): bool
 {
-    $ip = nm_client_ip();
-    return nm_rate_count('login', $ip, 900) >= nm_login_fail_max()
-        || nm_rate_count('login-lock', $ip, nm_login_lock()) > 0
-        || nm_rate_count('login-all', 'all', 3600) >= NM_LOGIN_FAIL_GLOBAL;
+    return nm_login_block() !== '';
 }
 
 /** The admin password; a wrong one counts towards the lockout. */
@@ -219,16 +272,25 @@ function nm_password_ok(string $password): bool
     return false;
 }
 
-function nm_login_failed(string $event): void
+/**
+ * A wrong answer. A marked browser counts against its mark only (the owner's typos never lock the address or the
+ * site); others count against their address and, unless it is a passkey (which cannot be guessed), the whole site.
+ */
+function nm_login_failed(string $event, bool $guessable = true): void
 {
-    $ip = nm_client_ip();
-    $count = nm_rate_hit('login', $ip, 900);
-    nm_rate_hit('login-all', 'all', 3600);
     nm_log($event);
-    // The failure that reaches the limit starts the lock (kept apart, so a long lock outlives the 15-minute count).
-    if ($count === nm_login_fail_max()) {
-        nm_rate_hit('login-lock', $ip, nm_login_lock());
-        nm_log('login_locked', (string)intdiv(nm_login_lock(), 60) . 'min');
+    $device = nm_device_id();
+    if ($device !== null && nm_device_trusted()) {
+        if (nm_rate_hit('login-device', $device, 86400) === nm_login_fail_max()) nm_log('login_device_locked');
+    } else {
+        $net = nm_client_net();
+        $count = nm_rate_hit('login', $net, 900);
+        if ($guessable) nm_rate_hit('login-all', 'all', 3600);
+        // The failure that reaches the limit starts the lock (kept apart, so a long lock outlives the 15-minute count).
+        if ($count === nm_login_fail_max()) {
+            nm_rate_hit('login-lock', $net, nm_login_lock());
+            nm_log('login_locked', (string)intdiv(nm_login_lock(), 60) . 'min');
+        }
     }
     usleep(random_int(400000, 900000));
 }
@@ -271,7 +333,7 @@ function nm_try_code(string $code): bool
 
 function nm_start_admin_session(string $event = 'login_ok'): void
 {
-    $ip = nm_client_ip();
+    $device = nm_device_id();
     session_regenerate_id(true);
     $_SESSION = [
         'nm_admin' => true,
@@ -283,7 +345,9 @@ function nm_start_admin_session(string $event = 'login_ok'): void
         'nm_role' => 'admin',
     ];
     nm_session_keep();
-    nm_rate_clear('login', $ip);
+    nm_rate_clear('login', nm_client_net());
+    if ($device !== null) nm_rate_clear('login-device', $device);
+    nm_device_mark();
     nm_log($event);
 }
 

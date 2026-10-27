@@ -161,7 +161,7 @@ def run(c, csrf, key):
     r = g.get('/admin/index.php?k=' + key)
     r = g.post('/admin/index.php', {'k': key, 'csrf': h.csrf_of(r.text), 'otp': totp(secret, step())})
     check('パスワードを飛ばしてコードだけ送ってもログインできない', '時間が過ぎました' in r.text and g.get('/admin/index.php?p=settings').status != 200)
-    log = (site / 'data/logs/security.log').read_text(encoding='utf-8')
+    log = (site / 'data/logs/security.log.php').read_text(encoding='utf-8')
     check('セキュリティログに記録', all(x in log for x in ('totp_enabled', 'login_password_ok', 'totp_failed', 'login_ok_recovery', 'totp_recovery_used')))
 
     # --- New recovery codes, turning it off ---------------------------------------------------------

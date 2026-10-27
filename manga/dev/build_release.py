@@ -2,15 +2,16 @@
 """
 Build the release package nagimanga-vX.Y.Z.zip (standard library only).
 
-    python dev/build_release.py          -> dev/results/nagimanga-vX.Y.Z.zip
+    python dev/build_release.py          -> dev/results/nagimanga-vX.Y.Z.zip and .zip.sig
 
 Layout (the admin's self-update reads exactly this):
     nagimanga/...              the contents of server/ (data/ and plugins/ only with their guard files)
     optional/guest-mode.php    the guest mode plugin
     README.txt                 first steps
 
-Attach the ZIP to a GitHub release of Lichiphen/NagiSwipe. Installed copies find it
-through the releases API and check it against the SHA-256 GitHub shows for the asset.
+Attach the ZIP and its .sig to a GitHub release of Lichiphen/NagiSwipe. Installed copies find
+them through the releases API, check the ZIP against the SHA-256 GitHub shows for the asset,
+and (from 0.12.0 on) against the signature made here with the key from dev/release_sign.py.
 """
 import hashlib
 import re
@@ -18,6 +19,8 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
+
+import release_sign
 
 HERE = Path(__file__).resolve().parent
 MANGA = HERE.parent
@@ -28,7 +31,8 @@ README = """NagiManga v{version}
 はじめて設置するとき
 1. nagimanga フォルダの中身を、FTP でサーバーの好きな場所にアップロードします。
    .htaccess（. で始まるファイル）も必ず送ってください。
-2. ブラウザで https://あなたのサイト/nagimanga/admin/ を開き、30 分以内にセットアップします。
+2. ブラウザで https://あなたのサイト/nagimanga/admin/ を開きます。
+   FTP で data/setup-key.php を開き、書いてある「セットアップの鍵」を貼り付けて、パスワードを決めます。
 3. 表示されたログイン URL をブックマークします。
 4. ログインして、作品一覧に「data フォルダがインターネットから見える状態です」が出ていないことを確認します。
 5. 設定の「公開URL」に設置先を入れます。log.php は付けません。
@@ -57,7 +61,8 @@ English
 First installation
 1. Upload the contents of the nagimanga folder to any place on your server with FTP.
    Send the .htaccess files (files starting with .) too.
-2. Open https://your-site/nagimanga/admin/ in a browser and set it up within 30 minutes.
+2. Open https://your-site/nagimanga/admin/ in a browser. Open data/setup-key.php with FTP,
+   paste the "setup key" written in it, and choose your password.
 3. Bookmark the login URL that is shown.
 4. Log in and check that the work list does not warn that the data folder can be seen from the internet.
 5. Enter where it is installed as the "Public URL" in the settings (without log.php).
@@ -113,6 +118,12 @@ def main():
         z.writestr("README.txt", ("﻿" + README.format(version=version)).replace("\n", "\r\n").encode("utf-8"))
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     print(f"{out}\nsha256:{digest}")
+    # Installed sites refuse an update without it; --unsigned is only for local packages that are never published.
+    if "--unsigned" in sys.argv:
+        print("(not signed)")
+        return
+    sig = release_sign.sign_release(out, version)
+    print(f"{sig}  <- attach to the release together with the ZIP")
 
 
 if __name__ == "__main__":
