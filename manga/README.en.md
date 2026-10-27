@@ -136,16 +136,15 @@ nagimanga/
 
 ### 2. Setup
 
-Open `https://your-site/nagimanga/admin/` in a browser.
-
-1. Open `data/setup-key.php` with FTP (or the server's file manager). The server made it when the admin panel was first opened. The setup screen also shows how, under "How to find the setup key".
-2. Paste the "setup key" written in it (20 characters, like `ABCDE-FGHJK-LMNPQ-RSTUV`) into the field on the screen. Lower case and spaces do not matter.
+1. Open `https://your-site/nagimanga/admin/` in a browser. The setup screen appears. **Only now does the server make `data/setup-key.php` (the setup key).** Uploading alone does not make it.
+2. Open `data/setup-key.php` with FTP (or the server's file manager). If your FTP app does not show it, refresh the listing. The setup screen also shows how, under "How to find the setup key".
+3. Paste the "setup key" written in it (20 characters, like `ABCDE-FGHJK-LMNPQ-RSTUV`) into the field on the screen. Lower case and spaces do not matter.
 
    ![setup-key.php opened in a text editor. The first line is the PHP line, the third is the key (for example ABCDE-FGHJK-LMNPQ-RSTUV), with notes in Japanese and English under it](docs/images/setup-key.png)
 
    The file looks like this. The third line, shaped like `XXXXX-XXXXX-XXXXX-XXXXX`, is the key (every site has its own).
-3. Choose the administrator password (10 characters or more).
-4. Under "What you will mostly use", pick **NagiLog** (a diary, blog or photos) or **NagiManga** (manga) with the large buttons. It is the screen that opens first after you log in. Either way you can use both, and you can switch on the login page at any time.
+4. Choose the administrator password (10 characters or more). It is not made for you.
+5. Under "What you will mostly use", pick **NagiLog** (a diary, blog or photos) or **NagiManga** (manga) with the large buttons. It is the screen that opens first after you log in. Either way you can use both, and you can switch on the login page at any time.
 
 - Turn on "allow the admin panel only from the current IP address" whenever you can.
 

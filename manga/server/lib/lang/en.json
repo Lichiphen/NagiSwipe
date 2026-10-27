@@ -1773,7 +1773,6 @@
   "設置したばかりのサイトを狙った乗っ取りが増えているため、セキュリティを厳重にしています。設置した本人か確かめるため、最初の一度だけ、サーバーの中に作られた「セットアップの鍵」を入力してください。": "Takeovers of freshly installed sites are on the rise, so the setup is strict about security. To make sure you are the one who installed it, enter the setup key the server made, this one time only.",
   "セットアップの鍵の見つけ方": "How to find the setup key",
   "ファイルをアップロードしたときと同じ FTP ソフト（FileZilla など）か、レンタルサーバーの管理画面にある「ファイルマネージャー」を開きます。": "Open the FTP app you uploaded the files with (FileZilla or similar), or the file manager in your hosting control panel.",
-  "アップロードしたフォルダの中から、{file} を探します。": "In the folder you uploaded, find {file}.",
   "ファイルの中身を表示します。FTP ソフトでは、右クリックして「表示/編集」を選ぶか、パソコンにダウンロードしてメモ帳で開きます。ファイルマネージャーでは、ファイルをクリックするか「編集」を選びます。": "Show what is in the file. In an FTP app, right-click it and choose View/Edit, or download it to your computer and open it in a text editor. In a file manager, click the file or choose Edit.",
   "{example} の形をした 1 行をコピーして、下の「セットアップの鍵」の欄に貼り付けます。小文字や前後の空白が混ざってもかまいません。": "Copy the line shaped like {example} and paste it into the Setup key field below. Lower case and spaces around it do not matter.",
   "ファイルが見つからないときは、このページを開き直すと作られます。鍵はほかの人に教えないでください。セットアップが終わると、ファイルは自動で消えます。": "If the file is not there, opening this page again makes it. Do not tell anyone the key. The file is deleted when the setup is done.",
@@ -1784,5 +1783,6 @@
   "LOGの画像の直リンク防止をオンにしました。相互リンクのバナーなどは、画像一覧で画像ごとに「ほかのサイトにも貼れるようにする」を選べます": "Hotlink protection for the LOG’s pictures is on. For a link-exchange banner and the like, choose Allow other sites to show it for that picture in the media list",
   "直リンク防止はオフのままです。設定の「NagiMANGA → 上級者向けの設定」から、いつでもオンにできます": "Hotlink protection stays off. You can turn it on any time under NagiMANGA → Advanced in the settings",
   "漫画の画像に直リンク防止を使う": "Use hotlink protection for manga pictures",
-  "ほかのサイトにも貼れるようにする（バナーなど）": "Allow other sites to show it (banners and the like)"
+  "ほかのサイトにも貼れるようにする（バナーなど）": "Allow other sites to show it (banners and the like)",
+  "アップロードしたフォルダの中から、{file} を探します。このファイルは、いまこの画面を開いたときにサーバーが作りました（アップロードしただけでは、まだありません）。FTP ソフトに出てこないときは、一覧を更新（再読み込み）してください。": "In the folder you uploaded, find {file}. The server made this file just now, when this screen was opened (uploading alone does not make it). If your FTP app does not show it, refresh the listing."
 }
