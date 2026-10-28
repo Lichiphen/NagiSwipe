@@ -7,6 +7,7 @@ require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/log.php';
 require __DIR__ . '/lib/log-public.php';
 require __DIR__ . '/lib/log-admin.php';
+require __DIR__ . '/lib/analytics.php';
 // Keep old bookmarks; all generated and canonical URLs use the directory root (a post or page goes straight to its clean URL).
 if (!defined('NL_FRONT') && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
     $query = (string)($_SERVER['QUERY_STRING'] ?? '');
@@ -154,9 +155,11 @@ $sidebarHtml = nl_sidebar($summaries, $filter, $s, $owner);
 $here = ['pg' => $fixed['slug'] ?? null, 'category' => $filter['category'] !== '' ? $filter['category'] : null, 'tag' => $filter['tag'] !== '' ? $filter['tag'] : null, 'id' => $single ? $post['id'] : null,
     'top' => $front !== null || ($blogSlug === '' && !$single && !$fixed && $filter['query'] === ''), 'blog' => $blog && $filter['query'] === ''];
 $topmenuHtml = nl_topmenu_html($here);
+// Access analytics count visitors only, not the owner's own visits.
+$analytics = nm_analytics_csp(!$owner);
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js. A fixed page adds the hosts of its outside pictures.
-header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . ($fixed ? nl_md_image_origins($postsHtml) : '') . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' blob: https:; connect-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . $analytics['script'] . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . ($fixed ? nl_md_image_origins($postsHtml) : '') . $analytics['img'] . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' blob: https:; connect-src 'self'" . $analytics['connect'] . "; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
 // The site title (logo or icon and name) is the page's h1 on the lists; a post or a fixed page has its own title as h1.
 $logo = nl_load_media($s['logo']);
 $brand = $logo ? '<img class="log-site-logo" src="' . h(nl_media_url($logo)) . '" width="' . (int)$logo['w'] . '" height="' . (int)$logo['h'] . '" alt="' . h($s['title']) . '">'
@@ -206,6 +209,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?= nm_t_script(NM_FRONT_TEXTS) ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
+<?= nm_search_verify_meta() ?><?= nm_analytics_html(!$owner) ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
 <?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><?= nm_icon('menu') ?><span class="log-menu-label" aria-hidden="true">MENU</span></button>
 <div class="log-menu-backdrop" hidden></div><div class="log-site-grid"><?= $tocRail ?><main class="log-site-main" id="log-main">

@@ -14,6 +14,117 @@
     const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+    // An error that must not be missed (a block the server refused to save): a toast at the bottom until closed.
+    function toast(text, opts = {}) {
+        let box = $('.nm-toasts');
+        if (!box) { box = document.createElement('div'); box.className = 'nm-toasts'; document.body.append(box); }
+        const item = document.createElement('div');
+        item.className = 'nm-toast' + (opts.big ? ' nm-toast-big' : '') + (opts.shake ? ' nm-toast-shake' : '');
+        item.setAttribute('role', 'alert');
+        item.innerHTML = '<p></p><button type="button" class="nm-toast-close" aria-label="' + t('閉じる') + '">' + icon('close') + '</button>';
+        item.firstChild.textContent = text;
+        item.lastChild.addEventListener('click', () => item.remove());
+        box.append(item);
+        setTimeout(() => item.remove(), 15000);
+    }
+
+    // Save the same refused analytics block again and again and the warning grows, each time louder than the last,
+    // before the message settles back into the toast at the bottom. Centered; skipped when the viewer asks for less motion.
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function escalate(strike, text) {
+        if (reduceMotion || strike < 2) { toast(text, { big: strike >= 2, shake: strike >= 2 }); return; }
+        if (strike === 2) { toast(text, { big: true, shake: true }); return; }
+        const stage = document.createElement('div');
+        stage.className = 'nm-punish'; stage.setAttribute('aria-hidden', 'true');
+        document.body.append(stage);
+        const done = () => { stage.remove(); toast(text, { big: true }); };
+        const word = (chars, cls) => {
+            const w = document.createElement('div');
+            w.className = 'nm-punish-word ' + cls;
+            for (const ch of chars) { const s = document.createElement('span'); s.textContent = ch; w.append(s); }
+            stage.append(w);
+            return w;
+        };
+        // Random fly-out direction for each piece of a word that breaks apart.
+        const scatter = w => $$('span', w).forEach(s => {
+            s.style.setProperty('--dx', (Math.random() * 2 - 1) * 55 + 'vw');
+            s.style.setProperty('--dy', (Math.random() * 2 - 1) * 45 + 'vh');
+            s.style.setProperty('--rot', (Math.random() * 2 - 1) * 540 + 'deg');
+        });
+        const after = (el, fn) => el.addEventListener('animationend', fn, { once: true });
+
+        // After the painted word leaves, the screen itself cracks and crumbles.
+        const crack = () => screenCrack(stage, done);
+
+        if (strike === 3) {
+            // Painted STOP pulled down by gravity, then bursts apart, then the screen cracks.
+            const w = word('STOP', 'nm-punish-stop is-falling');
+            after(w, () => { scatter(w); w.classList.add('is-burst'); after($('span', w), () => setTimeout(crack, 150)); });
+        } else if (strike === 4) {
+            // STOP shivers, bounces four times, bounces off the bottom, then the screen cracks.
+            const w = word('STOP', 'nm-punish-stop is-wobble');
+            after(w, () => { w.classList.remove('is-wobble'); w.classList.add('is-bounce');
+                after(w, () => { w.classList.remove('is-bounce'); w.classList.add('is-exit'); after(w, crack); }); });
+        } else {
+            // "Enough already" stands out in relief; then the screen cracks and crumbles from the cracks, bit by bit.
+            const w = word(t('くどいよ'), 'nm-punish-enough');
+            setTimeout(() => {
+                const box = w.getBoundingClientRect();
+                for (let i = 0; i < 64; i++) {
+                    const d = document.createElement('i');
+                    d.className = 'nm-dust';
+                    d.style.left = (box.left + Math.random() * box.width) + 'px';
+                    d.style.top = (box.top + Math.random() * box.height) + 'px';
+                    d.style.setProperty('--dx', (Math.random() * 2 - 1) * 12 + 'vw');
+                    d.style.setProperty('--dy', (25 + Math.random() * 40) + 'vh');
+                    d.style.animationDelay = (0.5 + Math.random() * 0.6) + 's';
+                    stage.append(d);
+                }
+                w.classList.add('is-crumble');
+                screenCrack(stage, done);
+            }, 800);
+        }
+    }
+
+    // A full-screen glass crack: lines spread from the middle, then the shards between them fall away one by one.
+    function screenCrack(stage, done) {
+        const NS = 'http://www.w3.org/2000/svg';
+        const W = innerWidth, H = innerHeight, cx = W / 2, cy = H / 2, R = Math.hypot(W, H);
+        const n = 11, rim = [];
+        for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2 + (Math.random() * 0.3 - 0.15);
+            rim.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]);
+        }
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('class', 'nm-crack'); svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('aria-hidden', 'true');
+        const line = (x1, y1, x2, y2, delay) => {
+            const l = document.createElementNS(NS, 'line');
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1); l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            l.style.setProperty('--len', Math.hypot(x2 - x1, y2 - y1));
+            l.style.setProperty('--cd', delay + 's');
+            svg.append(l);
+        };
+        rim.forEach(([x, y], i) => {
+            line(cx, cy, x, y, 0);
+            // A branch cracking off partway along each radial line.
+            const t = 0.35 + Math.random() * 0.3, bx = cx + (x - cx) * t, by = cy + (y - cy) * t;
+            const nb = rim[(i + 1) % n];
+            line(bx, by, bx + (nb[0] - bx) * 0.4, by + (nb[1] - by) * 0.4, 0.22);
+        });
+        stage.append(svg);
+        rim.forEach(([x1, y1], i) => {
+            const [x2, y2] = rim[(i + 1) % n];
+            const sh = document.createElement('div');
+            sh.className = 'nm-shard';
+            sh.style.clipPath = 'polygon(' + cx + 'px ' + cy + 'px, ' + x1 + 'px ' + y1 + 'px, ' + x2 + 'px ' + y2 + 'px)';
+            sh.style.setProperty('--dx', (((x1 + x2) / 2 - cx) * 0.12) + 'px');
+            sh.style.setProperty('--rot', ((Math.random() * 2 - 1) * 40) + 'deg');
+            sh.style.setProperty('--sd', (0.5 + i * 0.07 + Math.random() * 0.1) + 's');
+            stage.append(sh);
+        });
+        setTimeout(done, 1900);
+    }
+
     // Dialogs the page asks to show at once (the two-step reminder after a login).
     $$('dialog[data-open]').forEach(d => d.showModal());
 
@@ -187,7 +298,7 @@
             const snap = section => (items(section) ? items(section)() : '') + JSON.stringify($$('input, select, textarea', section).filter(c => c.name && c.form === form && c.type !== 'hidden')
                     .map(c => c.type === 'checkbox' || c.type === 'radio' ? c.checked : c.type === 'file' ? Array.from(c.files, f => f.name + ':' + f.size).join('|') : c.value));
             const saved = new Map(sections.map(s => [s, snap(s)]));
-            let changed = [], busy = false, leaving = false, armed = false, reloadTo = '';
+            let changed = [], busy = false, leaving = false, armed = false, reloadTo = '', analyticsStrikes = 0;
             const say = (text, error = false) => { if (status.textContent !== text) status.textContent = text; status.classList.toggle('is-error', error); };
             // The back gesture (or button) first returns to this extra entry, so the page can ask before leaving.
             const arm = () => { history.pushState({settingsGuard: true}, '', location.href); armed = true; };
@@ -226,20 +337,26 @@
                     data.set(s.dataset.revisionField || 'sidebar_revision', s.dataset.revision);
                 });
                 busy = true; form.inert = true; button.disabled = true; say(t('保存しています…'));
+                let rejected = null;
                 try {
                     const response = await fetch(form.getAttribute('action'), { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
                     let result;
                     try { result = await response.json(); }
                     catch { throw new Error(t('保存できませんでした。ログインが切れた可能性があります。入力した内容はこの画面に残っています。')); }
                     if (!response.ok || !result.ok) {
+                        rejected = result.section;
                         const section = sections.find(s => s.dataset.settingsSection === result.section);
                         if (section) { reveal(section); section.closest('.card').scrollIntoView({ block: 'start' }); }
                         throw new Error(t('{message}。入力した内容はこの画面に残っています。', { message: result.error || t('保存できませんでした') }));
                     }
-                    sections.forEach(s => saved.set(s, snap(s))); changed = [];
+                    sections.forEach(s => saved.set(s, snap(s))); changed = []; analyticsStrikes = 0;
                     return true;
                 } catch (e) {
-                    say(e.message || t('通信できませんでした。入力した内容はこの画面に残っています。'), true);
+                    const message = e.message || t('通信できませんでした。入力した内容はこの画面に残っています。');
+                    say(message, true);
+                    // The analytics block refused a second, third… time: the warning grows each time. Anything else is one toast.
+                    if (rejected === 'analytics') escalate(++analyticsStrikes, message);
+                    else toast(message);
                     return false;
                 } finally { busy = false; form.inert = false; button.disabled = false; }
             }

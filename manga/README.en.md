@@ -4,8 +4,8 @@
 
 # NagiManga (manga viewer)
 
-[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#demo)
-[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.en.md)
+[![NagiManga v0.13.0](https://img.shields.io/badge/NagiManga-v0.13.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#demo)
+[![NagiLog v0.13.0](https://img.shields.io/badge/NagiLog-v0.13.0-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -48,6 +48,7 @@ The admin panel can be shown in Japanese or English (see [Admin panel language](
   - [Embed code](#embed-code)
   - [Work pages (share links, v0.3.0 and later)](#work-pages-share-links-v030-and-later)
   - [Hotlink protection (advanced, v0.3.0 and later)](#hotlink-protection-advanced-v030-and-later)
+  - [Access analytics (v0.13.0 and later)](#access-analytics-v0130-and-later)
   - [Plugins (guest mode)](#plugins-guest-mode)
   - [Two-step login (v0.9.1 and later, optional)](#two-step-login-v091-and-later-optional)
   - [Passkeys (v0.10.0 and later, optional)](#passkeys-v0100-and-later-optional)
@@ -334,6 +335,18 @@ With "設定 → 上級者向けの設定 → 直リンク防止" (Settings → 
 - The LOG’s own pages, pages that embed the LOG (`embed.php`) and sites on the allow list still show them.
 - **For a picture you want other sites to show, such as a link-exchange banner**, tick "Allow other sites to show it" for that picture in the media list and save. Only that picture is left out of hotlink protection. Put the picture in a published post or fixed page (a links page, say).
 - For an RSS reader that shows pictures inside the browser, such as Feedly, add that site (for example `https://feedly.com`) to the allow list.
+
+### Access analytics (v0.13.0 and later)
+
+In Settings → SEO and analytics → Access analytics, paste the code an analytics service gives you (Matomo, Google Analytics, Microsoft Clarity, Plausible, Cloudflare Web Analytics and the like), with its `<script>` tags, and save. It goes into the public LOG and the manga pages (`read.php?nagimanga=…`). Save it empty to stop.
+
+- **Code that could harm visitors is not saved.** The code is checked when saved; if something is found, the reason shows as an error toast at the bottom of the screen (no setting is saved). Refused: code that reads cookies, the browser’s stored data or form fields, watches key presses, sends people to another page, rewrites the page (`document.write`, `innerHTML` and so on), makes its own connections, runs text as code (`eval` and so on), obfuscated code, mining and the like. Tags other than `<script>`, attributes such as `onload`, and loading over `http://` are refused too.
+- The public pages keep their strict Content-Security-Policy: **only the sites written in the code (and the ones Google Analytics or Clarity use next)** are allowed for scripts, connections and pictures. The pasted inline code is allowed by its hash.
+- The `<noscript>` part (counting people without JavaScript) is left out.
+- Your own visits to the LOG while logged in are not counted, and the admin pages never get the code.
+- If `data/config.php` is edited by hand, every page runs the same check before using the code, and code that does not pass is left out.
+
+On the same tab, Search engine ownership checks takes the meta tag that Google Search Console, Bing Webmaster Tools, Yandex Webmaster, Naver Search Advisor or Baidu show for the HTML tag method, as it is (the code alone works too). It goes into the head of every LOG page. Tags of other services and codes of the wrong form are not saved. Search engines and sitemap is on this tab as well.
 
 ### Plugins (guest mode)
 

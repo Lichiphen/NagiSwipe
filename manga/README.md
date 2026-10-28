@@ -4,8 +4,8 @@
 
 # NagiManga（漫画ビューアー）
 
-[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#デモ)
-[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.md)
+[![NagiManga v0.13.0](https://img.shields.io/badge/NagiManga-v0.13.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](#デモ)
+[![NagiLog v0.13.0](https://img.shields.io/badge/NagiLog-v0.13.0-2563eb?style=flat-square&logo=rss&logoColor=white)](README-LOG.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -46,6 +46,7 @@ v0.4.0 から、文章・画像・漫画を投稿できる個人用LOG「NagiLog
   - [設置用コード](#設置用コード)
   - [個別ページ（共有リンク・v0.3.0 以降）](#個別ページ共有リンクv030-以降)
   - [直リンク防止（上級者向け・v0.3.0 以降）](#直リンク防止上級者向けv030-以降)
+  - [アクセス解析（v0.13.0 以降）](#アクセス解析v0130-以降)
   - [プラグイン（ゲストモード）](#プラグインゲストモード)
   - [二段階認証（v0.9.1 以降・任意）](#二段階認証v091-以降任意)
   - [パスキー（v0.10.0 以降・任意）](#パスキーv0100-以降任意)
@@ -332,6 +333,18 @@ CLIP STUDIO PAINT などで書き出した **漫画の EPUB**（固定レイア�
 - **相互リンクのバナーなど、ほかのサイトに貼ってもらいたい画像** は、画像一覧でその画像の「ほかのサイトにも貼れるようにする」にチェックを入れて保存します。その画像だけ、直リンク防止の対象外になります。画像は、公開している記事か固定ページ（リンクのページなど）に載せておいてください。
 - 直リンク防止の対象の画像は、ブラウザーだけに保存させます（`Cache-Control: private`、v0.12.1 以降）。CDN などの共有キャッシュに置かれて、ほかのサイトのページにそのまま渡ってしまうのを防ぐためです。漫画の画像も、漫画の直リンク防止がオンの間は同じです。
 - Feedly のように、ブラウザーの中で画像を表示する RSS リーダーで画像を出したいときは、そのサイト（例: `https://feedly.com`）を許可リストに書きます。
+
+### アクセス解析（v0.13.0 以降）
+
+「設定 → SEO・アクセス解析 → アクセス解析」に、Matomo・Google アナリティクス・Microsoft Clarity・Plausible・Cloudflare Web Analytics などの計測サービスに表示されたコードを、`<script>` タグごと貼り付けて保存します。公開LOGと漫画の作品ページ（`read.php?nagimanga=…`）に入ります。空欄で保存すると使いません。
+
+- **閲覧者に害のあるコードは保存しません。** 保存するときに中身を確かめ、見つかったときは理由を画面の下にエラーのトーストで出します（どの設定も保存しません）。拒否するのは、Cookie・ブラウザーの保存データ・フォームの入力欄を読むコード、キー入力を見張るコード、ほかのページへ移動させるコード、ページを書き換えるコード（`document.write`・`innerHTML` など）、自分で通信するコード、`eval` などで文字列を実行するコード、難読化したコード、マイニングなどです。`<script>` 以外のタグ、`onload` などの属性、`http://` からの読み込みも入れられません。
+- 公開ページの CSP（Content-Security-Policy）はそのまま厳しく保ち、**コードに書かれたサイト（と、Google アナリティクスや Clarity が続けて使うサイト）だけ** を、スクリプト・通信・画像に許可します。貼ったコードの中身は、CSP にハッシュで登録します。
+- `<noscript>` の部分（JavaScript を使わない人向けの計測）は入れません。
+- ログイン中の自分が見る LOG では計測しません。管理画面にも入れません。
+- 設定ファイル（`data/config.php`）を直接書き換えた場合も、ページを出すたびに同じ確認をして、通らないコードは出しません。
+
+同じタブの「検索エンジンの所有権の確認」には、Google Search Console・Bing Webmaster Tools・Yandex Webmaster・Naver Search Advisor・百度（Baidu）站长平台の「HTML タグ」の確認方法で表示される meta タグをそのまま貼れます（確認コードだけでも可）。LOGのすべてのページの head に入ります。ほかのサービスのタグや、形の合わないコードは保存しません。「検索エンジンとサイトマップ」もこのタブにあります。
 
 ### プラグイン（ゲストモード）
 

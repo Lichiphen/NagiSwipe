@@ -16,6 +16,7 @@ require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
 require __DIR__ . '/../lib/update.php';
+require __DIR__ . '/../lib/analytics.php';
 require __DIR__ . '/../lib/log.php';
 require __DIR__ . '/../lib/log-public.php';
 require __DIR__ . '/../lib/log-backup.php';
@@ -28,13 +29,16 @@ const NM_SETUP_KEY_FILE = 'setup-key.php';
 const NM_SETUP_KEY_HEAD = "<?php http_response_code(404); exit; __halt_compiler();\n";
 // The image-popup script most sites pair with NagiManga (for the Tegalog setting line)
 const NM_NAGISWIPE_JS = 'https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@v1.6.0/NagiSwipe-main.js';
+/** Tabs of the settings screen. */
+const NM_SETTINGS_TABS = ['manga', 'log', 'seo', 'common'];
 /** Blocks of the settings screen: their heading (for messages) and tab. */
 const NM_SETTINGS_SECTIONS = [
     'log_preferences' => ['公開範囲・表示件数・ページ送り', 'log'],
     'log_front' => ['トップページとブログ', 'log'],
     'log_display' => ['一覧の見せ方・記事の下', 'log'],
     'log_design' => ['LOGのデザイン・アイコン', 'log'],
-    'log_seo' => ['検索エンジンとサイトマップ', 'log'],
+    'log_seo' => ['検索エンジンとサイトマップ', 'seo'],
+    'search_verify' => ['検索エンジンの所有権の確認', 'seo'],
     'log_topmenu' => ['トップメニュー', 'log'],
     'log_sidebar' => ['サイドバー・メニュー', 'log'],
     'log_footer' => ['サイト下部の表記', 'log'],
@@ -48,6 +52,7 @@ const NM_SETTINGS_SECTIONS = [
     'log_guard' => ['画像収集BOTへの対策', 'common'],
     'access' => ['管理画面を開ける場所（IP 制限）', 'common'],
     'general' => ['設置先と画像アップロード', 'common'],
+    'analytics' => ['アクセス解析', 'seo'],
     'page' => ['NagiMANGAの作品ページ', 'manga'],
     'advanced' => ['上級者向けの設定', 'manga'],
 ];
@@ -972,6 +977,23 @@ function nm_settings_page(array $cfg): array
     return $cfg;
 }
 
+/** Ownership checks of Google Search Console and Bing Webmaster Tools (a code or the whole meta tag). */
+function nm_settings_search_verify(array $cfg): array
+{
+    foreach (NM_SEARCH_VERIFY as $key => $v) $cfg[$key] = nm_search_verify_code(nm_str($_POST, $key, 500), $key);
+    return $cfg;
+}
+
+/** The analytics tag: kept only when nothing in it could harm the people who read the pages. */
+function nm_settings_analytics(array $cfg): array
+{
+    $code = $_POST['analytics'] ?? '';
+    if (!is_string($code)) throw new UnexpectedValueException(nm_t('アクセス解析のコードを読み取れませんでした'));
+    nm_analytics_parse($code);
+    $cfg['analytics'] = trim(str_replace(["\r\n", "\r"], "\n", $code));
+    return $cfg;
+}
+
 function nm_settings_advanced(array $cfg): array
 {
     $allow = [];
@@ -1005,6 +1027,7 @@ function nm_settings_logged(array $cfg, array $sections): void
     if (in_array('login_entry', $sections, true)) nm_log('settings_login_entry_changed', (string)$cfg['login_entry']);
     if (in_array('login_guard', $sections, true)) nm_log('settings_login_guard_changed', $cfg['login_fail_max'] . ' / ' . intdiv($cfg['login_lock'], 60) . 'min');
     if (in_array('access', $sections, true)) nm_log('settings_access_changed', implode(',', $cfg['allowed_ips']));
+    if (in_array('analytics', $sections, true)) nm_log('settings_analytics_changed', implode(',', nm_analytics()['script']) ?: 'off');
     if (in_array('advanced', $sections, true)) nm_log('settings_hotlink_changed', ($cfg['hotlink'] ? 'on ' : 'off ') . (!empty($cfg['hotlink_log']) ? 'log-on ' : 'log-off ') . implode(',', $cfg['hotlink_allow']));
 }
 
@@ -1024,7 +1047,7 @@ function nm_settings_save_all(array $cfg): never
     try {
         // 1. Check every block; nothing is written yet.
         $next = $cfg;
-        foreach (['admin_lang', 'lscache', 'login_days', 'login_entry', 'login_guard', 'access', 'general', 'page', 'advanced'] as $key) {
+        foreach (['admin_lang', 'lscache', 'login_days', 'login_entry', 'login_guard', 'access', 'general', 'search_verify', 'analytics', 'page', 'advanced'] as $key) {
             if (!in_array($key, $sections, true)) continue;
             // Without LiteSpeed the switch is disabled and absent; keep the stored value.
             if ($key === 'lscache' && !nm_lscache_server()) continue;
@@ -1064,14 +1087,14 @@ function nm_settings_save_all(array $cfg): never
         $message = $label !== '' ? nm_t('「{section}」: {message}。ほかの設定も保存していません', ['section' => nm_t($label), 'message' => $message]) : nm_t('{message}。ほかの設定も保存していません', ['message' => $message]);
         if ($json) nm_json(['ok' => false, 'error' => $message, 'section' => $at], 422);
         nm_flash('err', $message);
-        nm_redirect('p=settings&section=' . (NM_SETTINGS_SECTIONS[$at][1] ?? (in_array($tab, ['manga', 'log', 'common'], true) ? $tab : 'log')));
+        nm_redirect('p=settings&section=' . (NM_SETTINGS_SECTIONS[$at][1] ?? (in_array($tab, NM_SETTINGS_TABS, true) ? $tab : 'log')));
     }
     if (in_array('login_days', $sections, true)) nm_session_keep();
     nm_settings_logged($next, $sections);
     $labels = array_map(static fn($k) => nm_t(NM_SETTINGS_SECTIONS[$k][0]), $sections);
     nm_flash('ok', $sections ? nm_t('設定を保存しました（{sections}）', ['sections' => implode(nm_t('、'), $labels)]) : nm_t('変更はありませんでした'));
     if ($json) nm_json(['ok' => true]);
-    nm_redirect('p=settings&section=' . (in_array($tab, ['manga', 'log', 'common'], true) ? $tab : 'log'));
+    nm_redirect('p=settings&section=' . (in_array($tab, NM_SETTINGS_TABS, true) ? $tab : 'log'));
 }
 
 /** Guest entrance (the plugin decides whether a key is needed). */
@@ -1750,16 +1773,16 @@ function nm_view_settings(array $cfg): void
     $block = 'nl_settings_block';
 
     $section = nm_str($_GET, 'section', 20);
-    if (!in_array($section, ['manga', 'log', 'common'], true)) $section = 'log';
+    if (!in_array($section, NM_SETTINGS_TABS, true)) $section = 'log';
     $tabs = '<h1>' . nm_t('設定') . '</h1><p class="note">' . nm_t('使いたい機能を選んで、必要な項目だけ設定できます。どのタブで変えた設定も、画面の下の「設定を保存」でまとめて保存します。') . '</p><nav class="workspace-tabs" data-settings-tabs aria-label="' . nm_t('設定の種類') . '">';
-    foreach (['manga' => 'NagiMANGA', 'log' => 'LOG', 'common' => nm_t('共通・安全')] as $key => $label) $tabs .= '<a href="index.php?p=settings&amp;section=' . $key . '" data-settings-tab="' . $key . '"' . ($key === $section ? ' aria-current="page"' : '') . '>' . $label . '</a>';
+    foreach (['manga' => 'NagiMANGA', 'log' => 'LOG', 'seo' => nm_t('SEO・アクセス解析'), 'common' => nm_t('共通・安全')] as $key => $label) $tabs .= '<a href="index.php?p=settings&amp;section=' . $key . '" data-settings-tab="' . $key . '"' . ($key === $section ? ' aria-current="page"' : '') . '>' . $label . '</a>';
     $tabs .= '</nav>';
     $panel = static fn($key) => '<div id="settings-' . $key . '" data-settings-panel="' . $key . '"' . ($key === $section ? '' : ' hidden') . '>';
     // One form for every tab. The password and the login URL change at once with their own buttons,
     // so their forms sit after it and their fields join them with form="…".
     nm_layout(nm_t('設定'), $tabs . '<div class="settings-layout" data-settings-layout><nav class="settings-toc" data-settings-toc aria-label="' . nm_t('設定の目次') . '" hidden></nav>'
         . '<form method="post" action="index.php" enctype="multipart/form-data" class="settings-form" data-settings-form novalidate autocomplete="off">' . $hidden . '<input type="hidden" name="do" value="settings_save_all"><input type="hidden" name="tab" value="' . $section . '">'
-        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_front_panel() . nl_display_panel() . nl_settings_panel() . nl_css_settings_card() . nl_seo_panel() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('common')
+        . '<div class="settings-body">' . $panel('log') . nl_preferences_panel() . nl_front_panel() . nl_display_panel() . nl_settings_panel() . nl_css_settings_card() . nl_rss_panel() . nl_topmenu_panel() . nl_sidebar_panel() . nl_footer_panel() . nl_footmenu_panel() . nl_warning_presets_panel() . '<section class="card"><h2>' . nm_t('投稿の整理') . '</h2><p>' . nm_t('カテゴリとハッシュタグは、LOG・投稿のページで編集できます。') . '</p>' . nm_t('<a class="btn" href="index.php?p=log&amp;view=taxonomy">カテゴリ・タグを編集</a>') . '</section></div>' . $panel('seo') . nl_seo_panel() . nm_search_verify_panel($cfg) . nm_analytics_panel($cfg) . '</div>' . $panel('common')
         . '<section class="card"><h2>' . h(nm_t('管理画面の言語')) . '</h2>' . $block('admin_lang')
         . implode('', array_map(static fn($value, $label) => '<label class="check"><input type="radio" name="admin_lang" value="' . h($value) . '"' . (($cfg['admin_lang'] ?? 'auto') === $value ? ' checked' : '') . '>' . h($label) . '</label>',
             array_keys(['auto' => 0] + nm_langs()), array_merge([nm_t('自動（ブラウザの言語に合わせる）')], array_values(nm_langs()))))
@@ -1856,6 +1879,32 @@ function nm_view_settings(array $cfg): void
         . '</form></div>'
         . '<form id="settings-password" method="post" action="index.php">' . $hidden . '<input type="hidden" name="do" value="settings_pw"></form>'
         . '<form id="settings-regen-key" method="post" action="index.php" class="js-confirm" data-confirm="' . nm_t('ログイン URL を変更しますか？今のブックマークは使えなくなります。') . '">' . $hidden . '<input type="hidden" name="do" value="regen_key"></form>');
+}
+
+/** Settings card for the ownership checks of the search consoles. */
+function nm_search_verify_panel(array $cfg): string
+{
+    $fields = '';
+    foreach (NM_SEARCH_VERIFY as $key => $v) $fields .= '<label>' . h($v['label']) . '<input name="' . $key . '" value="' . h((string)($cfg[$key] ?? '')) . '" spellcheck="false" autocomplete="off" placeholder="' . h('<meta name="' . $v['meta'] . '" content="…">') . '"></label>';
+    return '<section class="card" id="search-verify"><h2>' . nm_t('検索エンジンの所有権の確認') . '</h2>'
+        . '<p>' . nm_t('Google Search Console や Bing Webmaster Tools で「HTML タグ」の確認方法を選ぶと表示される meta タグを、そのまま貼り付けます（content の中の文字だけでもかまいません）。LOGのすべてのページの head に入ります。') . '</p>'
+        . nl_settings_block('search_verify') . $fields
+        . '<p class="note">' . nm_t('保存したあとで、それぞれの画面の「確認」を押してください。確認が済んでも、消すと確認が外れることがあるので、そのまま残しておきます。空欄なら出しません。') . '</p>'
+        . '</div></section>';
+}
+
+/** Settings card for the analytics tag, with the outside sites the public pages then allow. */
+function nm_analytics_panel(array $cfg): string
+{
+    $sites = nm_analytics()['script'];
+    return '<section class="card" id="analytics"><h2>' . nm_t('アクセス解析') . '</h2>'
+        . '<p>' . nm_t('Matomo・Google アナリティクス・Microsoft Clarity などのアクセス解析のコードを、公開LOGと漫画の作品ページに入れます。') . '</p>'
+        . nl_settings_block('analytics')
+        . '<label>' . nm_t('計測サービスに表示されたコード（script タグごと貼り付け。空欄なら使いません）') . '<textarea name="analytics" rows="8" spellcheck="false" class="code" placeholder="&lt;script async src=&quot;https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX&quot;&gt;&lt;/script&gt;">' . h((string)($cfg['analytics'] ?? '')) . '</textarea></label>'
+        . '<p class="note">' . nm_t('保存するときに中身を確かめます。Cookie・保存データ・フォームの入力を読むコード、ほかのページへ移動させるコード、ページを書き換えるコード、自分で通信するコード、難読化したコード、マイニングなど、閲覧者に害のあるコードが見つかると保存しません。') . '</p>'
+        . '<p class="note">' . nm_t('script タグだけを使い、noscript の部分は入れません。読み込みと通信を許可するのは、コードに書かれたサイト（と、そのサービスが続けて使うサイト）だけです。ログイン中の自分が見る LOG では計測しません。') . '</p>'
+        . ($sites ? '<p class="note">' . nm_t('今許可しているサイト:') . ' <code>' . h(implode(' ', $sites)) . '</code></p>' : '')
+        . '</div></section>';
 }
 
 /** After login: a notice when GitHub has a newer NagiManga (checked at most every 12 hours). */

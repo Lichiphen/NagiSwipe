@@ -67,13 +67,34 @@ function nl_cards_prepare(string $body, bool $framesOnly = false): void
     }
 }
 
+/**
+ * A response the browser would download and run, not show: a program, installer or archive, told by its
+ * Content-Disposition, its media type or the file name at the end of the (redirected) address. A page embed
+ * pointed at one of these must never be opened in a frame.
+ */
+const NL_DOWNLOAD_TYPES = ['application/octet-stream', 'application/x-msdownload', 'application/x-msdos-program',
+    'application/vnd.microsoft.portable-executable', 'application/x-executable', 'application/x-dosexec',
+    'application/x-mach-binary', 'application/vnd.android.package-archive', 'application/x-apple-diskimage',
+    'application/java-archive', 'application/x-sh', 'application/x-shellscript', 'application/x-msi',
+    'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 'application/x-7z-compressed',
+    'application/gzip', 'application/x-gzip', 'application/x-tar'];
+function nl_embed_is_download(string $type, array $headers, string $finalUrl): bool
+{
+    if (stripos((string)($headers['content-disposition'] ?? ''), 'attachment') !== false) return true;
+    if (in_array(strtolower(trim(explode(';', $type)[0])), NL_DOWNLOAD_TYPES, true)) return true;
+    $path = rawurldecode((string)parse_url($finalUrl, PHP_URL_PATH));
+    return (bool)preg_match('~\.(?:exe|msi|msix|apk|dmg|pkg|app|bat|cmd|com|scr|pif|jar|vbs|vbe|jse|wsf|wsh|ps1|sh|run|bin|iso|img|zip|7z|rar|gz|tgz)\z~i', $path);
+}
+
 function nl_card_fetch(string $url, float $deadline): ?array
 {
     $res = nl_http_get($url, NL_CARD_HTML_MAX, 'text/html,application/xhtml+xml', $deadline, true);
-    if (!$res || !preg_match('~\A(text/html|application/xhtml\+xml)~i', $res['type'])) return null;
+    if (!$res) return null;
+    if (nl_embed_is_download($res['type'], $res['headers'] ?? [], $res['url'])) return ['url' => $url, 'final' => $res['url'], 'ok' => false, 'unsafe' => true, 'fetched' => time()];
+    if (!preg_match('~\A(text/html|application/xhtml\+xml)~i', $res['type'])) return null;
     $meta = nl_card_parse($res['body'], $res['type'], $res['url']);
     if ($meta['title'] === '') return null;
-    $card = ['url' => $url, 'final' => $res['url'], 'title' => $meta['title'], 'desc' => $meta['desc'], 'site' => $meta['site'], 'image' => null, 'ok' => true, 'fetched' => time()];
+    $card = ['url' => $url, 'final' => $res['url'], 'title' => $meta['title'], 'desc' => $meta['desc'], 'site' => $meta['site'], 'image' => null, 'ok' => true, 'unsafe' => false, 'fetched' => time()];
     if ($meta['image'] !== '' && microtime(true) < $deadline) {
         $img = nl_http_get($meta['image'], NL_CARD_IMAGE_MAX, 'image/*', $deadline, false);
         if ($img) {
@@ -218,7 +239,7 @@ function nl_http_get(string $url, int $max, string $accept, float $deadline, boo
             $body = substr($body, 0, $max);
         }
         if (stripos($headers['content-encoding'] ?? '', 'gzip') !== false) $body = (string)@gzdecode($body);
-        return ['body' => $body, 'type' => $headers['content-type'] ?? '', 'url' => $url];
+        return ['body' => $body, 'type' => $headers['content-type'] ?? '', 'url' => $url, 'headers' => $headers];
     }
     return null;
 }

@@ -17,6 +17,7 @@ declare(strict_types=1);
 
 define('NAGIMANGA', true);
 require __DIR__ . '/lib/bootstrap.php';
+require __DIR__ . '/lib/analytics.php';
 
 $cfg = nm_config();
 if (!$cfg || empty($cfg['admin_hash'])) nm_not_found();
@@ -120,7 +121,8 @@ function nm_serve_reader_page(array $work, array $cfg): never
     header('Cache-Control: no-store');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: same-origin');
-    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+    $analytics = nm_analytics_csp();
+    header("Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:" . $analytics['img'] . "; style-src 'self' 'unsafe-inline'; script-src 'self'" . $analytics['script'] . "; connect-src 'self'" . $analytics['connect'] . "; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
     echo '<!DOCTYPE html><html lang="' . nm_lang() . '"><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
         . '<title>' . h($title) . '</title>'
@@ -144,6 +146,7 @@ function nm_serve_reader_page(array $work, array $cfg): never
         . '.btn{display:inline-block;padding:.8em 1.8em;border-radius:999px;text-decoration:none;font-weight:600}'
         . '.read{background:#eee;color:#111}.back{border:1px solid #555;color:#ddd}[hidden]{display:none!important}'
         . '</style>'
+        . nm_analytics_html()
         . '</head><body><main>'
         . ($cover !== '' ? $cover : '<img class="icon" src="viewer/favicon.svg" alt="">')
         . '<h1>' . h($title) . '</h1><p>' . h($desc) . '</p>'

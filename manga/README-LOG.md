@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.13.0](https://img.shields.io/badge/NagiLog-v0.13.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.13.0](https://img.shields.io/badge/NagiManga-v0.13.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -1766,6 +1766,15 @@ python manga/dev/contrast_audit.py
 | セットアップと入口（`dev/login_entry_test.py`） | 43項目通過。セットアップ画面のお断りと鍵の見つけ方、「おもに使うもの」で選んだ画面がログイン画面と完了の画面に出ること。二段階認証をすすめるダイアログが1回のログインで1度だけ出て、「今後は表示しない」で出なくなること |
 | LOGの直リンク防止（`dev/log_test.py`） | LOG 223項目通過。新しく設置したサイトでは最初からオンで、ほかのサイトのページからの画像・サムネイルを404にし、LOGのページ・許可したサイト・URLを直接開いたとき・カードやRSSの取得では表示すること。「ほかのサイトにも貼れる」画像と OGP 画像は対象外になること（OGP 画像でもサムネイルは対象）。対象の画像は共有キャッシュに置かせないこと。漫画のスイッチとは別に動くこと。前からのサイトでは、お知らせの「オンにする」「今はしない」が効くこと |
 | 既存の試験 | サイドバー 133、管理 107、固定ページ 94、機能 100、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、埋め込み 124、追加CSS 104、追加CSSのブラウザー 119、動画・音声 28、トップとブログ 70、二段階認証 49、プレビュー 7、翻訳 3559 項目を通過 |
+
+2026年10月29日の v0.13.0（アクセス解析のコードを安全に貼れるように、検索エンジンの所有権の確認、ページ埋込の配布ファイル保護）で、次を加えて確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| アクセス解析（`dev/analytics_test.py`） | 34項目通過。計測サービスのコードを `<script>` タグごと保存でき、公開LOGと作品ページに入ること。公開ページの CSP にコードのサイトとハッシュだけを足し、Google アナリティクス・Clarity が続けて使うサイトも許すこと。`<noscript>` を外し、ログイン中の持ち主と管理画面では計測しないこと。検索エンジンの所有権確認の meta タグ（Google・Bing・Yandex・Naver・百度）を保存できること |
+| アクセス解析の敵対検証（`dev/analytics_adversarial_test.py`） | 69項目通過。Cookie・保存データ・フォームの読み取り、キー入力の監視、ほかのページへの移動、ページの書き換え、自前の通信、文字列の実行（`eval` など）、難読化、マイニング、`<script>` 以外のタグ・危険な属性・`http://` の読み込み、過大な入力をすべて拒否し、何も保存せず公開ページに出さないこと。設定ファイル（`data/config.php`）を直接書き換えても、描画のたびに同じ確認をして出さないこと |
+| ページ埋込の配布ファイル保護（`dev/log_embed_guard_test.py`） | 10項目通過。相手がプログラム・インストーラ・書庫などのダウンロード（メディアの種類・`Content-Disposition`・URL 末尾の拡張子で判定）のときは、ページ内で開くカバーを出さず、「このページは開けません」と外部リンクだけにし、古いページの正しい署名でも `embed.php` が 404 にすること。普通のHTMLページはこれまでどおり枠に入れること |
+| 既存の試験 | サイドバー 133、管理 107、固定ページ 94、機能 100、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、埋め込み 124、追加CSS 104、追加CSSのブラウザー 119、動画・音声 28、トップとブログ 70、二段階認証 49、プレビュー 7、翻訳 3657 項目を通過 |
 
 ## 参照元と文章
 

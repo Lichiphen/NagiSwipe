@@ -1138,7 +1138,8 @@
   "is-2x3",
   "is-3x4",
   "is-9x16",
-  "is-21x9"
+  "is-21x9",
+  "is-blocked"
  ],
  "internal": [
   "btn",
@@ -1378,7 +1379,8 @@
   "log-frame-icon",
   "log-frame-open",
   "log-frame-full",
-  "log-frame-close"
+  "log-frame-close",
+  "log-frame-note"
  ],
  "dynamic": [
   "is-box",

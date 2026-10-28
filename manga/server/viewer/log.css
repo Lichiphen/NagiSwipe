@@ -169,7 +169,14 @@ html[data-log-theme="light-paper"] .log-site-title > a { font-family:"Yu Mincho"
 .log-frame.is-full .log-frame-stage,.log-frame.is-cover .log-frame-stage { width:100%; aspect-ratio:auto; border-radius:0; box-shadow:none; background:#000; }
 .log-frame.is-cover .log-frame-stage { position:fixed; inset:0; z-index:230; height:100dvh; }
 html.log-frame-covered,html.log-frame-covered body { overflow:hidden; }
-/* Blog cards from OGP: title, description and site on the left, the page image on the right. */
+/* A page embed whose target turned out to be a file download: shown greyed out, not loadable, with an outside link only. */
+.log-frame.is-blocked .log-frame-stage { background:#1a1410; box-shadow:0 0 0 1px var(--log-line); }
+.log-frame-start.is-blocked { cursor:default; color:#f2d9c4; background:repeating-linear-gradient(135deg,#2a211a 0 12px,#241c16 12px 24px); }
+.log-frame-start.is-blocked::before { border-style:solid; border-color:#ffb27d40; }
+.log-frame-start.is-blocked .log-frame-play { border-color:#ffb27d; background:#5a3a24; color:#ffe6d2; transform:none; box-shadow:none; }
+.log-frame-start.is-blocked .log-frame-play .log-frame-icon { fill:none; stroke:currentColor; }
+.log-frame-note { display:inline-flex; align-items:center; gap:5px; min-width:0; color:var(--log-muted); }
+.log-frame-note .log-frame-icon { flex:none; width:14px; height:14px; }
 .log-site .log-card,.log-card { display:flex; align-items:stretch; max-width:640px; margin:14px 0 18px; border:1px solid var(--log-line); border-radius:calc(var(--log-radius) * .75); background:var(--log-card); color:var(--log-text); text-decoration:none; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
 .log-card + br { display:none; }.log-site .log-card:hover { border-color:var(--log-accent); box-shadow:0 6px 20px #0000001a; text-decoration:none; }.log-card:focus-visible { outline:2px solid var(--log-accent); outline-offset:3px; }
 .log-card-text { display:flex; flex-direction:column; gap:6px; flex:1; min-width:0; padding:14px 18px; }

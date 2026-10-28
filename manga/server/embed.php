@@ -13,6 +13,9 @@ if (isset($_GET['u'])) {
     $url = $_GET['u']; $sig = $_GET['s'] ?? '';
     $f = is_string($url) && is_string($sig) && strlen($url) <= 2000 ? nl_frame_target($url) : null;
     if (!$f || !hash_equals(nl_frame_sig($f['url']), $sig)) nm_not_found();
+    // Even with a valid signature from an older page, never frame a target the card fetch found to be a file download.
+    $card = nl_card_load($f['url']);
+    if (is_array($card) && !empty($card['unsafe'])) nm_not_found();
     header('Content-Type: text/html; charset=UTF-8');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');

@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.13.0](https://img.shields.io/badge/NagiLog-v0.13.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.13.0](https://img.shields.io/badge/NagiManga-v0.13.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -1769,6 +1769,15 @@ On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were a
 | Setup and way in (`dev/login_entry_test.py`) | 43 checks passed. The setup screen’s apology and how to find the key; the screen chosen under What you will mostly use shows on the login page and the finished screen. The two-step reminder shows once per login, and not again after Don’t show this again |
 | Hotlink protection for the LOG (`dev/log_test.py`) | LOG 223 checks passed. On from the start for new sites: pictures and thumbnails used by another site’s page give 404, while the LOG’s pages, allowed sites, opening the URL directly, and card and RSS fetchers still get them. A picture allowed on other sites and the share (OGP) images are left out (a share image’s thumbnail is not). Protected pictures are kept out of shared caches. It works apart from the manga switch. On earlier sites, Turn it on and Not now in the notice work |
 | Existing tests | sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, two-step login 49, preview 7, translations 3559 passed |
+
+On 29 October 2026, v0.13.0 (pasting analytics code safely, search engine ownership verification, download protection for page embeds) added and checked the following.
+
+| Check | Result |
+| --- | --- |
+| Access analytics (`dev/analytics_test.py`) | 34 checks passed. Analytics code is saved with its `<script>` tags and goes into the public LOG and the work pages; the public CSP gains only the code's own sites and its hash, plus the sites Google Analytics or Clarity use next; `<noscript>` is dropped; the logged-in owner and the admin panel are not counted; the ownership-verification meta tags (Google, Bing, Yandex, Naver, Baidu) are saved |
+| Access analytics, adversarial (`dev/analytics_adversarial_test.py`) | 69 checks passed. Reading cookies, storage or form fields, watching keystrokes, redirecting, rewriting the page, making its own network calls, running strings (`eval` and so on), obfuscation, mining, non-`<script>` tags, dangerous attributes, `http://` loads and oversized input are all refused, saving nothing and reaching no public page. Editing `data/config.php` by hand still runs the same check on every render |
+| Page embed download protection (`dev/log_embed_guard_test.py`) | 10 checks passed. When the target is a download (a program, installer or archive, told by media type, `Content-Disposition` or the file extension at the end of the address), no in-page cover is shown; a warning and an outside link only are offered, and `embed.php` returns 404 even with a valid signature from an older page. A normal HTML page is still framed as before |
+| Existing tests | sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, two-step login 49, preview 7, translations 3657 passed |
 
 ## Sources and writing
 

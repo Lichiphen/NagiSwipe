@@ -121,12 +121,21 @@ function nl_frame_html(array $f, bool $admin = false): string
     $src = ($admin ? '../' : './') . 'embed.php?u=' . rawurlencode($f['url']) . '&s=' . nl_frame_sig($f['url']);
     $card = function_exists('nl_card_load') ? nl_card_load($f['url']) : null;
     $title = $card && !empty($card['ok']) ? (string)$card['title'] : '';
+    $shape = str_replace(':', 'x', $f['shape']);
+    $open = ' href="' . h($f['url']) . '" target="_blank" rel="noopener noreferrer"';
+    // The fetch found a file download (a program or archive), not a page: never open it in a frame; a plain outside link only.
+    if (is_array($card) && !empty($card['unsafe'])) {
+        return '<figure class="log-frame is-' . $shape . ' is-blocked" data-frame><div class="log-frame-stage"><span class="log-frame-start is-blocked">'
+            . '<span class="log-frame-play">' . nm_icon('warning', 'log-frame-icon') . '<span>' . nm_t('このページは開けません') . '</span></span>'
+            . '<span class="log-frame-text"><strong>' . h($f['host']) . '</strong><small>' . h(nm_t('配布ファイルの可能性があります')) . '</small></span></span></div>'
+            . '<figcaption class="log-frame-bar"><span class="log-frame-note">' . nm_icon('warning', 'log-frame-icon') . h(nm_t('安全のため、サイト内では開きません')) . '</span>'
+            . '<a class="log-frame-open"' . $open . '>' . h(nm_t('{name}で開く', ['name' => $f['host']])) . ' ↗</a></figcaption></figure>';
+    }
     $img = '';
     if ($card && is_array($card['image'] ?? null) && preg_match(NM_PAGE_PATTERN, (string)($card['image']['f'] ?? ''))) {
         $img = '<img src="' . h(($admin ? '../' : './') . '?card=' . nl_card_key($f['url']) . '&v=' . (int)$card['fetched']) . '" alt="" loading="lazy" width="' . (int)$card['image']['w'] . '" height="' . (int)$card['image']['h'] . '">';
     }
-    $open = ' href="' . h($f['url']) . '" target="_blank" rel="noopener noreferrer"';
-    return '<figure class="log-frame is-' . str_replace(':', 'x', $f['shape']) . '" data-frame><div class="log-frame-stage">'
+    return '<figure class="log-frame is-' . $shape . '" data-frame><div class="log-frame-stage">'
         . '<a class="log-frame-start"' . $open . ' data-frame-src="' . h($src) . '" data-frame-title="' . h($title !== '' ? $title : $f['host']) . '">' . $img
         . '<span class="log-frame-play">' . nm_icon('p-play', 'log-frame-icon') . '<span>' . nm_t('ページを読み込む') . '</span></span>'
         . '<span class="log-frame-text"><strong>' . h($title !== '' ? $title : $f['host']) . '</strong>' . ($title !== '' ? '<small>' . h($f['host']) . '</small>' : '') . '</span></a>'
