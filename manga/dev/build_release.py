@@ -91,6 +91,9 @@ def main():
     vv = re.search(r"const VERSION = '([0-9.]+)';", viewer).group(1)
     if vv != version:
         sys.exit(f"version mismatch: lib/bootstrap.php {version} / viewer/NagiManga.js {vv}")
+    # Badges in the READMEs and on the site must show this version (the post-commit hook skips them when a README is dirty).
+    if subprocess.run([sys.executable, str(MANGA.parent / "scripts" / "check_versions.py")]).returncode != 0:
+        sys.exit("version badges: run python scripts/check_versions.py --fix and commit first")
     # The customizing catalog must match the stylesheets, and its "next" entries must carry this version.
     if subprocess.run([sys.executable, str(HERE / "css_catalog_check.py"), "--release"]).returncode != 0:
         sys.exit("css-catalog.json: fix the problems above first")
