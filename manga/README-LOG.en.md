@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.12.0](https://img.shields.io/badge/NagiLog-v0.12.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.12.0](https://img.shields.io/badge/NagiManga-v0.12.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -1758,7 +1758,7 @@ It makes 40 posts for 11 pages of paging and measures the 3 paging styles, micro
 python manga/dev/contrast_audit.py
 ```
 
-On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were added and checked:
+On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were added and checked. v0.12.1 (28 October 2026: share (OGP) images left out of hotlink protection, the everyone-together reader password limit only making people wait, protected pictures kept out of shared caches) passes the same checks:
 
 | Check | Result |
 | --- | --- |

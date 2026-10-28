@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.12.0](https://img.shields.io/badge/NagiLog-v0.12.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.12.0](https://img.shields.io/badge/NagiManga-v0.12.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.12.1](https://img.shields.io/badge/NagiLog-v0.12.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.12.1](https://img.shields.io/badge/NagiManga-v0.12.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -1755,7 +1755,7 @@ WebKitの確認は、このPC上のPlaywrightのWebKitです。実機のiPhone�
 python manga/dev/contrast_audit.py
 ```
 
-2026年10月27日に、セキュリティレビュー（v0.11.1）の指摘への対応（v0.12.0）を加え、次を確認しました。
+2026年10月27日に、セキュリティレビュー（v0.11.1）の指摘への対応（v0.12.0）を加え、次を確認しました。2026年10月28日の v0.12.1（OGP 画像を直リンク防止の対象外に、閲覧パスワードの全体上限を「待たせるだけ」に、直リンク防止の画像を共有キャッシュに置かせない）でも、同じ試験を通しています。
 
 | 検証 | 結果 |
 | --- | --- |
