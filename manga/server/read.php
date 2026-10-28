@@ -265,13 +265,16 @@ function nm_unlock(array $work): never
 
     $ip = nm_client_net();
     $key = $ip . '|' . $work['id'];
-    // 5 wrong answers per 15 minutes per work and line (IPv6: per /64), 30 per hour per line overall, and
-    // NM_UNLOCK_ALL_MAX per hour for the work from everyone (many lines guessing together only wait; readers who
-    // already opened the work keep their pass).
-    if (nm_rate_count('unlock', $key, 900) >= 5 || nm_rate_count('unlock-ip', $ip, 3600) >= 30
-        || nm_rate_count('unlock-all', $work['id'], 3600) >= NM_UNLOCK_ALL_MAX) {
+    // 5 wrong answers per 15 minutes per work and line (IPv6: per /64) and 30 per hour per line overall. Past
+    // NM_UNLOCK_ALL_MAX an hour for the work from everyone, answers go one at a time (nm_unlock_turn): many lines
+    // guessing together only slow down, and readers who already opened the work keep their pass.
+    if (nm_rate_count('unlock', $key, 900) >= 5 || nm_rate_count('unlock-ip', $ip, 3600) >= 30) {
         nm_log('unlock_blocked', $work['id']);
         nm_json(['ok' => false, 'error' => 'rate'], 429);
+    }
+    if (!nm_unlock_turn('unlock-all', $work['id'])) {
+        nm_log('unlock_busy', $work['id']);
+        nm_json(['ok' => false, 'error' => 'busy'], 429);
     }
 
     $pw = nm_str($_POST, 'password', 200);
@@ -307,10 +310,11 @@ function nm_serve_image(array $work, string $file, string $token, bool $thumb): 
     header("Content-Security-Policy: default-src 'none'; sandbox");
     header('Cross-Origin-Resource-Policy: cross-origin');
     header('ETag: ' . $etag);
-    // File names are unique per upload, so public pages never change under the same URL
+    // File names are unique per upload, so public pages never change under the same URL. Under hotlink protection
+    // only the browser keeps them: a shared cache (a CDN) would hand them to other sites' pages too.
     header($locked
         ? 'Cache-Control: private, max-age=3600'
-        : 'Cache-Control: public, max-age=31536000, immutable');
+        : 'Cache-Control: ' . (empty(nm_config()['hotlink']) ? 'public' : 'private') . ', max-age=31536000, immutable');
 
     if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
         http_response_code(304);

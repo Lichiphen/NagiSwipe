@@ -134,7 +134,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("公開後の下書き保存の再送信にも対応", post(pub_input).status == 200)
     check("公開画像を配信", public.get(public_media_url).status == 200)
     served = public.get(public_media_url); media_etag = served.getheader('ETag') or ''
-    check("公開画像はブラウザーに1日保存させETagと更新日時を付ける", served.getheader('Cache-Control') == 'public, max-age=86400' and re.fullmatch(r'"[0-9a-f]{16}-[0-9]+-[0-9]+"', media_etag) and served.getheader('Last-Modified', '').endswith(' GMT'))
+    check("公開画像はブラウザーに1日保存させETagと更新日時を付ける（直リンク防止の間は共有キャッシュに置かせない）", served.getheader('Cache-Control') == 'private, max-age=86400' and re.fullmatch(r'"[0-9a-f]{16}-[0-9]+-[0-9]+"', media_etag) and served.getheader('Last-Modified', '').endswith(' GMT'))
     same = public.get(public_media_url, headers={"If-None-Match": media_etag})
     check("変わっていない画像は304で本体を送らない", same.status == 304 and len(same.body) == 0)
     check("更新日時での確認にも304", public.get(public_media_url, headers={"If-Modified-Since": served.getheader('Last-Modified')}).status == 304)
@@ -186,6 +186,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     # Manga's switch and the LOG's are apart: manga on, the LOG off.
     post({"do": "settings_advanced", "hotlink": "1", "hotlink_allow": ""})
     check("漫画の直リンク防止だけオンなら、LOGの画像はほかのサイトからも読める", public.get(hot_url, headers=evil).status == 200)
+    check("LOGの直リンク防止がオフなら、画像は共有キャッシュにも置ける（public）", public.get(hot_url).getheader("Cache-Control") == "public, max-age=86400")
     # A site set up before 0.12.0 (no hotlink_log): a one-click notice in the LOG admin.
     text = cfg_path.read_text(encoding="utf-8")
     cfg_path.write_text(re.sub(r"\n  'hotlink_log' => (?:true|false),", "", text), encoding="utf-8")

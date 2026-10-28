@@ -71,7 +71,7 @@ if ($single) nl_clean_redirect(nl_post_path($post['id']));
 if ($fixed) nl_clean_redirect(nl_page_path($fixed));
 // A locked post or page shows its content only to the owner and to readers who opened it with the password.
 $closed = ($single && !nl_unlocked($post)) || ($fixed && !nl_unlocked($fixed));
-$lockState = isset($_GET['locked']) && in_array($_GET['locked'], ['wrong', 'wait'], true) ? (string)$_GET['locked'] : '';
+$lockState = isset($_GET['locked']) && in_array($_GET['locked'], ['wrong', 'wait', 'busy'], true) ? (string)$_GET['locked'] : '';
 $summaries = nl_post_summaries();
 if (!$single && !$fixed && isset($_GET['feed'])) nl_serve_feed($s, $summaries);
 if (!$single && !$fixed && isset($_GET['sitemap'])) nl_serve_sitemap($s, $summaries);

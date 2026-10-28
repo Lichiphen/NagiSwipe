@@ -11,6 +11,7 @@ Many addresses come from X-Forwarded-For, with 127.0.0.1 set as a trusted proxy.
 """
 import argparse
 import base64
+import hashlib
 import json
 import os
 import re
@@ -93,14 +94,24 @@ def run(site, owner, csrf, key):
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": "g"}, headers=ip("2001:db8:1:3::1"))
     check("閲覧パスワード: 別の /64 は別の相手として数える", r.status == 403)
 
+    # Past 60 wrong answers an hour for the work from everyone, answers go one at a time, 20 seconds apart.
+    turn = data / "ratelimit" / (hashlib.sha256(("unlock-all-turn|" + wid).encode()).hexdigest() + ".json")
     statuses = []
     for i in range(70):
+        started = time.time()
         statuses.append(anon.post("/read.php", {"a": "u", "id": wid, "password": f"x{i}"}, headers=ip(f"2001:db8:{i + 16:x}::1")).status)
-        if statuses[-1] == 429:
+        if turn.is_file():
             break
-    check("閲覧パスワード: /64 を替え続けても、作品ごとに 1 時間 60 回で待たされる", statuses[-1] == 429 and len(statuses) <= 60)
+    check("閲覧パスワード: 作品ごとに 1 時間 60 回を超えても、止めずに 1 件ずつ確かめる",
+          turn.is_file() and set(statuses) == {403} and 50 <= len(statuses) <= 61 and time.time() - started < 5)
+    # The next turn is taken by someone already waiting: no second waiter, only "busy".
+    turn.write_text(json.dumps([int(time.time()) + 40]), encoding="utf-8")
+    busy = anon.post("/read.php", {"a": "u", "id": wid, "password": "y1"}, headers=ip("2001:db8:fff1::1"))
+    check("閲覧パスワード: 次の番まで埋まっていれば、すぐに「混み合っている」（429・busy）", busy.status == 429 and json.loads(busy.text).get("error") == "busy")
+    turn.write_text(json.dumps([int(time.time()) + 2]), encoding="utf-8")
+    started = time.time()
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": work_pw}, headers=ip("2001:db8:ffff::1"))
-    check("閲覧パスワード: 上限の間は、初めての読者も待つ（429）", r.status == 429)
+    check("閲覧パスワード: 上限を超えていても、初めての読者は番を待てば開ける", r.status == 200 and json.loads(r.text).get("ok") is True and time.time() - started >= 1)
     r = reader.get(f"/read.php?a=m&id={wid}&t={tok}", headers=ip("192.0.2.77"))
     check("閲覧パスワード: 前に開けた読者は、上限の間も読める", r.status == 200 and json.loads(r.text).get("locked") is False)
 

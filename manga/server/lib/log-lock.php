@@ -117,12 +117,16 @@ function nl_unlock_request(): never
     nm_lscache_header(false);
     $ip = nm_client_net();
     $key = $ip . '|' . $id;
-    // 5 wrong answers per 15 minutes for one page, 30 per hour from one line (IPv6: per /64), and NM_UNLOCK_ALL_MAX
-    // per hour for the page from everyone (like a manga's reader password).
-    if (nm_rate_count('log-lock', $key, 900) >= 5 || nm_rate_count('log-lock-ip', $ip, 3600) >= 30
-        || nm_rate_count('log-lock-all', $id, 3600) >= NM_UNLOCK_ALL_MAX) {
+    // 5 wrong answers per 15 minutes for one page and 30 per hour from one line (IPv6: per /64); past
+    // NM_UNLOCK_ALL_MAX per hour for the page from everyone, answers go one at a time (like a manga's reader password).
+    if (nm_rate_count('log-lock', $key, 900) >= 5 || nm_rate_count('log-lock-ip', $ip, 3600) >= 30) {
         nm_log('log_unlock_blocked', $id);
         header('Location: ' . nl_lock_target($item, $page, 'wait'), true, 303);
+        exit;
+    }
+    if (!nm_unlock_turn('log-lock-all', $id)) {
+        nm_log('log_unlock_busy', $id);
+        header('Location: ' . nl_lock_target($item, $page, 'busy'), true, 303);
         exit;
     }
     $password = trim(nm_str($_POST, 'lockkey', NL_LOCK_MAX * 4));
@@ -151,12 +155,13 @@ function nl_lock_icon(string $class = 'log-lock-icon'): string
 {
     return nm_icon('lock-key', $class);
 }
-/** The form in place of a locked post's or page's content. $state: '' / 'wrong' / 'wait' (from ?locked=). */
+/** The form in place of a locked post's or page's content. $state: '' / 'wrong' / 'wait' / 'busy' (from ?locked=). */
 function nl_lock_form(array $item, bool $page, string $state = ''): string
 {
     $message = match ($state) {
         'wrong' => '<p class="log-lock-error" role="alert">' . nm_t('パスワードが違います。もう一度入れてください。') . '</p>',
         'wait' => '<p class="log-lock-error" role="alert">' . nm_t('続けて間違えたため、しばらく受け付けません。15分ほどしてから試してください。') . '</p>',
+        'busy' => '<p class="log-lock-error" role="alert">' . nm_t('いまは入力が混み合っています。1分ほどしてから、もう一度試してください。') . '</p>',
         default => '',
     };
     // A text field with the characters hidden by CSS: browsers offer to save only password fields; the password manager hints say the same.

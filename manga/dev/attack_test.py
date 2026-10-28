@@ -756,10 +756,12 @@ def run(data_dir):
           anon.get(page_src, headers={"Sec-Fetch-Site": "same-origin"}).status == 200
           and anon.get(page_src, headers={"Referer": f"http://{host}/read.php?nagimanga={wid}"}).status == 200)
     check("直リンク防止: 許可リストのサイトからは読める", anon.get(page_src, headers={"Referer": "https://note.com/"}).status == 200)
+    check("直リンク防止: オンの間、画像はブラウザーだけに保存させる（CDN などの共有キャッシュに置かせない）",
+          anon.get(page_src, headers={"Sec-Fetch-Site": "same-origin"}).getheader("Cache-Control") == "private, max-age=31536000, immutable")
     check("直リンク防止: オンでも、個別ページとカード用の表紙は使える",
           anon.get(f"/read.php?nagimanga={wid}").status == 200 and anon.get(f"/read.php?a=o&id={wid}").status == 200)
     adm.post("/admin/index.php", {"do": "settings_advanced", "csrf": csrf})
-    check("直リンク防止: オフに戻せる", anon.get(page_src).status == 200)
+    check("直リンク防止: オフに戻せる", anon.get(page_src).status == 200 and anon.get(page_src).getheader("Cache-Control") == "public, max-age=31536000, immutable")
 
     adm.post("/admin/index.php", {"do": "setpw", "id": wid, "password": "og-test-pw", "csrf": csrf})
     r = anon.get(f"/read.php?nagimanga={wid}")

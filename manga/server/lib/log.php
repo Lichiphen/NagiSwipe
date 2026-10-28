@@ -556,9 +556,11 @@ function nl_serve_media(string $id, bool $thumb, bool $admin = false, bool $cove
     if (!$m || $access === 0) nm_not_found();
     // Hotlink protection for the LOG (its own switch, hotlink_log); a picture marked for other sites (a banner) and the
     // share images (og:image, shown by sites that introduce a page) are left out.
-    if (!$admin && empty($m['hotlink_free']) && !empty(nm_config()['hotlink_log']) && !nm_hotlink_ok(nm_config(), true) && !nl_media_is_og($m, $thumb, $cover)) nm_not_found();
-    // A picture only an opened lock shows stays in this browser's own cache.
-    $cache = ($access === 2 ? 'private' : 'public') . ', max-age=' . NL_MEDIA_MAX_AGE;
+    $hotlink = !$admin && empty($m['hotlink_free']) && !empty(nm_config()['hotlink_log']);
+    if ($hotlink && !nm_hotlink_ok(nm_config(), true) && !nl_media_is_og($m, $thumb, $cover)) nm_not_found();
+    // A picture only an opened lock shows stays in this browser's own cache. So does one under hotlink protection:
+    // the answer depends on the page asking, and a shared cache (a CDN) would hand it to other sites' pages too.
+    $cache = ($access === 2 || $hotlink ? 'private' : 'public') . ', max-age=' . NL_MEDIA_MAX_AGE;
     $av = nl_is_av($m);
     if ($av && ($thumb || $cover) && ($m['cover'] ?? '') === '') nm_not_found();
     $name = $av && ($thumb || $cover) ? $m['cover'] : $m['f'];

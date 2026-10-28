@@ -34,6 +34,8 @@ define('NM_DATA', (static function (): string {
 
 /** Wrong reader passwords one work or locked post accepts per hour from all visitors together; more only wait. */
 const NM_UNLOCK_ALL_MAX = 60;
+/** Past that, one answer for the work every this many seconds (nm_unlock_turn). */
+const NM_UNLOCK_SPACING = 20;
 const NM_ID_PATTERN ='/\A[A-Za-z0-9]{12}\z/';
 const NM_PAGE_PATTERN = '/\A(p[0-9]{4}_[a-f0-9]{8})\.(webp|jpg|gif)\z/';
 require_once __DIR__ . '/image-guard.php';
@@ -553,6 +555,28 @@ function nm_rate_hit(string $bucket, string $key, int $window): int
         nm_write_json($file, $data);
         return count($data);
     });
+}
+
+/**
+ * The everyone-together limit for one work or locked post ($bucket counts its wrong answers). Past
+ * NM_UNLOCK_ALL_MAX an hour, answers are still checked, one at a time NM_UNLOCK_SPACING apart: the next turn is
+ * waited for here, so a new reader is held for a moment instead of shut out for the hour. False only when the
+ * next turn is taken too (answer "busy, try again"); at most one request per work waits at a time.
+ */
+function nm_unlock_turn(string $bucket, string $id): bool
+{
+    if (nm_rate_count($bucket, $id, 3600) < NM_UNLOCK_ALL_MAX) return true;
+    $file = nm_rate_file($bucket . '-turn', $id);
+    $wait = nm_with_lock('ratelimit', static function () use ($file): int {
+        $now = time();
+        $turn = max($now, (int)((nm_read_json($file) ?? [])[0] ?? 0));
+        if ($turn - $now > NM_UNLOCK_SPACING) return -1;
+        nm_write_json($file, [$turn + NM_UNLOCK_SPACING]);
+        return $turn - $now;
+    });
+    if ($wait < 0) return false;
+    if ($wait > 0) sleep($wait);
+    return true;
 }
 
 function nm_rate_clear(string $bucket, string $key): void

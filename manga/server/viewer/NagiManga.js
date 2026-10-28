@@ -439,6 +439,8 @@ manifestUrl() {
                     this.lock.hidden = true;
                     this.setLoading(true);
                     await this.load();
+                } else if (res.status === 429 && data.error === 'busy') {
+                    this.lockError.textContent = tr('いまは入力が混み合っています。1分ほどしてから、もう一度お試しください。');
                 } else if (res.status === 429) {
                     this.lockError.textContent = tr('何度も間違えたため、しばらく入力できません。時間をおいてお試しください。');
                 } else {
