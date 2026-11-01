@@ -17,7 +17,9 @@ leftover ?<hash> after .../viewer/NagiManga.js is removed. ?v=... is left alone.
 
 The version badges (img.shields.io/badge/NagiSwipe-v1.3.2-..., NagiManga-, NagiLog-) are set
 to the versions in the source: the header of NagiSwipe-main.js and NM_VERSION (NagiLog ships
-with NagiManga, so it has the same number).
+with NagiManga, so it has the same number). So are the version row of the NagiLog README's table
+("| 版 | 0.13.0（NagiManga v0.13.0に同梱） |" / "| Version | 0.13.0 (included in NagiManga v0.13.0) |")
+and the release ZIP name nagimanga-v0.13.0.zip (TEXT_VERSIONS).
 
 scripts/post-commit.sh runs this after each commit and commits the README change.
 """
@@ -31,6 +33,16 @@ CDN = re.compile(r"(https://cdn\.jsdelivr\.net/gh/Lichiphen/NagiSwipe@)[^/\s`\"'
 SELF = re.compile(r"(viewer/NagiManga\.js)\?[0-9a-f]{7,40}(?![0-9A-Za-z./_=-])")
 BADGE = re.compile(r"(img\.shields\.io/badge/(NagiSwipe|NagiManga|NagiLog)-v)[0-9]+\.[0-9]+\.[0-9]+(-)")
 BADGE_ALT = re.compile(r"((?:\[!\[|alt=\")(NagiSwipe|NagiManga|NagiLog) v)[0-9]+\.[0-9]+\.[0-9]+([\]\"])")
+# Version numbers written in the text of the NagiLog README: the "版 / Version" row of its table
+# ("| 版 | 0.13.0（NagiManga v0.13.0に同梱） |") and the release ZIP name (nagimanga-v0.13.0.zip).
+# Both follow NM_VERSION. Each pattern has one group, the number.
+TEXT_VERSIONS = [
+    re.compile(r"(?<=\| 版 \| )([0-9]+\.[0-9]+\.[0-9]+)(?=（NagiManga v)"),
+    re.compile(r"(?<=（NagiManga v)([0-9]+\.[0-9]+\.[0-9]+)(?=に同梱）)"),
+    re.compile(r"(?<=\| Version \| )([0-9]+\.[0-9]+\.[0-9]+)(?= \(included in NagiManga v)"),
+    re.compile(r"(?<=\(included in NagiManga v)([0-9]+\.[0-9]+\.[0-9]+)(?=\))"),
+    re.compile(r"(?<=nagimanga-v)([0-9]+\.[0-9]+\.[0-9]+)(?=\.zip)"),
+]
 
 
 def versions():
@@ -62,6 +74,8 @@ def main(files):
         vers = versions()
         new = BADGE.sub(lambda m: m.group(1) + vers[m.group(2)] + m.group(3), new)
         new = BADGE_ALT.sub(lambda m: m.group(1) + vers[m.group(2)] + m.group(3), new)
+        for pat in TEXT_VERSIONS:
+            new = pat.sub(vers["NagiManga"], new)
         if new != text:
             p.write_bytes((b"\xef\xbb\xbf" if bom else b"") + new.encode("utf-8"))
             print(f"{f}: updated")

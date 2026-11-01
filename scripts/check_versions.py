@@ -12,7 +12,8 @@ The source of each number:
              viewer/NagiManga.js must say the same); NagiLog ships with it, so it has the same number
 
 Checked: the version badges and their alt text in the READMEs, site/top*.html and the
-generated site pages. manga/dev/build_release.py runs this and refuses to build on a mismatch,
+generated site pages, plus the version row of the NagiLog table ("| 版 | …（NagiManga v…に同梱） |")
+and the release ZIP name nagimanga-v….zip (cachebust.TEXT_VERSIONS). manga/dev/build_release.py runs this and refuses to build on a mismatch,
 so a release never goes out with old badges (the post-commit hook skips its rewrite when a
 README has uncommitted edits, which is how badges were left behind before).
 """
@@ -23,7 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
-from cachebust import BADGE, BADGE_ALT, versions  # noqa: E402
+from cachebust import BADGE, BADGE_ALT, TEXT_VERSIONS, versions  # noqa: E402
 
 READMES = ["README.md", "README.en.md", "manga/README.md", "manga/README.en.md",
            "manga/README-LOG.md", "manga/README-LOG.en.md", "site/top.html", "site/top.en.html"]
@@ -56,6 +57,11 @@ def problems():
                     seen.add(m.group(2))
                     if m.group(3) != want[m.group(2)]:
                         out.append(f"{name}:{n}: {m.group(2)} v{m.group(3)} (should be v{want[m.group(2)]})")
+            # The version row of the NagiLog table and the release ZIP name (NagiManga's number).
+            for pat in TEXT_VERSIONS:
+                for m in pat.finditer(line):
+                    if m.group(1) != want["NagiManga"]:
+                        out.append(f"{name}:{n}: NagiLog version row / ZIP name says {m.group(1)} (should be {want['NagiManga']})")
         # Every README and top page carries the NagiManga and NagiLog badges.
         if name in READMES:
             for product in ("NagiManga", "NagiLog"):
