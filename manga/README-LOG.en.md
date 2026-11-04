@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.13.0](https://img.shields.io/badge/NagiLog-v0.13.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.13.0](https://img.shields.io/badge/NagiManga-v0.13.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.14.0](https://img.shields.io/badge/NagiLog-v0.14.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.14.0](https://img.shields.io/badge/NagiManga-v0.14.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -99,7 +99,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.13.0 (included in NagiManga v0.13.0) |
+| Version | 0.14.0 (included in NagiManga v0.14.0) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -238,7 +238,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.13.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.14.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -1818,6 +1818,15 @@ On 29 October 2026, v0.13.0 (pasting analytics code safely, search engine owners
 | Access analytics, adversarial (`dev/analytics_adversarial_test.py`) | 69 checks passed. Reading cookies, storage or form fields, watching keystrokes, redirecting, rewriting the page, making its own network calls, running strings (`eval` and so on), obfuscation, mining, non-`<script>` tags, dangerous attributes, `http://` loads and oversized input are all refused, saving nothing and reaching no public page. Editing `data/config.php` by hand still runs the same check on every render |
 | Page embed download protection (`dev/log_embed_guard_test.py`) | 10 checks passed. When the target is a download (a program, installer or archive, told by media type, `Content-Disposition` or the file extension at the end of the address), no in-page cover is shown; a warning and an outside link only are offered, and `embed.php` returns 404 even with a valid signature from an older page. A normal HTML page is still framed as before |
 | Existing tests | sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, two-step login 49, preview 7, translations 3657 passed |
+
+On 4 November 2026, v0.14.0 (NagiScope built-in access analytics, a check that embedded games really start, an admin menu reachable from anywhere) added and checked the following.
+
+| Check | Result |
+| --- | --- |
+| NagiScope (`dev/scope_test.py`) | 56 checks passed. Nothing is counted while it is OFF; sent values are checked; programs and the logged-in owner are not counted; the three ways of keeping IP addresses; goals counted back over earlier days; the dashboard; escaping of every text a visitor sent; turning addresses away; backup and restore without counting twice; reading across midnight; the English screens |
+| NagiScope in browsers (`dev/scope_browser_test.py`) | 52 checks passed in Chromium and WebKit. How far a post was read, link clicks, a page-embedded game's steps (shown, loaded, touched, start signal) and a manga read to the end all arrive and show on the screens; nothing overflows at phone width |
+| Admin menu (`dev/nav_fab_browser_test.py`) | 220 checks passed in Chromium and WebKit, at phone and PC width, light and dark. In the admin the button slides in after scrolling down; on the owner's LOG pages it is there without scrolling (top right on PCs, bottom right on phones). On phones it opens in the middle of the screen at full width; on PCs pointing at it drops the menu right below it. Every entry has an icon left of its name |
+| Existing tests | all 28 passed (including 4089 translation checks) |
 
 ## Sources and writing
 
