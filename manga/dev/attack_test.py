@@ -810,7 +810,9 @@ def run(data_dir):
         check("パスワード付き作品の画像は鍵なしで 404", is_404(anon.get("/" + pages[0]["src"].split("&t=")[0])))
     r = anon.get(f"/read.php?nagimanga={wid}")
     check("パスワード付き作品の共有 URL のページは、ページ画像もパスワードも含まない",
-          r.status == 200 and "a=i" not in r.text and "a=t" not in r.text and work_pw not in r.text)
+          # The image and thumbnail URLs as parameters (read.php?a=i&id=…); a bare "a=i" also matches the page's own
+          # address read.php?nagimanga=<ID> whenever the random ID starts with i or t.
+          r.status == 200 and not re.search(r"[?&;]a=[it]&", r.text) and work_pw not in r.text)
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": "wrong"})
     check("違うパスワードは 403", r.status == 403)
     r = anon.post("/read.php", {"a": "u", "id": wid, "password": work_pw})
