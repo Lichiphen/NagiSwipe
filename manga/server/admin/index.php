@@ -21,6 +21,7 @@ require __DIR__ . '/../lib/log.php';
 require __DIR__ . '/../lib/log-public.php';
 require __DIR__ . '/../lib/log-backup.php';
 require __DIR__ . '/../lib/log-admin.php';
+require __DIR__ . '/../lib/scope-admin.php';
 nm_load_plugins();
 
 // First run: the form asks for a key the server writes into data/ (read over FTP), so whoever opens a fresh
@@ -142,6 +143,7 @@ match ($page) {
     'css' => nm_is_guest() ? nm_view_guest_denied(nm_t('追加CSS')) : nl_css_view(),
     'embed' => nm_is_guest() ? nm_view_guest_denied(nm_t('設置用コード')) : nm_view_embed(),
     'update' => nm_is_guest() ? nm_view_guest_denied(nm_t('更新')) : nm_view_update($cfg),
+    'scope' => nm_is_guest() ? nm_view_guest_denied('NagiScope') : ns_view(),
     default => nm_not_found(),
 };
 exit;
@@ -189,8 +191,9 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         $p = nm_str($_GET, 'p', 20);
         $isLog = str_starts_with($p, 'log');
         $isSettings = $p === 'settings' || $p === 'css';
-        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '"><a href="index.php"' . (!$isLog && !$isSettings ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
-            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>' . h(nm_t('LOG・投稿')) . '</a><a href="index.php?p=settings"' . ($isSettings ? ' aria-current="page"' : '') . '>' . h(nm_t('設定')) . '</a>')
+        $isScope = $p === 'scope';
+        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '"><a href="index.php"' . (!$isLog && !$isSettings && !$isScope ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
+            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>' . h(nm_t('LOG・投稿')) . '</a><a href="index.php?p=scope"' . ($isScope ? ' aria-current="page"' : '') . '>NagiScope</a><a href="index.php?p=settings"' . ($isSettings ? ' aria-current="page"' : '') . '>' . h(nm_t('設定')) . '</a>')
             . '<details class="nav-more"><summary>' . h(nm_t('管理メニュー')) . '</summary><div>'
             . ($guest ? '' : '<a href="index.php?p=embed">' . h(nm_t('漫画の設置用コード')) . '</a><a href="index.php?p=backup">' . h(nm_t('バックアップ')) . '</a><a href="index.php?p=update">' . h(nm_t('更新')) . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">' . h(nm_t('新')) . '</span>' : '') . '</a>')
             . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . h(nm_t($guest ? 'ゲストを終了' : 'ログアウト')) . '</button></form></div></details></nav>';
@@ -577,6 +580,7 @@ function nm_handle_post(array $cfg): void
 {
     $do = nm_str($_POST, 'do', 30);
     if (str_starts_with($do, 'log_')) nl_handle_post($do);
+    if (str_starts_with($do, 'scope_')) ns_handle_post($do);
     $id = nm_str($_POST, 'id', 12);
 
     switch ($do) {
@@ -1536,7 +1540,7 @@ function nm_view_dashboard(): void
         nm_layout(nm_t('作品一覧'), '<section class="works">' . $rows . '</section>');
         return;
     }
-    nm_layout(nm_t('作品一覧'), nm_update_banner() . nm_hotlink_log_banner()
+    nm_layout(nm_t('作品一覧'), nm_update_banner() . nm_hotlink_log_banner() . ns_invite_card()
         . '<section class="card"><h1>' . nm_t('作品を作る') . '</h1>'
         . '<form method="post" action="index.php" class="form row">' . nm_csrf_field()
         . '<input type="hidden" name="do" value="create">'
@@ -1745,7 +1749,8 @@ function nm_view_backup(): void
         . '<label class="check"><input type="checkbox" name="overwrite" value="1"> ' . nm_t('同じ作品がある場合は上書きする') . '</label>'
         . '<button class="btn"' . ($zip ? '' : ' disabled') . '>' . nm_t('復元する') . '</button></form>'
         . '<p class="note">' . nm_t('サーバーのアップロード上限: {max}。これより大きいバックアップは作品ごとに分けて復元してください。', ['max' => h($max)]) . '</p>'
-        . '</section>' . nl_backup_panel());
+        . '</section>' . nl_backup_panel()
+        . '<section class="card"><h2>' . nm_t('NagiScope のバックアップ') . '</h2><p>' . nm_t('アクセス解析のデータは、NagiScope の設定画面からダウンロード・復元できます。生のログ（IP アドレスを含む）を入れるかどうかも選べます。') . '</p><p><a class="btn" href="index.php?p=scope&amp;view=settings">' . nm_t('NagiScope の設定を開く') . '</a></p></section>');
 }
 
 /**

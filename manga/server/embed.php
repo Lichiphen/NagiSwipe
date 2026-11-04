@@ -7,6 +7,8 @@ declare(strict_types=1);
 define('NAGIMANGA', true);
 require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/log.php';
+require __DIR__ . '/lib/scope.php';
+if (ns_denied()) nm_not_found();
 const NL_FRAME_ALLOW = 'autoplay; gamepad; clipboard-write; screen-wake-lock';
 if (isset($_GET['u'])) {
     // Only a URL this site signed when it drew the post (nl_frame_sig()), so the address cannot show any page someone types in.
@@ -20,10 +22,17 @@ if (isset($_GET['u'])) {
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Cache-Control: no-cache');
-    header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; frame-src " . $f['origin'] . "; frame-ancestors 'self'; form-action 'none'; base-uri 'none'; object-src 'none'");
+    // NagiScope: a game may say it started with window.parent.postMessage('nagiscope:start', '*'). This page keeps the
+    // signal (it can come before the LOG page is listening) for viewer/scope.js; it only listens, from the game's own origin.
+    // The browser leaves the default port out of an origin (https://x:443 is https://x).
+    $origin = (string)preg_replace(['~\Ahttps://([^/]+):443\z~', '~\Ahttp://([^/]+):80\z~'], ['https://$1', 'http://$1'], $f['origin']);
+    $relay = 'var o=' . json_encode($origin, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) . ';addEventListener("message",function(e){var f=document.querySelector("iframe"),d=e.data;'
+        . 'if(!f||e.source!==f.contentWindow||e.origin!==o)return;if(d==="nagiscope:start"||(d&&typeof d==="object"&&d.nagiscope==="start")){window.nagiscopeStart=1;dispatchEvent(new Event("nagiscope-start"))}});';
+    header("Content-Security-Policy: default-src 'none'; script-src 'sha256-" . base64_encode(hash('sha256', $relay, true)) . "'; style-src 'unsafe-inline'; frame-src " . $f['origin'] . "; frame-ancestors 'self'; form-action 'none'; base-uri 'none'; object-src 'none'");
     // The page keeps its scripts, storage and full screen; its links open in new windows, and it can never move this site's own page elsewhere.
     echo '<!doctype html><html lang="' . nm_lang() . '"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . h($f['host']) . '</title>'
         . '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{display:block;width:100%;height:100%;border:0}</style>'
+        . '<script>' . $relay . '</script>'
         . '<iframe src="' . h($f['url']) . '" title="' . h($f['host']) . '" allow="' . NL_FRAME_ALLOW . '" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"'
         . ' sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe></html>';
     exit;

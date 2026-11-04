@@ -18,9 +18,12 @@ declare(strict_types=1);
 define('NAGIMANGA', true);
 require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/analytics.php';
+require __DIR__ . '/lib/scope.php';
 
 $cfg = nm_config();
 if (!$cfg || empty($cfg['admin_hash'])) nm_not_found();
+// Addresses the owner turned away in NagiScope's access screen.
+if (ns_denied()) nm_not_found();
 
 nm_cors($cfg);
 
@@ -258,6 +261,8 @@ function nm_serve_manifest(array $work, string $token): never
         'locked' => false,
         'direction' => in_array($work['direction'] ?? '', ['rtl', 'ltr', 'vertical'], true) ? $work['direction'] : 'rtl',
         'pages' => $pages,
+        // NagiScope is on: the viewer reports what was read to scope.php next to this file.
+        'scope' => ns_on() ? 1 : 0,
     ]);
 }
 

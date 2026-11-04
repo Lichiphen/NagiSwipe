@@ -9,7 +9,8 @@ declare(strict_types=1);
 define('NAGIMANGA', true);
 require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/log.php';
-if (!nm_config() || empty(nm_config()['admin_hash'])) nm_not_found();
+require __DIR__ . '/lib/scope.php';
+if (!nm_config() || empty(nm_config()['admin_hash']) || ns_denied()) nm_not_found();
 $s = nl_settings();
 if (!$s['public'] || !$s['likes']) nm_not_found();
 nm_lscache_header(false, false);
@@ -39,5 +40,7 @@ if ($n < 1 || $n > NL_LIKE_DAILY || !$published($id)) nm_not_found();
 // The page sends one request per burst of taps; this only stops scripts hammering the counter file.
 nm_rate_gc();
 if (nm_rate_hit('log-like', nm_client_net(), 60) > 60) nm_json(['error' => 'busy'], 429);
-[$count, $left] = nl_like_add($id, $n);
+[$count, $left, $added] = nl_like_add($id, $n);
+// NagiScope counts only the likes that were really added (none once today's limit is reached).
+if ($added > 0) ns_record_like($id, $added);
 nm_json(['id' => $id, 'count' => $count, 'left' => $left]);

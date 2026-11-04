@@ -60,7 +60,7 @@ function nl_like_left(array $ids): array
     foreach ($ids as $id) $out[$id] = nl_like_room($used, $id);
     return $out;
 }
-/** Adds up to $n likes (cut to what is left today). Returns [count, left]. */
+/** Adds up to $n likes (cut to what is left today). Returns [count, left, added]. */
 function nl_like_add(string $id, int $n): array
 {
     return nm_with_lock('log-likes', static function () use ($id, $n) {
@@ -74,7 +74,7 @@ function nl_like_add(string $id, int $n): array
             nl_likes_write($counts);
             nl_write_record(nl_likes_day_file(), $today);
         }
-        return [$counts[$id] ?? 0, $room - $add];
+        return [$counts[$id] ?? 0, $room - $add, $add];
     });
 }
 /** The owner's edit screen: set a count (0 removes it). */

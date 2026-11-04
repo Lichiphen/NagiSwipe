@@ -8,6 +8,7 @@ require __DIR__ . '/lib/log.php';
 require __DIR__ . '/lib/log-public.php';
 require __DIR__ . '/lib/log-admin.php';
 require __DIR__ . '/lib/analytics.php';
+require __DIR__ . '/lib/scope.php';
 // Keep old bookmarks; all generated and canonical URLs use the directory root (a post or page goes straight to its clean URL).
 if (!defined('NL_FRONT') && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD'], true)) {
     $query = (string)($_SERVER['QUERY_STRING'] ?? '');
@@ -19,6 +20,8 @@ if (!defined('NL_FRONT') && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET'
     exit;
 }
 if (!nm_config() || empty(nm_config()['admin_hash'])) nm_not_found();
+// Addresses the owner turned away in NagiScope's access screen (a page LiteSpeed already cached may still reach them).
+if (ns_denied()) nm_not_found();
 // Anonymous readers create no session. Only a valid owner session adds controls.
 $owner = false;
 if (isset($_COOKIE['nm_admin']) && is_string($_COOKIE['nm_admin'])) {
@@ -157,6 +160,12 @@ $here = ['pg' => $fixed['slug'] ?? null, 'category' => $filter['category'] !== '
 $topmenuHtml = nl_topmenu_html($here);
 // Access analytics count visitors only, not the owner's own visits.
 $analytics = nm_analytics_csp(!$owner);
+// NagiScope: what this page is, for viewer/scope.js (null: off, the owner, or a private Memo).
+$scope = ns_on() && !$owner && $s['public'] && !$closed ? ($single ? ['k' => 'p', 'i' => $post['id']] : ($fixed ? ['k' => 'g', 'i' => $fixed['id']] : ['k' => 'l'])) : null;
+if ($scope !== null && $scope['k'] === 'l') {
+    if ($filter['search'] !== '') $scope['q'] = mb_substr($filter['search'], 0, 100);
+    if ($filter['tag'] !== '') $scope['tg'] = $filter['tag'];
+}
 // The existing viewers set styles dynamically and use data/blob placeholders.
 // Embeds: frames only for the known services; their scripts are loaded by viewer/log-embed.js. A fixed page adds the hosts of its outside pictures.
 header("Content-Security-Policy: default-src 'self'; script-src 'self' " . nl_embed_script_src() . $jsonHash . $analytics['script'] . "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: " . implode(' ', NL_THUMB_ORIGINS) . nl_sidebar_image_origins() . ($fixed ? nl_md_image_origins($postsHtml) : '') . $analytics['img'] . "; frame-src " . nl_embed_frame_src() . "; media-src 'self' blob: https:; connect-src 'self'" . $analytics['connect'] . "; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
@@ -209,6 +218,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
 <?= nm_t_script(NM_FRONT_TEXTS) ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
+<?php if ($scope !== null): ?><script src="<?= nl_public_asset('viewer/scope.js') ?>" data-scope="<?= h(json_encode($scope, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>" defer></script><?php endif; ?>
 <?= nm_search_verify_meta() ?><?= nm_analytics_html(!$owner) ?>
 </head><body class="log-site<?= $fixed ? ' log-layout-' . h($fixed['layout']) : '' ?>"><header class="log-site-header"><<?= $titleTag ?> class="log-site-title<?= $logo ? ' has-logo' : '' ?>"><a href="./"<?= $logo ? '' : nl_title_fit($s['title']) ?>><?= $brand ?></a></<?= $titleTag ?>><?php if ($s['show_description'] && $s['description'] !== ''): ?><p class="log-site-description"><?= h($s['description']) ?></p><?php endif; ?></header>
 <?= $topmenuHtml ?><button class="log-menu-toggle" type="button" aria-controls="log-sidebar" aria-expanded="false" aria-label="<?= nm_t('メニューを開く') ?>"><?= nm_icon('menu') ?><span class="log-menu-label" aria-hidden="true">MENU</span></button>

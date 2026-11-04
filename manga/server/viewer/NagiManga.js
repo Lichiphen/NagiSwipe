@@ -99,6 +99,9 @@
             if (this.built) return;
             this.built = true;
             loadCss();
+            // NagiScope: what was read so far goes out when the page is hidden (a phone may close it without warning).
+            document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && this.isOpen) this.scopeFlush(); });
+            global.addEventListener('pagehide', () => { if (this.isOpen) this.scopeFlush(); });
 
             const v = this.root = el('div', 'nm-viewer', { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Manga reader', tabindex: '-1' });
             v.hidden = true;
@@ -271,8 +274,10 @@
 
         close() {
             if (!this.isOpen) return;
-            this.isOpen = false;
             this.saveProgress();
+            this.scopeFlush();
+            this.scope = null;
+            this.isOpen = false;
             this.token = null;
             this.stopVInertia();
             this.releaseHistory();
@@ -393,6 +398,7 @@ manifestUrl() {
             this.root.classList.toggle('nm-vertical', dir === 'vertical');
             this.root.classList.toggle('nm-webtoon', dir === 'vertical' && this.opts.vfit === 'webtoon');
             this.setupNav();
+            this.scopeStart(data);
             this.setLoading(false);
             this.lock.hidden = true;
             this.root.classList.remove('nm-empty');
@@ -487,6 +493,68 @@ manifestUrl() {
             // Finished: start from the beginning next time
             const last = page >= this.pages.length - 1 || (this.spreads[this.spreadIndex] || {}).end;
             store.set('nagimanga_pos_' + this.progressKey(), String(last ? 0 : page));
+            const spread = this.direction === 'vertical' ? null : this.spreads[this.spreadIndex];
+            // The furthest page on screen: a last spread of two pages shows the last page too.
+            const furthest = spread ? (spread.end ? this.pages.length - 1 : Math.max(...spread.pages)) : page;
+            this.scopeStep(furthest, !!last || furthest >= this.pages.length - 1, spread && !spread.end ? spread.pages.length : 1);
+        }
+
+        // --------------------------------------------------------------------
+        // NagiScope (only when the site has it on: the manifest says scope: 1). No cookies, no storage.
+        // mo = opened, mp = progress so far (page views, furthest and last page, time to the last turn),
+        // me = reached the end (sk: turned faster than a page a second, a skim).
+        // --------------------------------------------------------------------
+
+        scopeStart(data) {
+            this.scope = null;
+            if (!data.scope || !this.opts.id || !this.opts.endpoint || typeof navigator.sendBeacon !== 'function') return;
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const sid = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => chars[b % 62]).join('');
+            this.scope = { url: new URL('scope.php', new URL(this.opts.endpoint, location.href)).href, sid, t0: Date.now(), at: 0, last: -1, max: 0, pg: 0, turns: 0, fast: 0, ms: 0, ended: false, sent: '' };
+            this.scopeSend([{ e: 'mo', h: location.href.slice(0, 500), r: (document.referrer || '').slice(0, 500), tc: navigator.maxTouchPoints > 1 ? 1 : 0 }]);
+        }
+
+        scopeSend(list) {
+            const s = this.scope;
+            if (!s) return;
+            const body = list.map(x => Object.assign({ s: s.sid, k: 'm', i: this.opts.id }, x));
+            try { navigator.sendBeacon(s.url, new Blob([JSON.stringify(body)], { type: 'text/plain' })); } catch (e) { /* never disturb reading */ }
+        }
+
+        /** page: the furthest page on screen; shown: how many pages the screen shows (2 for a spread). */
+        scopeStep(page, end, shown = 1) {
+            const s = this.scope;
+            if (!s) return;
+            if (page !== s.last) {
+                const now = Date.now();
+                if (s.last >= 0 && now - s.at < 1000) s.fast++;
+                s.turns++;
+                s.pg += shown;
+                s.at = now;
+                s.ms = now - s.t0;
+                s.last = page;
+                s.max = Math.max(s.max, page);
+            }
+            if (end && !s.ended) {
+                s.ended = true;
+                const skim = s.turns >= 5 && s.fast / Math.max(1, s.turns - 1) >= 0.7;
+                this.scopeSend([{ e: 'me', sk: skim ? 1 : 0 }, this.scopeProgress()]);
+                s.sent = JSON.stringify(this.scopeProgress());
+            }
+        }
+
+        scopeProgress() {
+            const s = this.scope;
+            return { e: 'mp', pg: s.pg, mx: s.max, ls: Math.max(0, s.last), ms: s.ms };
+        }
+
+        scopeFlush() {
+            const s = this.scope;
+            if (!s || !s.pg) return;
+            const p = this.scopeProgress(), key = JSON.stringify(p);
+            if (key === s.sent) return;
+            s.sent = key;
+            this.scopeSend([p]);
         }
 
         // --------------------------------------------------------------------

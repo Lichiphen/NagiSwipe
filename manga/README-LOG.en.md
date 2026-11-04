@@ -67,6 +67,7 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
 - [Pinned posts](#pinned-posts)
 - [Password locks](#password-locks)
 - [Likes](#likes)
+- [NagiScope (access analytics)](#nagiscope-access-analytics)
 - [Reordering the sidebar and HTML boxes](#reordering-the-sidebar-and-html-boxes)
 - [Title logo and introduction](#title-logo-and-introduction)
 - [Favicon and home screen icons](#favicon-and-home-screen-icons)
@@ -1255,6 +1256,45 @@ To keep forms and scripts of other sites from sending, a dedicated header and th
 
 The post's edit screen has a "いいね" (Likes) box. See the current count, change it to any number, or set it back to 0 with "いいねを削除" (delete likes).
 Deleting a post deletes its likes too.
+
+## NagiScope (access analytics)
+
+NagiScope is access analytics built into NagiManga and NagiLog. No outside service to sign up for and no tag to paste: open NagiScope in the admin to see how much was read. It is OFF by default and counts nothing until turned on. Turning it OFF keeps the data so far.
+It is separate from outside analytics tags (Settings → SEO and analytics → Access analytics) and can be used with them.
+
+Turning it on asks how to handle IP addresses.
+
+| Setting | Shown in the admin | Privacy policy |
+| --- | --- | --- |
+| Store as is (default) | `203.0.113.45` | Must mention it |
+| Store partly hidden | `203.0.113.xxx` | Must mention it |
+| Do not store | Used only to tell the same visitor apart, turned into a value that changes daily | A line such as counted without cookies and without identifying anyone is enough |
+
+With IP addresses stored, privacy policy samples (Japanese and English) can be copied. No setting uses cookies.
+
+| What you see | How it is counted |
+| --- | --- |
+| Visitors | Graphs for 1 day, 1 month (30 days) and 1 year (52 weeks), compared with the period before |
+| Manga completion and exit page | Readers who reached the last page, and the page where they stopped (with thumbnails). Turning faster than a page a second all the way is counted apart as skimming |
+| Posts read properly and where readers left | Scrolled to 90% of the text and stayed for a time that fits its length (about 500 characters a minute). Where readers left is named by heading |
+| Where visitors came from, devices | X, pixiv, search, other social media, other sites, direct. Phone, PC and tablet shares |
+| Site searches, popular tags, clicked links, likes | |
+| Embedded games | For each [page embed](#page-embeds): shown → load pressed → finished loading (a guide) → game touched (started) → start signal from the game, and the average play time (only while the game has the focus and the page is on screen) |
+
+Game touched (started) counts readers who clicked or tapped inside the game frame, so control moved into the game. Clicks inside the game itself cannot be seen, by how browsers work. Finished loading can also count when the game site refuses to be embedded or the connection fails, so it is a guide.
+For a game you made, run the line below when it starts: the start signal from the game is then counted too, so you know for sure it started.
+
+```js
+if (window.parent !== window) window.parent.postMessage('nagiscope:start', '*');
+```
+
+Make as many goals as you like: visited a page, clicked a link (URL contains or starts with), finished reading, liked, started an embedded game. One person reaching a goal several times a day counts once, and where they came from is listed. A new goal is also counted back over the records kept.
+
+Robots (told apart by the UA; visits that run no JavaScript never arrive) and the logged-in owner are not counted. Every value sent is checked against the works, posts, page numbers, headings and page embeds that exist before it is recorded, and too many sends from one visitor (over 60 a minute, or over 5 events in one send) are dropped.
+
+The access list filters records by IP address and can add an address to the block list; manga, the LOG and likes then answer Not Found to it (pages LiteSpeed Cache already stored may still reach it). An IP address alone does not tell you a name or address; identifying someone takes a disclosure request to their provider, and the records can serve as evidence for it.
+
+Records go to `data/scope/raw/YYYY-MM.jsonl.php` (one file a month, one line per event) and daily totals to `data/scope/daily/YYYY-MM-DD.json.php`. Both start with a line of PHP that stops at once, so a server ignoring `.htaccess` never shows them. Opening NagiScope in the admin adds the new lines to the daily totals (no cron needed). The raw log can be set to be deleted after some months; daily totals are kept. The NagiScope settings download and restore the data, with or without the raw log.
 
 ## Reordering the sidebar and HTML boxes
 
