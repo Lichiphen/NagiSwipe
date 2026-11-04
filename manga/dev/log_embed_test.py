@@ -303,7 +303,7 @@ def run(site,other_site,c,csrf,other,ot):
     top=pub.get('/').text
     check('サイドバーのカテゴリはフォルダの一覧、タグは#の並びで見分けられる','<ul class="log-cat-list"><li><a href="./?category=' in top and 'class="log-cat-icon"' in top and '<div class="log-tag-cloud"><a href="./?tag=' in top and '>#見た目タグ</a>' in top)
     owner_top=c.get('/').text
-    check('ログイン中の公開ページに「管理」ボタン（スパナ）を出し、訪問者には出さない','<a class="log-fab-admin" href="admin/index.php?p=log">' in owner_top and 'log-fab-admin' not in top)
+    check('ログイン中の公開ページに管理メニューのボタンを出し、訪問者には出さない','data-nav-fab="log"' in owner_top and 'href="admin/index.php?p=log"' in owner_top and 'data-nav-fab' not in top and 'nav-dialog' not in top)
     check('まとめて削除のボタンに文言を切り替える場所がある','<span data-bulk-label>まとめて削除</span>' in c.get('/admin/index.php?p=log').text)
     post_page=pub.get('/').text
     check('記事のカテゴリは「カテゴリ」＋フォルダのアイコン＋名前',re.search(r'<nav class="log-categories" aria-label="カテゴリ"><span class="log-categories-label">カテゴリ</span><a href="\./\?category=[a-f0-9]{12}"><svg class="log-cat-icon"[^>]*>.*?</svg><span>見た目分類</span></a>',post_page) is not None)

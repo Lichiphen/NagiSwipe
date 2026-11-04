@@ -1,0 +1,67 @@
+/*
+ * The admin menu button and dialog (lib/admin-menu.php, viewer/admin-menu.js), on the admin pages and on the LOG
+ * pages while the owner is logged in. Colours come from the admin (--card…) or, on the LOG, from its theme (--log-card…).
+ * MIT License (c) 2026 Lichiphen.
+ */
+.nav-fab,.nav-dialog,.nav-drop {
+    --m-card:var(--card,var(--log-card,#fff)); --m-bg:var(--bg,var(--log-bg,#f3f7fb)); --m-text:var(--text,var(--log-text,#253449));
+    --m-line:var(--line,var(--log-line,#dbe5ef)); --m-accent:var(--accent,var(--log-accent,#225dcb)); --m-on-accent:var(--accent-text,var(--log-on-accent,#fff));
+}
+.nm-menu-icon { width:18px; height:18px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+/* The button. Admin: slides down from the top edge once the header is out of sight. */
+.nav-fab { position:fixed; top:calc(10px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); z-index:90; display:flex; align-items:center; gap:7px; margin:0; padding:10px 16px; border:1px solid color-mix(in srgb,var(--m-accent) 40%,var(--m-line)); border-radius:999px; background:color-mix(in srgb,var(--m-card) 90%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); color:var(--m-accent); font:700 14px/1 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif; box-shadow:0 8px 24px #0000002e; cursor:pointer;
+    visibility:hidden; opacity:0; transform:translateY(calc(-100% - 24px)); transition:transform .32s cubic-bezier(.16,1,.3,1),opacity .2s ease,visibility 0s linear .32s; }
+.nav-fab.is-shown { visibility:visible; opacity:1; transform:none; transition:transform .32s cubic-bezier(.16,1,.3,1),opacity .2s ease,visibility 0s; }
+.nav-fab .nm-menu-icon { width:20px; height:20px; stroke-width:2; }
+.nav-fab:hover { border-color:var(--m-accent); }
+.nav-fab:focus-visible { outline:2px solid var(--m-accent); outline-offset:3px; }
+.nav-fab.is-shown:active { transform:scale(.96); }
+
+/* LOG pages: there from the start, floating in softly. PCs: top right. Phones (the MENU button takes the top right):
+   bottom right, above the write button. */
+.nav-fab[data-nav-fab="log"] { transform:translateY(-10px) scale(.96); transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .55s ease,visibility 0s linear .7s; }
+.nav-fab[data-nav-fab="log"].is-shown { transform:none; transition:transform .7s cubic-bezier(.22,1,.36,1),opacity .55s ease,visibility 0s; }
+@media(max-width:900px) {
+    .nav-fab[data-nav-fab="log"] { top:auto; right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + 58px + 12px + env(safe-area-inset-bottom)); transform:translateY(12px) scale(.96); }
+}
+/* The LOG editor open on a phone covers the whole screen: the button steps aside. */
+body:has(.log-compose.active) .nav-fab[data-nav-fab="log"] { visibility:hidden; opacity:0; }
+
+/* The dialog: wide, in the middle of the screen. */
+.nav-dialog { box-sizing:border-box; width:min(640px,calc(100% - 24px)); max-width:none; max-height:min(86vh,720px); margin:auto; padding:0 18px 18px; overflow-y:auto; border:1px solid var(--m-line); border-radius:18px; background:var(--m-card); color:var(--m-text); box-shadow:0 18px 50px #0000004d; font:15px/1.6 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif; }
+.nav-dialog[open] { animation:nav-dialog-in .26s cubic-bezier(.16,1,.3,1); }
+.nav-dialog::backdrop { background:#0e161f80; }
+.nav-dialog-head { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 -18px 14px; padding:14px 18px 12px; background:var(--m-card); border-bottom:1px solid var(--m-line); }
+.nav-dialog-head h2 { margin:0; font-size:1.05rem; color:var(--m-text); }
+.nav-dialog-head .btn { padding:8px 16px; border:1px solid var(--m-line); border-radius:10px; background:var(--m-card); color:var(--m-text); font:inherit; cursor:pointer; }
+.nav-dialog-main { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; }
+.nav-dialog-main > a { display:flex; align-items:center; justify-content:center; gap:8px; padding:14px 10px; border:1px solid var(--m-line); border-radius:12px; background:var(--m-bg); color:var(--m-text); text-align:center; text-decoration:none; font-weight:700; overflow-wrap:anywhere; }
+.nav-dialog-main > a .nm-menu-icon { width:20px; height:20px; }
+.nav-dialog-main > a[aria-current] { background:var(--m-accent); border-color:var(--m-accent); color:var(--m-on-accent); }
+.nav-dialog-more { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:14px; padding-top:12px; border-top:1px solid var(--m-line); }
+.nav-dialog-more form { margin:0; }
+.nav-dialog-more a,.nav-dialog-more button { display:flex; align-items:center; gap:10px; box-sizing:border-box; width:100%; margin:0; padding:12px 10px; border:0; border-radius:10px; background:none; color:var(--m-text); text-align:left; text-decoration:none; font:inherit; cursor:pointer; }
+.nav-dialog-more a:hover,.nav-dialog-more button:hover,.nav-dialog-main > a:not([aria-current]):hover { background:color-mix(in srgb,var(--m-accent) 10%,var(--m-bg)); text-decoration:none; }
+.nav-dialog a:focus-visible,.nav-dialog button:focus-visible { outline:2px solid var(--m-accent); outline-offset:2px; }
+.nav-dialog .badge.new { margin-left:auto; padding:1px 8px; border-radius:999px; background:var(--m-accent); color:var(--m-on-accent); font-size:12px; font-weight:700; }
+@media(max-width:600px) { .nav-dialog-main { grid-template-columns:repeat(2,minmax(0,1fr)); } .nav-dialog-more { grid-template-columns:1fr; } }
+@keyframes nav-dialog-in { from { opacity:0; transform:translateY(12px) scale(.98); } }
+
+/* With a mouse: the same entries drop down right below the button while it is pointed at. */
+.nav-drop { position:fixed; z-index:91; box-sizing:border-box; width:280px; max-height:calc(100vh - 80px); padding:8px; overflow-y:auto; border:1px solid var(--m-line); border-radius:14px; background:var(--m-card); color:var(--m-text); box-shadow:0 14px 40px #00000033; font:14px/1.5 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;
+    opacity:0; transform:translateY(-6px); transform-origin:top right; transition:opacity .16s ease,transform .2s cubic-bezier(.16,1,.3,1); }
+.nav-drop.is-open { opacity:1; transform:none; }
+.nav-drop[hidden] { display:none; }
+/* The gap above the menu still counts as the menu, so the pointer can cross it. */
+.nav-drop::before { content:""; position:absolute; left:0; right:0; top:-10px; height:10px; }
+.nav-drop .nav-dialog-main,.nav-drop .nav-dialog-more { display:grid; grid-template-columns:1fr; gap:2px; }
+.nav-drop .nav-dialog-more { margin-top:6px; padding-top:6px; border-top:1px solid var(--m-line); }
+.nav-drop form { margin:0; }
+.nav-drop a,.nav-drop button { display:flex; align-items:center; justify-content:flex-start; gap:10px; box-sizing:border-box; width:100%; margin:0; padding:9px 10px; border:0; border-radius:9px; background:none; color:var(--m-text); text-align:left; text-decoration:none; font:inherit; font-weight:400; cursor:pointer; }
+.nav-drop .nav-dialog-main > a { font-weight:700; }
+.nav-drop a:hover,.nav-drop button:hover { background:color-mix(in srgb,var(--m-accent) 10%,var(--m-bg)); text-decoration:none; }
+.nav-drop a[aria-current] { background:var(--m-accent); color:var(--m-on-accent); }
+.nav-drop a:focus-visible,.nav-drop button:focus-visible { outline:2px solid var(--m-accent); outline-offset:-2px; }
+.nav-drop .badge.new { margin-left:auto; padding:1px 8px; border-radius:999px; background:var(--m-accent); color:var(--m-on-accent); font-size:12px; font-weight:700; }
+@media(prefers-reduced-motion:reduce) { .nav-fab,.nav-fab.is-shown,.nav-fab[data-nav-fab="log"],.nav-fab[data-nav-fab="log"].is-shown,.nav-drop { transition:none; } .nav-dialog[open] { animation:none; } }

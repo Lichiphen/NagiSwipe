@@ -48,7 +48,7 @@ def run(site):
     # --- Off ------------------------------------------------------------------------------------------------
     works = c.get('/admin/index.php')
     check('OFF のあいだは作品一覧に「NagiScope を使ってみませんか？」', 'NagiScope を使ってみませんか？' in works.text and 'href="index.php?p=scope"' in works.text)
-    check('ナビに NagiScope', '>NagiScope</a>' in works.text)
+    check('ナビに NagiScope', '<span>NagiScope</span></a>' in works.text and 'href="index.php?p=scope"' in works.text)
     page = public.get('/?id=' + pid)
     check('OFF の記事ページは計測スクリプトを読まない', 'viewer/scope.js' not in page.text)
     check('OFF の漫画の目次は scope: 0', json.loads(public.get(f'/read.php?a=m&id={wid}').text)['scope'] == 0)

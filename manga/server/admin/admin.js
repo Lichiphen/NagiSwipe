@@ -420,37 +420,17 @@
             });
         }
     }
+    const hoverMouse = matchMedia('(hover: hover) and (pointer: fine)');
     $$('.nav-more').forEach(menu => {
+        // With a mouse, pointing at it opens it; it closes a moment after the pointer leaves (time to cross the gap).
+        let closeTimer = 0;
+        menu.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && hoverMouse.matches) { clearTimeout(closeTimer); menu.open = true; } });
+        menu.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && hoverMouse.matches) { clearTimeout(closeTimer); closeTimer = setTimeout(() => { menu.open = false; }, 280); } });
+        // A press while it is already open by pointing keeps it open (the summary would otherwise close it).
+        $('summary', menu).addEventListener('click', e => { if (hoverMouse.matches && menu.open && menu.matches(':hover')) e.preventDefault(); });
         document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && menu.open) { menu.open = false; $('summary', menu).focus(); } });
     });
-
-    // --- The admin menu once the header has scrolled away ------------------------
-    // Android has no tap-to-top, so a button slides down from the top edge when the header is out of sight and
-    // opens every menu entry in a wide dialog in the middle of the screen.
-    const topNav = $('.workspace-nav');
-    const header = $('header.top');
-    if (topNav && header && 'IntersectionObserver' in window && typeof HTMLDialogElement === 'function') {
-        const fab = document.createElement('button');
-        fab.type = 'button'; fab.className = 'nav-fab'; fab.setAttribute('aria-haspopup', 'dialog');
-        fab.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>' + t('管理メニュー') + '</span>';
-        const dialog = document.createElement('dialog');
-        dialog.className = 'nav-dialog'; dialog.setAttribute('aria-labelledby', 'nav-dialog-title');
-        dialog.innerHTML = '<div class="nav-dialog-head"><h2 id="nav-dialog-title">' + t('管理メニュー') + '</h2><button type="button" class="btn" data-nav-close>' + t('閉じる') + '</button></div>';
-        const main = document.createElement('div');
-        main.className = 'nav-dialog-main';
-        $$(':scope > a', topNav).forEach(a => main.append(a.cloneNode(true)));
-        const more = document.createElement('div');
-        more.className = 'nav-dialog-more';
-        $$('.nav-more > div > *', topNav).forEach(el => more.append(el.cloneNode(true)));
-        dialog.append(main, more);
-        document.body.append(fab, dialog);
-        const setShown = on => { fab.classList.toggle('is-shown', on); fab.tabIndex = on ? 0 : -1; fab.setAttribute('aria-hidden', on ? 'false' : 'true'); };
-        setShown(false);
-        new IntersectionObserver(([en]) => setShown(!en.isIntersecting)).observe(header);
-        fab.addEventListener('click', () => { $$('.nav-more').forEach(m => { m.open = false; }); dialog.showModal(); });
-        dialog.addEventListener('click', e => { if (e.target === dialog || e.target.closest('[data-nav-close]')) dialog.close(); });
-    }
 
     // --- Verification code boxes: half-width digits only -------------------------
     // A Japanese keyboard types full-width digits (０-９): turn them into 0-9 and drop anything else, up to 6.

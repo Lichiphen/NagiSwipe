@@ -16,6 +16,7 @@ require __DIR__ . '/../lib/image.php';
 require __DIR__ . '/../lib/backup.php';
 require __DIR__ . '/../lib/epub.php';
 require __DIR__ . '/../lib/update.php';
+require __DIR__ . '/../lib/admin-menu.php';
 require __DIR__ . '/../lib/analytics.php';
 require __DIR__ . '/../lib/log.php';
 require __DIR__ . '/../lib/log-public.php';
@@ -185,6 +186,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         unset($_SESSION['nm_flash']);
     }
     $navHtml = '';
+    $menuDialog = '';
     $banner = '';
     if ($nav) {
         $guest = nm_is_guest();
@@ -192,11 +194,10 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         $isLog = str_starts_with($p, 'log');
         $isSettings = $p === 'settings' || $p === 'css';
         $isScope = $p === 'scope';
-        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '"><a href="index.php"' . (!$isLog && !$isSettings && !$isScope ? ' aria-current="page"' : '') . '>NagiMANGA</a>'
-            . ($guest ? '' : '<a href="index.php?p=log"' . ($isLog ? ' aria-current="page"' : '') . '>' . h(nm_t('LOG・投稿')) . '</a><a href="index.php?p=scope"' . ($isScope ? ' aria-current="page"' : '') . '>NagiScope</a><a href="index.php?p=settings"' . ($isSettings ? ' aria-current="page"' : '') . '>' . h(nm_t('設定')) . '</a>')
-            . '<details class="nav-more"><summary>' . h(nm_t('管理メニュー')) . '</summary><div>'
-            . ($guest ? '' : '<a href="index.php?p=embed">' . h(nm_t('漫画の設置用コード')) . '</a><a href="index.php?p=backup">' . h(nm_t('バックアップ')) . '</a><a href="index.php?p=update">' . h(nm_t('更新')) . (nm_update_available(nm_update_cached()) ? ' <span class="badge new">' . h(nm_t('新')) . '</span>' : '') . '</a>')
-            . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="logout"><button class="link">' . h(nm_t($guest ? 'ゲストを終了' : 'ログアウト')) . '</button></form></div></details></nav>';
+        [$menuMain, $menuMore] = nm_menu_entries('', $isLog ? 'log' : ($isSettings ? 'settings' : ($isScope ? 'scope' : 'manga')), $guest);
+        $navHtml = '<nav class="nav workspace-nav" aria-label="' . h(nm_t('管理メニュー')) . '">' . $menuMain
+            . '<details class="nav-more"><summary>' . nm_icon('menu', 'nm-menu-icon') . '<span>' . h(nm_t('管理メニュー')) . '</span></summary><div>' . $menuMore . '</div></details></nav>';
+        $menuDialog = nm_menu_dialog('', $isLog ? 'log' : ($isSettings ? 'settings' : ($isScope ? 'scope' : 'manga')), $guest, 'admin');
         $g = $guest ? nm_guest_config() : null;
         if ($g) $banner = '<p class="guest-banner">' . h($g['banner']) . '</p>';
     }
@@ -211,6 +212,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         . ((($favicon = nl_favicon_links('../', false)) !== '') ? $favicon : '<link rel="icon" href="' . nm_asset('../viewer/favicon.svg') . '" type="image/svg+xml">')
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
+        . ($menuDialog !== '' ? '<link rel="stylesheet" href="' . nm_asset('../viewer/admin-menu.css') . '"><script src="' . nm_asset('../viewer/admin-menu.js') . '" defer></script>' : '')
         . ($logUi
             ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script><script src="' . nm_asset('../viewer/log-code.js') . '" defer></script><script src="' . nm_asset('../viewer/log-mermaid.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
@@ -226,7 +228,7 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
         . $head
         . '</head><body><header class="top"><span class="brand">' . nl_ui_icon() . '<span>NagiManga / LOG</span></span>' . $navHtml . '</header>'
         . '<main class="main' . ($logPage ? ' log-admin-main' . (nl_is_editor_view(nm_str($_GET, 'p', 20)) ? ' log-editor-main' : '') : '') . '">' . $banner . $flash . $body . '</main>'
-        . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer></body></html>';
+        . '<footer class="foot">NagiManga ' . h(NM_VERSION) . '</footer>' . $menuDialog . '</body></html>';
 }
 
 function nm_csrf_field(): string

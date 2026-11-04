@@ -327,6 +327,8 @@ def run(site, c, csrf):
     shutil.copytree(HERE.parent, tmp / 'manga', ignore=shutil.ignore_patterns('results', 'data', '__pycache__'))
     for name in ('NagiSwipe-main.js', 'NagiSwipe-main.css'):
         shutil.copyfile(HERE.parents[1] / name, tmp / name)
+    # The release build checks the version badges with the repository's scripts/check_versions.py.
+    shutil.copytree(HERE.parents[1] / 'scripts', tmp / 'scripts', ignore=shutil.ignore_patterns('__pycache__'))
     cat_path = tmp / 'manga/server/lib/css-catalog.json'
     version = re.search(r"const NM_VERSION = '([0-9.]+)'", (tmp / 'manga/server/lib/bootstrap.php').read_text(encoding='utf-8')).group(1)
     released = cat_path.read_text(encoding='utf-8').replace('"next"', f'"{version}"')

@@ -499,7 +499,6 @@ function nl_editor(?array $p = null, bool $public = false): string
         . '<input type="hidden" name="title" value="">'
         . '<p class="log-status" role="status" aria-live="polite"></p><div class="log-submit"><span class="note" data-character-count></span><button class="btn" name="status" value="draft">' . nm_t('下書き保存') . '</button><button class="btn primary" name="status" value="published">' . (!nl_settings()['public'] ? nm_t('メモを保存') : ($edit ? nm_t('公開して保存') : nm_t('投稿する'))) . '</button></div></form></section>'
         . '<button type="button" class="log-fab" aria-controls="log-compose" aria-expanded="' . ($edit ? 'true' : 'false') . '">' . nl_ui_icon() . '<span>' . nm_t('書く') . '</span></button>'
-        . ($public ? '<a class="log-fab-admin" href="admin/index.php?p=log">' . nl_ui_icon('wrench') . '<span>' . nm_t('管理') . '</span></a>' : '')
         . '<dialog class="log-picker" aria-labelledby="log-picker-title"><div class="log-compose-head"><h2 id="log-picker-title">' . nm_t('選ぶ') . '</h2><button type="button" class="btn" data-picker-close>' . nm_t('閉じる') . '</button></div><label>' . nm_t('検索') . '<input type="search" data-picker-search></label><p class="note" data-picker-status role="status"></p><div class="log-picker-grid" data-picker-grid></div><button type="button" class="btn" data-picker-more hidden>' . nm_t('さらに表示') . '</button></dialog>';
 }
 function nl_admin_post_card(array $p): string

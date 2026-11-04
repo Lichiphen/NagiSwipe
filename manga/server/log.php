@@ -29,6 +29,7 @@ if (isset($_COOKIE['nm_admin']) && is_string($_COOKIE['nm_admin'])) {
     $owner = nm_ip_allowed(nm_config()) && nm_is_logged_in() && !nm_is_guest();
 }
 define('NL_OWNER', $owner);
+if ($owner) require __DIR__ . '/lib/admin-menu.php';
 $s = nl_settings();
 // Public pages speak the admin language when it is set to one (English…); otherwise Japanese.
 nm_lang(nm_site_lang());
@@ -194,7 +195,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <meta property="og:type" content="<?= $single ? 'article' : 'website' ?>"><meta property="og:site_name" content="<?= h($s['title']) ?>">
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>"><?php if ($ogWidth > 0): ?><meta property="og:image:width" content="<?= $ogWidth ?>"><meta property="og:image:height" content="<?= $ogHeight ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
-<?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><?php endif; ?>
+<?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/admin-menu.css') ?>"><script src="<?= nl_public_asset('viewer/admin-menu.js') ?>" defer></script><?php endif; ?>
 <?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
 <?= nl_css_link() ?>
@@ -229,4 +230,4 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?= $postsHtml ?>
 <?php if (!$posts && !$fixed): ?><p class="log-empty"><?= nm_t($filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。'))) ?></p><?php endif; ?>
 <?= $single ? $relatedHtml . ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : ($fixed ? '' : nl_pager($s, $filter['query'], $page, count($all))) ?>
-</main><?= $sidebarHtml ?></div><?= $shareRows ? nl_share_dialog() : '' ?><?= nl_footer_html($s, $here) ?></body></html>
+</main><?= $sidebarHtml ?></div><?= $shareRows ? nl_share_dialog() : '' ?><?= nl_footer_html($s, $here) ?><?= $owner ? nm_menu_dialog('admin/', '', false, 'log') : '' ?></body></html>
