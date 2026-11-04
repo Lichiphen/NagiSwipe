@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.14.0](https://img.shields.io/badge/NagiLog-v0.14.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.14.0](https://img.shields.io/badge/NagiManga-v0.14.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.14.1](https://img.shields.io/badge/NagiLog-v0.14.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.14.1](https://img.shields.io/badge/NagiManga-v0.14.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -97,7 +97,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.14.0（NagiManga v0.14.0に同梱） |
+| 版 | 0.14.1（NagiManga v0.14.1に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -235,7 +235,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.14.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.14.1.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、FTP で `data/setup-key.php` に書いてある「セットアップの鍵」を貼り付けて、管理者パスワードを決めます。「おもに使うもの」は **NagiLog** を選ぶと、ログインしたときに LOG・投稿の画面が開きます。
 3. 表示された管理用URLをブックマークします。初めてログインすると、パスキーか二段階認証の設定をすすめるダイアログが出ます。できるだけ、ここで設定してください。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -1824,6 +1824,13 @@ python manga/dev/contrast_audit.py
 | NagiScope のブラウザー（`dev/scope_browser_test.py`） | Chromium と WebKit で52項目通過。記事を読んだ深さ・リンクのクリック・ページ埋込のゲームの「表示 → 読み込み → 触った → 起動の合図」・漫画を最後まで読んだことが届き、画面に出ること。スマホの幅ではみ出さないこと |
 | 管理メニュー（`dev/nav_fab_browser_test.py`） | Chromium と WebKit・スマホと PC・明るい表示と暗い表示で220項目通過。管理画面で下へスクロールするとボタンが入り、ログイン中の LOG ではスクロールせずに出ること（PC は右上、スマホは右下）。スマホでは画面の中央に幅を狭めずに開き、PC ではカーソルを当てるだけでボタンのすぐ下に開くこと。どの項目も名前の左にアイコンがあること |
 | 既存の試験 | 28本すべて通過（翻訳 4089 項目を含む） |
+
+2026年11月4日の v0.14.1（管理画面の配色を LOG のテーマに揃えた）で、次を確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| 管理画面の配色 | 管理画面のどのページも LOG で選んだテーマの色・角丸・影で表示され、OS のダークモードでは切り替わらないこと。6 テーマで文字と背景のコントラストが今までより下がっていないこと（`dev/contrast_audit.py`） |
+| 既存の試験 | log_test 223、attack_test 206、追加CSS 104、追加CSSのブラウザー 119、管理メニュー 220、NagiScope のブラウザー 52、ログイン 43 項目を通過 |
 
 ## 参照元と文章
 
