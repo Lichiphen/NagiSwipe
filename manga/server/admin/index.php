@@ -204,17 +204,19 @@ function nm_layout(string $title, string $body, bool $nav = true, string $head =
     if ($nav) $body .= nm_twofa_nudge();
     $logPage = $nav && !nm_is_guest() && str_starts_with(nm_str($_GET, 'p', 20), 'log');
     $logUi = $logPage || (defined('NL_PUBLIC_LOGIN') && NL_PUBLIC_LOGIN) || ($nav && !nm_is_guest() && nm_str($_GET, 'p', 20) === 'settings');
-    echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . (nm_public_login() ? ' data-public-login="1"' : '') . ($logUi ? ' data-log-theme="' . h(nl_settings()['theme']) . '" data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
+    echo '<!DOCTYPE html><html lang="' . nm_lang() . '" data-icons="' . h(nm_icon_url()) . '"' . (nm_public_login() ? ' data-public-login="1"' : '') . ' data-log-theme="' . h(nl_settings()['theme']) . '"' . ($logUi ? ' data-embed-scripts="off"' : '') . '><head><meta charset="UTF-8">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex, nofollow">'
         . '<title>' . h(nm_t($title)) . ' - NagiManga</title>' . nm_t_script()
         // The LOG's own favicon when one is set (the tab shows which site this admin belongs to).
         . ((($favicon = nl_favicon_links('../', false)) !== '') ? $favicon : '<link rel="icon" href="' . nm_asset('../viewer/favicon.svg') . '" type="image/svg+xml">')
         . '<link rel="stylesheet" href="' . nm_asset('admin.css') . '">'
+        // Every admin screen wears the LOG's theme (log.css holds its colours), so going between the LOG and the admin keeps the same look.
+        . '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '">'
         . '<script src="' . nm_asset('admin.js') . '" defer></script>'
         . ($menuDialog !== '' ? '<link rel="stylesheet" href="' . nm_asset('../viewer/admin-menu.css') . '"><script src="' . nm_asset('../viewer/admin-menu.js') . '" defer></script>' : '')
         . ($logUi
-            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log.css') . '"><link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script><script src="' . nm_asset('../viewer/log-code.js') . '" defer></script><script src="' . nm_asset('../viewer/log-mermaid.js') . '" defer></script>'
+            ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log-owner.css') . '"><script src="' . nm_asset('../viewer/log-embed.js') . '" defer></script><script src="' . nm_asset('../viewer/log-player.js') . '" defer></script><script src="' . nm_asset('../viewer/log-code.js') . '" defer></script><script src="' . nm_asset('../viewer/log-mermaid.js') . '" defer></script>'
               . '<script src="' . nm_asset('log-settings.js') . '" defer></script>'
               . '<script src="' . nm_asset('../viewer/log-loading.js') . '" defer></script>' : '')
         . ($logPage

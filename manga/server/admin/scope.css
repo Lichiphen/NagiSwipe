@@ -1,11 +1,11 @@
-/* NagiScope screens. Colours come from admin.css (light and dark). MIT License (c) 2026 Lichiphen. */
+/* NagiScope screens. Colours come from admin.css (the LOG's theme). MIT License (c) 2026 Lichiphen. */
 .ns-title { margin: 0 0 12px; }
 .ns-invite { border-left: 4px solid var(--accent); }
 .ns-invite-actions, .ns-dialog-actions, .ns-goal-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .ns-goal-actions form { margin: 0; }
 .ns-points { padding-left: 1.3em; }
 .ns-points li { margin: 4px 0; }
-.ns-ip { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin: 0 0 12px; }
+.ns-ip { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
 .ns-ip legend { font-weight: 700; padding: 0 6px; }
 .ns-ip .note { margin: 0 0 10px 1.8em; }
 
@@ -16,16 +16,15 @@
 .ns-site a[aria-current] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .ns-periods { background: var(--bg); border-radius: 999px; padding: 4px; width: max-content; max-width: 100%; }
 .ns-periods button { font: inherit; border: 0; background: transparent; color: var(--text); padding: 6px 18px; border-radius: 999px; cursor: pointer; }
-.ns-periods button[aria-selected="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.18); font-weight: 700; }
+.ns-periods button[aria-selected="true"] { background: var(--card); color: var(--accent); box-shadow: 0 1px 4px #0000001f; font-weight: 700; }
 .ns-periods button:focus-visible, .ns-site a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ns-big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 14px 0 4px; }
 .ns-big-n { font-size: clamp(2.6rem, 9vw, 4rem); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .ns-big-unit { font-size: 1.2rem; font-weight: 700; margin-left: -6px; }
 .ns-big-label { color: var(--muted); }
 .ns-vs { font-weight: 700; }
-.ns-vs[data-dir="up"] { color: #1f7a3d; }
+.ns-vs[data-dir="up"] { color: var(--ok-ink); }
 .ns-vs[data-dir="down"] { color: var(--danger); }
-@media (prefers-color-scheme: dark) { .ns-vs[data-dir="up"] { color: #7fd69a; } }
 .ns-chart { width: 100%; min-height: 190px; }
 .ns-chart-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .ns-gridline { stroke: var(--line); stroke-width: 1; }
@@ -40,7 +39,7 @@
 .ns-key-now { background: var(--accent); }
 .ns-key-before { border-top: 2px dashed var(--muted); height: 0; border-radius: 0; margin-left: 8px; }
 .ns-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0 6px; }
-.ns-stats > div { background: var(--bg); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; }
+.ns-stats > div { background: var(--bg); border-radius: calc(var(--radius) * .75); padding: 12px 14px; display: flex; flex-direction: column; }
 .ns-stat-n { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; overflow-wrap: anywhere; }
 .ns-stat-label { color: var(--muted); font-size: .88em; }
 
