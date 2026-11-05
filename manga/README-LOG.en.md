@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.14.1](https://img.shields.io/badge/NagiLog-v0.14.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.14.1](https://img.shields.io/badge/NagiManga-v0.14.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.14.2](https://img.shields.io/badge/NagiLog-v0.14.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.14.2](https://img.shields.io/badge/NagiManga-v0.14.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -43,6 +43,7 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
   - [Markdown in posts](#markdown-in-posts)
   - [Ruby (reading aids)](#ruby-reading-aids)
   - [Alerts and diagrams (Mermaid)](#alerts-and-diagrams-mermaid)
+  - [Buttons](#buttons)
 - [Content warnings (sensitive, R-18, R-18G)](#content-warnings-sensitive-r-18-r-18g)
 - [Embedding social media and video](#embedding-social-media-and-video)
   - [Blog cards](#blog-cards)
@@ -99,7 +100,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.14.1 (included in NagiManga v0.14.1) |
+| Version | 0.14.2 (included in NagiManga v0.14.2) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -238,7 +239,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.14.1.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.14.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -439,7 +440,7 @@ The posting box has the text, the media of the text, chips for set items and one
 | Add pictures, video or audio / Choose from the media list | Places them at the cursor in the text (see below). Video and audio go into the same rows. |
 | Choose manga | Puts a manga tag at the cursor in the text. |
 | B, I, link | Makes the selected text bold or italic, or a link. Pressing B or I again takes the mark off. |
-| Format (A and three lines) | Opens a choice of headings, strikethrough, code, ruby, bulleted and numbered lists, quotes, tables, dividing lines and code blocks (see "Headings" and "Markdown in posts" below). They are gathered here so the tool row stays short on phones. |
+| Format (A and three lines) | Opens a choice of headings, strikethrough, code, ruby, bulleted and numbered lists, quotes, tables, dividing lines, code blocks and buttons (see "Headings" and "Markdown in posts" below). They are gathered here so the tool row stays short on phones. |
 | #, folder, warning triangle, ? | Opens recent hashtags, categories, content warnings or help below the tool row, one at a time. |
 | Eye | Opens and closes the preview. |
 
@@ -574,6 +575,30 @@ Posts and fixed pages take alert boxes written as on GitHub, and diagrams writte
 - "拡大" (Enlarge) on a diagram's top right corner opens it over the whole screen, at its own size and scrollable both ways. "−" and "+" (or Ctrl + wheel, or the `-` and `+` keys) change the size, and the percentage fits it to the screen. It helps when reading a detailed diagram on a phone.
 - A diagram that cannot be drawn because of a mistake shows the line that could not be read and its source.
 - "装飾" (Format) in the posting box and the fixed page editor puts them in: "注意書き" (Alerts) and "まとまり › 図（Mermaid）" (Blocks › Diagram).
+
+### Buttons
+
+In posts and fixed pages, a link whose words are in double brackets `[[ ]]` is a button (from v0.14.2). It is valid ordinary Markdown, so pasted elsewhere (GitHub and so on) it stays a link, with brackets around its words.
+
+| Write | Shows |
+| --- | --- |
+| `[[Read more]](https://example.com/)` | A button in the theme's color |
+| `[[Download]](https://example.com/app.zip "download green")` | A green button with the download icon on the left |
+| `[[Support]](https://example.com/ "heart pink solid")` | A filled pink button with the heart icon |
+
+In the quotes after the URL, write these names apart by spaces, in any order. Each can be left out. The Japanese names work too.
+
+| Kind | Names |
+| --- | --- |
+| Color | `blue`, `green`, `orange`, `red`, `purple`, `pink`, `gray`. Without one, the theme's color |
+| Icon | `download`, `link`, `arrow`, `play`, `book`, `mail`, `cart`, `heart`, `star`, `home`, `none` |
+| Filled | `solid`. Without it, a pale button |
+
+- Without an icon name, a button to a file such as `.zip`, `.exe`, `.pdf` or `.epub` shows the download icon, and a `mailto:` button the mail icon. Write `none` to leave it out.
+- Buttons on one line sit side by side and wrap on a narrow screen. A button can also sit in a sentence.
+- Unknown names are ignored. The URLs that work are those of an ordinary link (including addresses in the site, `mailto:` and `tel:`).
+- "装飾 › ボタン" (Format › Button) in the posting box and the fixed page editor makes a button from the selected words or URL. Add the color in the quotes by hand.
+- Additional CSS can restyle them with `.log-button` (the whole), `.log-button-icon`, `.log-button-green` and so on; `--button` sets the color.
 
 ## Content warnings (sensitive, R-18, R-18G)
 
@@ -1109,6 +1134,17 @@ The list of this version:
 | `.log-frame-stage` | The frame of a page embed (its cover, then the page once pressed) | Post pages, Fixed pages | `.log-frame-stage { border-radius: 0; }` | v0.11.0 |
 | `.log-frame-play` | The Load the page sticker on a page embed’s cover | Post pages, Fixed pages | `.log-frame-play { transform: none; }` | v0.11.0 |
 | `.log-frame-bar` | The row under a page embed (the link to open it in a new tab and the Full screen button) | Post pages, Fixed pages | `.log-frame-bar { font-size: 13px; }` | v0.11.0 |
+| `.log-button` | A button ([[words]](URL)). --button sets its color and --button-ink the icon color on it | Post pages, Fixed pages | `.log-button { border-radius: 10px; }` | v0.14.2 |
+| `.log-button-icon` | The round icon on the left of a button | Post pages, Fixed pages | `.log-button-icon { width: 26px; height: 26px; }` | v0.14.2 |
+| `.log-button-label` | The words of a button | Post pages, Fixed pages | `.log-button-label { letter-spacing: 0; }` | v0.14.2 |
+| `.log-button-solid` | A filled button (solid) | Post pages, Fixed pages | `.log-button-solid { box-shadow: none; }` | v0.14.2 |
+| `.log-button-blue` | The blue button (blue) | Post pages, Fixed pages | `.log-button-blue { --button: #0969da; }` | v0.14.2 |
+| `.log-button-green` | The green button (green) | Post pages, Fixed pages | `.log-button-green { --button: #1a7f37; }` | v0.14.2 |
+| `.log-button-orange` | The orange button (orange) | Post pages, Fixed pages | `.log-button-orange { --button: #bc4c00; }` | v0.14.2 |
+| `.log-button-red` | The red button (red) | Post pages, Fixed pages | `.log-button-red { --button: #cf222e; }` | v0.14.2 |
+| `.log-button-purple` | The purple button (purple) | Post pages, Fixed pages | `.log-button-purple { --button: #8250df; }` | v0.14.2 |
+| `.log-button-pink` | The pink button (pink) | Post pages, Fixed pages | `.log-button-pink { --button: #bf3989; }` | v0.14.2 |
+| `.log-button-gray` | The gray button (gray) | Post pages, Fixed pages | `.log-button-gray { --button: #57606a; }` | v0.14.2 |
 
 **CSS variables**
 
@@ -1834,6 +1870,15 @@ On 4 November 2026, v0.14.1 (admin colours follow the LOG theme) checked the fol
 | --- | --- |
 | Admin colours | Every admin page shows the colours, radius and shadow of the theme chosen for the LOG and no longer switches with the OS dark mode. Text contrast is no lower than before on all 6 themes (`dev/contrast_audit.py`) |
 | Existing tests | log_test 223, attack_test 206, custom CSS 104, custom CSS in browsers 119, admin menu 220, NagiScope in browsers 52, sign-in 43 checks passed |
+
+On 5 November 2026, v0.14.2 (buttons in the text, `[[words]](URL)`) checked the following.
+
+| Check | Result |
+| --- | --- |
+| Buttons (`dev/log_feature_test.py`) | 106 feature checks passed: color names and the download icon for files, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
+| English pages (`dev/log_en_test.py`) | 24 checks passed: a post with a page embed, an alert, a diagram and buttons leaves no Japanese and draws them with English labels |
+| Browsers | Playwright Chromium and WebKit (iPhone 13), on two light and two dark themes, at PC and phone widths. The words on filled buttons reach a contrast of 4.6 or more on light themes and 7.6 or more on dark ones |
+| Existing tests | All 27 test files passed (including 4113 translation checks) |
 
 ## Sources and writing
 

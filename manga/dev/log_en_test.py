@@ -43,11 +43,14 @@ def run(c, csrf):
     save(f'Soft picture\n[Image:{image}]', rating='sensitive')
     locked = save('Locked notes\nOnly for friends.', lock_form='1', lock='1', lock_password='friends-only')
     save('https://www.youtube.com/watch?v=dQw4w9WgXcQ\nA video I liked.')
+    # Marks with labels of the LOG's own: page embeds, alerts, diagrams and buttons.
+    marks = save('Things to try\n[Embed]https://game.example/play/[/Embed]\n\n> [!WARNING]\n> Mind the step.\n\n```mermaid\nflowchart LR\n  A --> B\n```\n\n[[Download]](https://example.com/app.zip "green") [[Support]](https://example.com/ "heart solid")\n\n```\ncode\n```')
     post({'do': 'log_pin', 'post_id': plain['id'], 'pin': '1'})
     post({'do': 'log_page_save', 'page_id': '', 'revision': '0', 'title': 'About', 'slug': 'about', 'body': '## Hello\nThis is me.', 'layout': 'sidebar', 'status': 'published'}, headers=json_head)
     month = plain['id'][:4] + '-' + plain['id'][4:6]
     pages = {
         'トップ': '/', '2ページ目': '/?page=2', '記事': '/?id=' + plain['id'], '鍵付きの記事': '/?id=' + locked['id'],
+        '埋込・注意書き・図・ボタンの記事': '/?id=' + marks['id'],
         '鍵の入力を間違えた記事': f'/?id={locked["id"]}&locked=wrong', '鍵の入力を続けて間違えた記事': f'/?id={locked["id"]}&locked=wait',
         '固定ページ': '/?pg=about', 'カテゴリ': '/?category=' + re.search(r'category=([a-f0-9]{12})', pub.get('/').text).group(1),
         'タグ': '/?tag=walk', '月': '/?month=' + month, '日': '/?date=' + month + '-' + plain['id'][6:8],
@@ -57,6 +60,9 @@ def run(c, csrf):
         r = pub.get(path, headers={'Accept': 'text/html'})
         found = japanese(r.text)
         check(f'{name}に日本語の表示が残っていない', r.status == 200 and not found, f'{r.status} {found}')
+    shown = pub.get('/?id=' + marks['id']).text
+    want = ('class="log-frame', 'Load the page','<span>Warning</span>', 'data-mermaid', 'class="log-button log-button-green"', 'log-md-code')
+    check('埋込・注意書き・図・ボタンを英語の見出しで描く', not [s for s in want if s not in shown], str([s for s in want if s not in shown]))
     top = pub.get('/').text
     check('ページの言語が英語', '<html lang="en"' in top)
     check('サイドバーのアイコンの下に名前を表示', re.search(r'class="log-profile-icon[^"]*">.*?</div><p class="log-profile-name">Me</p>', top, re.S) is not None)

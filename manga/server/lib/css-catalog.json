@@ -934,6 +934,149 @@
    ],
    "example": ".log-frame-bar { font-size: 13px; }",
    "since": "0.11.0"
+  },
+  {
+   "name": ".log-button",
+   "purpose": {
+    "ja": "ボタン（[[文字]](URL)）。--button で色、--button-ink でアイコンの色を変えられます",
+    "en": "A button ([[words]](URL)). --button sets its color and --button-ink the icon color on it"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button { border-radius: 10px; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-icon",
+   "purpose": {
+    "ja": "ボタンの左の丸いアイコン",
+    "en": "The round icon on the left of a button"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-icon { width: 26px; height: 26px; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-label",
+   "purpose": {
+    "ja": "ボタンの文字",
+    "en": "The words of a button"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-label { letter-spacing: 0; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-solid",
+   "purpose": {
+    "ja": "塗りのボタン（solid）",
+    "en": "A filled button (solid)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-solid { box-shadow: none; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-blue",
+   "purpose": {
+    "ja": "青のボタン（blue）",
+    "en": "The blue button (blue)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-blue { --button: #0969da; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-green",
+   "purpose": {
+    "ja": "緑のボタン（green）",
+    "en": "The green button (green)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-green { --button: #1a7f37; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-orange",
+   "purpose": {
+    "ja": "橙のボタン（orange）",
+    "en": "The orange button (orange)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-orange { --button: #bc4c00; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-red",
+   "purpose": {
+    "ja": "赤のボタン（red）",
+    "en": "The red button (red)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-red { --button: #cf222e; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-purple",
+   "purpose": {
+    "ja": "紫のボタン（purple）",
+    "en": "The purple button (purple)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-purple { --button: #8250df; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-pink",
+   "purpose": {
+    "ja": "ピンクのボタン（pink）",
+    "en": "The pink button (pink)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-pink { --button: #bf3989; }",
+   "since": "0.14.2"
+  },
+  {
+   "name": ".log-button-gray",
+   "purpose": {
+    "ja": "灰色のボタン（gray）",
+    "en": "The gray button (gray)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-button-gray { --button: #57606a; }",
+   "since": "0.14.2"
   }
  ],
  "variables": [
@@ -1407,7 +1550,15 @@
   "is-2x3",
   "is-3x4",
   "is-9x16",
-  "is-21x9"
+  "is-21x9",
+  "log-button-blue",
+  "log-button-green",
+  "log-button-orange",
+  "log-button-red",
+  "log-button-purple",
+  "log-button-pink",
+  "log-button-gray",
+  "log-button-solid"
  ],
  "history": [
   {
@@ -1461,6 +1612,22 @@
     ".log-frame-stage",
     ".log-frame-play",
     ".log-frame-bar"
+   ]
+  },
+  {
+   "version": "0.14.2",
+   "added": [
+    ".log-button",
+    ".log-button-icon",
+    ".log-button-label",
+    ".log-button-solid",
+    ".log-button-blue",
+    ".log-button-green",
+    ".log-button-orange",
+    ".log-button-red",
+    ".log-button-purple",
+    ".log-button-pink",
+    ".log-button-gray"
    ]
   }
  ]

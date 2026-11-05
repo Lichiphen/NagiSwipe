@@ -59,6 +59,19 @@ window.NagiLogFormat = (() => {
         const text = '[' + label + '](https://)';
         put(body, start, end, text, label.length + 3, text.length - 1);
     }
+    // A button: [[words]](URL "icon"), as a link is made; the color is added to the quotes by hand ("download green").
+    function button(body, range, icon) {
+        const [start, end] = clamp(body, range);
+        const picked = body.value.slice(start, end).trim();
+        const title = icon ? ' "' + icon + '"' : '';
+        const sample = icon === 'download' ? t('ダウンロード') : t('ボタンの文字');
+        if (/^https?:\/\/\S+$/.test(picked)) { put(body, start, end, '[[' + sample + ']](' + picked + title + ')', 2, 2 + sample.length); return; }
+        const label = picked && !picked.includes('\n') ? picked : sample;
+        const text = '[[' + label + ']](https://' + title + ')';
+        put(body, start, end, text, label.length + 5, label.length + 13);
+    }
+    // The icons a button can show (lib/log-pages.php NL_MD_BUTTON_ICONS), with their names in the dialog.
+    const BUTTONS = { '': t('ボタン'), download: t('ダウンロード'), link: t('外部リンク'), arrow: t('矢印'), play: t('再生'), book: t('本'), mail: t('メール'), cart: t('購入'), heart: t('ハート'), star: t('星'), home: t('ホーム') };
     // Ruby: the selected words get |…《》 with the caret in the brackets for the reading; |words《reading》 again comes off.
     function ruby(body, range) {
         const [start, end] = clamp(body, range);
@@ -172,6 +185,7 @@ window.NagiLogFormat = (() => {
         mermaid: (body, range) => block(body, range, 'mermaid'),
         frame: (body, range) => block(body, range, 'frame'),
         ...Object.fromEntries(Object.keys(ALERTS).map(kind => [kind, (body, range) => block(body, range, kind)])),
+        ...Object.fromEntries(Object.keys(BUTTONS).map(icon => ['button' + (icon && '-' + icon), (body, range) => button(body, range, icon)])),
     };
     function apply(name, body, range = [body.selectionStart, body.selectionEnd], options = {}) {
         const h = /^h([234])$/.exec(name);
@@ -225,6 +239,7 @@ window.NagiLogFormat = (() => {
         dialog.append(group(t('文字'), [['strike', t('取り消し線'), '~~ ~~'], ['code', t('コード'), '` `'], ['ruby', t('ルビ（読み仮名）'), '|漢字《かんじ》']]));
         dialog.append(group(t('まとまり'), [['list', t('箇条書き'), '- '], ['ordered', t('番号付きリスト'), '1. '], ['quote', t('引用'), '> '], ['table', t('表'), '| |'], ['rule', t('区切り線'), '---'], ['codeblock', t('コードブロック'), '```'], ['mermaid', t('図（Mermaid）'), '```mermaid'], ['frame', t('ページ埋込'), '[' + frameTag() + ']URL']]));
         dialog.append(group(t('注意書き'), Object.keys(ALERTS).map(kind => [kind, alertTitle(kind), '> [!' + kind.toUpperCase() + ']'])));
+        dialog.append(group(t('ボタン'), Object.entries(BUTTONS).map(([icon, name]) => ['button' + (icon && '-' + icon), name, icon ? '"' + icon + '"' : '[[ ]]( )'])));
         dialog.showModal();
         dialog.querySelector('.log-format-choice')?.focus();
     }

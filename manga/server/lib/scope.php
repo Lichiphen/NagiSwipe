@@ -315,7 +315,7 @@ function ns_target(string $kind, string $id): ?array
 function ns_body_chars(array $item): int
 {
     $body = (string)($item['body'] ?? '');
-    $body = (string)preg_replace(['~!\[[^\]]*\]\([^)]*\)~u', '~\[([^\]]*)\]\([^)]*\)~u', '~https?://\S+~u', '/[#>*_`~|\-\[\]]+/u', '~\s+~u'], ['', '$1', '', '', ''], $body);
+    $body = (string)preg_replace(['~!\[[^\]]*\]\([^)]*\)~u', '~\[\[([^\[\]\n]+)\]\]\([^)]*\)~u', '~\[([^\]]*)\]\([^)]*\)~u', '~https?://\S+~u', '/[#>*_`~|\-\[\]]+/u', '~\s+~u'], ['', '$1', '$1', '', '', ''], $body);
     return mb_strlen($body);
 }
 

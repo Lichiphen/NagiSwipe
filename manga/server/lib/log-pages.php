@@ -284,7 +284,7 @@ function nl_md_list(array $lines, int $i, bool $admin, int $depth, array &$ids, 
 /** A heading's id for #links: its words, like GitHub (見出し → #見出し), numbered when repeated. */
 function nl_md_anchor(string $text, array &$ids): string
 {
-    $plain = (string)preg_replace(['/!?\[([^\]]*)\]\([^)]*\)/u', '/[*_~`]/'], ['$1', ''], nl_ruby_plain($text));
+    $plain = (string)preg_replace([NL_MD_BUTTON_PLAIN, '/!?\[([^\]]*)\]\([^)]*\)/u', '/[*_~`]/'], ['$1', '$1', ''], nl_ruby_plain($text));
     $id = trim((string)preg_replace('/[^\p{L}\p{N}_-]+/u', '-', mb_strtolower($plain, 'UTF-8')), '-');
     $id = mb_substr($id !== '' ? $id : 'section', 0, 60);
     $base = $id;
@@ -337,7 +337,8 @@ function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags 
         return $out . h(substr($s, $at));
     };
     // A bare URL may hold parentheses in pairs (Wikipedia); a closing one of its own belongs to the text.
-    $pattern = '/(`+)(.+?)\1|!\[([^\]\n]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|\[([^\]\n]+)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|(https?:\/\/(?:[^\s<>"\[\]()]|\([^\s<>"\[\]()]*\))+)/u';
+    // [[words]](URL "color icon") is a button (nl_md_button()); an ordinary link never starts with [[.
+    $pattern = '/(`+)(.+?)\1|!\[([^\]\n]*)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|\[([^\]\n]+)\]\(\s*<?([^\s)>]+)>?(?:\s+"[^"]*")?\s*\)|(https?:\/\/(?:[^\s<>"\[\]()]|\([^\s<>"\[\]()]*\))+)|' . NL_MD_BUTTON . '/u';
     $out = ''; $at = 0;
     preg_match_all($pattern, $text, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
     foreach ($all as $m) {
@@ -352,6 +353,7 @@ function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags 
             $out .= $keep($href !== '' ? '<a href="' . h($href) . '"' . (preg_match('~\Ahttps?://~i', $href) ? ' rel="noopener noreferrer"' : '') . '>' . $label . '</a>' : $label);
             continue;
         }
+        if (($m[9][1] ?? -1) >= 0) { $out .= $keep(nl_md_button($m[8][0], $m[9][0], $m[10][0] ?? '', $admin, $links)); continue; }
         $url = rtrim($m[7][0], nm_t('.,!?;:。、'));
         $at -= strlen($m[7][0]) - strlen($url);
         $out .= $keep($links && filter_var($url, FILTER_VALIDATE_URL) ? '<a href="' . h($url) . '" rel="noopener noreferrer">' . h($url) . '</a>' : h($url));
@@ -360,6 +362,61 @@ function nl_md_inline(string $text, bool $admin, bool $links = true, bool $tags 
     $out = nl_ruby($out);
     $out = (string)preg_replace(['/\*\*(?=\S)(.+?)(?<=\S)\*\*/u', '/~~(?=\S)(.+?)(?<=\S)~~/u', '/(?<!\*)\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?!\*)/u'], ['<strong>$1</strong>', '<del>$1</del>', '<em>$1</em>'], $out);
     return (string)preg_replace_callback('/\x01([0-9]+)\x02/', static fn($t) => $tokens[(int)$t[1]] ?? '', $out);
+}
+/**
+ * Buttons: [[words]](URL), with an optional "title" of words naming a color, an icon and the filled look in any order
+ * ([[ダウンロード]](https://… "download green")). It is ordinary Markdown, so elsewhere it is a link with a tooltip.
+ * Groups: the words, the URL, the title. Unknown words are left out, as a link's title is.
+ */
+const NL_MD_BUTTON = '\[\[([^\[\]\n]+)\]\]\(\s*<?([^\s)>]+)>?(?:\s+"([^"]*)")?\s*\)';
+/** The marks without the button: its words stay (descriptions, heading ids, search snippets). */
+const NL_MD_BUTTON_PLAIN = '/' . NL_MD_BUTTON . '/u';
+/** Colors of the palette (the theme's accent without one); each has a light and a dark tone in log.css. */
+const NL_MD_BUTTON_COLORS = ['blue', 'green', 'orange', 'red', 'purple', 'pink', 'gray'];
+/** Line icons in the alert boxes' style (24×24, round ends). */
+const NL_MD_BUTTON_ICONS = [
+    'download' => '<path d="M12 4v10.5M7.5 10l4.5 4.5 4.5-4.5M5 19.5h14"/>',
+    'link' => '<path d="M14 4.5h5.5V10M19.5 4.5 11.5 12.5"/><path d="M18 14v4.5c0 .8-.7 1.5-1.5 1.5h-11c-.8 0-1.5-.7-1.5-1.5v-11C4 6.7 4.7 6 5.5 6H10"/>',
+    'arrow' => '<path d="M5 12h13.5M13.5 7l5 5-5 5"/>',
+    'play' => '<path d="M8 5.5v13l10.5-6.5Z"/>',
+    'book' => '<path d="M3.5 5.5c3-1 5.8-.7 8.5 1.2 2.7-1.9 5.5-2.2 8.5-1.2v13c-3-1-5.8-.7-8.5 1.2-2.7-1.9-5.5-2.2-8.5-1.2Z"/><path d="M12 6.7v13"/>',
+    'mail' => '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.5 7.5 7.5 5.5 7.5-5.5"/>',
+    'cart' => '<path d="M3 4.5h2.4l2.1 10h10.2l2-7H6.4"/><circle cx="9" cy="19" r="1.4"/><circle cx="16.5" cy="19" r="1.4"/>',
+    'heart' => '<path d="M12 19.5s-7.5-4.3-7.5-9.6A4 4 0 0 1 12 7.6a4 4 0 0 1 7.5 2.3c0 5.3-7.5 9.6-7.5 9.6Z"/>',
+    'star' => '<path d="m12 3.8 2.5 5.1 5.6.8-4 4 .9 5.6-5-2.6-5 2.6.9-5.6-4-4 5.6-.8Z"/>',
+    'home' => '<path d="M3.8 11 12 4.3l8.2 6.7"/><path d="M6.2 9.3v10.2h11.6V9.3"/><path d="M10 19.5v-5h4v5"/>',
+];
+/** The words a title may hold, English and Japanese, and what each one sets. */
+const NL_MD_BUTTON_WORDS = [
+    'blue' => 'blue', '青' => 'blue', 'green' => 'green', '緑' => 'green', 'orange' => 'orange', '橙' => 'orange', 'オレンジ' => 'orange',
+    'red' => 'red', '赤' => 'red', 'purple' => 'purple', '紫' => 'purple', 'pink' => 'pink', 'ピンク' => 'pink', '桃' => 'pink',
+    'gray' => 'gray', 'grey' => 'gray', '灰' => 'gray', 'グレー' => 'gray',
+    'download' => 'download', 'ダウンロード' => 'download', 'link' => 'link', 'external' => 'link', 'リンク' => 'link', '外部' => 'link',
+    'arrow' => 'arrow', '矢印' => 'arrow', '次へ' => 'arrow', 'play' => 'play', '再生' => 'play', '動画' => 'play',
+    'book' => 'book', '本' => 'book', '読む' => 'book', 'mail' => 'mail', 'メール' => 'mail', 'cart' => 'cart', 'shop' => 'cart', 'カート' => 'cart', '購入' => 'cart',
+    'heart' => 'heart', 'ハート' => 'heart', '応援' => 'heart', 'star' => 'star', '星' => 'star', 'スター' => 'star', 'home' => 'home', 'ホーム' => 'home',
+    'none' => 'none', 'なし' => 'none', 'solid' => 'solid', 'fill' => 'solid', '塗り' => 'solid',
+];
+/** Addresses of files to save: such a button shows the download icon when its title names none. */
+const NL_MD_BUTTON_FILE = '/\.(?:zip|7z|rar|lzh|tar|gz|tgz|bz2|xz|exe|msi|dmg|pkg|appimage|deb|rpm|apk|ipa|pdf|epub|cbz)(?:[?#]|\z)/i';
+function nl_md_button(string $words, string $url, string $title, bool $admin, bool $links): string
+{
+    $label = nl_md_inline($words, $admin, false);
+    $href = $links ? nl_md_url($url) : '';
+    if ($href === '') return $label;
+    $color = ''; $icon = ''; $solid = false;
+    foreach (preg_split('/[\s,、，・]+/u', mb_strtolower(trim($title), 'UTF-8'), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $word) {
+        $set = NL_MD_BUTTON_WORDS[$word] ?? '';
+        if (in_array($set, NL_MD_BUTTON_COLORS, true)) $color = $set;
+        elseif ($set === 'solid') $solid = true;
+        elseif ($set !== '') $icon = $set;
+    }
+    if ($icon === '') $icon = str_starts_with(strtolower($href), 'mailto:') ? 'mail' : (preg_match(NL_MD_BUTTON_FILE, (string)parse_url($href, PHP_URL_PATH)) ? 'download' : '');
+    if ($icon === 'none') $icon = '';
+    return '<a class="log-button' . ($color !== '' ? ' log-button-' . $color : '') . ($solid ? ' log-button-solid' : '') . '" href="' . h($href) . '"'
+        . ($icon !== '' ? ' data-icon="' . $icon . '"' : '') . (preg_match('~\Ahttps?://~i', $href) ? ' rel="noopener noreferrer"' : '') . '>'
+        . ($icon !== '' ? '<svg class="log-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . NL_MD_BUTTON_ICONS[$icon] . '</svg>' : '')
+        . '<span class="log-button-label">' . $label . '</span></a>';
 }
 /**
  * The table of contents of an article or page: with NL_TOC_MIN headings or more (and the setting not "off"),
@@ -426,7 +483,7 @@ function nl_md_image_origins(string $html): string
 /** Plain text of a page for its description: Markdown marks and URLs removed. */
 function nl_page_excerpt(array $p, int $length = 120): string
 {
-    $text = (string)preg_replace([NL_MD_ALERT_MARK, NL_FRAME_MARK, '/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '', '', '$1', '', '', '', ''], nl_ruby_plain($p['body']));
+    $text = (string)preg_replace([NL_MD_ALERT_MARK, NL_FRAME_MARK, '/^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1/ms', '/!\[[^\]]*\]\([^)]*\)/u', NL_MD_BUTTON_PLAIN, '/\[([^\]]*)\]\([^)]*\)/u', '~https?://\S+~u', '/^ {0,3}(?:#{1,6}|>|[-*+]|[0-9]+[.)])[ \t]+/mu', '/^[\s|:-]+$/mu', '/[*_~`|]/u'], ['', '', '', '', '$1', '$1', '', '', '', ''], nl_ruby_plain($p['body']));
     $text = trim((string)preg_replace('/\s+/u', ' ', $text));
     return mb_strlen($text) > $length ? rtrim(mb_substr($text, 0, $length - 1)) . '…' : $text;
 }
@@ -464,6 +521,7 @@ function nl_page_help(): string
         [nm_t('|親文字《ルビ》'), nm_t('ルビ（読み仮名）。漢字だけなら | は省けます（漢字《かんじ》）。表の中では全角の ｜ を使います')],
         [nm_t('- 項目 / 1. 項目'), nm_t('箇条書きと番号付きリスト。行頭に空白2つで入れ子')],
         [nm_t('[文字](https://example.com/)'), nm_t('リンク。./privacy や ./?pg=privacy のようなサイト内のURLも使えます')],
+        [nm_t('[[ダウンロード]](https://…') . ' "download green")', nm_t('ボタン。URLの後ろの引用符の中に、色（blue・green・orange・red・purple・pink・gray）、アイコン（download・link・arrow・play・book・mail・cart・heart・star・home）、塗り（solid）を空白で区切って書けます。どれも省けます')],
         [nm_t('![説明](./?media=…)'), nm_t('画像。「画像を追加」かドロップで入ります')],
         ['> ' . nm_t('引用'), nm_t('引用')],
         ['> [!NOTE]<br>> ' . nm_t('本文'), nm_t('注意書きの箱（GitHubと同じ書き方）。NOTE・TIP・IMPORTANT・WARNING・CAUTION の5種類')],

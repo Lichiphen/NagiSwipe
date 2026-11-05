@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.14.1](https://img.shields.io/badge/NagiLog-v0.14.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.14.1](https://img.shields.io/badge/NagiManga-v0.14.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.14.2](https://img.shields.io/badge/NagiLog-v0.14.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.14.2](https://img.shields.io/badge/NagiManga-v0.14.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -41,6 +41,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
   - [投稿のMarkdown](#投稿のmarkdown)
   - [ルビ（読み仮名）](#ルビ読み仮名)
   - [注意書きと図（Mermaid）](#注意書きと図mermaid)
+  - [ボタン](#ボタン)
 - [閲覧注意（センシティブ・R-18・R-18G）](#閲覧注意センシティブr-18r-18g)
 - [SNSや動画の埋め込み](#snsや動画の埋め込み)
   - [ブログカード](#ブログカード)
@@ -97,7 +98,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.14.1（NagiManga v0.14.1に同梱） |
+| 版 | 0.14.2（NagiManga v0.14.2に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -235,7 +236,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.14.1.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.14.2.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、FTP で `data/setup-key.php` に書いてある「セットアップの鍵」を貼り付けて、管理者パスワードを決めます。「おもに使うもの」は **NagiLog** を選ぶと、ログインしたときに LOG・投稿の画面が開きます。
 3. 表示された管理用URLをブックマークします。初めてログインすると、パスキーか二段階認証の設定をすすめるダイアログが出ます。できるだけ、ここで設定してください。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -436,7 +437,7 @@ PHPのファイル名をURLから外すだけで、安全性が高まるわけ�
 | 画像・動画・音声を追加・メディア一覧から選ぶ | 本文のカーソル位置に置きます（下の説明）。動画・音声も同じ列に並びます。 |
 | 漫画を選ぶ | 本文のカーソル位置に漫画のタグを入れます。 |
 | B・I・リンク | 選んだ文字を太字・斜体・リンクにします。同じボタンをもう一度押すと太字・斜体は外れます。 |
-| 装飾（Aと3本線） | 見出し・取り消し線・コード・ルビ・箇条書き・番号付きリスト・引用・表・区切り線・コードブロックを選ぶ画面を開きます（下の「見出し」「投稿のMarkdown」）。スマホでも道具の列が長くならないよう、ここにまとめています。 |
+| 装飾（Aと3本線） | 見出し・取り消し線・コード・ルビ・箇条書き・番号付きリスト・引用・表・区切り線・コードブロック・ボタンを選ぶ画面を開きます（下の「見出し」「投稿のMarkdown」）。スマホでも道具の列が長くならないよう、ここにまとめています。 |
 | #・フォルダー・注意の三角・? | 最近のハッシュタグ、カテゴリ、閲覧注意、使い方を、道具の列の下に1つずつ開きます。 |
 | 目 | プレビューを開く・閉じる。 |
 
@@ -571,6 +572,30 @@ Markdownを書かない場合は、投稿欄の「装飾」を使います。押
 - 図の右上の「拡大」で、図を画面いっぱいに開きます。最初は図そのものの大きさで、縦横にスクロールできます。「−」「＋」（Ctrl＋ホイール、キーボードの `-` `+` でも）で大きさを変え、％の数字を押すと画面に合わせます。スマホで細かい図を読むときに使います。
 - 書き間違いで描けない図は、読めなかった行と元の文を表示します。
 - 投稿欄・固定ページの「装飾」の「注意書き」と「まとまり › 図（Mermaid）」から入れられます。
+
+### ボタン
+
+投稿・固定ページの本文で、リンクの文字を `[[ ]]` で二重に囲むと、ボタンになります（v0.14.2 以降）。普通のMarkdownとしても正しい書き方なので、GitHubなどほかの場所に貼っても崩れません（角かっこ付きのリンクになります）。
+
+| 書き方 | 表示 |
+| --- | --- |
+| `[[詳しく見る]](https://example.com/)` | テーマの色のボタン |
+| `[[ダウンロード]](https://example.com/app.zip "download green")` | 緑のボタン、左にダウンロードのアイコン |
+| `[[応援する]](https://example.com/ "heart pink solid")` | ピンクの塗りのボタン、左にハートのアイコン |
+
+URLの後ろの引用符の中に、次の名前を空白で区切って、好きな順に書きます。どれも省けます。日本語の名前でも書けます。
+
+| 種類 | 名前 |
+| --- | --- |
+| 色 | `blue`（青）・`green`（緑）・`orange`（橙）・`red`（赤）・`purple`（紫）・`pink`（ピンク）・`gray`（灰）。書かなければテーマの色 |
+| アイコン | `download`（ダウンロード）・`link`（外部）・`arrow`（矢印）・`play`（再生）・`book`（本）・`mail`（メール）・`cart`（購入）・`heart`（ハート）・`star`（星）・`home`（ホーム）・`none`（なし） |
+| 塗り | `solid`（塗り）。書かなければ淡い色のボタン |
+
+- アイコンを書かなくても、`.zip` `.exe` `.pdf` `.epub` などのファイルへのボタンにはダウンロードのアイコン、`mailto:` のボタンにはメールのアイコンを付けます。付けたくないときは `none` と書きます。
+- 1行に並べたボタンは横に並び、狭い画面では折り返します。文の途中にも置けます。
+- 知らない名前は無視します。URLに使えるもの（サイト内のURL・`mailto:`・`tel:` を含む）は普通のリンクと同じです。
+- 投稿欄・固定ページの「装飾 › ボタン」で、選んだ文字やURLからボタンを作れます。色は引用符の中に書き足します。
+- 追加CSSでは `.log-button`（全体）、`.log-button-icon`、`.log-button-green` などで見た目を変えられます。`--button` で色を変えられます。
 
 ## 閲覧注意（センシティブ・R-18・R-18G）
 
@@ -1106,6 +1131,17 @@ LOG用のバックアップZIPには、追加CSSと適用のオン・オフを�
 | `.log-frame-stage` | ページ埋込の枠（読み込む前は表紙、押すとページ） | 記事のページ・固定ページ | `.log-frame-stage { border-radius: 0; }` | v0.11.0 |
 | `.log-frame-play` | ページ埋込の表紙の「ページを読み込む」ステッカー | 記事のページ・固定ページ | `.log-frame-play { transform: none; }` | v0.11.0 |
 | `.log-frame-bar` | ページ埋込の下の行（別のタブで開くリンクと「全画面」ボタン） | 記事のページ・固定ページ | `.log-frame-bar { font-size: 13px; }` | v0.11.0 |
+| `.log-button` | ボタン（[[文字]](URL)）。--button で色、--button-ink でアイコンの色を変えられます | 記事のページ・固定ページ | `.log-button { border-radius: 10px; }` | v0.14.2 |
+| `.log-button-icon` | ボタンの左の丸いアイコン | 記事のページ・固定ページ | `.log-button-icon { width: 26px; height: 26px; }` | v0.14.2 |
+| `.log-button-label` | ボタンの文字 | 記事のページ・固定ページ | `.log-button-label { letter-spacing: 0; }` | v0.14.2 |
+| `.log-button-solid` | 塗りのボタン（solid） | 記事のページ・固定ページ | `.log-button-solid { box-shadow: none; }` | v0.14.2 |
+| `.log-button-blue` | 青のボタン（blue） | 記事のページ・固定ページ | `.log-button-blue { --button: #0969da; }` | v0.14.2 |
+| `.log-button-green` | 緑のボタン（green） | 記事のページ・固定ページ | `.log-button-green { --button: #1a7f37; }` | v0.14.2 |
+| `.log-button-orange` | 橙のボタン（orange） | 記事のページ・固定ページ | `.log-button-orange { --button: #bc4c00; }` | v0.14.2 |
+| `.log-button-red` | 赤のボタン（red） | 記事のページ・固定ページ | `.log-button-red { --button: #cf222e; }` | v0.14.2 |
+| `.log-button-purple` | 紫のボタン（purple） | 記事のページ・固定ページ | `.log-button-purple { --button: #8250df; }` | v0.14.2 |
+| `.log-button-pink` | ピンクのボタン（pink） | 記事のページ・固定ページ | `.log-button-pink { --button: #bf3989; }` | v0.14.2 |
+| `.log-button-gray` | 灰色のボタン（gray） | 記事のページ・固定ページ | `.log-button-gray { --button: #57606a; }` | v0.14.2 |
 
 **CSS変数**
 
@@ -1831,6 +1867,15 @@ python manga/dev/contrast_audit.py
 | --- | --- |
 | 管理画面の配色 | 管理画面のどのページも LOG で選んだテーマの色・角丸・影で表示され、OS のダークモードでは切り替わらないこと。6 テーマで文字と背景のコントラストが今までより下がっていないこと（`dev/contrast_audit.py`） |
 | 既存の試験 | log_test 223、attack_test 206、追加CSS 104、追加CSSのブラウザー 119、管理メニュー 220、NagiScope のブラウザー 52、ログイン 43 項目を通過 |
+
+2026年11月5日の v0.14.2（本文のボタン `[[文字]](URL)`）で、次を確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| ボタン（`dev/log_feature_test.py`） | 機能 106項目通過。色の名前とファイルへのダウンロードのアイコン、色・アイコン・塗りを順不同で書けること、知らない名前を無視すること、サイト内のURL、`none`、`javascript:` をボタンにしないこと、コードの中は記号のまま、説明文には文字だけ |
+| 英語表示（`dev/log_en_test.py`） | 24項目通過。ページ埋込・注意書き・図・ボタンの入った記事に日本語が残らず、英語の見出しで描くこと |
+| ブラウザー | Playwright の Chromium と WebKit（iPhone 13）で、6つのテーマのうち明るいもの2つと暗いもの2つ、パソコン幅とスマホ幅。塗りのボタンの文字のコントラストは、明るいテーマで 4.6 以上、暗いテーマで 7.6 以上 |
+| 既存の試験 | 27本すべて通過（翻訳 4113 項目を含む） |
 
 ## 参照元と文章
 

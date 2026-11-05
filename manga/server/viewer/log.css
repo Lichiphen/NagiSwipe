@@ -617,6 +617,31 @@ html[data-log-theme^="dark"] .markdown-alert-icon { color:var(--alert); }
 .markdown-alert > :last-child { margin-bottom:0; }.log-page-body .markdown-alert { margin:32px 0 1.15em; }
 .markdown-alert blockquote,.markdown-alert code { background:var(--log-card); }
 @media(prefers-reduced-motion:reduce) { .markdown-alert-title { transition:none; }.markdown-alert:hover .markdown-alert-title { transform:translateY(-55%) rotate(-3deg); } }
+/*
+ * Buttons ([[words]](URL "color icon solid")): a soft tinted pill in the theme's accent or a palette color, with the
+ * icon in a round badge like the alerts' stickers. Buttons on one line sit side by side and wrap on a phone.
+ * --button is the color, --button-ink the icon (and the filled button's words) on it.
+ */
+.log-button { --button:var(--log-accent); --button-ink:var(--log-on-accent); display:inline-flex; align-items:center; gap:8px; box-sizing:border-box; min-height:42px; max-width:100%; margin:5px 3px; padding:6px 20px; vertical-align:middle; border:1.5px solid color-mix(in srgb,var(--button) 32%,var(--log-line)); border-radius:999px; background:color-mix(in srgb,var(--button) 8%,var(--log-card)); box-shadow:0 2px 0 color-mix(in srgb,var(--button) 20%,transparent); font-size:15px; font-weight:700; line-height:1.4; letter-spacing:.03em; overflow-wrap:anywhere; transition:transform .3s cubic-bezier(.34,1.56,.64,1),background-color .2s,box-shadow .2s; }
+.log-button,.log-site a.log-button,.log-site a.log-button:hover { color:color-mix(in srgb,var(--button) 80%,var(--log-text)); text-decoration:none; }
+.log-button[data-icon] { padding-left:6px; }.log-button-label { min-width:0; }
+.log-button-blue { --button:#2f6fd6; --button-ink:#fff; }.log-button-green { --button:#177f43; --button-ink:#fff; }.log-button-orange { --button:#a85f00; --button-ink:#fff; }.log-button-red { --button:#d1343a; --button-ink:#fff; }.log-button-purple { --button:#7c4ddb; --button-ink:#fff; }.log-button-pink { --button:#cc3d7a; --button-ink:#fff; }.log-button-gray { --button:#66717f; --button-ink:#fff; }
+html[data-log-theme^="dark"] .log-button-blue { --button:#7fb0ff; --button-ink:#10192d; }html[data-log-theme^="dark"] .log-button-green { --button:#5fcf8c; --button-ink:#0f2a1b; }html[data-log-theme^="dark"] .log-button-orange { --button:#f0b04d; --button-ink:#2e1f05; }html[data-log-theme^="dark"] .log-button-red { --button:#ff8a8f; --button-ink:#33100f; }html[data-log-theme^="dark"] .log-button-purple { --button:#b99cff; --button-ink:#1f1338; }html[data-log-theme^="dark"] .log-button-pink { --button:#ff8fc0; --button-ink:#381021; }html[data-log-theme^="dark"] .log-button-gray { --button:#aeb6c2; --button-ink:#1b1f25; }
+.log-button-icon { flex:none; box-sizing:border-box; width:30px; height:30px; padding:6px; border-radius:50%; background:var(--button); color:var(--button-ink); fill:none; stroke:currentColor; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; transition:transform .35s cubic-bezier(.34,1.56,.64,1); }
+.log-button:hover { background:color-mix(in srgb,var(--button) 15%,var(--log-card)); box-shadow:0 4px 0 color-mix(in srgb,var(--button) 22%,transparent); transform:translateY(-2px); }
+.log-button:hover .log-button-icon { transform:rotate(-10deg) scale(1.08); }
+.log-button[data-icon="download"]:hover .log-button-icon { transform:translateY(2px) scale(1.08); }
+.log-button[data-icon="arrow"]:hover .log-button-icon,.log-button[data-icon="link"]:hover .log-button-icon { transform:translateX(2px) scale(1.08); }
+.log-button:active { box-shadow:0 0 0 transparent; transform:translateY(1px); transition-duration:.1s; }
+.log-button:focus-visible { outline:3px solid color-mix(in srgb,var(--button) 55%,transparent); outline-offset:2px; }
+/* Filled: the color itself, the badge turned to the card's color. */
+.log-button-solid,.log-site a.log-button-solid,.log-site a.log-button-solid:hover { border-color:transparent; background:var(--button); color:var(--button-ink); }
+.log-button-solid { box-shadow:0 3px 0 color-mix(in srgb,var(--button) 55%,#000),0 6px 14px #0000001a; }
+.log-button-solid:hover,.log-site a.log-button-solid:hover { background:color-mix(in srgb,var(--button) 88%,#fff); box-shadow:0 5px 0 color-mix(in srgb,var(--button) 55%,#000),0 8px 18px #00000021; }
+.log-button-solid .log-button-icon { background:var(--log-card); color:color-mix(in srgb,var(--button) 88%,#000); }
+html[data-log-theme^="dark"] .log-button-solid .log-button-icon { color:var(--button); }
+@media(prefers-reduced-motion:reduce) { .log-button,.log-button-icon { transition:none; }.log-button:hover,.log-button:active,.log-button:hover .log-button-icon { transform:none; } }
+@media print { .log-button { box-shadow:none; } }
 /* Diagrams (```mermaid, drawn by viewer/log-mermaid.js): fitted to the column, 拡大 on the frame's corner like COPY. */
 .log-mermaid { position:relative; margin:22px 0 .5em; padding:20px 14px 14px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); }
 .log-page-body .log-mermaid { margin:26px 0 1.15em; }
