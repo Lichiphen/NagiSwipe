@@ -1,0 +1,6 @@
+<!-- Original UI artwork. MIT License (c) 2026 Lichiphen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M9 17.5V6.5l10-2v11M9 9.5l10-2"/>
+  <circle cx="6.75" cy="17.5" r="2.25"/>
+  <circle cx="16.75" cy="15.5" r="2.25"/>
+</svg>

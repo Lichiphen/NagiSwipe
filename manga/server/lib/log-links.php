@@ -3,7 +3,9 @@
 declare(strict_types=1);
 if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
-const NL_LINK_ICONS = ['conversation' => '会話・短文', 'pictures' => '写真・画像', 'sky-network' => '空・通信', 'code-branch' => 'コード・分岐', 'film' => '動画・映像', 'mail' => 'メール', 'link' => '一般リンク'];
+const NL_LINK_ICONS = ['conversation' => '会話・短文', 'pictures' => '写真・画像', 'sky-network' => '空・通信', 'code-branch' => 'コード・分岐', 'film' => '動画・映像',
+    'game' => 'ゲーム', 'app' => 'アプリ・ツール', 'home' => 'ホームページ', 'pen' => 'ブログ・文章', 'palette' => 'イラスト・作品集', 'book' => '本・小説・漫画', 'music' => '音楽・音声',
+    'broadcast' => '配信・ライブ', 'shop' => 'ショップ・販売', 'heart' => '支援・応援', 'download' => 'ダウンロード・配布', 'person' => 'プロフィール', 'mail' => 'メール', 'link' => '一般リンク'];
 const NL_LINKS_MESSAGE_MAX = 300;
 
 function nl_links_default_item(): array
@@ -83,12 +85,13 @@ function nl_links_html(array $item, array $s): string
 }
 function nl_link_edit_row(array $link): string
 {
-    $options = '';
-    foreach (NL_LINK_ICONS as $key => $label) $options .= '<option value="' . $key . '"' . ($link['icon'] === $key ? ' selected' : '') . '>' . h(nm_t($label)) . '</option>';
-    return '<div class="log-link-edit-row" data-link-item><span class="log-link-edit-preview" data-link-preview>' . nl_link_icon($link['icon']) . '</span>'
+    $icon = isset(NL_LINK_ICONS[$link['icon']]) ? $link['icon'] : 'link';
+    return '<div class="log-link-edit-row" data-link-item><span class="log-link-edit-preview" data-link-preview>' . nl_link_icon($icon) . '</span>'
         . '<label class="log-link-edit-label">' . nm_t('表示名') . '<input data-link-label maxlength="100" required placeholder="' . nm_t('例：X') . '" value="' . h($link['label']) . '"></label>'
         . '<label class="log-link-edit-url">' . nm_t('URL・メール') . '<input data-link-url maxlength="2000" required placeholder="' . nm_t('https://example.com/your-profile または you@example.com') . '" value="' . h(nl_link_edit_url($link['url'])) . '"></label>'
-        . '<label class="log-link-edit-icon">' . nm_t('アイコン') . '<select data-link-icon>' . $options . '</select></label><div class="log-link-edit-actions">'
+        // A palette of drawn icons instead of a <select>, which cannot show pictures (log-settings.js opens it).
+        . '<div class="log-link-edit-icon"><span class="log-link-edit-caption">' . nm_t('アイコン') . '</span><button class="btn log-link-icon-open" type="button" data-link-icon-open aria-expanded="false"><span data-link-icon-name>' . h(nm_t(NL_LINK_ICONS[$icon])) . '</span>' . nm_icon('sb-down', 'log-ui-icon') . '</button>'
+        . '<input type="hidden" data-link-icon value="' . $icon . '"></div><div class="log-link-edit-actions">'
         . '<button class="btn log-icon-btn" type="button" data-link-step="-1" aria-label="' . nm_t('リンクを上へ移動') . '">' . nl_sidebar_ui_icon('up') . '</button><button class="btn log-icon-btn" type="button" data-link-step="1" aria-label="' . nm_t('リンクを下へ移動') . '">' . nl_sidebar_ui_icon('down') . '</button>'
         . '<button class="btn log-icon-btn danger" type="button" data-link-remove aria-label="' . nm_t('このリンクを削除') . '">' . nl_sidebar_ui_icon('remove') . '</button></div></div>';
 }
@@ -96,7 +99,7 @@ function nl_links_editor(array $item): string
 {
     $rows = ''; $icons = '';
     foreach ($item['links'] as $link) $rows .= nl_link_edit_row($link);
-    foreach (array_keys(NL_LINK_ICONS) as $key) $icons .= '<span data-link-icon-source="' . $key . '">' . nl_link_icon($key) . '</span>';
+    foreach (NL_LINK_ICONS as $key => $name) $icons .= '<span data-link-icon-source="' . $key . '" data-name="' . h(nm_t($name)) . '">' . nl_link_icon($key) . '</span>';
     return '<details class="log-sidebar-editor log-links-editor"><summary>' . nm_t('プロフィールとリンクを編集') . '</summary><div class="log-sidebar-editor-body">'
         . '<fieldset class="log-links-profile"><legend>' . nm_t('プロフィール') . '</legend><label class="check"><input type="checkbox" data-links-frame' . (($item['icon_frame'] ?? true) ? ' checked' : '') . '>' . nm_t('アイコンにフチを付ける') . '</label>'
         . '<label class="check"><input type="checkbox" data-links-name' . (($item['show_name'] ?? true) ? ' checked' : '') . '>' . nm_t('アイコンの下に名前を表示する') . '</label><p class="note">' . nm_t('名前は「LOGのデザイン・アイコン」の「名前」に入れたものを使います。') . '</p>'

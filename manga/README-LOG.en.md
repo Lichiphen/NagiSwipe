@@ -1347,7 +1347,8 @@ Links can be added, deleted and moved up and down.
 The initial URLs are the top pages of X, Instagram, Bluesky, GitHub and YouTube.
 Rewrite, for example, X's URL into your profile URL.
 
-The SVG icons are original drawings of a conversation, a photo, sky and communication, a code branch, film, an envelope (mail) and a general link.
+The SVG icons are original drawings of a conversation, a photo, sky and communication, a code branch, film, a game controller, apps, a house (home page), a pen (blog), a palette (illustration), a book, music notes, waves (streams), a bag (shop), a heart (support), a download, a person (profile), an envelope (mail) and a general link. They are not modelled on any game console or service logo.
+Pressing the "Icon" field opens the list of icons. Pointing at one or touching it shows it large, together with how the button will look on the public page; pressing it uses it.
 For mail, write only the address, such as `you@example.com`, in the "URL / mail" field and choose the "mail" icon. `mailto:` can be included too.
 Visitors who press the mail button get a dialog showing the address. They choose "アドレスをコピー" (copy the address) or "メールアプリで送信" (send with the mail app, the default one).
 Without JavaScript, the default mail app opens directly. Subjects (`?subject=`) and several recipients cannot be used.
@@ -1364,13 +1365,13 @@ Showing the login link is switched only by this "Log in / Admin page" switch. Th
 
 Open "上級者向け：HTML枠を追加" (advanced: add an HTML box), choose a template and add it.
 There is no fixed number of boxes. The same template can be called again and again.
-Grid links are two columns of links; banner links are picture links without a frame or background.
+Grid links are a list of links shown with a small arrow and text, without a box around each. "Grid link layout" chooses two per row or one per row (one per row reads better for long names). Banner links are picture links without a frame or background.
 After adding, rewrite the link targets, picture URLs and text with your own.
 An empty heading hides the heading. "枠と背景を表示する" (show the frame and background) can be changed too.
 
 HTML boxes can use links, pictures, headings, paragraphs, lists and bold.
 script, iframe, forms, event attributes and style attributes are removed when saving.
-The layout classes `log-link-grid`, `log-banner-link` and `log-banner` can be used.
+The layout classes `log-link-grid`, `log-link-grid-1` (grid links one per row), `log-banner-link` and `log-banner` can be used.
 Headings up to 100 characters, one box's HTML up to 50KB after cleaning, all together up to 1MB.
 If another screen saved first, it does not overwrite; your changes stay in the edit field and it tells you to open the screen again.
 Copy unsaved HTML somewhere before reopening the screen.

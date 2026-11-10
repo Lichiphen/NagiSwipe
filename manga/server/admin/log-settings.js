@@ -41,10 +41,133 @@
     const rows = () => Array.from(group.children);
     const dirty = () => { status.textContent = t('未保存の変更があります。画面の下の「設定を保存」で反映します。'); form.dispatchEvent(new Event('settings:change', {bubbles: true})); };
     const count = editor => { editor.closest('[data-sidebar-item]').querySelector('[data-sidebar-chip]').textContent = t('{n}件のリンク', { n: editor.querySelector('[data-link-items]').children.length }); };
-    const preview = select => {
-        const source = select.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelector(`[data-link-icon-source="${select.value}"] svg`);
-        if (source) select.closest('[data-link-item]').querySelector('[data-link-preview]').replaceChildren(source.cloneNode(true));
+    // Link icons: a palette of the drawings (a <select> cannot show them). Pointing at or touching one shows it large
+    // with how the link button will look; pressing it chooses it. The value lives in the hidden [data-link-icon].
+    const iconSource = (row, key) => row.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelector(`[data-link-icon-source="${key}"]`);
+    const svgOf = source => source.querySelector('svg').cloneNode(true);
+    const hint = (row, key) => {
+        const panel = row.querySelector('[data-link-icon-picker]'), source = iconSource(row, key);
+        if (!panel || !source) return;
+        panel.querySelector('[data-hint-big]').replaceChildren(svgOf(source));
+        panel.querySelector('[data-hint-name]').textContent = source.dataset.name;
+        panel.querySelector('[data-hint-chosen]').textContent = key === row.querySelector('[data-link-icon]').value ? t('（選んでいます）') : '';
+        const sample = panel.querySelector('[data-hint-sample]');
+        sample.replaceChildren(svgOf(source), Object.assign(document.createElement('span'), {textContent: row.querySelector('[data-link-label]').value.trim() || source.dataset.name}));
     };
+    const choose = (row, key) => {
+        const source = iconSource(row, key);
+        if (!source) return;
+        row.querySelector('[data-link-icon]').value = key;
+        row.querySelector('[data-link-preview]').replaceChildren(svgOf(source));
+        row.querySelector('[data-link-icon-name]').textContent = source.dataset.name;
+        row.querySelectorAll('[data-link-icon-choice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.linkIconChoice === key)));
+        hint(row, key); dirty();
+    };
+    const closePicker = (row, focus = false) => {
+        const panel = row?.querySelector('[data-link-icon-picker]');
+        if (!panel) return;
+        panel.remove();
+        const open = row.querySelector('[data-link-icon-open]');
+        open.setAttribute('aria-expanded', 'false');
+        if (focus) open.focus();
+    };
+    let pickers = 0;
+    const openPicker = row => {
+        form.querySelectorAll('[data-link-icon-picker]').forEach(p => closePicker(p.closest('[data-link-item]')));
+        const el = (tag, className, attrs = {}) => Object.assign(document.createElement(tag), className ? {className} : {}, attrs);
+        const panel = el('div', 'log-link-icon-picker', {id: 'log-link-icon-picker-' + (++pickers)});
+        panel.dataset.linkIconPicker = '';
+        const big = el('span', 'log-link-icon-hint-big'); big.dataset.hintBig = '';
+        const name = el('strong'); name.dataset.hintName = '';
+        const chosen = el('span', 'log-link-icon-hint-chosen'); chosen.dataset.hintChosen = '';
+        const sample = el('span', 'log-link-icon-sample'); sample.dataset.hintSample = '';
+        const caption = el('span', 'log-link-icon-hint-caption', {textContent: t('公開ページでの見え方')});
+        const title = el('span', 'log-link-icon-hint-title'); title.append(name, chosen);
+        const text = el('span', 'log-link-icon-hint-text'); text.append(title, caption, sample);
+        const hintBox = el('div', 'log-link-icon-hint'); hintBox.setAttribute('aria-live', 'polite'); hintBox.append(big, text);
+        const choices = el('div', 'log-link-icon-choices'); choices.setAttribute('role', 'group'); choices.setAttribute('aria-label', t('アイコンを選ぶ'));
+        const current = row.querySelector('[data-link-icon]').value;
+        row.closest('.log-links-editor').querySelector('[data-link-icon-set]').content.querySelectorAll('[data-link-icon-source]').forEach(source => {
+            const b = el('button', 'log-link-icon-choice', {type: 'button', title: source.dataset.name});
+            b.dataset.linkIconChoice = source.dataset.linkIconSource;
+            b.setAttribute('aria-label', source.dataset.name);
+            b.setAttribute('aria-pressed', String(source.dataset.linkIconSource === current));
+            b.append(svgOf(source));
+            choices.append(b);
+        });
+        const note = el('p', 'note', {textContent: t('マウスを合わせるか指で触れると、上に大きく表示します。押すと、そのアイコンを使います。')});
+        const close = el('button', 'btn', {type: 'button', textContent: t('閉じる')}); close.dataset.linkIconClose = '';
+        const foot = el('div', 'log-link-icon-foot'); foot.append(note, close);
+        panel.append(hintBox, choices, foot);
+        row.append(panel);
+        const open = row.querySelector('[data-link-icon-open]');
+        open.setAttribute('aria-expanded', 'true'); open.setAttribute('aria-controls', panel.id);
+        hint(row, current);
+        choices.querySelector('[aria-pressed="true"]')?.focus();
+    };
+    // Pointing, touching or moving the keyboard focus over a choice previews it; leaving the palette shows the chosen one again.
+    const peek = event => {
+        const choice = event.target.closest?.('[data-link-icon-choice]');
+        if (choice) hint(choice.closest('[data-link-item]'), choice.dataset.linkIconChoice);
+    };
+    const unpeek = event => {
+        const choices = event.target.closest?.('.log-link-icon-choices');
+        if (!choices || choices.contains(event.relatedTarget)) return;
+        const row = choices.closest('[data-link-item]');
+        hint(row, row.querySelector('[data-link-icon]').value);
+    };
+    form.addEventListener('pointerover', peek);
+    form.addEventListener('pointerdown', peek);
+    form.addEventListener('focusin', peek);
+    form.addEventListener('pointerout', event => { if (event.pointerType === 'mouse') unpeek(event); });
+    form.addEventListener('focusout', unpeek);
+    // Escape closes the open palette wherever the focus is (Safari does not focus a button when it is clicked).
+    document.addEventListener('keydown', event => {
+        const open = event.key === 'Escape' && !dragging && form.querySelector('[data-link-icon-picker]');
+        if (!open || event.target.closest?.('dialog')) return;
+        event.preventDefault(); closePicker(open.closest('[data-link-item]'), true);
+    });
+    form.addEventListener('keydown', event => {
+        const panel = event.target.closest?.('[data-link-icon-picker]');
+        if (!panel) return;
+        const choice = event.target.closest('[data-link-icon-choice]');
+        const step = {ArrowRight: 1, ArrowLeft: -1, ArrowDown: 'down', ArrowUp: 'up'}[event.key];
+        if (!choice || !step) return;
+        event.preventDefault();
+        const all = Array.from(panel.querySelectorAll('[data-link-icon-choice]')), i = all.indexOf(choice);
+        const top = choice.offsetTop, perRow = all.filter(b => b.offsetTop === top).length;
+        const next = step === 'down' ? i + perRow : step === 'up' ? i - perRow : i + step;
+        all[Math.min(all.length - 1, Math.max(0, next))].focus();
+    });
+    form.addEventListener('input', event => {
+        // The sample button shows the label being typed.
+        const row = event.target.matches('[data-link-label]') && event.target.closest('[data-link-item]');
+        if (row?.querySelector('[data-link-icon-picker]')) hint(row, row.querySelector('[data-link-icon]').value);
+    });
+    // Grid links: one or two per row is a class on the grid in the HTML (log-link-grid-1 = one per row).
+    const gridClasses = area => Array.from(area.value.matchAll(/class=(["'])([^"']*)\1/g), m => m[2].split(/\s+/)).filter(names => names.includes('log-link-grid'));
+    const syncColumns = row => {
+        const area = row?.querySelector('[data-sidebar-html]'), field = row?.querySelector('[data-sidebar-columns-field]');
+        if (!area || !field) return;
+        const grids = gridClasses(area);
+        field.hidden = !grids.length;
+        if (grids.length) field.querySelector('[data-sidebar-columns]').value = grids[0].includes('log-link-grid-1') ? '1' : '2';
+    };
+    const setColumns = (area, one) => {
+        area.value = area.value.replace(/class=(["'])([^"']*)\1/g, (all, quote, list) => {
+            const names = list.split(/\s+/).filter(Boolean);
+            if (!names.includes('log-link-grid')) return all;
+            const kept = names.filter(n => n !== 'log-link-grid-1');
+            if (one) kept.splice(kept.indexOf('log-link-grid') + 1, 0, 'log-link-grid-1');
+            return `class=${quote}${kept.join(' ')}${quote}`;
+        });
+    };
+    form.addEventListener('input', event => { if (event.target.matches('[data-sidebar-html]')) syncColumns(event.target.closest('[data-sidebar-item]')); });
+    form.addEventListener('change', event => {
+        if (!event.target.matches('[data-sidebar-columns]')) return;
+        setColumns(event.target.closest('[data-sidebar-item]').querySelector('[data-sidebar-html]'), event.target.value === '1');
+        dirty();
+    });
     const buttons = () => {
         rows().forEach((row, i, all) => {
             row.querySelector('[data-sidebar-step="-1"]').disabled = i === 0;
@@ -140,10 +263,19 @@
             dialog.showModal(); no.focus();
         });
     }
-    form.addEventListener('change', event => { if (event.target.matches('[data-link-icon]')) preview(event.target); });
     form.addEventListener('keydown', event => { if (event.key === 'Escape' && dragging) { event.preventDefault(); end(true); } });
     form.addEventListener('click', event => {
         if (dragging) return;
+        const iconOpen = event.target.closest('[data-link-icon-open]');
+        if (iconOpen) {
+            const row = iconOpen.closest('[data-link-item]');
+            if (row.querySelector('[data-link-icon-picker]')) closePicker(row); else openPicker(row);
+            return;
+        }
+        const iconChoice = event.target.closest('[data-link-icon-choice]');
+        if (iconChoice) { choose(iconChoice.closest('[data-link-item]'), iconChoice.dataset.linkIconChoice); return; }
+        const iconClose = event.target.closest('[data-link-icon-close]');
+        if (iconClose) { closePicker(iconClose.closest('[data-link-item]'), true); return; }
         const linkAdd = event.target.closest('[data-link-add]');
         if (linkAdd) {
             const editor = linkAdd.closest('.log-links-editor');

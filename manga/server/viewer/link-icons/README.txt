@@ -12,6 +12,18 @@ code-branch.svg    Source-code brackets and branching nodes (GitHub)
 film.svg           Film perforations and successive frames (YouTube)
 link.svg           Two connected chain segments (any website)
 mail.svg           A sealed envelope with folded edges (e-mail, mailto: links)
+game.svg           A generic two-grip controller with a cross pad and two dots (games)
+app.svg            Three rounded tiles and a plus (apps, tools)
+home.svg           A house with a door (a home page or website)
+pen.svg            A pencil over a writing line (blogs, writing)
+palette.svg        A paint palette with four wells (illustration, portfolios)
+book.svg           An open book (novels, manga, books)
+music.svg          Two beamed notes (music, audio)
+broadcast.svg      A point sending out two pairs of waves (live streams, radio)
+shop.svg           A carrier bag with a handle (shops, sales)
+heart.svg          A heart outline (support, fan pages)
+download.svg       An arrow going down into a tray (downloads, distribution)
+person.svg         A head and shoulders (profiles, about pages)
 bookmark-save.svg  A ribbon bookmark with a plus (Hatena Bookmark, share dialog)
 chat-bubbles.svg   Two speech bubbles talking to each other (LINE, share dialog)
 share.svg          An arrow leaving an open tray (post share button)
@@ -26,7 +38,10 @@ User-supplied HTML still cannot insert SVG.
 
 The drawings do not use the X symbol, a camera glyph, a butterfly, a cat mascot,
 a play triangle inside a rounded video-logo badge, a lettered
-speech-bubble badge or a letter mark. Do not replace them with
+speech-bubble badge or a letter mark. The controller is not modelled on any
+console's controller and carries no console button symbols; the app tiles,
+bag, palette and other new drawings are not modelled on any store, app or
+brand mark either. Do not replace them with
 official service logos when redistributing this template as original artwork.
 
 When using an icon alone, provide an accessible label in the surrounding UI.

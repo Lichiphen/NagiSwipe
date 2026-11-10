@@ -4,7 +4,7 @@ declare(strict_types=1);
 if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 const NL_SIDEBAR_BUILTINS = ['links' => 'プロフィール・リンク集', 'search' => '検索', 'login' => 'ログイン・管理ページ', 'calendar' => 'カレンダー', 'latest' => '最新ポスト', 'categories' => 'カテゴリ', 'hashtags' => 'ハッシュタグ', 'updated' => '最終更新日', 'all' => 'すべての投稿'];
-const NL_SIDEBAR_CLASSES = ['log-link-grid', 'log-banner-link', 'log-banner'];
+const NL_SIDEBAR_CLASSES = ['log-link-grid', 'log-link-grid-1', 'log-banner-link', 'log-banner'];
 
 function nl_sidebar_defaults(): array
 {
@@ -211,6 +211,13 @@ function nl_sidebar_templates(): array
         'blank' => ['title' => '自由なHTML', 'framed' => true, 'html' => '<p>ここに案内やリンクを書けます。</p>'],
     ];
 }
+/** The grid links' layout, kept as a class in the HTML (log-link-grid-1 = one link per row); log-settings.js rewrites the class and shows the field only while the HTML has a grid. */
+function nl_sidebar_columns_field(string $html): string
+{
+    $grid = (bool)preg_match('/class="(?:[^"]*\s)?log-link-grid[\s"]/', $html);
+    $one = (bool)preg_match('/class="(?:[^"]*\s)?log-link-grid-1[\s"]/', $html);
+    return '<label class="log-sidebar-columns" data-sidebar-columns-field' . ($grid ? '' : ' hidden') . '>' . nm_t('グリッドリンクの並べ方') . '<select data-sidebar-columns><option value="2"' . ($one ? '' : ' selected') . '>' . nm_t('1行に2つ並べる') . '</option><option value="1"' . ($one ? ' selected' : '') . '>' . nm_t('1行に1つずつ並べる') . '</option></select></label>';
+}
 /** Small stroke icons for the editor controls; they follow the text color. */
 function nl_sidebar_ui_icon(string $name): string
 {
@@ -226,7 +233,7 @@ function nl_sidebar_edit_row(array $item, bool $loginShown = true): string
         'search' => '<p class="note">' . nm_t('投稿の本文・タイトル・ハッシュタグ・カテゴリ名から探せる検索欄です。スマホではMENUの中に出ます。') . '</p>',
         'login' => '<p class="note">' . nm_t('公開ページのメニューに「ログイン」、ログイン中は「管理ページ」へのリンクを出します。隠しても、パスワードによる保護はそのままです。') . '</p>',
         'links' => nl_links_editor($item),
-        'html' => '<details class="log-sidebar-editor log-sidebar-html-editor"><summary>' . nm_t('HTMLと表示を編集') . '</summary><div class="log-sidebar-editor-body"><label>' . nm_t('見出し（空欄なら表示しません）') . '<input data-sidebar-title maxlength="100" value="' . h($item['title']) . '"></label><label class="check"><input type="checkbox" data-sidebar-framed' . ($item['framed'] ? ' checked' : '') . '>' . nm_t('枠と背景を表示する') . '</label><label>HTML<textarea data-sidebar-html rows="7" spellcheck="false">' . h($item['html']) . '</textarea></label><div class="log-sidebar-remove"><button class="btn danger" type="button" data-sidebar-remove>' . nl_sidebar_ui_icon('remove') . nm_t('このHTML枠を外す') . '</button><p class="note">' . nm_t('保存するまで取り消せます。外しても、リンク先や画像そのものは削除しません。') . '</p></div></div></details>',
+        'html' => '<details class="log-sidebar-editor log-sidebar-html-editor"><summary>' . nm_t('HTMLと表示を編集') . '</summary><div class="log-sidebar-editor-body"><label>' . nm_t('見出し（空欄なら表示しません）') . '<input data-sidebar-title maxlength="100" value="' . h($item['title']) . '"></label><label class="check"><input type="checkbox" data-sidebar-framed' . ($item['framed'] ? ' checked' : '') . '>' . nm_t('枠と背景を表示する') . '</label>' . nl_sidebar_columns_field($item['html']) . '<label>HTML<textarea data-sidebar-html rows="7" spellcheck="false">' . h($item['html']) . '</textarea></label><div class="log-sidebar-remove"><button class="btn danger" type="button" data-sidebar-remove>' . nl_sidebar_ui_icon('remove') . nm_t('このHTML枠を外す') . '</button><p class="note">' . nm_t('保存するまで取り消せます。外しても、リンク先や画像そのものは削除しません。') . '</p></div></div></details>',
         default => '',
     };
     return '<div class="log-sidebar-edit-row" data-sidebar-item data-sidebar-id="' . h($item['id']) . '" data-sidebar-kind="' . h($item['kind']) . '">'
@@ -248,6 +255,6 @@ function nl_sidebar_panel(): string
     return '<section class="card log-sidebar-manager" id="log-sidebar-settings"><h2>' . nm_t('サイドバー・メニュー') . '</h2><p class="note">' . nm_t('PCの右側と、スマホの「MENU」に同じ順番で表示します。左の持ち手をドラッグするか、上下ボタンで並べ替えます。スイッチをオフにすると、その項目を隠します。') . '</p>'
         // A block of the settings form; the sidebar is sent as JSON by log-settings.js, so it has no marker for sending without JavaScript.
         . '<div class="form" data-settings-section="log_sidebar" data-sidebar-manager data-revision="' . $s['revision'] . '"' . (function_exists('nm_base_url') && !empty(nm_config()['login_key']) ? ' data-login-url="' . h(nm_base_url() . '/admin/index.php?k=' . nm_config()['login_key']) . '"' : '') . '><div class="log-sidebar-list" data-sidebar-items>' . $rows . '</div>'
-        . '<details class="log-sidebar-add"><summary>' . nm_t('上級者向け：HTML枠を追加') . '</summary><div class="log-sidebar-editor-body"><p class="note">' . nm_t('テンプレートを選んで追加し、リンク先や文章、画像のURLを書き換えて使います。枠は繰り返し追加できます。グリッドリンクは2列、バナーは枠や背景を付けずに表示します。') . '</p><div class="log-sidebar-template-picker"><label>' . nm_t('テンプレート') . '<select data-sidebar-template-choice>' . $options . '</select></label><button class="btn" type="button" data-sidebar-add>' . nl_sidebar_ui_icon('add') . nm_t('HTML枠を追加') . '</button></div><p class="note">' . nm_t('リンク・画像・見出し・段落・リスト・太字を使えます。script、iframe、フォーム、イベント属性、style属性は取り除いて保存します。画像は同じサイトのURLかHTTPSのURLを使ってください。外部画像は、表示時にリンク先のサーバーから読み込みます。見出しは100文字、1枠のHTMLは50KB、全体は1MBまでです。') . '</p></div></details>'
+        . '<details class="log-sidebar-add"><summary>' . nm_t('上級者向け：HTML枠を追加') . '</summary><div class="log-sidebar-editor-body"><p class="note">' . nm_t('テンプレートを選んで追加し、リンク先や文章、画像のURLを書き換えて使います。枠は繰り返し追加できます。グリッドリンクは1行に2つか1つずつかを選べます。バナーは枠や背景を付けずに表示します。') . '</p><div class="log-sidebar-template-picker"><label>' . nm_t('テンプレート') . '<select data-sidebar-template-choice>' . $options . '</select></label><button class="btn" type="button" data-sidebar-add>' . nl_sidebar_ui_icon('add') . nm_t('HTML枠を追加') . '</button></div><p class="note">' . nm_t('リンク・画像・見出し・段落・リスト・太字を使えます。script、iframe、フォーム、イベント属性、style属性は取り除いて保存します。画像は同じサイトのURLかHTTPSのURLを使ってください。外部画像は、表示時にリンク先のサーバーから読み込みます。見出しは100文字、1枠のHTMLは50KB、全体は1MBまでです。') . '</p></div></details>'
         . '<div class="log-sidebar-save"><p class="note" data-sidebar-status role="status" aria-live="polite">' . nm_t('順番と内容は、画面の下の「設定を保存」で反映します。') . '</p><div class="log-sidebar-save-actions">' . nm_t('<a class="btn" href="../" target="_blank" rel="noopener">公開ページで確認</a>') . '</div></div><noscript><p>' . nm_t('並び替えとHTML枠の編集には、ブラウザのJavaScriptを有効にしてください。') . '</p></noscript></div>' . $examples . '</section>';
 }
