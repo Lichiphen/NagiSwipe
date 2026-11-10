@@ -2,7 +2,8 @@
 """
 Build the release package nagimanga-vX.Y.Z.zip (standard library only).
 
-    python dev/build_release.py          -> dev/results/nagimanga-vX.Y.Z.zip and .zip.sig
+    python dev/build_release.py          -> dev/results/nagimanga-vX.Y.Z.zip and .zip.sig,
+                                            plus dev/results/nagimanga.zip (the same bytes)
 
 Layout (the admin's self-update reads exactly this):
     nagimanga/...              the contents of server/ (data/ and plugins/ only with their guard files)
@@ -12,9 +13,14 @@ Layout (the admin's self-update reads exactly this):
 Attach the ZIP and its .sig to a GitHub release of Lichiphen/NagiSwipe. Installed copies find
 them through the releases API, check the ZIP against the SHA-256 GitHub shows for the asset,
 and (from 0.12.0 on) against the signature made here with the key from dev/release_sign.py.
+
+Attach nagimanga.zip to every release as well. It gives a link that never changes and always
+downloads the newest ZIP: https://github.com/Lichiphen/NagiSwipe/releases/latest/download/nagimanga.zip
+The self-update ignores it (its name has no version, so NM_UPDATE_ASSET in lib/update.php does not match).
 """
 import hashlib
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -121,12 +127,16 @@ def main():
         z.writestr("README.txt", ("﻿" + README.format(version=version)).replace("\n", "\r\n").encode("utf-8"))
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     print(f"{out}\nsha256:{digest}")
+    # The same ZIP under a fixed name, for the .../releases/latest/download/nagimanga.zip link
+    latest = out.with_name("nagimanga.zip")
+    shutil.copyfile(out, latest)
     # Installed sites refuse an update without it; --unsigned is only for local packages that are never published.
     if "--unsigned" in sys.argv:
         print("(not signed)")
         return
     sig = release_sign.sign_release(out, version)
     print(f"{sig}  <- attach to the release together with the ZIP")
+    print(f"{latest}  <- attach too (the fixed link to the newest ZIP)")
 
 
 if __name__ == "__main__":

@@ -507,7 +507,7 @@ python ../site/build.py    # ドキュメントサイトを README から作り�
 
 README の jsDelivr の URL は、そのファイルを最後に変更したコミットに固定しています（例: `…/NagiSwipe@93db749/NagiSwipe-main.js`）。コミットの URL は中身が変わらず、ファイルを変えるたびに URL も変わるので、ブラウザや jsDelivr に古いファイルが残りません。`cp scripts/post-commit.sh .git/hooks/post-commit` でフックを入れておくと、NagiSwipe-main.js / .css を変更したコミットのあとに README の URL を自動で書き換え、[ドキュメントサイト](https://nagiswipe.pages.dev/) のページ（`python site/build.py`）も作り直してコミットします（手動なら `python scripts/cachebust.py README.md README.en.md manga/README.md manga/README.en.md manga/README-LOG.md manga/README-LOG.en.md site/top.html site/top.en.html` のあと `python site/build.py`）。
 
-リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。
+リリースするときは、`lib/bootstrap.php` の `NM_VERSION` と `viewer/NagiManga.js` の `VERSION` を同じ番号に上げてから `dev/build_release.py` で ZIP を作り、GitHub のリリースに添付します。設置済みの NagiManga は、リリースの `nagimanga-vX.Y.Z.zip`（中身は `nagimanga/` フォルダ）を見て更新を知らせます。`dev/build_release.py` は同じ中身の `dev/results/nagimanga.zip` も作るので、これも毎回添付してください。`https://github.com/Lichiphen/NagiSwipe/releases/latest/download/nagimanga.zip` がいつも最新の ZIP を指すようになります（名前にバージョンがないので、自動更新はこのファイルを使いません）。
 
 番号の上げ方: 小さな修正や追加は最後の数字を上げます（0.5.0 → 0.5.1 → … → 0.5.99）。大きな更新のときだけ真ん中の数字を上げます（0.6.0）。設置済みの NagiManga は今より大きい番号のときだけ更新を知らせるので、一度出した番号より小さい番号は使いません。
 
