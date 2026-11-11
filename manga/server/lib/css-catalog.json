@@ -1593,7 +1593,8 @@
   "log-comment-name-label",
   "log-comments-form",
   "log-comments-write",
-  "log-comments-write-icon"
+  "log-comments-write-icon",
+  "log-comment-trap"
  ],
  "dynamic": [
   "is-box",

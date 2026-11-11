@@ -22,7 +22,7 @@
     const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text !== undefined) n.textContent = text; return n; };
     const pad = n => String(n).padStart(2, '0');
     const when = s => { const d = new Date(s * 1000); return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-    let data = null, me = '';
+    let data = null, me = '', ticketAt = 0;
     // The comment being answered (null: a new thread), and the form, which moves under that thread while replying.
     let replyTo = null, f = null, setReply = () => {};
 
@@ -141,7 +141,11 @@
         const send = el('button', 'log-comment-send', t('送る')); send.type = 'submit'; send.disabled = true;
         foot.append(whoEl, send);
         const status = el('p', 'log-comment-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
-        f.append(foot, status);
+        // Left empty by people (they never see it); a bot that fills every field gives itself away.
+        const trap = el('div', 'log-comment-trap'); trap.setAttribute('aria-hidden', 'true');
+        const hp = el('input'); hp.name = 'website'; hp.type = 'text'; hp.tabIndex = -1; hp.autocomplete = 'off';
+        trap.append(hp);
+        f.append(trap, foot, status);
         const ready = () => { send.disabled = !stamp && !(area && area.value.trim()); };
         setReply = c => {
             replyTo = c;
@@ -159,12 +163,16 @@
             const name = nameInput.value.trim();
             store.set('nl-comment-name', name);
             send.disabled = true; status.textContent = t('送っています…');
+            // The ticket must be a moment old: someone very quick waits that moment here instead of meeting an error.
+            const early = (data.wait || 2) * 1000 + 300 - (Date.now() - ticketAt);
+            if (early > 0) await new Promise(r => setTimeout(r, early));
             try {
                 const res = await fetch(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-NagiLog': 'comment' },
-                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '', name, re: replyTo ? replyTo.id : '' }) });
+                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '', name, re: replyTo ? replyTo.id : '', ticket: data.ticket, website: hp.value }) });
                 const out = await res.json().catch(() => ({}));
+                if (out.ticket) { data.ticket = out.ticket; ticketAt = Date.now(); }
                 if (!res.ok || !out.item) {
-                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章か名前が長すぎます。文章は{n}文字・数行、名前は{name}文字までにしてください。', { n: data.max, name: data.name_max || 16 }), full: t('この記事のコメントはいっぱいです。'), gone: t('返信先のコメントが見つかりませんでした。'), empty: t('スタンプを選ぶか、文章を書いてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
+                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章か名前が長すぎます。文章は{n}文字・数行、名前は{name}文字までにしてください。', { n: data.max, name: data.name_max || 16 }), full: t('この記事のコメントはいっぱいです。'), gone: t('返信先のコメントが見つかりませんでした。'), url: t('URLは書けません。'), old: t('ページを開いてから時間がたったため、確認し直しました。もう一度送ってください。'), empty: t('スタンプを選ぶか、文章を書いてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
                     ready(); return;
                 }
                 me = out.me; whoEl.textContent = t('あなたの印：{mark}', { mark: mark(me) });
@@ -187,7 +195,7 @@
         try {
             const res = await fetch(endpoint + '?id=' + encodeURIComponent(id), { credentials: 'same-origin', headers: key ? { 'X-NagiLog-Key': key } : {} });
             if (!res.ok) throw new Error(String(res.status));
-            data = await res.json(); me = data.me || '';
+            data = await res.json(); me = data.me || ''; ticketAt = Date.now();
             render(); form();
         } catch {
             list.replaceChildren(el('p', 'log-comments-note', t('コメントを読み込めませんでした。')));

@@ -34,6 +34,11 @@ const NL_COMMENT_TARGET = '/\A(?:pg[a-f0-9]{12}|[0-9]{14}(?:-[0-9]{2,6})?)\z/';
 const NL_COMMENT_ID = '/\A[a-f0-9]{10}\z/';
 /** The reader's own random key, kept by their browser; their shown ID is made from it. */
 const NL_COMMENT_TOKEN = '/\A[a-f0-9]{32}\z/';
+/** The ticket comment.php hands out with the comments: a write needs one at least this many seconds old, and not older than the second number. */
+const NL_COMMENT_TICKET_WAIT = 2;
+const NL_COMMENT_TICKET_LIFE = 6 * 3600;
+/** Addresses in a text or name (a scheme, www., or a name ending in a common top-level domain); checked after full-width letters are made plain. */
+const NL_COMMENT_URL = '~[a-z][a-z0-9+.\-]*://|\bwww\.|\b[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.(?:com|net|org|info|biz|xyz|top|site|online|shop|store|club|live|io|co|me|jp|ru|cn|uk|de|fr|us|tk|ml|ga|cf|gq|link|click|app|dev|pro|vip|win|bid|loan|cc|tv|ly|in|be|to|gl|gg|ws|su|pw|work|fun|space|website|icu|buzz|today|life)(?![a-z0-9])~i';
 
 function nl_comments_dir(): string { return nl_root() . '/comments'; }
 function nl_comments_index_file(): string { return nl_root() . '/comments-index.php'; }
@@ -301,6 +306,31 @@ function nl_comments_seen(): void
 
 /* ---- Readers -------------------------------------------------------------------------------- */
 
+/* ---- Against bots: nothing for a reader to do ---------------------------------------------------- */
+
+/** A ticket for writing on $id, signed with the site's secret: "time.mac". Sent with the comments (GET comment.php). */
+function nl_comment_ticket(string $id, ?int $time = null): string
+{
+    $time ??= time();
+    return $time . '.' . substr(hash_hmac('sha256', 'log-comment-ticket|' . $id . '|' . $time, (string)(nm_config()['secret'] ?? '')), 0, 24);
+}
+/**
+ * '' when the ticket is good, else a short code: 'fast' (sent sooner than a person could, or by a script that never opened the page),
+ * 'old' (the page was open for hours: the script gets a new ticket).
+ */
+function nl_comment_ticket_check(string $id, mixed $ticket): string
+{
+    if (!is_string($ticket) || !preg_match('/\A([0-9]{10})\.[a-f0-9]{24}\z/', $ticket, $m) || !hash_equals(nl_comment_ticket($id, (int)$m[1]), $ticket)) return 'fast';
+    $age = time() - (int)$m[1];
+    if ($age < NL_COMMENT_TICKET_WAIT) return 'fast';
+    return $age > NL_COMMENT_TICKET_LIFE ? 'old' : '';
+}
+/** True when a reader's text or name holds an address (full-width letters count too). */
+function nl_comment_has_url(string $text): bool
+{
+    return $text !== '' && preg_match(NL_COMMENT_URL, mb_convert_kana($text, 'as', 'UTF-8')) === 1;
+}
+
 /** The ID shown beside a comment: made from the reader's key, so a changing IP address keeps it and nobody else can show it. */
 function nl_comment_uid(string $token): string
 {
@@ -372,6 +402,8 @@ function nl_comment_add(string $id, array $in): array
     $re = is_string($in['re'] ?? null) ? $in['re'] : '';
     if ($text !== '' && !$s['comment_text']) throw new UnexpectedValueException('form');
     if ($stamp === '' && $text === '') throw new UnexpectedValueException('empty');
+    // Addresses are what spam is for: they are never taken (the owner's own replies may have them).
+    if (nl_comment_has_url($text) || nl_comment_has_url($name)) throw new UnexpectedValueException('url');
     $c = ['id' => bin2hex(random_bytes(5)), 't' => time(), 'uid' => nl_comment_uid($token), 'name' => $name, 'icon' => $icon, 'stamp' => $stamp, 'text' => $text, 'to' => '', 're' => '', 'st' => 'ok', 'net' => nl_comment_net()];
     return nm_with_lock('log-comments', static function () use ($id, $c, $re) {
         $items = nl_comments_read($id);
@@ -533,6 +565,7 @@ function nl_comments_settings_panel(): string
         . '<fieldset class="log-visibility"><legend>' . nm_t('名前と印') . '</legend><p class="note">' . nm_t('読者のブラウザーに推測できない合言葉を保存し、そこから作った印（◆と6文字）を名前の横に出します。スマホでIPアドレスが変わっても同じ印のままで、ほかの人は同じ印を出せません。名前は任意（{n}文字まで）で、同じ名前を名乗られても印で見分けられます。合言葉をなくす（ブラウザーのデータを消す）と、印が変わります。', ['n' => NL_COMMENT_NAME_MAX]) . '</p>'
         . '<p class="note">' . nm_t('名前の付いたコメントは、その名前を一度承認するまで公開しません（スタンプだけでも）。承認したあとは、同じ人が同じ名前で書くとすぐに表示します。') . '</p>'
         . '<p class="note">' . nm_t('返信は1段まで入れ子にして表示します。返信への返信は同じ流れの中に並び、誰あての返信かを表示します。管理画面の「コメント」から、管理人として返信できます。') . '</p>'
+        . '<p class="note">' . nm_t('bot対策として、読者には何もさせずに次の3つを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。', ['n' => NL_COMMENT_TICKET_WAIT]) . '</p>'
         . '<p class="note">' . nm_t('連続の書き込みは、同じ回線から1分に{minute}件、1日に{day}件までです。IPアドレスそのものは保存せず、管理画面では回線ごとの短い印だけを見られます。', ['minute' => NL_COMMENT_MINUTE, 'day' => NL_COMMENT_DAY]) . '</p></fieldset>'
         . '</div></section>';
 }

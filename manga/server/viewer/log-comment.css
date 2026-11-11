@@ -65,6 +65,8 @@
 .log-comment-text-label textarea { box-sizing:border-box; width:100%; min-height:64px; padding:10px 12px 22px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); color:var(--log-text); font:inherit; font-size:.95rem; line-height:1.6; resize:vertical; }
 .log-comment-text-label textarea:focus { outline:2px solid var(--log-accent); outline-offset:1px; }
 .log-comment-counter { position:absolute; right:10px; bottom:6px; font-size:.7rem; }
+/* The hidden field for bots: off screen, not just display:none (some bots skip hidden fields). */
+.log-comment-trap { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
 .log-comment-foot { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; }
 .log-comment-who { color:var(--log-muted); font-size:.78rem; }
 .log-comment-send { min-width:96px; height:40px; padding:0 20px; border:0; border-radius:999px; background:var(--log-accent); color:#fff; font:inherit; font-weight:700; cursor:pointer; }

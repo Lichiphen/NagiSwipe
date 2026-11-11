@@ -2185,5 +2185,8 @@
   "返信先のコメントが見つかりません": "The comment to reply to was not found",
   "返信先のコメントが見つかりませんでした。": "The comment you are replying to is gone.",
   "送りました。名前を管理者が確認すると表示されます。": "Sent. It appears once the owner approves your name.",
-  "書き込む": "Write"
+  "書き込む": "Write",
+  "URLは書けません。": "Addresses (URLs) cannot be posted.",
+  "ページを開いてから時間がたったため、確認し直しました。もう一度送ってください。": "The page was open for a long time, so it was checked again. Please send once more.",
+  "bot対策として、読者には何もさせずに次の3つを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。": "Against bots, three checks run without asking readers to do anything. A comment sent less than {n} seconds after the comments opened, or sent without opening the page, is refused. A hidden field that people never see must stay empty. Text and names may not contain addresses (URLs)."
 }

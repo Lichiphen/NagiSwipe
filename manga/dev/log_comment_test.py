@@ -43,8 +43,16 @@ def run(site, other_site, c, csrf, other, ot):
         return next(p['id'] for p in php(site, 'echo json_encode(nl_post_summaries(false));') if p['id'] not in before)
     def load(pid): return php(site, f"echo json_encode(nl_load_post('{pid}'));")
     def get(pid, key=''): return pub.get('/comment.php?id=' + pid, headers={'X-NagiLog-Key': key} if key else {})
+    tickets = {}
+    def ticket(pid, age=10):
+        # A ticket as the page would hold it after a person looked for a while (made here, so the test need not wait).
+        if age != 10 or pid not in tickets: t = php(site, f"echo json_encode(nl_comment_ticket('{pid}', time() - {age}));")
+        else: return tickets[pid]
+        if age == 10: tickets[pid] = t
+        return t
     def send(pid, stamp='', text='', icon='star', key=KEY, headers=None, client=pub, **more):
         hd = {'Content-Type': 'application/json', 'X-NagiLog': 'comment'} if headers is None else headers
+        more.setdefault('ticket', ticket(pid))
         return client.post('/comment.php', json.dumps({'id': pid, 'token': key, 'icon': icon, 'stamp': stamp, 'text': text, **more}).encode(), headers=hd)
     def calm(where=site):
         for f in (where / 'data/ratelimit').glob('*'): f.unlink()
@@ -73,6 +81,22 @@ def run(site, other_site, c, csrf, other, ot):
     # Refused writes count towards the limit too: start the next ones from zero.
     calm()
     check('空のコメントは拒否', json.loads(send(pid).text).get('error') == 'empty')
+    # Bots: the ticket, the hidden field, addresses.
+    calm()
+    err = lambda r: json.loads(r.text).get('error')
+    check('窓口が書き込み券を渡す', re.fullmatch(r'\d{10}\.[a-f0-9]{24}', json.loads(get(pid).text).get('ticket', '')) is not None)
+    check('券なし・作りたての券・ほかの記事の券は fast', err(send(pid, '👍', ticket='')) == 'fast' and err(send(pid, '👍', ticket=ticket(pid, 0))) == 'fast' and err(send(pid, '👍', ticket=ticket(old))) == 'fast')
+    calm()
+    r = send(pid, '👍', ticket=ticket(pid, 7 * 3600))
+    check('古い券は old と新しい券', err(r) == 'old' and re.fullmatch(r'\d{10}\.[a-f0-9]{24}', json.loads(r.text).get('ticket', '')) is not None)
+    check('隠し欄に何か入っていたら spam', err(send(pid, '👍', website='http://x')) == 'spam')
+    calm()
+    check('文章や名前にURLがあれば拒否（全角も）', err(send(pid, text='見てね https://spam.example')) == 'url' and err(send(pid, text='ｃｈｅａｐ．ｃｏｍ')) == 'url' and err(send(pid, '👍', name='spam.xyz')) == 'url')
+    calm()
+    check('URLでない「Node.js」「v1.14」は通る', send(pid, text='Node.jsで動くv1.14、楽しみです').status == 200)
+    calm()
+    tid = json.loads(get(pid, KEY).text)['items'][-1]['id']
+    post({'do': 'log_comments_moderate', 'action': 'delete', 'items': json.dumps([[pid, tid]])})
     check('長すぎる文章は拒否', json.loads(send(pid, text='あ' * 301).text).get('error') == 'long')
     calm()
     r = send(pid, '🎉'); stamp = json.loads(r.text).get('item', {})
