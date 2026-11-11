@@ -17,6 +17,10 @@ and (from 0.12.0 on) against the signature made here with the key from dev/relea
 Attach nagimanga.zip to every release as well. It gives a link that never changes and always
 downloads the newest ZIP: https://github.com/Lichiphen/NagiSwipe/releases/latest/download/nagimanga.zip
 The self-update ignores it (its name has no version, so NM_UPDATE_ASSET in lib/update.php does not match).
+
+Stylesheets (.css) go into the ZIP minified to one line that keeps their licence comment (dev/minify_css.py);
+the sources here stay readable. Installed sites version every file by its content (nm_asset_version), so
+browsers fetch the minified files anew.
 """
 import hashlib
 import re
@@ -27,6 +31,7 @@ import zipfile
 from pathlib import Path
 
 import release_sign
+from minify_css import minify
 
 HERE = Path(__file__).resolve().parent
 MANGA = HERE.parent
@@ -90,6 +95,14 @@ MIT License (c) 2026 Lichiphen
 """
 
 
+def add(z, f, name):
+    """One file of the package; stylesheets minified to one line (dev/minify_css.py)."""
+    if f.suffix == ".css":
+        z.writestr(name, minify(f.read_text(encoding="utf-8")).encode("utf-8"))
+    else:
+        z.write(f, name)
+
+
 def main():
     boot = (SERVER / "lib" / "bootstrap.php").read_text(encoding="utf-8")
     viewer = (SERVER / "viewer" / "NagiManga.js").read_text(encoding="utf-8")
@@ -115,10 +128,10 @@ def main():
             top = rel.split("/", 1)[0]
             if top in ("data", "plugins") and rel not in (f"{top}/.htaccess", f"{top}/index.html"):
                 continue
-            z.write(f, "nagimanga/" + rel)
+            add(z, f, "nagimanga/" + rel)
         # Bundle the root gallery without keeping a second source copy in Git.
         for name in ("NagiSwipe-main.js", "NagiSwipe-main.css"):
-            z.write(MANGA.parent / name, "nagimanga/viewer/" + name)
+            add(z, MANGA.parent / name, "nagimanga/viewer/" + name)
         z.write(MANGA / "plugins" / "guest-mode.php", "optional/guest-mode.php")
         for name in ("README.md", "README.en.md", "README-LOG.md", "README-LOG.en.md"):
             z.write(MANGA / name, name)

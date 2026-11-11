@@ -1,0 +1,18 @@
+/* The dialog of mail links. Loaded only on pages that use it (lib/log-public.php nl_feature_css_files). MIT License (c) 2026 Lichiphen. */
+.log-mail-dialog { width:min(400px,calc(100% - 32px)); padding:0; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); box-shadow:0 18px 50px #0000003d; }
+.log-mail-dialog::backdrop { background:#10192d80; }
+.log-mail-body { display:grid; gap:12px; padding:22px 20px 18px; text-align:center; }
+.log-mail-body h2 { margin:0; font-size:15px; color:var(--log-muted); font-weight:600; }
+.log-mail-address { margin:0; padding:12px; border-radius:10px; background:var(--log-bg); font-size:16px; font-weight:650; overflow-wrap:anywhere; user-select:all; }
+.log-mail-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.log-mail-actions > * { display:flex; align-items:center; justify-content:center; min-height:46px; padding:8px 12px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); color:var(--log-text); font:inherit; font-size:14px; font-weight:600; text-decoration:none; cursor:pointer; }
+.log-site .log-mail-send { color:var(--log-text); }
+.log-mail-actions > .log-mail-primary { border-color:var(--log-accent); background:var(--log-accent); color:var(--log-on-accent); }
+.log-mail-actions > *:hover { border-color:var(--log-accent); text-decoration:none; }
+.log-mail-actions > *:focus-visible,.log-mail-close:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-mail-status { min-height:1.5em; margin:0; color:var(--log-muted); font-size:13px; }
+.log-mail-status:empty { display:none; }
+.log-mail-close { justify-self:center; min-height:40px; padding:6px 18px; border:0; background:none; color:var(--log-muted); font:inherit; font-size:13px; cursor:pointer; }
+@media(max-width:420px) {
+    .log-mail-actions { grid-template-columns:1fr; }
+}

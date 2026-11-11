@@ -73,16 +73,16 @@ function nl_page_input(array $in): array
     return ['title' => $title, 'slug' => $slug, 'body' => $body, 'layout' => $layout, 'status' => $status];
 }
 /** Save under the LOG lock; the revision stops two tabs overwriting each other. $lock: [switch, typed password], or null to keep the lock. */
-function nl_page_save(string $id, int $revision, array $fields, ?array $lock = null): array
+function nl_page_save(string $id, int $revision, array $fields, ?array $lock = null, ?bool $comments = null): array
 {
-    return nm_with_lock('personal-log', static function () use ($id, $revision, $fields, $lock) {
+    return nm_with_lock('personal-log', static function () use ($id, $revision, $fields, $lock, $comments) {
         $old = $id !== '' ? nl_load_page($id) : null;
         if ($id !== '' && !$old) throw new UnexpectedValueException(nm_t('固定ページが見つかりません。一覧を開き直してください'));
         if ($old && $old['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で更新されています。本文をコピーしてから開き直してください'));
         if (!$old && count(nl_pages()) >= NL_PAGE_MAX) throw new UnexpectedValueException(nm_t('固定ページは{n}件までです', ['n' => NL_PAGE_MAX]));
         foreach (nl_pages() as $p) if ($p['slug'] === $fields['slug'] && $p['id'] !== $id) throw new UnexpectedValueException(nm_t('URL名「{slug}」はほかの固定ページで使っています', ['slug' => $fields['slug']]));
         $now = time();
-        $page = $fields + ['id' => $old['id'] ?? 'pg' . bin2hex(random_bytes(6)), 'media' => nl_page_media_refs($fields['body']), 'created' => $old['created'] ?? $now, 'updated' => $now, 'revision' => ($old['revision'] ?? 0) + 1];
+        $page = $fields + ['id' => $old['id'] ?? 'pg' . bin2hex(random_bytes(6)), 'media' => nl_page_media_refs($fields['body']), 'created' => $old['created'] ?? $now, 'updated' => $now, 'revision' => ($old['revision'] ?? 0) + 1, 'comments' => $comments ?? nl_comments_default($old)];
         // A new URL name may not be a folder of the LOG or look like a post (older pages keep theirs).
         if ($fields['slug'] === nl_blog_slug()) throw new UnexpectedValueException(nm_t('URL名「{slug}」はブログ（投稿の一覧）のURLで使っています', ['slug' => $fields['slug']]));
         if ((!$old || $old['slug'] !== $fields['slug']) && !nl_slug_free($fields['slug'])) throw new UnexpectedValueException(nm_t('URL名「{slug}」はLOGのフォルダー名や記事の番号と重なるため使えません', ['slug' => $fields['slug']]));
@@ -101,6 +101,7 @@ function nl_page_delete(string $id, int $revision): void
         if ($p['revision'] !== $revision) throw new UnexpectedValueException(nm_t('別の画面で更新されています。開き直してください'));
         if (!@unlink(nl_page_file($id))) throw new RuntimeException('delete failed');
         if (function_exists('opcache_invalidate')) @opcache_invalidate(nl_page_file($id), true);
+        try { nl_comments_forget([$id]); } catch (Throwable) {}
         nm_touch_content();
         nm_log('log_page_deleted', $id);
     });
@@ -494,14 +495,16 @@ function nl_pages_tabs(string $current): string
 {
     $tab = static fn(string $key, string $href, string $icon, string $label) => '<a href="' . $href . '"' . ($key === $current ? ' aria-current="page"' : '') . '>' . nl_ui_icon($icon) . '<span>' . nm_t($label) . '</span></a>';
     return '<nav class="workspace-tabs log-admin-tabs" aria-label="' . nm_t('LOGの管理') . '">' . $tab('posts', 'index.php?p=log', 'list', nm_t('投稿一覧')) . $tab('taxonomy', 'index.php?p=log&amp;view=taxonomy', 'tag', nm_t('カテゴリ・タグ'))
-        . $tab('pages', 'index.php?p=log_pages', 'page', nm_t('固定ページ')) . $tab('settings', 'index.php?p=settings&amp;section=log', 'settings', nm_t('LOGの設定')) . '</nav>';
+        . $tab('pages', 'index.php?p=log_pages', 'page', nm_t('固定ページ'))
+        // Comments: while they are on, or while some are kept.
+        . (nl_settings()['comments'] || nl_comments_index()['n'] ? str_replace('</span></a>', '</span>' . nl_comments_menu_badge() . '</a>', $tab('comments', 'index.php?p=log_comments', 'comment', nm_t('コメント'))) : '') . $tab('settings', 'index.php?p=settings&amp;section=log', 'settings', nm_t('LOGの設定')) . '</nav>';
 }
 function nl_view_pages(): void
 {
     $rows = '';
     foreach (nl_pages() as $p) {
         $published = $p['status'] === 'published';
-        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">' . nm_t('下書き') . '</small>') . (nl_is_locked($p) ? nl_lock_badge() : '') . '</a>'
+        $rows .= '<li class="log-page-row"><a class="log-page-row-title" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon('page') . '<span>' . h($p['title']) . '</span>' . ($published ? '' : '<small class="badge">' . nm_t('下書き') . '</small>') . (nl_is_locked($p) ? nl_lock_badge() : '') . nl_comments_badge($p['id']) . '</a>'
             . '<code class="log-page-row-url">' . h(nl_fixed_path($p['slug'])) . '</code><span class="log-page-row-layout">' . h(nm_t(NL_PAGE_LAYOUTS[$p['layout']] ?? '')) . '</span><span class="log-page-row-time">' . nl_ui_icon('time') . '<time datetime="' . h(nl_date($p['updated'], 'c')) . '">' . h(nl_date($p['updated'])) . '</time></span>'
             . ($published ? '<a class="btn log-list-view" href="../' . h(nl_fixed_url($p)) . '">' . nl_ui_icon('view') . '<span>' . nm_t('ページを見る') . '</span></a>' : '<span class="log-list-view note">' . nm_t('非公開') . '</span>')
             . '<a class="btn log-list-edit" href="index.php?p=log_page&amp;id=' . h($p['id']) . '">' . nl_ui_icon() . '<span>' . nm_t('編集') . '</span></a></li>';
@@ -569,6 +572,7 @@ function nl_view_page_edit(string $id): void
         . '<label class="check"><input type="checkbox" name="lock" value="1"' . ($locked ? ' checked' : '') . '>' . nm_t('このページにパスワードをかける') . '</label>'
         . '<label>' . nm_t('パスワード（{min}〜{max}文字）', ['min' => NL_LOCK_MIN, 'max' => NL_LOCK_MAX]) . '<input type="text" name="lock_password" maxlength="' . NL_LOCK_MAX . '" value="' . h($plain ?? '') . '"' . ($locked && $plain === null ? ' placeholder="' . nm_t('設定済み（変えるときだけ入力）') . '"' : '') . ' autocomplete="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"></label>'
         . '<p class="note">' . nm_t('読者にはタイトルとパスワードの入力欄だけを見せ、正しいパスワードを入れた人にだけ本文を表示します。開いた人のブラウザーには、パスワードではなく、このページを読める印をクッキーで{days}日間残します。', ['days' => NL_LOCK_DAYS]) . '</p></fieldset>'
+        . nl_comments_switch($p['id'] !== '' ? $p : null, true)
         . '<fieldset class="log-page-layouts"><legend>' . nm_t('ページの幅（PC）') . '</legend>' . $layouts . '<p class="note">' . nm_t('スマホでは、どの形でもサイドバーを「MENU」の中に出します。') . '</p></fieldset>'
         // Phones held upright: the row right under the text, scrolling sideways with a fade and an arrow where it has more.
         // A PC or sideways (log-pages.js): the row above the text and 書く / プレビュー tabs, the preview in the text's place.

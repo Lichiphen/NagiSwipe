@@ -9,7 +9,7 @@ declare(strict_types=1);
 if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 /** Folder and file names next to the LOG: a fixed page with one of these URL names keeps ./?pg=. */
-const NL_URL_RESERVED = ['admin', 'viewer', 'lib', 'data', 'plugins', 'index', 'log', 'read', 'like', 'embed', '404'];
+const NL_URL_RESERVED = ['admin', 'viewer', 'lib', 'data', 'plugins', 'index', 'log', 'read', 'like', 'comment', 'embed', '404'];
 
 function nl_pretty(): bool
 {

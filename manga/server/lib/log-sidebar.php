@@ -207,6 +207,8 @@ function nl_sidebar_templates(): array
 {
     return [
         'grid' => ['title' => 'リンク集', 'framed' => true, 'html' => '<div class="log-link-grid">' . "\n" . '  <a href="https://example.com/">リンク1</a>' . "\n" . '  <a href="https://example.org/">リンク2</a>' . "\n" . '  <a href="https://example.net/">リンク3</a>' . "\n" . '  <a href="./">LOG</a>' . "\n" . '</div>'],
+        // The same links one per row: long names read as one line each.
+        'grid1' => ['title' => 'リンク集', 'framed' => true, 'html' => '<div class="log-link-grid log-link-grid-1">' . "\n" . '  <a href="https://example.com/">リンク1</a>' . "\n" . '  <a href="https://example.org/">リンク2</a>' . "\n" . '  <a href="https://example.net/">リンク3</a>' . "\n" . '  <a href="./">LOG</a>' . "\n" . '</div>'],
         'banner' => ['title' => '', 'framed' => false, 'html' => '<a class="log-banner-link" href="https://example.com/" target="_blank">' . "\n" . '  <img class="log-banner" src="viewer/og.jpg" alt="バナーの説明">' . "\n" . '</a>'],
         'blank' => ['title' => '自由なHTML', 'framed' => true, 'html' => '<p>ここに案内やリンクを書けます。</p>'],
     ];
@@ -216,7 +218,7 @@ function nl_sidebar_columns_field(string $html): string
 {
     $grid = (bool)preg_match('/class="(?:[^"]*\s)?log-link-grid[\s"]/', $html);
     $one = (bool)preg_match('/class="(?:[^"]*\s)?log-link-grid-1[\s"]/', $html);
-    return '<label class="log-sidebar-columns" data-sidebar-columns-field' . ($grid ? '' : ' hidden') . '>' . nm_t('グリッドリンクの並べ方') . '<select data-sidebar-columns><option value="2"' . ($one ? '' : ' selected') . '>' . nm_t('1行に2つ並べる') . '</option><option value="1"' . ($one ? ' selected' : '') . '>' . nm_t('1行に1つずつ並べる') . '</option></select></label>';
+    return '<label class="log-sidebar-columns" data-sidebar-columns-field' . ($grid ? '' : ' hidden') . '>' . nm_t('グリッドリンクの列数') . '<select data-sidebar-columns><option value="2"' . ($one ? '' : ' selected') . '>' . nm_t('2列（1行に2つ）') . '</option><option value="1"' . ($one ? ' selected' : '') . '>' . nm_t('1列（1行に1つ）') . '</option></select></label>';
 }
 /** Small stroke icons for the editor controls; they follow the text color. */
 function nl_sidebar_ui_icon(string $name): string
@@ -249,12 +251,12 @@ function nl_sidebar_panel(): string
     $s = nl_sidebar_settings(); $rows = ''; $loginShown = nl_settings()['show_login'];
     foreach ($s['items'] as $item) $rows .= nl_sidebar_edit_row($item, $loginShown);
     $templates = nl_sidebar_templates(); $options = '';
-    foreach (['grid' => nm_t('グリッドリンク'), 'banner' => nm_t('バナーリンク（枠なし）'), 'blank' => nm_t('自由なHTML')] as $key => $name) $options .= '<option value="' . $key . '">' . $name . '</option>';
+    foreach (['grid' => nm_t('グリッドリンク（2列）'), 'grid1' => nm_t('グリッドリンク（1列）'), 'banner' => nm_t('バナーリンク（枠なし）'), 'blank' => nm_t('自由なHTML')] as $key => $name) $options .= '<option value="' . $key . '">' . $name . '</option>';
     $examples = '';
     foreach ($templates as $key => $item) $examples .= '<template data-sidebar-template="' . $key . '">' . nl_sidebar_edit_row(['id' => '', 'kind' => 'html', 'enabled' => true] + $item) . '</template>';
     return '<section class="card log-sidebar-manager" id="log-sidebar-settings"><h2>' . nm_t('サイドバー・メニュー') . '</h2><p class="note">' . nm_t('PCの右側と、スマホの「MENU」に同じ順番で表示します。左の持ち手をドラッグするか、上下ボタンで並べ替えます。スイッチをオフにすると、その項目を隠します。') . '</p>'
         // A block of the settings form; the sidebar is sent as JSON by log-settings.js, so it has no marker for sending without JavaScript.
         . '<div class="form" data-settings-section="log_sidebar" data-sidebar-manager data-revision="' . $s['revision'] . '"' . (function_exists('nm_base_url') && !empty(nm_config()['login_key']) ? ' data-login-url="' . h(nm_base_url() . '/admin/index.php?k=' . nm_config()['login_key']) . '"' : '') . '><div class="log-sidebar-list" data-sidebar-items>' . $rows . '</div>'
-        . '<details class="log-sidebar-add"><summary>' . nm_t('上級者向け：HTML枠を追加') . '</summary><div class="log-sidebar-editor-body"><p class="note">' . nm_t('テンプレートを選んで追加し、リンク先や文章、画像のURLを書き換えて使います。枠は繰り返し追加できます。グリッドリンクは1行に2つか1つずつかを選べます。バナーは枠や背景を付けずに表示します。') . '</p><div class="log-sidebar-template-picker"><label>' . nm_t('テンプレート') . '<select data-sidebar-template-choice>' . $options . '</select></label><button class="btn" type="button" data-sidebar-add>' . nl_sidebar_ui_icon('add') . nm_t('HTML枠を追加') . '</button></div><p class="note">' . nm_t('リンク・画像・見出し・段落・リスト・太字を使えます。script、iframe、フォーム、イベント属性、style属性は取り除いて保存します。画像は同じサイトのURLかHTTPSのURLを使ってください。外部画像は、表示時にリンク先のサーバーから読み込みます。見出しは100文字、1枠のHTMLは50KB、全体は1MBまでです。') . '</p></div></details>'
+        . '<details class="log-sidebar-add"><summary>' . nm_t('上級者向け：HTML枠を追加') . '</summary><div class="log-sidebar-editor-body"><p class="note">' . nm_t('テンプレートを選んで追加し、リンク先や文章、画像のURLを書き換えて使います。枠は繰り返し追加できます。グリッドリンクは2列か1列かを選べます。バナーは枠や背景を付けずに表示します。') . '</p><div class="log-sidebar-template-picker"><label>' . nm_t('テンプレート') . '<select data-sidebar-template-choice>' . $options . '</select></label><button class="btn" type="button" data-sidebar-add>' . nl_sidebar_ui_icon('add') . nm_t('HTML枠を追加') . '</button></div><p class="note">' . nm_t('リンク・画像・見出し・段落・リスト・太字を使えます。script、iframe、フォーム、イベント属性、style属性は取り除いて保存します。画像は同じサイトのURLかHTTPSのURLを使ってください。外部画像は、表示時にリンク先のサーバーから読み込みます。見出しは100文字、1枠のHTMLは50KB、全体は1MBまでです。') . '</p></div></details>'
         . '<div class="log-sidebar-save"><p class="note" data-sidebar-status role="status" aria-live="polite">' . nm_t('順番と内容は、画面の下の「設定を保存」で反映します。') . '</p><div class="log-sidebar-save-actions">' . nm_t('<a class="btn" href="../" target="_blank" rel="noopener">公開ページで確認</a>') . '</div></div><noscript><p>' . nm_t('並び替えとHTML枠の編集には、ブラウザのJavaScriptを有効にしてください。') . '</p></noscript></div>' . $examples . '</section>';
 }

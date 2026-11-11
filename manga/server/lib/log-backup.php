@@ -12,7 +12,10 @@ function nl_backup_download(): never
         $zip = new ZipArchive();
         if ($zip->open($tmp, ZipArchive::CREATE | ZipArchive::EXCL) !== true) throw new RuntimeException('zip failed');
         try {
-            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings(), 'topmenu' => nl_topmenu_settings(), 'footmenu' => nl_menu_settings('foot'), 'pins' => nl_pins(), 'likes' => (object)nl_like_counts(), 'custom_css' => nl_css_backup()], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            $zip->addFromString('backup.json', json_encode(['app' => 'NagiMangaLog', 'schema' => 1, 'created' => time(), 'settings' => nl_settings(), 'taxonomy' => nl_taxonomy(), 'sidebar' => nl_sidebar_settings(), 'topmenu' => nl_topmenu_settings(), 'footmenu' => nl_menu_settings('foot'), 'pins' => nl_pins(), 'likes' => (object)nl_like_counts(), 'custom_css' => nl_css_backup(), 'comment_icons' => (object)array_map(static fn($i) => $i['name'], nl_comment_icons_custom())], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            // Comments (one file per post or page, so a busy site never makes backup.json too large) and the owner's comment icons.
+            foreach (nl_comments_backup() as $id => $items) $zip->addFromString('comments/' . $id . '.json', json_encode($items, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            foreach (nl_comment_icons_custom() as $key => $icon) $zip->addFile(nl_comment_icons_dir() . '/' . $key . '.' . $icon['type'], 'comment-icons/' . $key . '.' . $icon['type']);
             foreach (nl_pages() as $page) $zip->addFromString('pages/' . $page['id'] . '.json', json_encode($page, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
             foreach (nl_post_summaries(false) as $summary) {
                 $p = nl_load_post($summary['id']);
@@ -60,7 +63,7 @@ function nl_restore_json(ZipArchive $zip, int $index, mixed &$native = null): ar
 function nl_restore_plan(ZipArchive $zip): array
 {
     if ($zip->numFiles > 20000) throw new UnexpectedValueException(nm_t('バックアップのファイル数が多すぎます'));
-    $entries = []; $postEntries = []; $mediaEntries = []; $pageEntries = []; $total = 0;
+    $entries = []; $postEntries = []; $mediaEntries = []; $pageEntries = []; $commentEntries = []; $iconEntries = []; $total = 0;
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $stat = $zip->statIndex($i);
         if (!$stat) throw new UnexpectedValueException(nm_t('ZIPの項目を読めません'));
@@ -74,6 +77,8 @@ function nl_restore_plan(ZipArchive $zip): array
         if (preg_match('~\Aposts/([0-9]{14}(?:-[0-9]{2,6})?|d[a-f0-9]{16})\.json\z~', $name, $m)) $postEntries[$m[1]] = $i;
         elseif (preg_match('~\Amedia/([a-f0-9]{16})/(media\.json|(?:t_)?p[0-9]{4}_[a-f0-9]{8}\.(?:jpg|webp|gif|svg)|p[0-9]{4}_[a-f0-9]{8}\.(?:mp4|webm|mp3|m4a|ogg|wav|flac|weba))\z~', $name, $m)) $mediaEntries[$m[1]][$m[2]] = $i;
         elseif (preg_match('~\Apages/(pg[a-f0-9]{12})\.json\z~', $name, $m)) $pageEntries[$m[1]] = $i;
+        elseif (preg_match('~\Acomments/(pg[a-f0-9]{12}|[0-9]{14}(?:-[0-9]{2,6})?)\.json\z~', $name, $m)) $commentEntries[$m[1]] = $i;
+        elseif (preg_match('~\Acomment-icons/(u[a-f0-9]{12})\.(?:svg|png)\z~', $name, $m)) $iconEntries[$m[1]] = $i;
         else throw new UnexpectedValueException(nm_t('LOG以外のファイルが入っています'));
     }
     if (!isset($entries['backup.json'])) throw new UnexpectedValueException(nm_t('LOGのバックアップではありません'));
@@ -104,7 +109,7 @@ function nl_restore_plan(ZipArchive $zip): array
     $preferences['posts_per_page'] = $settings['posts_per_page'] ?? nl_settings()['posts_per_page'];
     if (array_key_exists('pager', $settings) && (!is_string($settings['pager']) || !isset(NL_PAGERS[$settings['pager']]))) throw new UnexpectedValueException(nm_t('LOGのページ送りの設定が壊れています'));
     $preferences['pager'] = $settings['pager'] ?? nl_settings()['pager'];
-    foreach (['likes', 'related', 'search_engines'] as $field) {
+    foreach (['likes', 'related', 'search_engines', 'comments', 'comment_text'] as $field) {
         if (array_key_exists($field, $settings) && !is_bool($settings[$field])) throw new UnexpectedValueException(nm_t('LOGの表示設定が壊れています'));
         $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
     }
@@ -133,6 +138,26 @@ function nl_restore_plan(ZipArchive $zip): array
     if (array_key_exists('blog_slug', $settings) && (!is_string($settings['blog_slug']) || !preg_match(NL_PAGE_SLUG_PATTERN, $settings['blog_slug']) || !nl_slug_free($settings['blog_slug']))) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
     if (array_key_exists('blog_label', $settings) && (!is_string($settings['blog_label']) || nl_blog_label_clean($settings['blog_label']) !== $settings['blog_label'])) throw new UnexpectedValueException(nm_t('トップページとブログの設定が壊れています'));
     foreach (['front_page', 'blog_slug', 'blog_label'] as $field) $preferences[$field] = $settings[$field] ?? nl_settings()[$field];
+    // Comment settings: older backups have none and keep the ones here.
+    if (array_key_exists('comment_stamps', $settings) && (!is_array($settings['comment_stamps']) || nl_comment_stamps_clean($settings['comment_stamps']) !== array_values($settings['comment_stamps']))) throw new UnexpectedValueException(nm_t('コメントの設定が壊れています'));
+    if (array_key_exists('comment_icons_off', $settings) && (!is_array($settings['comment_icons_off']) || array_filter($settings['comment_icons_off'], static fn($k) => !is_string($k) || (!isset(NL_COMMENT_ICONS[$k]) && !preg_match(NL_COMMENT_ICON_KEY, $k))))) throw new UnexpectedValueException(nm_t('コメントの設定が壊れています'));
+    foreach (['comment_stamps', 'comment_icons_off'] as $field) $preferences[$field] = array_values($settings[$field] ?? nl_settings()[$field]);
+    $comments = [];
+    foreach ($commentEntries as $id => $i) {
+        $items = nl_restore_json($zip, $i);
+        if (!array_is_list($items) || count($items) > NL_COMMENT_ITEM_MAX) throw new UnexpectedValueException(nm_t('コメントが壊れています'));
+        foreach ($items as $c) if (($comments[(string)$id][] = nl_comment_restore($c)) === null) throw new UnexpectedValueException(nm_t('コメントが壊れています'));
+    }
+    $iconNames = $mark['comment_icons'] ?? [];
+    if (!is_array($iconNames) || count($iconEntries) > NL_COMMENT_ICON_UPLOADS) throw new UnexpectedValueException(nm_t('コメントのアイコンが壊れています'));
+    $icons = [];
+    foreach ($iconEntries as $key => $i) {
+        // Checked and converted like a new one (an SVG through lib/log-svg.php, a PNG drawn again).
+        $svg = nl_comment_icon_convert((string)nm_zip_read($zip, $i, NL_COMMENT_ICON_BYTES));
+        $name = $iconNames[$key] ?? '';
+        if (is_string($svg) || !is_string($name) || mb_strlen($name) > 30 || preg_match('/[\x00-\x1F\x7F]/', $name)) throw new UnexpectedValueException(nm_t('コメントのアイコンが壊れています'));
+        $icons[(string)$key] = ['name' => $name, 'type' => $svg['type'], 'bytes' => $svg['bytes']];
+    }
     $likes = $mark['likes'] ?? [];
     if (!is_array($likes) || count($likes) > 100000) throw new UnexpectedValueException(nm_t('いいねの数が壊れています'));
     foreach ($likes as $id => $n) if (!nl_valid_post((string)$id) || !is_int($n) || $n < 0 || $n > NL_LIKE_MAX) throw new UnexpectedValueException(nm_t('いいねの数が壊れています'));
@@ -162,7 +187,7 @@ function nl_restore_plan(ZipArchive $zip): array
         if (!is_array($categories) || count($categories) > 20) throw new UnexpectedValueException(nm_t('投稿のカテゴリが壊れています'));
         foreach ($categories as $cid) if ((!is_string($cid) && !is_int($cid)) || !preg_match('/\A[a-f0-9]{12}\z/', (string)$cid)) throw new UnexpectedValueException(nm_t('投稿のカテゴリが壊れています'));
         $categories = array_map('strval', $categories);
-        $posts[$id] = ['id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'rating' => nl_restore_rating($p), 'warning' => nl_warning_text(nl_restore_string($p, 'warning', 400)), 'status' => $p['status'], 'lock' => nl_lock_restore($p['lock'] ?? null), 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
+        $posts[$id] = ['comments' => ($p['comments'] ?? false) === true, 'id' => $id, 'title' => nl_restore_string($p, 'title', 1000), 'body' => $body, 'manga' => $refs, 'media' => nl_media_refs($body), 'categories' => array_values(array_unique($categories)), 'rating' => nl_restore_rating($p), 'warning' => nl_warning_text(nl_restore_string($p, 'warning', 400)), 'status' => $p['status'], 'lock' => nl_lock_restore($p['lock'] ?? null), 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
     }
     $media = [];
     foreach ($mediaEntries as $id => $files) {
@@ -177,7 +202,7 @@ function nl_restore_plan(ZipArchive $zip): array
         try {
             $fields = nl_page_input(['title' => nl_restore_string($p, 'title', 1000), 'slug' => nl_restore_string($p, 'slug', 200), 'body' => nl_restore_string($p, 'body', NL_PAGE_BODY_MAX), 'layout' => nl_restore_string($p, 'layout', 10), 'status' => nl_restore_string($p, 'status', 10)]);
         } catch (UnexpectedValueException $e) { throw new UnexpectedValueException(nm_t('固定ページ「{title}」が壊れています：{message}', ['title' => mb_strimwidth((string)($p['title'] ?? ''), 0, 40, '…', 'UTF-8'), 'message' => nm_t($e->getMessage())]), 0, $e); }
-        $pages[$id] = $fields + ['id' => $id, 'media' => nl_page_media_refs($fields['body']), 'lock' => nl_lock_restore($p['lock'] ?? null), 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
+        $pages[$id] = $fields + ['comments' => ($p['comments'] ?? false) === true, 'id' => $id, 'media' => nl_page_media_refs($fields['body']), 'lock' => nl_lock_restore($p['lock'] ?? null), 'created' => max(0, (int)($p['created'] ?? 0)), 'updated' => time(), 'revision' => max(1, (int)($p['revision'] ?? 1))];
     }
     $slugs = array_column($pages, 'slug');
     if (count($slugs) !== count(array_unique($slugs))) throw new UnexpectedValueException(nm_t('固定ページのURL名が重複しています'));
@@ -186,7 +211,7 @@ function nl_restore_plan(ZipArchive $zip): array
     foreach ($pins as $pid) if (!is_string($pid) || !nl_valid_post($pid)) throw new UnexpectedValueException(nm_t('ピン留めの設定が壊れています'));
     return ['settings' => $settings, 'tax' => $tax, 'tag_order' => $tagOrder, 'sidebar' => $sidebar, 'topmenu' => $topmenu, 'footmenu' => $footmenu, 'pages' => $pages, 'likes' => $likes, 'media' => $media, 'posts' => $posts, 'pins' => array_values(array_unique($pins)),
         // Backups made before the additional CSS existed have none: the CSS here is then kept as it is.
-        'custom_css' => nl_css_restore_plan($mark)];
+        'custom_css' => nl_css_restore_plan($mark), 'comments' => $comments, 'comment_icons' => $icons];
 }
 /** Convert one image of a backup into $stage/media/<id> and return its record. */
 function nl_restore_image(ZipArchive $zip, string $stage, string $id, array $files): array
@@ -249,10 +274,10 @@ function nl_restore_apply(string $stage, array $plan, array $media, bool $overwr
 {
     ['settings' => $settings, 'tax' => $tax, 'tag_order' => $tagOrder, 'sidebar' => $sidebar, 'likes' => $likes, 'posts' => $posts] = $plan;
     // Plans saved by an older version (a restore in progress during an update) have no pages or top menu.
-    $pages = $plan['pages'] ?? []; $topmenu = $plan['topmenu'] ?? null; $footmenu = $plan['footmenu'] ?? null; $pins = $plan['pins'] ?? []; $customCss = $plan['custom_css'] ?? null;
+    $pages = $plan['pages'] ?? []; $topmenu = $plan['topmenu'] ?? null; $footmenu = $plan['footmenu'] ?? null; $pins = $plan['pins'] ?? []; $customCss = $plan['custom_css'] ?? null; $comments = $plan['comments'] ?? []; $commentIcons = $plan['comment_icons'] ?? [];
     // The favicon's files are not in the backup: the icons in use stay.
     $settings['favicon'] = nl_settings()['favicon'];
-    return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $pages, $topmenu, $footmenu, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite, $pins, $customCss) {
+    return nm_with_lock('personal-log', static function () use ($stage, $media, $posts, $pages, $topmenu, $footmenu, $settings, $tax, $tagOrder, $sidebar, $likes, $overwrite, $pins, $customCss, $comments, $commentIcons) {
         // Validate all references before replacing any live file.
         if ($settings['icon'] !== '' && !isset($media[$settings['icon']]) && !nl_load_media($settings['icon'])) throw new UnexpectedValueException(nm_t('アイコンの画像がバックアップにありません'));
         if ($settings['og_image'] !== '' && !isset($media[$settings['og_image']]) && !nl_load_media($settings['og_image'])) throw new UnexpectedValueException(nm_t('紹介画像がバックアップにありません'));
@@ -336,6 +361,38 @@ function nl_restore_apply(string $stage, array $plan, array $media, bool $overwr
                 $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
                 $list = array_values(array_unique($overwrite ? $pins : array_merge(nl_pins(), $pins)));
                 nl_pins_write(array_slice(array_values(array_filter($list, static fn($id) => nl_load_post($id) !== null)), 0, NL_PINS_MAX));
+            }
+            if ($comments || $commentIcons) {
+                // Comments: overwriting takes the backup's list of a post or page; otherwise the ones not here yet join in time order.
+                foreach ($comments as $id => $items) {
+                    $dest = nl_comments_file((string)$id);
+                    $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
+                    if (!$overwrite) {
+                        $have = nl_comments_read((string)$id); $ids = array_flip(array_column($have, 'id'));
+                        foreach ($items as $c) if (!isset($ids[$c['id']])) $have[] = $c;
+                        usort($have, static fn($a, $b) => $a['t'] <=> $b['t']);
+                        $items = array_slice($have, -NL_COMMENT_ITEM_MAX);
+                    }
+                    nl_comments_write((string)$id, $items);
+                }
+                if ($commentIcons) {
+                    $dest = nl_comment_icons_file();
+                    $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
+                    $record = nl_read_record($dest) ?? ['icons' => []];
+                    nm_ensure_dir(nl_comment_icons_dir());
+                    foreach ($commentIcons as $key => $icon) {
+                        if (isset($record['icons'][$key]) && !$overwrite) continue;
+                        if (!isset($record['icons'][$key]) && count($record['icons']) >= NL_COMMENT_ICON_UPLOADS) break;
+                        $file = nl_comment_icons_dir() . '/' . $key . '.' . $icon['type'];
+                        $changes[] = ['file', $file, is_file($file) ? file_get_contents($file) : null];
+                        nm_write_atomic($file, $icon['bytes']);
+                        $record['icons'][$key] = ['name' => $icon['name'], 'added' => $record['icons'][$key]['added'] ?? time(), 'type' => $icon['type']];
+                    }
+                    nl_write_record($dest, $record);
+                }
+                $dest = nl_comments_index_file();
+                $changes[] = ['file', $dest, is_file($dest) ? file_get_contents($dest) : null];
+                nl_comments_index_rebuild();
             }
             $cssBefore = nl_css_restore_apply($customCss, $overwrite);
             if ($cssBefore !== false) $changes[] = ['file', nl_css_dir() . '/state.php', $cssBefore];

@@ -48,6 +48,11 @@
     const hint = (row, key) => {
         const panel = row.querySelector('[data-link-icon-picker]'), source = iconSource(row, key);
         if (!panel || !source) return;
+        // The pointer crossing the lines inside one button fires again and again: redrawing the same icon each time
+        // made it blink (the drawing comes from the sprite), so only a different icon, choice or label is drawn.
+        const shown = [key, row.querySelector('[data-link-icon]').value, row.querySelector('[data-link-label]').value].join('|');
+        if (panel.dataset.hintShown === shown) return;
+        panel.dataset.hintShown = shown;
         panel.querySelector('[data-hint-big]').replaceChildren(svgOf(source));
         panel.querySelector('[data-hint-name]').textContent = source.dataset.name;
         panel.querySelector('[data-hint-chosen]').textContent = key === row.querySelector('[data-link-icon]').value ? t('（選んでいます）') : '';

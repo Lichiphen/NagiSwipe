@@ -467,7 +467,7 @@ function nl_css_layouts_form(array $state, string $csrf): string
 function nl_css_help_card(): string
 {
     $items = [
-        nm_t('読み込む順番：LOG本体のCSS（log.css）・画像ビューアーのCSSのあとです。漫画ビューアーのCSSは、あとから読み込まれても追加CSSより前に入ります。'),
+        nm_t('読み込む順番：LOG本体のCSS（log.css と、目次・図・コメントなど、そのページで使う機能のCSS）・画像ビューアーのCSSのあとです。漫画ビューアーのCSSは、あとから読み込まれても追加CSSより前に入ります。'),
         nm_t('同じ詳細度なら追加CSSが勝ちます。本体のほうが詳細度の高いセレクターや!importantを使っている場合は、追加CSSが効かないことがあります。そのときは、セレクターをより具体的にします（例：.log-site .log-post）。'),
         nm_t('CSS変数（--log-accent など）を上書きすると、テーマの色をまとめて変えられます。テーマごとに変えるときは html[data-log-theme="dark-navy"] のように書きます。'),
         nm_t('url() の相対パスは、LOGのトップ（log.php のあるフォルダ）が基準です。例：url(viewer/og.jpg)。LOGに載せた画像は、画像一覧で表示されるURL（?media=…）を使えます。'),

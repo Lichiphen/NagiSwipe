@@ -177,6 +177,9 @@ $brand = $logo ? '<img class="log-site-logo" src="' . h(nl_media_url($logo)) . '
 $titleTag = !$single && !$fixed ? 'h1' : 'p';
 // The image viewer and the manga reader load only where something uses them. The owner keeps both (editor previews),
 // and so does a "show more" list with pages still to come, which may bring images or manga in later.
+// Comments (lib/log-comments.php): under one post or a fixed page that takes them, once this reader may read it.
+$commentItem = $single ? $post : $fixed;
+$commentsHtml = $commentItem && !$closed && nl_comments_open($commentItem) ? nl_comments_section($commentItem) : '';
 $more = !$single && !$fixed && $s['pager'] === 'more' && $page * $perPage < count($all);
 $swipe = $owner || $more || nl_has_image_links($postsHtml . $sidebarHtml);
 $shareRows = $s['public'] && $posts && (!$grid || $single);
@@ -187,6 +190,8 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
     ? '<aside class="log-toc-rail" aria-labelledby="log-toc-rail-title" data-toc-rail><div class="log-toc-rail-card"><p class="log-toc-rail-title" id="log-toc-rail-title">' . nm_icon('toc') . '<span>' . nm_t('目次') . '</span></p>'
         . '<div class="log-toc-progress" aria-hidden="true"><i></i></div>' . $tocMatch[1] . '</div></aside>'
     : '';
+// The feature stylesheets go where the placeholder is in the head, once the finished page shows which features it uses.
+ob_start(static fn(string $html): string => str_replace('<!--nl-feature-css-->', implode('', array_map(static fn($f) => '<link rel="stylesheet" href="' . nl_public_asset($f) . '">', nl_feature_css_files($html, $owner || $more))), $html));
 ?><!DOCTYPE html>
 <html lang="<?= nm_lang() ?>" data-icons="<?= h(nm_icon_url()) ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($single || ($fixed && !$front) ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
@@ -195,7 +200,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <meta property="og:type" content="<?= $single ? 'article' : 'website' ?>"><meta property="og:site_name" content="<?= h($s['title']) ?>">
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>"><?php if ($ogWidth > 0): ?><meta property="og:image:width" content="<?= $ogWidth ?>"><meta property="og:image:height" content="<?= $ogHeight ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
-<?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/admin-menu.css') ?>"><script src="<?= nl_public_asset('viewer/admin-menu.js') ?>" defer></script><?php endif; ?>
+<?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><!--nl-feature-css--><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/admin-menu.css') ?>"><script src="<?= nl_public_asset('viewer/admin-menu.js') ?>" defer></script><?php endif; ?>
 <?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
 <?= nl_css_link() ?>
@@ -206,6 +211,7 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <script src="<?= nl_public_asset('viewer/log-mail.js') ?>" defer></script>
 <?php if ($shareRows): ?><script src="<?= nl_public_asset('viewer/log-share.js') ?>" defer></script><?php endif; ?>
 <?php if ($shareRows && $s['likes']): ?><script src="<?= nl_public_asset('viewer/log-like.js') ?>" defer></script><?php endif; ?>
+<?php if ($commentsHtml !== ''): ?><script src="<?= nl_public_asset('viewer/log-comment.js') ?>" defer></script><?php endif; ?>
 <?php if (str_contains($relatedHtml, 'data-related-random')): ?><script src="<?= nl_public_asset('viewer/log-related.js') ?>" defer></script><?php endif; ?>
 <?php if ($s['public']): ?><link rel="alternate" type="application/rss+xml" title="<?= h($s['title']) ?>" href="<?= h(nl_feed_url()) ?>"><?php if (!$single && ($filter['category'] !== '' || $filter['tag'] !== '')): ?><link rel="alternate" type="application/rss+xml" title="<?= h($title) ?>" href="<?= h(nl_feed_url($filter['query'])) ?>"><?php endif; ?><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/log-embed.js') ?>" defer></script>
@@ -229,5 +235,5 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
 <?php if ($owner): ?><?php if (!$s['public']): ?><p class="log-private-note"><?= nm_t('自分専用Memo · 記事とLOGの画像はログイン時だけ表示されます。') ?></p><?php endif; ?><div class="log-compose-slot<?= $index ? '' : ' log-compose-collapsed' ?>" data-compose-slot><?= nl_editor(null, true) ?></div><?php endif; ?>
 <?= $postsHtml ?>
 <?php if (!$posts && !$fixed): ?><p class="log-empty"><?= nm_t($filter['search'] !== '' ? '見つかりませんでした。言葉を短くするか、別の言葉で探してみてください。' : ($filter['tag'] !== '' || $filter['category'] !== '' ? 'この分類の記録はありません。' : ($filter['query'] !== '' ? 'この日の記録はありません。' : 'まだ記録はありません。'))) ?></p><?php endif; ?>
-<?= $single ? $relatedHtml . ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : ($fixed ? '' : nl_pager($s, $filter['query'], $page, count($all))) ?>
+<?= $single ? $commentsHtml . $relatedHtml . ($s['post_nav'] ? nl_post_nav($summaries, $post) : '') : ($fixed ? $commentsHtml : nl_pager($s, $filter['query'], $page, count($all))) ?>
 </main><?= $sidebarHtml ?></div><?= $shareRows ? nl_share_dialog() : '' ?><?= nl_footer_html($s, $here) ?><?= $owner ? nm_menu_dialog('admin/', '', false, 'log') : '' ?></body></html>

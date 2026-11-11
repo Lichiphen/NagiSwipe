@@ -1,0 +1,68 @@
+/* Diagrams (```mermaid) and their full-screen view. Loaded only on pages that use it (lib/log-public.php nl_feature_css_files). MIT License (c) 2026 Lichiphen. */
+/* Diagrams (```mermaid, drawn by viewer/log-mermaid.js): fitted to the column, 拡大 on the frame's corner like COPY. */
+.log-mermaid { position:relative; margin:22px 0 .5em; padding:20px 14px 14px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); }
+.log-page-body .log-mermaid { margin:26px 0 1.15em; }
+.log-mermaid-view { overflow-x:auto; overscroll-behavior-x:contain; }
+.log-mermaid-view svg { display:block; max-width:100%; height:auto; margin:0 auto; overflow:visible; }
+/*
+ * The diagrams drawn by log-mermaid.js, in the LOG's look: boxes are small cards with a short shadow under them like a
+ * sticker, lines are soft and round-ended, notes are tilted sticky notes, and a frame's kind sits in a round tag.
+ */
+.log-dg { --dg-ink:var(--log-text); --dg-line:color-mix(in srgb,var(--log-muted) 75%,var(--log-card)); --dg-box:var(--log-card); --dg-edge:var(--log-accent); font-family:inherit; }
+.log-dg-text { fill:var(--dg-ink); font-size:14px; font-weight:500; }
+.log-dg-text.is-small { font-size:13px; }
+.log-dg-text.is-muted { fill:var(--log-muted); }
+.log-dg-text.is-tag { fill:var(--log-on-accent); font-size:12px; font-weight:700; letter-spacing:.06em; }
+.log-dg-text.is-number { fill:var(--log-on-accent); font-size:11px; font-weight:700; }
+.log-dg-node > :first-child { fill:var(--dg-box); stroke:var(--dg-edge); stroke-width:1.6; filter:drop-shadow(0 3px 0 color-mix(in srgb,var(--dg-edge) 22%,transparent)); }
+.log-dg-node.is-diamond > :first-child { fill:color-mix(in srgb,var(--dg-edge) 9%,var(--dg-box)); }
+.log-dg-node.is-circle > :first-child,.log-dg-node.is-stadium > :first-child { fill:color-mix(in srgb,var(--dg-edge) 6%,var(--dg-box)); }
+.log-dg-line { fill:none; stroke:var(--dg-edge); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-edge { fill:none; stroke:var(--dg-line); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-edge.is-dotted { stroke-dasharray:2 6; }
+.log-dg-edge.is-thick { stroke:var(--dg-edge); stroke-width:3.2; }
+.log-dg-head { fill:var(--dg-line); }
+.log-dg-head.is-strong { fill:var(--dg-edge); }
+.log-dg-head-open { fill:none; stroke:var(--dg-line); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-dg-head-ring { fill:var(--dg-box); stroke:var(--dg-line); stroke-width:1.8; }
+.log-dg-edge-label rect { fill:var(--dg-box); stroke:color-mix(in srgb,var(--dg-line) 55%,transparent); stroke-width:1; }
+/* Sequence diagrams: people as cards (an actor's corners round), dashed lives, messages in the text color. */
+.log-dg-actor rect { fill:var(--dg-box); stroke:var(--dg-edge); stroke-width:1.6; filter:drop-shadow(0 3px 0 color-mix(in srgb,var(--dg-edge) 22%,transparent)); }
+.log-dg-actor.is-actor rect { fill:color-mix(in srgb,var(--dg-edge) 9%,var(--dg-box)); }
+.log-dg-life { fill:none; stroke:var(--log-line); stroke-width:1.6; stroke-dasharray:4 5; stroke-linecap:round; }
+.log-dg-message .log-dg-line { stroke:var(--dg-ink); stroke-width:1.5; }
+.log-dg-message.is-dashed .log-dg-line { stroke-dasharray:5 5; }
+.log-dg-message .log-dg-head { fill:var(--dg-ink); }
+.log-dg-message .log-dg-head-open { stroke:var(--dg-ink); }
+.log-dg-number { fill:var(--dg-edge); }
+.log-dg-note rect { --note:#d9a400; fill:color-mix(in srgb,var(--note) 16%,var(--dg-box)); stroke:color-mix(in srgb,var(--note) 45%,var(--log-line)); stroke-width:1.2; transform-box:fill-box; transform-origin:center; transform:rotate(-1deg); filter:drop-shadow(0 2px 3px #0000001a); }
+.log-dg-frame rect { fill:color-mix(in srgb,var(--dg-edge) 3%,transparent); stroke:color-mix(in srgb,var(--dg-edge) 40%,var(--log-line)); stroke-width:1.4; stroke-dasharray:6 4; }
+.log-dg-frame.is-rect rect,.log-dg-frame.is-box rect { fill:color-mix(in srgb,var(--dg-edge) 6%,transparent); stroke-dasharray:none; stroke:var(--log-line); }
+.log-dg-frame-tag { fill:var(--dg-edge); }
+.log-dg-frame-split { fill:none; stroke:color-mix(in srgb,var(--dg-edge) 35%,var(--log-line)); stroke-width:1.2; stroke-dasharray:6 4; }
+.log-mermaid-source { margin:0; padding:0; border:0; background:none; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--log-muted); }
+.log-mermaid-source[hidden] { display:none; }
+.log-mermaid-error { display:grid; gap:2px; margin:0 0 10px; padding:8px 12px; border-radius:10px; background:color-mix(in srgb,#b86a00 9%,var(--log-card)); color:var(--log-text); font-size:13px; line-height:1.6; }
+.log-mermaid-error small { color:var(--log-muted); font-size:11.5px; overflow-wrap:anywhere; }
+.log-mermaid-zoom { position:absolute; top:0; right:12px; z-index:1; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 11px; transform:translateY(-50%); border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-muted); box-shadow:0 2px 8px #0000001f; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.log-mermaid-zoom:hover { color:var(--log-accent); border-color:var(--log-accent); }
+.log-mermaid-zoom:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-mermaid-icon { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+html.log-mermaid-open,html.log-mermaid-open body { overflow:hidden; }
+.log-mermaid-sheet { position:fixed; inset:0; z-index:220; box-sizing:border-box; width:100%; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:var(--log-bg); color:var(--log-text); }
+.log-mermaid-sheet[open] { display:flex; flex-direction:column; }
+.log-mermaid-sheet::backdrop { background:#10192d80; }
+.log-mermaid-sheet-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:calc(10px + env(safe-area-inset-top)) 14px 10px; border-bottom:1px solid var(--log-line); background:var(--log-card); }
+.log-mermaid-sheet-tools { display:flex; align-items:center; gap:4px; padding:3px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-bg); }
+.log-mermaid-sheet button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:40px; height:38px; padding:0 12px; border:0; border-radius:999px; background:none; color:var(--log-text); font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.log-mermaid-sheet button:hover { color:var(--log-accent); }
+.log-mermaid-sheet button:focus-visible { outline:2px solid var(--log-accent); outline-offset:1px; }
+.log-mermaid-sheet .log-mermaid-level { min-width:64px; font-variant-numeric:tabular-nums; }
+.log-mermaid-sheet .log-mermaid-sheet-close { border:1px solid var(--log-line); background:var(--log-card); }
+.log-mermaid-sheet .log-mermaid-icon { width:18px; height:18px; }
+.log-mermaid-stage { flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; padding:16px; box-sizing:border-box; outline:none; }
+.log-mermaid-figure { display:flex; align-items:center; justify-content:center; width:max-content; min-width:100%; min-height:100%; padding-bottom:env(safe-area-inset-bottom); }
+.log-mermaid-figure svg { display:block; flex:none; padding:16px; box-sizing:content-box; border-radius:12px; background:var(--log-card); }
+@media print {
+    .log-mermaid-zoom { display:none; }
+}

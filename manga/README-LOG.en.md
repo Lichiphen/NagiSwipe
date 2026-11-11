@@ -68,6 +68,7 @@ The admin panel can be shown in Japanese or English ([Admin panel language](READ
 - [Pinned posts](#pinned-posts)
 - [Password locks](#password-locks)
 - [Likes](#likes)
+- [Comments](#comments)
 - [NagiScope (access analytics)](#nagiscope-access-analytics)
 - [Reordering the sidebar and HTML boxes](#reordering-the-sidebar-and-html-boxes)
 - [Title logo and introduction](#title-logo-and-introduction)
@@ -181,6 +182,7 @@ Scroll down and a "書く" (Write) button aligned with the right edge of the sid
 | Paging | Under a list: "新しい投稿" (newer posts), "過去の投稿" (older posts) and page numbers 1, 2, 3… The total and the current position (for example "51–60 of 124") are shown too. Post pages show the previous and next posts and "すべての投稿" (all posts). |
 | Sharing | On a public log, "Share" and "Copy" are under each post. Both use "post title + line break + post URL". Share opens the device's share sheet on phones, and on computers a chooser for X, Hatena Bookmark, LINE and Instagram. Instagram has no share URL that takes text, so it copies the text and then tells you to open Instagram. The icons are original drawings, not the services' official logos (`server/viewer/link-icons/README.txt`). |
 | Likes | A heart button left of "Share" under each post. A tap adds 1, holding adds 10 at a time. The same line and the same device can press at most 100 per post per day. It can be turned off in the settings. The count can be seen, changed and cleared on the post's edit screen. |
+| Comments | An anonymous comment block under posts and fixed pages (off by default). Readers choose an icon and write a stamp alone or text. Stamps show at once; text shows after you approve it. An ID per browser is shown instead of a name. |
 | List style | "Microblog", showing whole posts, or "tiles" with a thumbnail, date and title. New posts get a "NEW" mark (the period and the text are set in the settings). |
 | Related posts | Six posts of the same category or hashtags under each post. Random, or most recently updated first. |
 | Pinned posts | Like “stick to the top” in WordPress, posts can be shown first on the top page. Pin several (up to 30) and reorder them in the admin panel; the admin post list shows them at the top too. |
@@ -1021,7 +1023,7 @@ Some elements appear only on some pages (under posts, on fixed pages, only while
 
 ### How it applies
 
-- It loads on the public LOG pages (lists, posts, fixed pages, search, archives) after the LOG's own CSS (`viewer/log.css`) and the image viewer's CSS. The manga reader's CSS loads later but is placed before the additional CSS.
+- It loads on the public LOG pages (lists, posts, fixed pages, search, archives) after the LOG's own CSS (`viewer/log.css`, and the CSS of the features the page uses, such as the table of contents, diagrams and comments) and the image viewer's CSS. The manga reader's CSS loads later but is placed before the additional CSS.
 - With the same specificity the additional CSS wins. Where the LOG's own CSS uses a more specific selector or `!important`, yours may not take effect; then make your selector more specific (e.g. `.log-site .log-post`).
 - Overriding the CSS variables (`--log-accent` and so on) changes the theme colors at once. For one theme only, write `html[data-log-theme="dark-navy"]` and so on.
 - Relative paths in `url()` start from the top of the LOG (the folder with `log.php`), e.g. `url(viewer/og.jpg)`. Pictures on the LOG can be used with their `./?media=…` address.
@@ -1145,6 +1147,8 @@ The list of this version:
 | `.log-button-purple` | The purple button (purple) | Post pages, Fixed pages | `.log-button-purple { --button: #8250df; }` | v0.14.2 |
 | `.log-button-pink` | The pink button (pink) | Post pages, Fixed pages | `.log-button-pink { --button: #bf3989; }` | v0.14.2 |
 | `.log-button-gray` | The gray button (gray) | Post pages, Fixed pages | `.log-button-gray { --button: #57606a; }` | v0.14.2 |
+| `.log-comments` | The comment block under a post or fixed page (heading, list and form) | Post pages, Fixed pages | `.log-comments { border-radius: 0; }` | Next version |
+| `.log-comment` | One comment (icon, ID, time, stamp and text) | Post pages, Fixed pages | `.log-comment { padding: 12px 0; }` | Next version |
 
 **CSS variables**
 
@@ -1167,7 +1171,7 @@ The list of this version:
 </details>
 
 The list is written by hand in `server/lib/css-catalog.json`. The admin only reads it; nothing builds or compares lists on the server or on a phone.
-`dev/css_catalog_check.py` collects the names from `log.css` and the code and compares them with the list. It fails for a name in the CSS but not in the list, a listed name that no longer exists, and a public selector removed or renamed since the last release (the newest `v*` tag) without a history entry. Classes whose names are built in code are registered in `dynamic`.
+`dev/css_catalog_check.py` collects the names from `log.css`, the feature stylesheets (`viewer/log-*.css`, without the owner's `log-owner.css`) and the code and compares them with the list. It fails for a name in the CSS but not in the list, a listed name that no longer exists, and a public selector removed or renamed since the last release (the newest `v*` tag) without a history entry. Classes whose names are built in code are registered in `dynamic`.
 GitLab CI and GitHub Actions run the same check. Before a release, replace `"next"` in the list with the version number and rewrite the README copy with `python manga/dev/css_catalog_check.py --write-docs` (`dev/build_release.py` checks this and refuses to build the ZIP otherwise). That command builds the list below from `css-catalog.json`.
 
 ## Search
@@ -1293,6 +1297,25 @@ To keep forms and scripts of other sites from sending, a dedicated header and th
 The post's edit screen has a "いいね" (Likes) box. See the current count, change it to any number, or set it back to 0 with "いいねを削除" (delete likes).
 Deleting a post deletes its likes too.
 
+## Comments
+
+Posts and fixed pages can show an anonymous comment block under them. It is off by default. Turned on in "Settings → LOG → Comments", the post editor's tool row gets a "Comments" panel and the page editor a "Comments" box, so each post or page can be switched on or off. Posts and pages made after turning it on start with it on; older ones stay off. A private Memo never shows comments.
+
+| What readers write | Shown |
+| --- | --- |
+| An icon and a stamp (emoji) | At once |
+| An icon and text (up to 300 characters and a few lines, with or without a stamp) | Only to its writer, as waiting, until you approve it in the admin |
+
+There is no name field. The reader's browser keeps a secret key nobody can guess (32 random characters), and an 8-character ID made from it is shown instead of a name. The ID stays the same when a phone's IP address changes, and nobody else can show the same ID. Clearing the browser's data changes it.
+The standard icons are eight outlines with a gradient (star, moon, drop, leaf, flower, cloud, heart, sparkle). The same settings block adds and deletes icons in SVG, PNG, JPEG, WebP or GIF (up to 64 KB each, up to 32) and chooses which ones readers see. SVGs are checked by `lib/log-svg.php`; PNG and the others are drawn again into a 128×128 PNG (no location or other data is kept). They are served only as pictures (no scripts run).
+Up to 24 stamps can be set, emoji only. Text is shown as plain text, never as HTML or links.
+
+One line can send up to 4 comments a minute and 60 a day. Texts waiting for approval are limited to 300 for the whole site and comments to 500 per post or page, so the disk never fills up. IP addresses themselves are not stored; the admin shows only a short mark for each line (the same line, the same mark). On a locked post or page only readers who entered the password can read and write comments.
+
+No database is used. Comments go into one small file per post or page (`log/comments/<ID>.php`), the counts and the number of new ones into `log/comments-index.php`. Pages stay cached: the comment block loads from `comment.php` (once, when it comes near the screen). Its CSS and JS (`viewer/log-comment.css`, `viewer/log-comment.js`) load only on pages with a comment block.
+
+In the admin, the bell in the top menu and the "Comments" tab of "LOG and posts" show the number of comments waiting for approval or not seen yet. On the public pages while logged in, the admin menu button (top right; bottom right on phones) shows it too. The "Comments" list approves and deletes them and can show only those waiting (icons are managed in the "Comments" settings). The post list and the page list show each one's count (waiting ones stand out). Deleting a post or page deletes its comments. Comments and icons are part of the LOG backup.
+
 ## NagiScope (access analytics)
 
 NagiScope is access analytics built into NagiManga and NagiLog. No outside service to sign up for and no tag to paste: open NagiScope in the admin to see how much was read. It is OFF by default and counts nothing until turned on. Turning it OFF keeps the data so far.
@@ -1365,13 +1388,13 @@ Showing the login link is switched only by this "Log in / Admin page" switch. Th
 
 Open "上級者向け：HTML枠を追加" (advanced: add an HTML box), choose a template and add it.
 There is no fixed number of boxes. The same template can be called again and again.
-Grid links are a list of links shown with a small arrow and text, without a box around each. "Grid link layout" chooses two per row or one per row (one per row reads better for long names). Banner links are picture links without a frame or background.
+Grid links are a list of links shown with a small arrow and text, without a box around each. The templates "Grid links (2 columns)" and "Grid links (1 column)" choose it, and "Grid link columns" switches it later (one per row reads better for long names). Banner links are picture links without a frame or background.
 After adding, rewrite the link targets, picture URLs and text with your own.
 An empty heading hides the heading. "枠と背景を表示する" (show the frame and background) can be changed too.
 
 HTML boxes can use links, pictures, headings, paragraphs, lists and bold.
 script, iframe, forms, event attributes and style attributes are removed when saving.
-The layout classes `log-link-grid`, `log-link-grid-1` (grid links one per row), `log-banner-link` and `log-banner` can be used.
+The layout classes `log-link-grid`, `log-link-grid-1` (grid links in 1 column), `log-banner-link` and `log-banner` can be used.
 Headings up to 100 characters, one box's HTML up to 50KB after cleaning, all together up to 1MB.
 If another screen saved first, it does not overwrite; your changes stay in the edit field and it tells you to open the screen again.
 Copy unsaved HTML somewhere before reopening the screen.
@@ -1693,6 +1716,7 @@ The security log (`logs/security.log.php`) and the setup key made only at first 
 | Favicon and home screen icons | `log/favicon/VERSION/` |
 | Additional CSS (the text in use, the one before it, on or off) | `log/custom-css/` |
 | Like counts | `log/likes.php` |
+| Comments | `log/comments/<ID>.php`, the counts in `log/comments-index.php`, added icons in `log/comment-icons/` and `log/comment-icons.php` |
 | Presses of the day (per reader; made anew the next day) | `log/likes-today.php` |
 | Pictures and picture data | `log/media/FOLDER_MADE_FROM_THE_SECRET_KEY/` |
 
@@ -1791,6 +1815,7 @@ python manga/dev/log_test.py
 python manga/dev/attack_test.py
 python manga/dev/log_management_test.py
 python manga/dev/log_sidebar_test.py
+python manga/dev/log_comment_test.py
 python manga/dev/log_embed_test.py
 node manga/dev/log_embed_script_test.js
 python manga/dev/log_lscache_test.py

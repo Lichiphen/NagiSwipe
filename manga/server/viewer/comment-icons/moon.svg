@@ -1,0 +1,5 @@
+<!-- Original UI artwork. MIT License (c) 2026 Lichiphen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="url(#g)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+  <path d="M30.5 8.5a16 16 0 1 0 9 26.5A13 13 0 0 1 30.5 8.5Z"/>
+</svg>

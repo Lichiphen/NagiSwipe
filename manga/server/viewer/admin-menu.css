@@ -15,6 +15,7 @@
 .nav-fab.is-shown { visibility:visible; opacity:1; transform:none; transition:transform .32s cubic-bezier(.16,1,.3,1),opacity .2s ease,visibility 0s; }
 .nav-fab .nm-menu-icon { width:20px; height:20px; stroke-width:2; }
 .nav-fab:hover { border-color:var(--m-accent); }
+.nav-fab-count { display:grid; place-items:center; min-width:20px; height:20px; box-sizing:border-box; padding:0 6px; border-radius:999px; background:#e11d48; color:#fff; font-size:12px; font-variant-numeric:tabular-nums; }
 .nav-fab:focus-visible { outline:2px solid var(--m-accent); outline-offset:3px; }
 .nav-fab.is-shown:active { transform:scale(.96); }
 

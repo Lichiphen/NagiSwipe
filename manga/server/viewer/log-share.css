@@ -1,0 +1,60 @@
+/* The share row under posts, its dialog, and the like button. Loaded only on pages that use it (lib/log-public.php nl_feature_css_files). MIT License (c) 2026 Lichiphen. */
+.log-share { display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:6px; margin:14px 0 -6px; }
+.log-site .log-share-btn { --share-accent:var(--log-text); display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 11px; border:1px solid var(--log-line); border-radius:999px; background:var(--log-card); color:var(--log-muted); font:inherit; font-size:.72rem; font-weight:600; line-height:1; letter-spacing:.02em; text-decoration:none; white-space:nowrap; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:color .15s ease,background-color .15s ease,border-color .15s ease,transform .1s ease; }
+.log-site .log-share-btn:hover { color:var(--share-accent); border-color:var(--share-accent); text-decoration:none; }
+.log-share-btn:active { transform:scale(.95); }
+.log-share-btn:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-share-icon { flex-shrink:0; width:14px; height:14px; }
+/* The comment button: the count of comments, and a jump to them (lib/log-comments.php). */
+.log-site .log-comment-link { --share-accent:var(--log-accent); font-variant-numeric:tabular-nums; }
+.log-comment-link-icon { fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.log-share-open { --share-accent:var(--log-accent); }
+.log-share-copy { --share-accent:var(--log-accent); }
+html:not(.log-share-ready) .log-share-copy { display:none; }
+.log-share-copy .log-share-icon-done { display:none; }
+.log-site .log-share-copy.is-copied { --share-accent:#047857; color:#047857; background:var(--ok-bg); border-color:#6ee7b7; }
+.log-site .log-share-copy.is-error { --share-accent:var(--danger); color:var(--danger); background:var(--err-bg); border-color:var(--danger); }
+html[data-log-theme^="dark"] .log-site .log-share-copy.is-copied { --share-accent:#8fe0b5; color:#8fe0b5; border-color:#4f9f78; }
+.log-share-copy.is-copied .log-share-icon-copy { display:none; }
+.log-share-copy.is-copied .log-share-icon-done { display:block; animation:log-share-pop .25s ease; }
+.log-share-dialog { width:min(420px,calc(100% - 32px)); padding:0; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); color:var(--log-text); box-shadow:0 18px 50px #0000003d; }
+.log-share-dialog::backdrop { background:#10192d80; }
+.log-share-dialog-body { display:grid; gap:14px; padding:22px 20px 16px; }
+.log-share-dialog h2 { margin:0; text-align:center; font-size:15px; color:var(--log-muted); font-weight:600; }
+.log-share-preview { margin:0; padding:10px 12px; border-radius:10px; background:var(--log-bg); font-size:13px; line-height:1.6; white-space:pre-line; overflow-wrap:anywhere; }
+.log-share-services { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.log-share-service { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:76px; padding:10px 4px; border:1px solid var(--log-line); border-radius:12px; background:var(--log-card); color:var(--log-text); font:inherit; font-size:12px; font-weight:600; line-height:1.3; text-align:center; word-break:keep-all; cursor:pointer; transition:border-color .15s ease,color .15s ease,background-color .15s ease; }
+.log-share-service .log-share-icon { width:24px; height:24px; color:var(--log-accent); }
+.log-share-service:hover { border-color:var(--log-accent); background:var(--log-bg); }
+.log-share-service:focus-visible,.log-share-close:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-share-status { margin:0; color:var(--log-muted); font-size:13px; text-align:center; }
+.log-share-status:empty { display:none; }
+.log-share-status.is-error { color:var(--danger); }
+.log-share-status a { font-weight:700; white-space:nowrap; }
+.log-share-close { justify-self:center; min-height:40px; padding:6px 18px; border:0; background:none; color:var(--log-muted); font:inherit; font-size:13px; cursor:pointer; }
+/* Like: first in the share row. Tap +1, hold +10 every 70 frames (the fill shows the way to the next +10). */
+.log-site .log-like { --share-accent:var(--like-ink); --like-tint:color-mix(in srgb,#d63d6e 16%,transparent); position:relative; background:linear-gradient(var(--like-tint),var(--like-tint)) left / calc(var(--like-hold,0) * 100%) 100% no-repeat,var(--log-card); font-variant-numeric:tabular-nums; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+html[data-log-theme^="dark"] .log-site .log-like { --share-accent:#ff8fb1; --like-tint:color-mix(in srgb,#ff8fb1 22%,transparent); }
+html:not(.log-like-ready) .log-like { display:none; }
+.log-like-heart { fill:none; stroke:currentColor; stroke-width:2; stroke-linejoin:round; transition:fill .15s ease; }
+.log-site .log-like.is-liked,.log-site .log-like.is-holding { color:var(--share-accent); border-color:color-mix(in srgb,var(--share-accent) 55%,var(--log-line)); }
+.log-like.is-liked .log-like-heart { fill:currentColor; }
+.log-like.is-full { cursor:default; }
+.log-like.is-beat .log-like-heart { animation:log-like-beat .32s cubic-bezier(.3,1.8,.5,1); }
+.log-like-pop { position:absolute; left:50%; bottom:calc(100% + 6px); padding:3px 9px; border-radius:999px; background:var(--share-accent); color:#fff; font-size:12px; font-weight:800; line-height:1.4; white-space:nowrap; pointer-events:none; transform:translateX(-50%); animation:log-like-pop .9s ease-out forwards; }
+html[data-log-theme^="dark"] .log-like-pop { color:#3a1020; }
+.log-like-pop::after { content:""; position:absolute; left:50%; top:100%; border:5px solid transparent; border-top-color:var(--share-accent); transform:translateX(-50%); }
+@keyframes log-share-pop { from { transform:scale(.4); } to { transform:scale(1); } }
+@keyframes log-like-beat { 40% { transform:scale(1.45); } }
+@keyframes log-like-pop { from { opacity:0; transform:translate(-50%,6px) scale(.7); } 20% { opacity:1; transform:translate(-50%,0) scale(1); } 70% { opacity:1; } to { opacity:0; transform:translate(-50%,-16px); } }
+@keyframes log-like-fade { from,70% { opacity:1; } to { opacity:0; } }
+@media(prefers-reduced-motion:reduce) {
+    .log-site .log-share-btn,.log-share-copy.is-copied .log-share-icon-done { transition:none; animation:none; }
+}
+@media(max-width:420px) {
+    .log-share-services { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(prefers-reduced-motion:reduce) {
+    .log-like.is-beat .log-like-heart { animation:none; }
+    .log-like-pop { animation-duration:.9s; animation-name:log-like-fade; }
+}

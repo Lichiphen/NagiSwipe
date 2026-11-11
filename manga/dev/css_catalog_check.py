@@ -6,7 +6,7 @@
     python manga/dev/css_catalog_check.py --release    also refuse a "next" version (run by build_release.py)
 
 Fails when
-- a class in viewer/log.css or a --log-* variable is missing from the catalog (public, state or internal),
+- a class in viewer/log.css (or a feature stylesheet viewer/log-*.css) or a --log-* variable is missing from the catalog (public, state or internal),
 - a catalog name no longer exists in the stylesheet or the code (generated names are listed in "dynamic"),
 - a public name of the base version disappeared, stopped being public or was renamed without a history entry
   (removed / renamed / deprecated) newer than the base,
@@ -119,6 +119,11 @@ def docs_problems(cat, write):
     return problems
 
 
+def public_css():
+    """The LOG's public stylesheets: viewer/log.css and viewer/log-*.css, without the owner's log-owner.css."""
+    return [SERVER / 'viewer/log.css'] + sorted(f for f in (SERVER / 'viewer').glob('log-*.css') if f.name != 'log-owner.css')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--write-docs', action='store_true', help='rewrite the list in README-LOG.md / README-LOG.en.md')
@@ -130,7 +135,8 @@ def main():
     args = parser.parse_args()
     problems = []
     cat = json.loads(args.catalog.read_text(encoding='utf-8'))
-    classes, variables = css_names((SERVER / 'viewer/log.css').read_text(encoding='utf-8'))
+    # log.css and the feature stylesheets loaded only where they are used (log-comment.css …); the owner's log-owner.css is not public.
+    classes, variables = css_names('\n'.join(f.read_text(encoding='utf-8') for f in public_css()))
     code = code_text()
     public = cat['selectors']
     public_classes = set(names_of(public))

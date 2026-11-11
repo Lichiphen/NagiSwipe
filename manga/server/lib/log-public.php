@@ -199,7 +199,7 @@ function nl_share_row(array $p): string
 {
     $title = nl_post_title($p, 120);
     $text = ($title !== '' ? $title : nm_t('画像の記録')) . "\n" . nl_post_abs($p['id']);
-    return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">' . (nl_settings()['likes'] ? nl_like_button($p) : '')
+    return '<div class="log-share" data-share-text="' . str_replace("\n", '&#10;', h($text)) . '">' . (nl_settings()['likes'] ? nl_like_button($p) : '') . (nl_comments_open($p) ? nl_comment_share_button($p) : '')
         . '<a class="log-share-btn log-share-open" href="https://x.com/intent/tweet?text=' . rawurlencode($text) . '" target="_blank" rel="noopener noreferrer" aria-haspopup="dialog">' . nl_share_icon('share') . '<span>Share</span></a>'
         . '<button class="log-share-btn log-share-copy" type="button" aria-label="' . nm_t('タイトルとURLをコピー') . '">' . nl_share_icon('copy', 'log-share-icon-copy') . nl_share_icon('check', 'log-share-icon-done') . '<span class="log-share-label" aria-live="polite">Copy</span></button></div>';
 }
@@ -250,7 +250,28 @@ function nl_login_icon(): string
     return nm_icon('login', 'log-login-icon');
 }
 /** The names nl_ui_icon() knows (symbols ui-* in viewer/icons/ui.svg). */
-const NL_UI_ICONS = ['pen', 'time', 'title', 'delete', 'view', 'wrench', 'list', 'tag', 'settings', 'globe', 'lock', 'images', 'page', 'copy'];
+/**
+ * Feature stylesheets (viewer/log-<name>.css), split out of log.css so a page loads only what it shows:
+ * name => what in a page's HTML shows the feature is there (a class or an attribute).
+ */
+const NL_CSS_FEATURES = [
+    'toc' => ['log-toc'], 'mermaid' => ['log-mermaid'], 'code' => ['log-md-code', 'log-code'], 'alert' => ['markdown-alert'], 'button' => ['log-button'],
+    'embed' => ['log-frame', 'log-embed', 'log-card', 'embedded', 'instagram-media', 'twitter-tweet'], 'player' => ['data-player=', 'log-player', 'log-video', 'log-audio'],
+    'veil' => ['data-veil=', 'log-veil'], 'lock' => ['log-lock'], 'share' => ['log-share', 'log-like'], 'tiles' => ['log-tile', 'log-related'], 'pager' => ['log-pager', 'log-pagination'], 'mail' => ['data-mail='], 'comment' => ['log-comments'],
+];
+/** The feature stylesheets a page needs ('viewer/log-<name>.css'), from its finished HTML; $all for pages that can show anything later (the owner, "show more"). */
+function nl_feature_css_files(string $html, bool $all = false): array
+{
+    $body = ($at = strpos($html, '<body')) !== false ? substr($html, $at) : $html;
+    $out = [];
+    foreach (NL_CSS_FEATURES as $name => $marks) {
+        $used = $all;
+        foreach ($marks as $mark) if (!$used && str_contains($body, $mark)) $used = true;
+        if ($used) $out[] = 'viewer/log-' . $name . '.css';
+    }
+    return $out;
+}
+const NL_UI_ICONS = ['pen', 'time', 'title', 'delete', 'view', 'wrench', 'list', 'tag', 'settings', 'globe', 'lock', 'images', 'page', 'copy', 'comment'];
 function nl_ui_icon(string $name = 'pen'): string
 {
     return nm_icon(in_array($name, NL_UI_ICONS, true) ? 'ui-' . $name : 'ui-pen', 'log-ui-icon');

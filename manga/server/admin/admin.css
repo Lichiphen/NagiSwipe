@@ -348,6 +348,30 @@ html[data-log-theme^="dark"] .settings-form .settings-savebar-status.is-error { 
 .log-like-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px 16px; }.log-like-form label { max-width:220px; }.log-like-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .log-list-likes { display:inline-flex; align-items:center; gap:3px; color:var(--like-ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }.log-list-likes svg { width:13px; height:13px; fill:currentColor; }
 .log-list-likes { flex-shrink:0; }
+/* Comments (lib/log-comments.php): counts in the lists, the comment list, the icons and the settings. */
+.log-list-comments { display:inline-flex; align-items:center; gap:3px; flex-shrink:0; color:var(--muted); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }.log-list-comments svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.log-list-comments.is-waiting { color:var(--accent); }.log-list-comments b { margin-left:4px; padding:0 6px; border-radius:99px; background:var(--accent); color:var(--accent-text); font-size:11px; }
+.log-comment-filter { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+.log-comment-filter a { padding:6px 14px; border:1px solid var(--line); border-radius:99px; color:inherit; text-decoration:none; font-size:14px; }.log-comment-filter a[aria-current="page"] { border-color:var(--accent); background:var(--accent); color:var(--accent-text); }
+.log-comment-list { display:grid; gap:8px; margin:0 0 16px; padding:0; list-style:none; }
+.log-comment-row { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:start; gap:12px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+.log-comment-row.is-waiting { border-color:var(--accent); box-shadow:inset 3px 0 0 var(--accent); }
+.log-comment-row-icon { width:40px; height:40px; }
+.log-comment-row-main > p { margin:0; }
+.log-comment-row-meta { display:flex; flex-wrap:wrap; align-items:center; gap:2px 10px; font-size:13px; }.log-comment-row-meta .note { margin:0; }
+.log-comment-row-stamp { font-size:28px; line-height:1.3; }
+.log-comment-row-text { margin-top:4px !important; line-height:1.7; overflow-wrap:anywhere; }
+.log-comment-row-target { display:flex; align-items:center; gap:6px; margin-top:6px !important; font-size:13px; }.log-comment-row-target .log-ui-icon { width:15px; height:15px; }
+.log-comment-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }.log-comment-row-actions form { margin:0; }
+.log-comment-icon-choices { display:flex; flex-wrap:wrap; gap:8px; }
+.log-comment-icon-choice { display:grid; justify-items:center; gap:4px; width:84px; padding:8px 4px; border:1px solid var(--line); border-radius:12px; font-size:12px; text-align:center; }
+.log-comment-icon-choice:has(.log-comment-icon-show input:checked) { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+.form .log-comment-icon-show { display:grid; justify-items:center; gap:4px; cursor:pointer; }.log-comment-icon-show img { object-fit:contain; }
+.form .log-comment-icon-delete { display:flex; align-items:center; gap:4px; color:var(--danger); font-size:12px; cursor:pointer; }
+.log-comment-icon-delete:has(input:checked) { font-weight:700; }.log-comment-icon-choice:has(.log-comment-icon-delete input:checked) img { opacity:.35; }
+.log-comment-icon-tag { color:var(--muted); font-size:11px; }
+.log-page-comments legend { display:flex; align-items:center; gap:6px; }
+@media(max-width:600px) { .log-comment-row { grid-template-columns:32px minmax(0,1fr); }.log-comment-row-icon { width:32px; height:32px; }.log-comment-row-actions { grid-column:1 / -1; } }
 
 /* LOG restore: steps, a wave meter that fills from the left, the share done and the time left. */
 .log-restore-dialog { width:min(520px,calc(100% - 32px)); padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--text); box-shadow:0 20px 60px #0000004d; }

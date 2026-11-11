@@ -20,6 +20,7 @@ require_once __DIR__ . '/log-embed.php';
 require_once __DIR__ . '/log-card.php';
 require_once __DIR__ . '/log-grid.php';
 require_once __DIR__ . '/log-likes.php';
+require_once __DIR__ . '/log-comments.php';
 require_once __DIR__ . '/log-feed.php';
 require_once __DIR__ . '/log-veil.php';
 require_once __DIR__ . '/log-svg.php';
@@ -267,6 +268,7 @@ function nl_delete_posts(mixed $items): array
         // The temporary transaction folder is removed, never retained as trash.
         nm_rmdir_recursive($stage);
         try { nl_likes_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
+        try { nl_comments_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
         nl_og_forget(array_keys($selected));
         try { nl_pins_forget(array_map('strval', array_keys($selected))); } catch (Throwable) {}
         $clean = !is_dir($stage);
@@ -299,7 +301,7 @@ function nl_settings(): array
 }
 function nl_read_settings(): array
 {
-    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3', 'h4'], 'toc' => 'closed', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'front' => false, 'front_page' => '', 'blog_slug' => 'blog', 'blog_label' => '', 'blog_topmenu' => true, 'blog_footer' => true, 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
+    $s = array_replace(['title' => 'わたしのLOG', 'description' => '日々のメモと、絵と漫画。', 'name' => 'わたし', 'theme' => 'light-blue', 'headings' => ['h2', 'h3', 'h4'], 'toc' => 'closed', 'icon' => '', 'og_image' => '', 'public' => true, 'show_login' => true, 'posts_per_page' => 10, 'pager' => 'numbers', 'pager_status' => true, 'post_nav' => true, 'show_footer' => true, 'footer_text' => 'Powered by NagiLog＆NagiManga', 'layout' => 'stream', 'likes' => true, 'related' => true, 'related_by' => 'both', 'related_order' => 'random', 'new_days' => 7, 'new_label' => 'NEW', 'crumb_home' => 'home', 'crumb_label' => '', 'show_description' => true, 'logo' => '', 'footer_home' => true, 'warning_presets' => NL_WARNING_PRESETS, 'search_engines' => true, 'favicon' => '', 'front' => false, 'front_page' => '', 'blog_slug' => 'blog', 'blog_label' => '', 'blog_topmenu' => true, 'blog_footer' => true, 'comments' => false, 'comment_text' => true, 'comment_stamps' => NL_COMMENT_STAMPS, 'comment_icons_off' => [], 'updated' => 0], nl_read_record(nl_root() . '/settings.php') ?? []);
     $s['public'] = $s['public'] === true;
     // Sites that saved the former default footer follow the new default; edited text is left alone.
     if ($s['footer_text'] === 'Powered by NagiManga / NagiSwipe') $s['footer_text'] = 'Powered by NagiLog＆NagiManga';
@@ -339,6 +341,11 @@ function nl_read_settings(): array
     $s['blog_label'] = is_string($s['blog_label']) ? nl_blog_label_clean($s['blog_label']) : '';
     $s['blog_topmenu'] = $s['blog_topmenu'] !== false;
     $s['blog_footer'] = $s['blog_footer'] !== false;
+    // Comments (lib/log-comments.php): off until the owner turns them on.
+    $s['comments'] = $s['comments'] === true;
+    $s['comment_text'] = $s['comment_text'] !== false;
+    $s['comment_stamps'] = nl_comment_stamps_clean($s['comment_stamps']);
+    $s['comment_icons_off'] = is_array($s['comment_icons_off']) ? array_values(array_filter($s['comment_icons_off'], static fn($k) => is_string($k) && (isset(NL_COMMENT_ICONS[$k]) || preg_match(NL_COMMENT_ICON_KEY, $k)))) : [];
     return $s;
 }
 function nl_date(int $time, string $format = 'Y/m/d H:i'): string
@@ -411,10 +418,12 @@ function nl_save_post(array $input): array
         $mediaRatings = nl_media_ratings_input($input['media_ratings'] ?? [], $media);
         // Editors without the lock fields (older pages, scripts) leave the lock as it was.
         $lock = !empty($input['lock_form']) ? nl_lock_input(!empty($input['lock']), (string)($input['lock_password'] ?? ''), $old) : ($old['lock'] ?? null);
+        // The comment switch: editors without it (older pages, scripts) keep it; a new post follows the site's switch.
+        $comments = is_bool($input['comments'] ?? null) ? $input['comments'] : nl_comments_default($old);
         $p = ['id' => $id, 'title' => $title, 'body' => $body, 'manga' => $refs, 'media' => $media,
             'categories' => $categories, 'rating' => $rating, 'warning' => $warning,
             'status' => $status, 'created' => $old && (!str_starts_with($old['id'], 'd') || $status === 'draft') ? $old['created'] : $now,
-            'updated' => $now, 'revision' => (int)($old['revision'] ?? 0) + 1];
+            'updated' => $now, 'revision' => (int)($old['revision'] ?? 0) + 1, 'comments' => $comments];
         if ($lock !== null) $p['lock'] = $lock;
         $indexFile = nl_root() . '/index.php';
         $oldIndex = is_file($indexFile) ? file_get_contents($indexFile) : null;

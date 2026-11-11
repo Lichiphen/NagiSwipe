@@ -1,0 +1,55 @@
+/* LOG comments (viewer/log-comment.js). Loaded only on a post or fixed page that takes comments (lib/log-public.php nl_feature_css_files). MIT License (c) 2026 Lichiphen. */
+.log-comments { margin:8px 0 32px; padding:20px 24px 22px; border:1px solid var(--log-line); border-radius:var(--log-radius); background:var(--log-card); box-shadow:var(--log-shadow); color:var(--log-text); }
+.log-comments-title { display:flex; align-items:center; gap:8px; margin:0 0 14px; font-size:1.05rem; }
+.log-comments-icon { width:22px; height:22px; flex:none; fill:none; stroke:var(--log-accent); stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
+.log-comments-count { min-width:1.6em; padding:1px 8px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 14%,transparent); color:var(--log-accent); font-size:.8rem; text-align:center; }
+.log-comments-note { margin:0; color:var(--log-muted); font-size:.85rem; line-height:1.7; }
+.log-comment-list { display:grid; gap:2px; margin:0 0 18px; padding:0; list-style:none; }
+.log-comment { display:flex; align-items:flex-start; gap:12px; padding:10px 4px; border-bottom:1px solid var(--log-line); }
+.log-comment:last-child { border-bottom:0; }
+.log-comment.is-waiting { opacity:.85; }
+.log-comment-icon { flex:none; width:40px; height:40px; }
+.log-comment-body { min-width:0; flex:1; }
+.log-comment-meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px; margin:0 0 2px; color:var(--log-muted); font-size:.78rem; }
+.log-comment-id { color:var(--log-text); font-weight:600; letter-spacing:.02em; }
+.log-comment-me { padding:0 7px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 14%,transparent); color:var(--log-accent); font-weight:600; }
+.log-comment-stamp { margin:2px 0 0; font-size:1.9rem; line-height:1.2; }
+.log-comment-text { margin:2px 0 0; font-size:.95rem; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.log-comment-wait { margin:4px 0 0; color:var(--log-muted); font-size:.75rem; }
+.log-comment-form { display:grid; gap:12px; padding-top:14px; border-top:1px dashed var(--log-line); }
+.log-comment-icons,.log-comment-stamp-set { display:flex; flex-wrap:wrap; gap:6px; min-width:0; margin:0; padding:0; border:0; }
+/* The name of each group and, beside it, what it does (a few words). */
+.log-comment-legend { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; margin-bottom:6px; padding:0; }
+.log-comment-legend b { color:var(--log-text); font-size:.85rem; }
+.log-comment-hint { color:var(--log-muted); font-size:.78rem; }
+.log-comment-icon-pick { position:relative; display:grid; place-items:center; width:46px; height:46px; border:1px solid transparent; border-radius:12px; cursor:pointer; }
+.log-comment-icon-pick input { position:absolute; inset:0; margin:0; opacity:0; cursor:pointer; }
+.log-comment-icon-pick:hover { background:var(--log-bg); }
+.log-comment-icon-pick:has(input:checked) { border-color:var(--log-accent); background:color-mix(in srgb,var(--log-accent) 10%,transparent); }
+.log-comment-icon-pick:has(input:focus-visible) { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-comment-stamps { display:flex; flex-wrap:wrap; gap:6px; }
+.log-comment-stamp-btn { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--log-line); border-radius:12px; background:var(--log-bg); font:inherit; font-size:1.4rem; line-height:1; cursor:pointer; touch-action:manipulation; transition:transform .1s ease,border-color .15s ease; }
+.log-comment-stamp-btn:hover { border-color:var(--log-accent); }
+.log-comment-stamp-btn:active { transform:scale(.92); }
+.log-comment-stamp-btn[aria-pressed="true"] { border-color:var(--log-accent); background:color-mix(in srgb,var(--log-accent) 16%,var(--log-card)); box-shadow:inset 0 0 0 1px var(--log-accent); }
+.log-comment-stamp-btn:focus-visible,.log-comment-send:focus-visible { outline:2px solid var(--log-accent); outline-offset:2px; }
+.log-comment-text-label { position:relative; display:grid; gap:0; color:var(--log-muted); font-size:.8rem; }
+.log-comment-text-label textarea { box-sizing:border-box; width:100%; min-height:64px; padding:10px 12px 22px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); color:var(--log-text); font:inherit; font-size:.95rem; line-height:1.6; resize:vertical; }
+.log-comment-text-label textarea:focus { outline:2px solid var(--log-accent); outline-offset:1px; }
+.log-comment-counter { position:absolute; right:10px; bottom:6px; font-size:.7rem; }
+.log-comment-foot { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; }
+.log-comment-who { color:var(--log-muted); font-size:.78rem; }
+.log-comment-send { min-width:96px; height:40px; padding:0 20px; border:0; border-radius:999px; background:var(--log-accent); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.log-comment-send:disabled { opacity:.45; cursor:not-allowed; }
+.log-comment-status { min-height:1.2em; margin:0; color:var(--log-muted); font-size:.82rem; }
+.log-comment-status:empty { display:none; }
+@media(max-width:900px) {
+    .log-site .log-comments { border-radius:0; border-left:0; border-right:0; box-shadow:none; }
+}
+@media(max-width:480px) {
+    .log-comments { padding:18px 16px; }
+    /* Eight icons and seven stamps a row on a phone. */
+    .log-comment-icons,.log-comment-stamps { gap:4px; }
+    .log-comment-icon-pick { width:39px; height:39px; border-radius:10px; }.log-comment-icon-pick img { width:30px; height:30px; }
+    .log-comment-stamp-btn { width:44px; height:42px; font-size:1.3rem; }
+}

@@ -1077,6 +1077,32 @@
    ],
    "example": ".log-button-gray { --button: #57606a; }",
    "since": "0.14.2"
+  },
+  {
+   "name": ".log-comments",
+   "purpose": {
+    "ja": "記事・固定ページの下のコメント欄（見出し・一覧・書き込み欄）",
+    "en": "The comment block under a post or fixed page (heading, list and form)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-comments { border-radius: 0; }",
+   "since": "next"
+  },
+  {
+   "name": ".log-comment",
+   "purpose": {
+    "ja": "コメント1件（アイコン・ID・日時・スタンプ・文章）",
+    "en": "One comment (icon, ID, time, stamp and text)"
+   },
+   "pages": [
+    "post",
+    "page"
+   ],
+   "example": ".log-comment { padding: 12px 0; }",
+   "since": "next"
   }
  ],
  "variables": [
@@ -1282,7 +1308,8 @@
   "is-3x4",
   "is-9x16",
   "is-21x9",
-  "is-blocked"
+  "is-blocked",
+  "is-waiting"
  ],
  "internal": [
   "btn",
@@ -1524,7 +1551,36 @@
   "log-frame-open",
   "log-frame-full",
   "log-frame-close",
-  "log-frame-note"
+  "log-frame-note",
+  "log-comments-title",
+  "log-comments-icon",
+  "log-comments-count",
+  "log-comments-note",
+  "log-comment-list",
+  "log-comment-icon",
+  "log-comment-body",
+  "log-comment-meta",
+  "log-comment-id",
+  "log-comment-me",
+  "log-comment-stamp",
+  "log-comment-text",
+  "log-comment-wait",
+  "log-comment-form",
+  "log-comment-icons",
+  "log-comment-icon-pick",
+  "log-comment-stamps",
+  "log-comment-stamp-btn",
+  "log-comment-text-label",
+  "log-comment-counter",
+  "log-comment-foot",
+  "log-comment-who",
+  "log-comment-send",
+  "log-comment-status",
+  "log-comment-stamp-set",
+  "log-comment-legend",
+  "log-comment-hint",
+  "log-comment-link",
+  "log-comment-link-icon"
  ],
  "dynamic": [
   "is-box",
@@ -1629,6 +1685,13 @@
     ".log-button-purple",
     ".log-button-pink",
     ".log-button-gray"
+   ]
+  },
+  {
+   "version": "next",
+   "added": [
+    ".log-comments",
+    ".log-comment"
    ]
   }
  ]

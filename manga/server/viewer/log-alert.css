@@ -1,0 +1,29 @@
+/* Note boxes (> [!NOTE] and the others). Loaded only on pages that use it (lib/log-public.php nl_feature_css_files). MIT License (c) 2026 Lichiphen. */
+/*
+ * Alerts (> [!NOTE] … [!CAUTION]; GitHub's class names, so CSS written for GitHub still finds them), drawn the LOG's way:
+ * a soft dashed card with its title as a round sticker stuck on the top edge, a little tilted, with a white rim.
+ */
+.markdown-alert { --alert:#2f6fd6; --alert-ink:#fff; position:relative; margin:30px 0 1em; padding:24px 18px 14px; border:2px dashed color-mix(in srgb,var(--alert) 38%,var(--log-line)); border-radius:max(10px,var(--log-radius,16px)); background:color-mix(in srgb,var(--alert) 6%,var(--log-card)); overflow-wrap:anywhere; }
+.markdown-alert-note { --alert:#2f6fd6; }
+.markdown-alert-tip { --alert:#1a8a4a; }
+.markdown-alert-important { --alert:#7c4ddb; }
+.markdown-alert-warning { --alert:#b86a00; }
+.markdown-alert-caution { --alert:#d1343a; }
+html[data-log-theme^="dark"] .markdown-alert { --alert:#7fb0ff; --alert-ink:#10192d; }
+html[data-log-theme^="dark"] .markdown-alert-tip { --alert:#5fcf8c; }
+html[data-log-theme^="dark"] .markdown-alert-important { --alert:#b99cff; }
+html[data-log-theme^="dark"] .markdown-alert-warning { --alert:#f0b04d; }
+html[data-log-theme^="dark"] .markdown-alert-caution { --alert:#ff8a8f; }
+.markdown-alert-title { position:absolute; top:0; left:14px; display:inline-flex; align-items:center; gap:6px; margin:0 !important; padding:4px 14px 4px 6px; transform:translateY(-55%) rotate(-3deg); transform-origin:left center; border:3px solid var(--log-card); border-radius:999px; background:color-mix(in srgb,var(--alert) 88%,#000); color:var(--alert-ink); box-shadow:0 3px 0 color-mix(in srgb,var(--alert) 30%,transparent),0 6px 14px #0000001f; font-size:13px; font-weight:800; line-height:1.4; letter-spacing:.08em; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
+html[data-log-theme^="dark"] .markdown-alert-title { background:var(--alert); }
+.markdown-alert:hover .markdown-alert-title { transform:translateY(-58%) rotate(1deg) scale(1.04); }
+/* The icon sits in its own white circle, like a badge on the sticker. */
+.markdown-alert-icon { flex:none; box-sizing:border-box; width:24px; height:24px; padding:3px; border-radius:50%; background:var(--log-card); color:color-mix(in srgb,var(--alert) 88%,#000); fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+html[data-log-theme^="dark"] .markdown-alert-icon { color:var(--alert); }
+.markdown-alert > :last-child { margin-bottom:0; }
+.log-page-body .markdown-alert { margin:32px 0 1.15em; }
+.markdown-alert blockquote,.markdown-alert code { background:var(--log-card); }
+@media(prefers-reduced-motion:reduce) {
+    .markdown-alert-title { transition:none; }
+    .markdown-alert:hover .markdown-alert-title { transform:translateY(-55%) rotate(-3deg); }
+}

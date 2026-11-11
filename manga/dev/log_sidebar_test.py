@@ -68,11 +68,12 @@ def run(site,other_site,c,csrf,other,ot):
     check('LOG設定へ並び替え・3テンプレート・保存操作を用意','data-sidebar-manager' in panel and all('data-sidebar-template="'+x+'"' in panel for x in ('grid','banner','blank')) and 'data-sidebar-step="-1"' in panel and 'data-sidebar-step="1"' in panel)
     check('JavaScript無効時の案内・サイズ・外部画像の説明','<noscript>' in panel and '50KB' in panel and '1MB' in panel and '外部画像' in panel)
     check('バナーテンプレートのローカル画像が実在',pub.get('/viewer/og.jpg').status==200)
-    check('ログインリンクの切り替えはサイドバーの1か所だけ','name="show_login"' not in panel and 'パスワードによる保護はそのまま' in panel and panel.count('role="switch" data-sidebar-enabled')==9+3)
+    check('ログインリンクの切り替えはサイドバーの1か所だけ','name="show_login"' not in panel and 'パスワードによる保護はそのまま' in panel and panel.count('role="switch" data-sidebar-enabled')==9+len(php(site,'echo json_encode(nl_sidebar_templates());')))
     check('スマホのメニューボタンにMENU表記',re.search(r'<button class="log-menu-toggle"[^>]*aria-label="メニューを開く">.*?<span class="log-menu-label" aria-hidden="true">MENU</span></button>',pub.get('/').text) is not None)
     check('リンク集はHTMLなしで編集・追加・並び替え可能','data-link-add' in panel and 'data-link-remove' in panel and 'data-link-step="-1"' in panel and 'data-link-icon' in panel and '自分のプロフィールURL' in panel)
     templates=php(site,'echo json_encode(nl_sidebar_templates(),JSON_UNESCAPED_UNICODE);')
-    additions=[custom(**{'text':t['html'],'title':t['title'],'framed':t['framed']}) for t in templates.values()]
+    additions=[custom(**{'text':templates[k]['html'],'title':templates[k]['title'],'framed':templates[k]['framed']}) for k in ('grid','banner','blank')]
+    check('グリッドリンクは1行に2つと1つずつの2つのテンプレート','log-link-grid-1' in templates['grid1']['html'] and 'log-link-grid-1' not in templates['grid']['html'] and 'value="grid1"' in panel)
     old=builtins[2:]
     reordered=[old[2],additions[0],old[0],old[4],additions[1],old[1],old[3],additions[2],old[5],old[6],builtins[1],builtins[0]]
     response=ok_sidebar(reordered); stored=side(site)
