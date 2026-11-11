@@ -10,6 +10,10 @@ if (!defined('NAGIMANGA')) { http_response_code(404); exit; }
 
 const NL_COMMENT_TEXT_MAX = 300;
 const NL_COMMENT_LINES_MAX = 8;
+/** A reader's name: optional, one line. Shown beside their mark, so the same name from someone else still looks different. */
+const NL_COMMENT_NAME_MAX = 16;
+/** Approved names kept in the index (uid|name), so a reader's next comment with the same name needs no approval. */
+const NL_COMMENT_NAMES_MAX = 2000;
 /** Comments kept for one post or page (shown and waiting together). */
 const NL_COMMENT_ITEM_MAX = 500;
 /** Texts waiting for the owner, the whole site together: a flood of them cannot fill the disk. */
@@ -244,17 +248,22 @@ function nl_comments_index_read(): array
 {
     $r = nl_read_record(nl_comments_index_file());
     if (!is_array($r) || !is_array($r['n'] ?? null)) return nl_comments_index_rebuild(false);
-    return ['new' => max(0, (int)($r['new'] ?? 0)), 'n' => $r['n']];
+    return ['new' => max(0, (int)($r['new'] ?? 0)), 'n' => $r['n'], 'names' => is_array($r['names'] ?? null) ? $r['names'] : []];
 }
 /** From the comment files (after a restore, or when the index is missing). */
 function nl_comments_index_rebuild(bool $write = true): array
 {
-    $index = ['new' => 0, 'n' => []];
+    $index = ['new' => 0, 'n' => [], 'names' => []];
     foreach (glob(nl_comments_dir() . '/*.php') ?: [] as $file) {
         $id = basename($file, '.php');
         if (!preg_match(NL_COMMENT_TARGET, $id)) continue;
         $n = ['ok' => 0, 'wait' => 0];
-        foreach (nl_comments_read($id) as $c) $n[($c['st'] ?? '') === 'wait' ? 'wait' : 'ok']++;
+        foreach (nl_comments_read($id) as $c) {
+            $wait = ($c['st'] ?? '') === 'wait';
+            $n[$wait ? 'wait' : 'ok']++;
+            // A shown comment with a name: the owner approved that name for that reader.
+            if (!$wait && ($c['name'] ?? '') !== '' && ($c['uid'] ?? '') !== '') $index['names'][$c['uid'] . '|' . $c['name']] = 1;
+        }
         if ($n['ok'] + $n['wait'] > 0) $index['n'][$id] = $n;
     }
     if ($write) nl_write_record(nl_comments_index_file(), $index);
@@ -263,7 +272,8 @@ function nl_comments_index_rebuild(bool $write = true): array
 function nl_comments_index_write(array $index): void
 {
     $index['n'] = array_filter($index['n'], static fn($n) => ($n['ok'] ?? 0) + ($n['wait'] ?? 0) > 0);
-    nl_write_record(nl_comments_index_file(), ['new' => max(0, $index['new']), 'n' => $index['n']]);
+    $names = array_slice($index['names'] ?? [], -NL_COMMENT_NAMES_MAX, null, true);
+    nl_write_record(nl_comments_index_file(), ['new' => max(0, $index['new']), 'n' => $index['n'], 'names' => $names]);
 }
 /** [shown, waiting] for one post or page. */
 function nl_comment_counts(string $id): array
@@ -312,10 +322,31 @@ function nl_comment_text(mixed $text): string
     if (mb_strlen($text) > NL_COMMENT_TEXT_MAX || substr_count($text, "\n") >= NL_COMMENT_LINES_MAX) throw new UnexpectedValueException('long');
     return $text;
 }
-/** What a reader sees of a comment. */
+/** A reader's name: one line, no control characters, at most NL_COMMENT_NAME_MAX characters ('' for none). */
+function nl_comment_name(mixed $name): string
+{
+    if ($name === null) return '';
+    if (!is_string($name) || !mb_check_encoding($name, 'UTF-8')) throw new UnexpectedValueException('form');
+    $name = trim(preg_replace('/[\x00-\x1F\x7F\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{25C6}]/u', '', $name) ?? '');
+    if (mb_strlen($name) > NL_COMMENT_NAME_MAX) throw new UnexpectedValueException('long');
+    return $name;
+}
+/** What a reader sees of a comment. 'to': the comment its thread starts with, 're': the one it answers, 'own': written by the owner. */
 function nl_comment_public(array $c): array
 {
-    return ['id' => (string)$c['id'], 't' => (int)$c['t'], 'uid' => (string)$c['uid'], 'icon' => (string)$c['icon'], 'stamp' => (string)($c['stamp'] ?? ''), 'text' => (string)($c['text'] ?? ''), 'wait' => ($c['st'] ?? '') === 'wait'];
+    return ['id' => (string)$c['id'], 't' => (int)$c['t'], 'uid' => (string)$c['uid'], 'name' => (string)($c['name'] ?? ''), 'icon' => (string)$c['icon'], 'stamp' => (string)($c['stamp'] ?? ''), 'text' => (string)($c['text'] ?? ''),
+        'to' => (string)($c['to'] ?? ''), 're' => (string)($c['re'] ?? ''), 'own' => !empty($c['own']), 'wait' => ($c['st'] ?? '') === 'wait'];
+}
+/**
+ * Where a reply goes, from the comments of its post or page: ['to' => thread, 're' => answered comment]. Replies stay one level deep:
+ * an answer to a reply joins the same thread (and names whom it answers). Throws 'gone' when that comment is not shown (any more).
+ */
+function nl_comment_reply_to(array $items, string $re, bool $owner = false): array
+{
+    if ($re === '') return ['to' => '', 're' => ''];
+    if (!preg_match(NL_COMMENT_ID, $re)) throw new UnexpectedValueException('form');
+    foreach ($items as $c) if ($c['id'] === $re && ($owner || ($c['st'] ?? '') !== 'wait')) return ['to' => ($c['to'] ?? '') !== '' ? (string)$c['to'] : $re, 're' => $re];
+    throw new UnexpectedValueException('gone');
 }
 /** The comments a reader sees: the shown ones, and their own that wait for approval. */
 function nl_comments_for(string $id, string $uid = ''): array
@@ -337,13 +368,18 @@ function nl_comment_add(string $id, array $in): array
     if (!preg_match(NL_COMMENT_TOKEN, $token) || !isset(nl_comment_icons()[$icon])) throw new UnexpectedValueException('form');
     if ($stamp !== '' && !in_array($stamp, $s['comment_stamps'], true)) throw new UnexpectedValueException('form');
     $text = nl_comment_text($in['text'] ?? '');
+    $name = nl_comment_name($in['name'] ?? '');
+    $re = is_string($in['re'] ?? null) ? $in['re'] : '';
     if ($text !== '' && !$s['comment_text']) throw new UnexpectedValueException('form');
     if ($stamp === '' && $text === '') throw new UnexpectedValueException('empty');
-    $c = ['id' => bin2hex(random_bytes(5)), 't' => time(), 'uid' => nl_comment_uid($token), 'icon' => $icon, 'stamp' => $stamp, 'text' => $text, 'st' => $text === '' ? 'ok' : 'wait', 'net' => nl_comment_net()];
-    return nm_with_lock('log-comments', static function () use ($id, $c) {
+    $c = ['id' => bin2hex(random_bytes(5)), 't' => time(), 'uid' => nl_comment_uid($token), 'name' => $name, 'icon' => $icon, 'stamp' => $stamp, 'text' => $text, 'to' => '', 're' => '', 'st' => 'ok', 'net' => nl_comment_net()];
+    return nm_with_lock('log-comments', static function () use ($id, $c, $re) {
         $items = nl_comments_read($id);
         if (count($items) >= NL_COMMENT_ITEM_MAX) throw new UnexpectedValueException('full');
+        $c = nl_comment_reply_to($items, $re) + $c;
         $index = nl_comments_index_read();
+        // A text waits for the owner; so does a name the owner has not yet approved for this reader (else a stamp could carry any words).
+        if ($c['text'] !== '' || ($c['name'] !== '' && !isset($index['names'][$c['uid'] . '|' . $c['name']]))) $c['st'] = 'wait';
         if ($c['st'] === 'wait' && array_sum(array_map(static fn($n) => (int)($n['wait'] ?? 0), $index['n'])) >= NL_COMMENT_WAIT_MAX) throw new UnexpectedValueException('busy');
         $items[] = $c;
         nl_comments_write($id, $items);
@@ -374,7 +410,9 @@ function nl_comments_moderate(array $pairs, string $action): int
             $id = (string)$id;
             $items = [];
             foreach (nl_comments_read($id) as $c) {
-                if (!isset($ids[$c['id']])) { $items[] = $c; continue; }
+                // A deleted comment takes the replies under it along (they would answer nothing).
+                $hit = isset($ids[$c['id']]) || ($action === 'delete' && ($c['to'] ?? '') !== '' && isset($ids[$c['to']]));
+                if (!$hit) { $items[] = $c; continue; }
                 $done++;
                 if ($action === 'ok') { $c['st'] = 'ok'; $items[] = $c; }
             }
@@ -384,6 +422,26 @@ function nl_comments_moderate(array $pairs, string $action): int
         $index['new'] = nl_comments_index_read()['new'];
         nl_comments_index_write($index);
         return $done;
+    });
+}
+/** The owner answers a comment from the admin list: shown at once, marked as the owner's, and the answered comment is approved too. */
+function nl_comment_owner_reply(string $id, string $re, string $text): array
+{
+    if (!preg_match(NL_COMMENT_TARGET, $id) || !nl_comment_target($id)) throw new UnexpectedValueException(nm_t('コメントを選び直してください'));
+    try { $text = nl_comment_text($text); } catch (UnexpectedValueException) { throw new UnexpectedValueException(nm_t('返信は{n}文字・数行までにしてください', ['n' => NL_COMMENT_TEXT_MAX])); }
+    if ($text === '') throw new UnexpectedValueException(nm_t('返信の文章を書いてください'));
+    return nm_with_lock('log-comments', static function () use ($id, $re, $text) {
+        $items = nl_comments_read($id);
+        if (count($items) >= NL_COMMENT_ITEM_MAX) throw new UnexpectedValueException(nm_t('この記事のコメントはいっぱいです。'));
+        try { $where = nl_comment_reply_to($items, $re, true); } catch (UnexpectedValueException) { throw new UnexpectedValueException(nm_t('返信先のコメントが見つかりません')); }
+        foreach ($items as &$c) if ($c['id'] === $re) $c['st'] = 'ok';
+        unset($c);
+        $items[] = $mine = ['id' => bin2hex(random_bytes(5)), 't' => time(), 'uid' => '', 'name' => '', 'icon' => '', 'stamp' => '', 'text' => $text, 'st' => 'ok', 'own' => true, 'net' => ''] + $where;
+        nl_comments_write($id, $items);
+        $index = nl_comments_index_rebuild(false);
+        $index['new'] = nl_comments_index_read()['new'];
+        nl_comments_index_write($index);
+        return $mine;
     });
 }
 /** Deleted posts and pages take their comments with them. */
@@ -416,12 +474,15 @@ function nl_comments_backup(): array
 /** A comment from a backup, checked like a new one (the owner's own file, but it may have been edited). */
 function nl_comment_restore(mixed $c): ?array
 {
-    if (!is_array($c) || !is_string($c['id'] ?? null) || !preg_match(NL_COMMENT_ID, $c['id']) || !is_int($c['t'] ?? null) || !is_string($c['uid'] ?? null) || !preg_match('/\A[A-Za-z0-9]{8}\z/', $c['uid'])
-        || !is_string($c['icon'] ?? null) || !(isset(NL_COMMENT_ICONS[$c['icon']]) || preg_match(NL_COMMENT_ICON_KEY, $c['icon']))) return null;
+    if (!is_array($c)) return null;
+    $own = ($c['own'] ?? false) === true;
+    if ( !is_string($c['id'] ?? null) || !preg_match(NL_COMMENT_ID, $c['id']) || !is_int($c['t'] ?? null) || !is_string($c['uid'] ?? null) || !preg_match($own ? '/\A\z/' : '/\A[A-Za-z0-9]{8}\z/', $c['uid'])
+        || !is_string($c['icon'] ?? null) || !($own ? $c['icon'] === '' : (isset(NL_COMMENT_ICONS[$c['icon']]) || preg_match(NL_COMMENT_ICON_KEY, $c['icon'])))) return null;
     $stamp = is_string($c['stamp'] ?? null) && ($c['stamp'] === '' || nl_comment_stamp_ok($c['stamp'])) ? $c['stamp'] : null;
-    try { $text = nl_comment_text($c['text'] ?? ''); } catch (UnexpectedValueException) { return null; }
-    if ($stamp === null || ($stamp === '' && $text === '')) return null;
-    return ['id' => $c['id'], 't' => $c['t'], 'uid' => $c['uid'], 'icon' => $c['icon'], 'stamp' => $stamp, 'text' => $text, 'st' => ($c['st'] ?? '') === 'wait' ? 'wait' : 'ok', 'net' => is_string($c['net'] ?? null) && preg_match('/\A[a-f0-9]{8}\z/', $c['net']) ? $c['net'] : ''];
+    try { $text = nl_comment_text($c['text'] ?? ''); $name = nl_comment_name($c['name'] ?? ''); } catch (UnexpectedValueException) { return null; }
+    $to = $c['to'] ?? ''; $re = $c['re'] ?? '';
+    if ($stamp === null || ($stamp === '' && $text === '') || !is_string($to) || !is_string($re) || ($to !== '' && !preg_match(NL_COMMENT_ID, $to)) || ($re !== '' && !preg_match(NL_COMMENT_ID, $re)) || ($to === '') !== ($re === '')) return null;
+    return ['id' => $c['id'], 't' => $c['t'], 'uid' => $c['uid'], 'name' => $name, 'icon' => $c['icon'], 'stamp' => $stamp, 'text' => $text, 'to' => $to, 're' => $re, 'st' => ($c['st'] ?? '') === 'wait' ? 'wait' : 'ok', 'net' => is_string($c['net'] ?? null) && preg_match('/\A[a-f0-9]{8}\z/', $c['net']) ? $c['net'] : ''] + ($own ? ['own' => true] : []);
 }
 
 /* ---- The public page ------------------------------------------------------------------------ */
@@ -430,8 +491,10 @@ function nl_comment_restore(mixed $c): ?array
 function nl_comments_section(array $item): string
 {
     [$ok] = nl_comment_counts((string)$item['id']);
-    return '<section class="log-comments" id="comments" data-comments="' . h($item['id']) . '" aria-labelledby="log-comments-title"><h2 class="log-comments-title" id="log-comments-title">' . nm_icon('ui-comment', 'log-comments-icon') . '<span>' . nm_t('コメント') . '</span><span class="log-comments-count" data-comments-count>' . $ok . '</span></h2>'
-        . '<div class="log-comments-list" data-comments-list><p class="log-comments-note">' . nm_t('読み込んでいます') . '</p></div><div class="log-comments-form" data-comments-form></div>'
+    return '<section class="log-comments" id="comments" data-comments="' . h($item['id']) . '" aria-labelledby="log-comments-title"><h2 class="log-comments-title" id="log-comments-title">' . nm_icon('ui-comment', 'log-comments-icon') . '<span>' . nm_t('コメント') . '</span><span class="log-comments-count" data-comments-count>' . $ok . '</span>'
+        // Right beside the count: a jump down to the form (the script also leaves a reply, if one was open).
+        . '<a class="log-comments-write" href="#comments-form" data-comments-write>' . nm_icon('ui-pen', 'log-comments-write-icon') . '<span>' . nm_t('書き込む') . '</span></a></h2>'
+        . '<div class="log-comments-list" data-comments-list><p class="log-comments-note">' . nm_t('読み込んでいます') . '</p></div><div class="log-comments-form" id="comments-form" data-comments-form></div>'
         . '<noscript><p class="log-comments-note">' . nm_t('コメントを見たり書いたりするには、JavaScriptを有効にしてください。') . '</p></noscript></section>';
 }
 
@@ -467,7 +530,9 @@ function nl_comments_settings_panel(): string
         . '<p class="note">' . nm_t('チェックを外したアイコンは、新しいコメントでは選べなくなります。追加したアイコンは「削除」にチェックを入れて保存すると消えます（使ったコメントは最初のアイコンで表示します）。') . '</p>'
         . '<label>' . nm_t('アイコンを追加（SVG・PNG・JPEG・WebP・GIF、1枚{n}KBまで・複数可）', ['n' => NL_COMMENT_ICON_BYTES / 1024]) . '<input type="file" name="comment_icon_files[]" accept="image/svg+xml,.svg,image/png,image/jpeg,image/webp,image/gif" multiple></label>'
         . '<p class="note">' . nm_t('正方形の画像がきれいに収まります。PNGなどは128×128pxに縮めて保存し、写真の位置情報などは残しません。スクリプトや外部の読み込みを含むSVGは、安全のため受け付けません。ファイル名がアイコンの名前になります。追加できるのは{n}個までです。', ['n' => NL_COMMENT_ICON_UPLOADS]) . '</p></fieldset>'
-        . '<fieldset class="log-visibility"><legend>' . nm_t('名前とID') . '</legend><p class="note">' . nm_t('名前の欄はありません。読者のブラウザーに推測できない合言葉を保存し、そこから作った8文字のIDを名前の代わりに出します。スマホでIPアドレスが変わっても同じIDのままで、ほかの人は同じIDを出せません。合言葉をなくす（ブラウザーのデータを消す）と、IDが変わります。') . '</p>'
+        . '<fieldset class="log-visibility"><legend>' . nm_t('名前と印') . '</legend><p class="note">' . nm_t('読者のブラウザーに推測できない合言葉を保存し、そこから作った印（◆と6文字）を名前の横に出します。スマホでIPアドレスが変わっても同じ印のままで、ほかの人は同じ印を出せません。名前は任意（{n}文字まで）で、同じ名前を名乗られても印で見分けられます。合言葉をなくす（ブラウザーのデータを消す）と、印が変わります。', ['n' => NL_COMMENT_NAME_MAX]) . '</p>'
+        . '<p class="note">' . nm_t('名前の付いたコメントは、その名前を一度承認するまで公開しません（スタンプだけでも）。承認したあとは、同じ人が同じ名前で書くとすぐに表示します。') . '</p>'
+        . '<p class="note">' . nm_t('返信は1段まで入れ子にして表示します。返信への返信は同じ流れの中に並び、誰あての返信かを表示します。管理画面の「コメント」から、管理人として返信できます。') . '</p>'
         . '<p class="note">' . nm_t('連続の書き込みは、同じ回線から1分に{minute}件、1日に{day}件までです。IPアドレスそのものは保存せず、管理画面では回線ごとの短い印だけを見られます。', ['minute' => NL_COMMENT_MINUTE, 'day' => NL_COMMENT_DAY]) . '</p></fieldset>'
         . '</div></section>';
 }
@@ -515,24 +580,34 @@ function nl_view_comments(): void
     $icons = nl_comment_icons(true, '../');
     $first = array_key_first($icons);
     $targets = [];
+    $byId = [];
+    foreach ($all as $c) $byId[$c['target']][$c['id']] = $c;
+    $s = nl_settings();
     $rows = '';
     $form = static fn(string $action, string $pair, string $show, string $button, string $confirm = '') => '<form method="post" action="index.php"' . ($confirm !== '' ? ' class="js-confirm" data-confirm="' . $confirm . '"' : '') . '>' . nl_csrf_field()
         . '<input type="hidden" name="do" value="log_comments_moderate"><input type="hidden" name="action" value="' . $action . '"><input type="hidden" name="items" value="[' . $pair . ']"><input type="hidden" name="show" value="' . $show . '">' . $button . '</form>';
     foreach (array_slice($list, ($page - 1) * $per, $per) as $c) {
         $info = $targets[$c['target']] ??= nl_comment_target_info($c['target']);
         $wait = ($c['st'] ?? '') === 'wait';
-        $icon = $icons[$c['icon']] ?? $icons[$first];
+        $own = !empty($c['own']);
+        $icon = $own ? null : ($icons[$c['icon']] ?? $icons[$first]);
         $pair = h(json_encode([$c['target'], $c['id']]));
-        $rows .= '<li class="log-comment-row' . ($wait ? ' is-waiting' : '') . '"><img class="log-comment-row-icon" src="' . h($icon['url']) . '" alt="" width="40" height="40">'
-            . '<div class="log-comment-row-main"><p class="log-comment-row-meta"><b>ID:' . h($c['uid']) . '</b><span class="note" title="' . nm_t('同じ回線からの書き込みは、同じ印になります') . '">' . nm_t('回線 {net}', ['net' => h($c['net'] ?? '')]) . '</span><time datetime="' . h(nl_date($c['t'], 'c')) . '">' . h(nl_date($c['t'])) . '</time>' . ($wait ? '<span class="badge">' . nm_t('承認待ち') . '</span>' : '') . '</p>'
+        $re = ($c['re'] ?? '') !== '' ? ($byId[$c['target']][$c['re']] ?? null) : null;
+        $who = $own ? '<b>' . h($s['name']) . '</b><span class="badge">' . nm_t('管理人') . '</span>' : (($c['name'] ?? '') !== '' ? '<b>' . h($c['name']) . '</b> ' : '') . '<b>◆' . h(substr($c['uid'], 0, 6)) . '</b><span class="note" title="' . nm_t('同じ回線からの書き込みは、同じ印になります') . '">' . nm_t('回線 {net}', ['net' => h($c['net'] ?? '')]) . '</span>';
+        $rows .= '<li class="log-comment-row' . ($wait ? ' is-waiting' : '') . '">' . ($icon ? '<img class="log-comment-row-icon" src="' . h($icon['url']) . '" alt="" width="40" height="40">' : nl_icon_html($s, '../', 'log-comment-row-icon'))
+            . '<div class="log-comment-row-main"><p class="log-comment-row-meta">' . $who . '<time datetime="' . h(nl_date($c['t'], 'c')) . '">' . h(nl_date($c['t'])) . '</time>' . ($wait ? '<span class="badge">' . nm_t('承認待ち') . '</span>' : '') . '</p>'
+            . (($c['re'] ?? '') !== '' ? '<p class="log-comment-row-to note">' . nm_t('↳ {who}への返信', ['who' => h($re ? (!empty($re['own']) ? nm_t('管理人') : trim(($re['name'] ?? '') . ' ◆' . substr($re['uid'], 0, 6))) : nm_t('削除したコメント'))]) . '</p>' : '')
             . ($c['stamp'] !== '' ? '<p class="log-comment-row-stamp">' . h($c['stamp']) . '</p>' : '') . ($c['text'] !== '' ? '<p class="log-comment-row-text">' . nl2br(h($c['text']), false) . '</p>' : '')
             . '<p class="log-comment-row-target">' . ($info ? nl_ui_icon('page') . '<a href="' . h($info['url']) . '" target="_blank" rel="noopener">' . h($info['title']) . '</a>' . ($info['open'] ? '' : '<small class="badge">' . nm_t('コメント欄はオフ') . '</small>') : '<span class="note">' . nm_t('（見つからない記事）') . '</span>') . '</p></div>'
+            . ($own ? '' : '<details class="log-comment-reply"><summary class="btn">' . nl_ui_icon('comment') . '<span>' . nm_t('返信') . '</span></summary><form method="post" action="index.php">' . nl_csrf_field()
+                . '<input type="hidden" name="do" value="log_comments_reply"><input type="hidden" name="target" value="' . h($c['target']) . '"><input type="hidden" name="re" value="' . h($c['id']) . '"><input type="hidden" name="show" value="' . $show . '">'
+                . '<label>' . nm_t('管理人として返信（{n}文字まで・すぐ表示）', ['n' => NL_COMMENT_TEXT_MAX]) . '<textarea name="text" rows="3" maxlength="' . NL_COMMENT_TEXT_MAX . '" required></textarea></label>'
+                . '<button class="btn primary">' . ($wait ? nm_t('承認して返信') : nm_t('返信する')) . '</button></form></details>')
             . '<div class="log-comment-row-actions">' . ($wait ? $form('ok', $pair, $show, '<button class="btn primary">' . nm_t('承認して表示') . '</button>') : '')
-            . $form('delete', $pair, $show, '<button class="btn danger">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button>', nm_t('このコメントを削除しますか？元に戻せません。')) . '</div></li>';
+            . $form('delete', $pair, $show, '<button class="btn danger">' . nl_ui_icon('delete') . '<span>' . nm_t('削除') . '</span></button>', (($c['to'] ?? '') === '' ? nm_t('このコメントと、その返信を削除しますか？元に戻せません。') : nm_t('このコメントを削除しますか？元に戻せません。'))) . '</div></li>';
     }
     // Seen: the bell counts only what arrives after this.
     nl_comments_seen();
-    $s = nl_settings();
     $state = !$s['public'] ? nm_t('自分専用Memoのため、コメント欄は出していません。') : (!$s['comments'] ? nm_t('コメントは「設定 › LOG › コメント」でオフになっています。書き込まれたコメントは残しています。') : '');
     $filter = '<nav class="log-comment-filter" aria-label="' . nm_t('表示するコメント') . '"><a href="index.php?p=log_comments"' . ($show === '' ? ' aria-current="page"' : '') . '>' . nm_t('すべて（{n}）', ['n' => count($all)]) . '</a><a href="index.php?p=log_comments&amp;show=wait"' . ($show === 'wait' ? ' aria-current="page"' : '') . '>' . nm_t('承認待ち（{n}）', ['n' => $waiting]) . '</a></nav>';
     nm_layout(nm_t('コメント'), '<div class="log-heading"><div><h1>' . nm_t('コメント') . '</h1><p class="note">' . h($s['title']) . ' ' . nm_t('· 記事と固定ページに書き込まれた匿名のコメントです。') . '</p></div><div class="log-toolbar"><a class="btn" href="index.php?p=settings&amp;section=log#log-comments-settings">' . nl_ui_icon('settings') . '<span>' . nm_t('コメントの設定') . '</span></a></div></div>'
@@ -548,6 +623,10 @@ function nl_comments_handle(string $do): never
             $action = nm_str($_POST, 'action', 10);
             $n = nl_comments_moderate(nl_json_list(nm_str($_POST, 'items', 50000)), $action);
             nm_flash('ok', $action === 'ok' ? nm_t('コメントを{n}件承認しました', ['n' => $n]) : nm_t('コメントを{n}件削除しました', ['n' => $n]));
+            nm_redirect('p=log_comments' . (nm_str($_POST, 'show', 10) === 'wait' ? '&show=wait' : ''));
+        case 'log_comments_reply':
+            nl_comment_owner_reply(nm_str($_POST, 'target', 24), nm_str($_POST, 're', 10), nm_str($_POST, 'text', 4000));
+            nm_flash('ok', nm_t('返信しました'));
             nm_redirect('p=log_comments' . (nm_str($_POST, 'show', 10) === 'wait' ? '&show=wait' : ''));
     }
     nm_not_found();

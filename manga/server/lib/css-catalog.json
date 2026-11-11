@@ -1580,7 +1580,20 @@
   "log-comment-legend",
   "log-comment-hint",
   "log-comment-link",
-  "log-comment-link-icon"
+  "log-comment-link-icon",
+  "log-comment-thread",
+  "log-comment-replies",
+  "log-comment-name",
+  "log-comment-owner",
+  "log-comment-owner-icon",
+  "log-comment-to",
+  "log-comment-reply-btn",
+  "log-comment-replying",
+  "log-comment-cancel",
+  "log-comment-name-label",
+  "log-comments-form",
+  "log-comments-write",
+  "log-comments-write-icon"
  ],
  "dynamic": [
   "is-box",

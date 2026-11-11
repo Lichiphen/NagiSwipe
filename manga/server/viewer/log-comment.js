@@ -23,21 +23,44 @@
     const pad = n => String(n).padStart(2, '0');
     const when = s => { const d = new Date(s * 1000); return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
     let data = null, me = '';
+    // The comment being answered (null: a new thread), and the form, which moves under that thread while replying.
+    let replyTo = null, f = null, setReply = () => {};
 
     function iconOf(key) { return data.icons.find(i => i.key === key) || data.icons[0]; }
+    // The mark made from the reader's key: the same name from someone else still shows a different mark.
+    const mark = uid => '◆' + uid.slice(0, 6);
+    const who = c => c.own ? (data.owner?.name || t('管理人')) : (c.name ? c.name + ' ' : '') + mark(c.uid);
     function item(c) {
-        const li = el('li', 'log-comment' + (c.wait ? ' is-waiting' : ''));
-        const icon = iconOf(c.icon), img = el('img', 'log-comment-icon');
-        img.src = icon ? icon.url : ''; img.alt = ''; img.width = 40; img.height = 40; img.loading = 'lazy'; img.decoding = 'async';
+        const li = el('li', 'log-comment' + (c.wait ? ' is-waiting' : '') + (c.own ? ' is-owner' : ''));
+        li.id = 'comment-' + c.id;
+        let face;
+        if (c.own && !data.owner?.icon) face = el('span', 'log-comment-icon log-comment-owner-icon', [...(data.owner?.name || '?')][0]);
+        else {
+            face = el('img', 'log-comment-icon');
+            const icon = c.own ? { url: data.owner.icon } : iconOf(c.icon);
+            face.src = icon ? icon.url : ''; face.alt = ''; face.width = 40; face.height = 40; face.loading = 'lazy'; face.decoding = 'async';
+        }
         const body = el('div', 'log-comment-body'), meta = el('p', 'log-comment-meta');
-        meta.append(el('b', 'log-comment-id', 'ID:' + c.uid));
-        if (c.uid === me) meta.append(el('span', 'log-comment-me', t('あなた')));
+        if (c.own) meta.append(el('b', 'log-comment-name', data.owner?.name || ''), el('span', 'log-comment-owner', t('管理人')));
+        else {
+            if (c.name) meta.append(el('b', 'log-comment-name', c.name));
+            meta.append(el('b', 'log-comment-id', mark(c.uid)));
+            if (c.uid === me) meta.append(el('span', 'log-comment-me', t('あなた')));
+        }
         const time = el('time', '', when(c.t)); time.dateTime = new Date(c.t * 1000).toISOString(); meta.append(time);
         body.append(meta);
+        const to = c.re && data.items.find(x => x.id === c.re);
+        if (to) body.append(el('p', 'log-comment-to', t('{who} さんへ', { who: who(to) })));
         if (c.stamp) body.append(el('p', 'log-comment-stamp', c.stamp));
         if (c.text) body.append(el('p', 'log-comment-text', c.text));
         if (c.wait) body.append(el('p', 'log-comment-wait', t('承認待ち：管理者が確認すると、ほかの人にも表示されます（いまはあなたにだけ見えています）。')));
-        li.append(img, body);
+        else {
+            const b = el('button', 'log-comment-reply-btn', t('返信')); b.type = 'button';
+            b.setAttribute('aria-label', t('{who} さんに返信', { who: who(c) }));
+            b.addEventListener('click', () => setReply(c));
+            body.append(b);
+        }
+        li.append(face, body);
         return li;
     }
     function render() {
@@ -45,17 +68,35 @@
         if (countEl) countEl.textContent = String(shown);
         // The button beside Share on this page shows the same count.
         document.querySelectorAll(`.log-comment-link[data-comments-for="${CSS.escape(id)}"] span`).forEach(n => { n.textContent = String(shown); });
+        if (f && !replyTo && f.parentNode !== formSlot) formSlot.replaceChildren(f);
         if (!data.items.length) { list.replaceChildren(el('p', 'log-comments-note', t('まだコメントはありません。スタンプひとつから、どうぞ。'))); return; }
+        // One level deep: each thread is a comment and the replies under it (a reply to a reply joins the same thread).
+        const ids = new Set(data.items.map(c => c.id));
         const ul = el('ol', 'log-comment-list');
-        data.items.forEach(c => ul.append(item(c)));
+        const threads = new Map();
+        data.items.forEach(c => {
+            if (c.to && ids.has(c.to)) return;
+            const li = el('li', 'log-comment-thread'), replies = el('ol', 'log-comment-replies');
+            li.append(item(c), replies); ul.append(li);
+            threads.set(c.id, { li, replies });
+        });
+        data.items.forEach(c => { if (c.to && threads.has(c.to)) threads.get(c.to).replies.append(item(c)); });
+        threads.forEach(({ replies }) => { if (!replies.children.length) replies.remove(); });
+        // While replying, the form sits under its thread.
+        const at = replyTo && threads.get(replyTo.to && ids.has(replyTo.to) ? replyTo.to : replyTo.id);
+        if (f && at) at.li.append(f);
         list.replaceChildren(ul);
     }
     function form() {
-        const f = el('form', 'log-comment-form'); f.noValidate = true;
+        f = el('form', 'log-comment-form'); f.noValidate = true;
+        // Whom this answers, with a way back to a new comment.
+        const replying = el('p', 'log-comment-replying'); replying.hidden = true;
+        const replyLabel = el('span'), cancel = el('button', 'log-comment-cancel', t('やめる')); cancel.type = 'button';
+        replying.append(replyLabel, cancel); f.append(replying);
         // Icons: a row of radio buttons drawn as pictures; the last choice is remembered.
         // Each group says in a few words what it is for, so icons and stamps are not taken for one another.
         const legend = (title, hint) => { const l = el('legend', 'log-comment-legend'); l.append(el('b', '', title), el('span', 'log-comment-hint', hint)); return l; };
-        const icons = el('fieldset', 'log-comment-icons'); icons.append(legend(t('アイコン'), t('名前の代わりに表示します')));
+        const icons = el('fieldset', 'log-comment-icons'); icons.append(legend(t('アイコン'), t('名前の横に表示します')));
         const saved = store.get('nl-comment-icon');
         data.icons.forEach((icon, i) => {
             const label = el('label', 'log-comment-icon-pick'), input = el('input'), img = el('img');
@@ -65,6 +106,11 @@
         });
         if (!icons.querySelector('input:checked')) icons.querySelector('input')?.click();
         f.append(icons);
+        // An optional name, beside the mark; the first time, the owner approves it.
+        const nameLabel = el('label', 'log-comment-name-label');
+        const nameHead = el('span', 'log-comment-legend'); nameHead.append(el('b', '', t('名前')), el('span', 'log-comment-hint', t('任意・はじめは確認後に表示')));
+        const nameInput = el('input'); nameInput.name = 'name'; nameInput.maxLength = data.name_max || 16; nameInput.autocomplete = 'nickname'; nameInput.value = store.get('nl-comment-name');
+        nameLabel.append(nameHead, nameInput); f.append(nameLabel);
         let stamp = '';
         if (data.stamps.length) {
             const set = el('fieldset', 'log-comment-stamp-set'); set.append(legend(t('スタンプ'), t('押して送るだけでもOK')));
@@ -91,32 +137,43 @@
             label.append(area, count); f.append(label);
         }
         const foot = el('div', 'log-comment-foot');
-        const who = el('span', 'log-comment-who', me ? t('あなたのID：{id}', { id: me }) : t('名前は出ません。最初の書き込みで、このブラウザー用のIDを作ります。'));
+        const whoEl = el('span', 'log-comment-who', me ? t('あなたの印：{mark}', { mark: mark(me) }) : t('最初の書き込みで、このブラウザー用の印（◆）を作ります。'));
         const send = el('button', 'log-comment-send', t('送る')); send.type = 'submit'; send.disabled = true;
-        foot.append(who, send);
+        foot.append(whoEl, send);
         const status = el('p', 'log-comment-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         f.append(foot, status);
         const ready = () => { send.disabled = !stamp && !(area && area.value.trim()); };
+        setReply = c => {
+            replyTo = c;
+            replying.hidden = !c;
+            if (c) replyLabel.textContent = t('{who} さんへ返信', { who: who(c) });
+            render();
+            if (c) { f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); (area || f.querySelector('.log-comment-stamp-btn'))?.focus({ preventScroll: true }); }
+        };
+        cancel.addEventListener('click', () => setReply(null));
         f.addEventListener('submit', async event => {
             event.preventDefault();
             if (send.disabled) return;
             const icon = f.querySelector('input[name="icon"]:checked')?.value || data.icons[0]?.key;
             store.set('nl-comment-icon', icon);
+            const name = nameInput.value.trim();
+            store.set('nl-comment-name', name);
             send.disabled = true; status.textContent = t('送っています…');
             try {
                 const res = await fetch(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-NagiLog': 'comment' },
-                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '' }) });
+                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '', name, re: replyTo ? replyTo.id : '' }) });
                 const out = await res.json().catch(() => ({}));
                 if (!res.ok || !out.item) {
-                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章が長すぎます。{n}文字・数行までにしてください。', { n: data.max }), full: t('この記事のコメントはいっぱいです。'), empty: t('スタンプを選ぶか、文章を書いてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
+                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章か名前が長すぎます。文章は{n}文字・数行、名前は{name}文字までにしてください。', { n: data.max, name: data.name_max || 16 }), full: t('この記事のコメントはいっぱいです。'), gone: t('返信先のコメントが見つかりませんでした。'), empty: t('スタンプを選ぶか、文章を書いてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
                     ready(); return;
                 }
-                me = out.me; who.textContent = t('あなたのID：{id}', { id: me });
-                data.items.push(out.item); render();
+                me = out.me; whoEl.textContent = t('あなたの印：{mark}', { mark: mark(me) });
+                data.items.push(out.item);
+                replyTo = null; replying.hidden = true; render();
                 stamp = ''; f.querySelectorAll('.log-comment-stamps button').forEach(x => x.setAttribute('aria-pressed', 'false'));
                 if (area) { area.value = ''; count.textContent = `0/${data.max}`; }
-                status.textContent = out.item.wait ? t('送りました。管理者が確認すると表示されます。') : t('送りました。');
-                list.querySelector('.log-comment:last-child')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                status.textContent = out.item.wait ? (out.item.text ? t('送りました。管理者が確認すると表示されます。') : t('送りました。名前を管理者が確認すると表示されます。')) : t('送りました。');
+                document.getElementById('comment-' + out.item.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             } catch {
                 status.textContent = t('送れませんでした。通信を確かめてから、もう一度お試しください。');
             }
@@ -124,7 +181,9 @@
         });
         formSlot.replaceChildren(f);
     }
-    async function load() {
+    let loading = null;
+    function load() { return loading ??= fetchAll(); }
+    async function fetchAll() {
         try {
             const res = await fetch(endpoint + '?id=' + encodeURIComponent(id), { credentials: 'same-origin', headers: key ? { 'X-NagiLog-Key': key } : {} });
             if (!res.ok) throw new Error(String(res.status));
@@ -134,6 +193,13 @@
             list.replaceChildren(el('p', 'log-comments-note', t('コメントを読み込めませんでした。')));
         }
     }
+    // "書き込む" beside the count: back to a new comment (not a reply) and down to the form, once it is there.
+    box.querySelector('[data-comments-write]')?.addEventListener('click', event => {
+        event.preventDefault();
+        const go = () => { if (replyTo) setReply(null); (f || formSlot).scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); };
+        if (data) go();
+        else { load().then(go); }
+    });
     // Fetched when the block comes near the screen, so a reader who never scrolls there sends nothing.
     if ('IntersectionObserver' in window) {
         const io = new IntersectionObserver(entries => { if (entries.some(e => e.isIntersecting)) { io.disconnect(); load(); } }, { rootMargin: '600px 0px' });

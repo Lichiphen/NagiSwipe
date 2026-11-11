@@ -2,7 +2,7 @@
 /*
  * LOG comments. MIT License (c) 2026 Lichiphen.
  *   GET  comment.php?id=ID      the comments, the icons and stamps to choose from (header X-NagiLog-Key: the reader's key, to see their own waiting texts)
- *   POST comment.php            {"id", "token", "icon", "stamp", "text"} with the header X-NagiLog: comment
+ *   POST comment.php            {"id", "token", "icon", "stamp", "text", "name", "re"} with the header X-NagiLog: comment
  *   GET  comment.php?icon=KEY   an icon the owner added (SVG, served as a picture only)
  * Pages stay cached: comments arrive here, never by rebuilding a page.
  */
@@ -41,7 +41,10 @@ if ($method === 'GET') {
     $s = nl_settings();
     $icons = [];
     foreach (nl_comment_icons() as $key => $icon) $icons[] = ['key' => $key, 'name' => $icon['name'], 'url' => $icon['url']];
-    nm_json(['items' => nl_comments_for($id, $uid), 'icons' => $icons, 'stamps' => $s['comment_stamps'], 'text' => $s['comment_text'], 'max' => NL_COMMENT_TEXT_MAX, 'me' => $uid]);
+    // The owner's replies carry the LOG's name and icon.
+    $avatar = nl_load_media($s['icon']);
+    nm_json(['items' => nl_comments_for($id, $uid), 'icons' => $icons, 'stamps' => $s['comment_stamps'], 'text' => $s['comment_text'], 'max' => NL_COMMENT_TEXT_MAX, 'name_max' => NL_COMMENT_NAME_MAX, 'me' => $uid,
+        'owner' => ['name' => $s['name'], 'icon' => $avatar ? nl_media_url($avatar, true) : '']]);
 }
 if ($method !== 'POST') nm_not_found();
 // A custom header cannot be sent by another site's form, and fetch() from another origin needs a preflight we never answer.
@@ -60,7 +63,7 @@ if (nm_rate_hit('log-comment', $net, 60) > NL_COMMENT_MINUTE || nm_rate_hit('log
 try {
     $c = nl_comment_add($in['id'], $in);
 } catch (UnexpectedValueException $e) {
-    nm_json(['error' => in_array($e->getMessage(), ['empty', 'long', 'full', 'busy'], true) ? $e->getMessage() : 'form'], 422);
+    nm_json(['error' => in_array($e->getMessage(), ['empty', 'long', 'full', 'busy', 'gone'], true) ? $e->getMessage() : 'form'], 422);
 }
 nm_log('log_comment', $in['id'] . ($c['wait'] ? ' (waiting)' : ''));
 // A shown comment changes the counts beside Share on the cached pages: they are rebuilt on their next visit.

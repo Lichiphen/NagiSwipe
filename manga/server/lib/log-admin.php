@@ -243,6 +243,7 @@ function nl_handle_post(string $do): never
                 nm_flash('ok', nm_t('LOGを復元しました（投稿 {posts}件・画像 {media}件）', ['posts' => $r['posts'], 'media' => $r['media']]));
                 nm_json(['ok' => true, 'redirect' => 'index.php?p=log'] + $r);
             case 'log_comments_moderate':
+            case 'log_comments_reply':
                 nl_comments_handle($do);
             case 'log_restore_cancel':
                 nl_restore_cancel(nm_str($_POST, 'token', 16));
@@ -261,7 +262,7 @@ function nl_handle_post(string $do): never
         if (in_array($do, ['log_save', 'log_preview', 'log_upload', 'log_taxonomy_order', 'log_pin_order', 'log_sidebar_settings', 'log_page_preview', 'log_media_play'], true) || str_starts_with($do, 'log_restore_') || str_starts_with($do, 'log_av_')
             || ($do === 'log_page_save' && str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json'))) nm_json(['error' => nm_t($message)], 422);
         nm_flash('err', $message);
-        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings' => 'p=settings&section=log', 'log_seo_settings' => 'p=settings&section=seo', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', 'log_pin' => nm_str($_POST, 'back', 10) === 'edit' ? 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) : 'p=log', 'log_page_save' => 'p=log_page' . (preg_match(NL_PAGE_ID_PATTERN, nm_str($_POST, 'page_id', 14)) ? '&id=' . nm_str($_POST, 'page_id', 14) : ''), 'log_page_delete' => 'p=log_pages', 'log_comments_moderate' => 'p=log_comments', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
+        nm_redirect(match ($do) { 'log_settings', 'log_preferences', 'log_footer_settings', 'log_display_settings' => 'p=settings&section=log', 'log_seo_settings' => 'p=settings&section=seo', 'log_like_set' => 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) . '#log-likes', 'log_guard_settings' => 'p=settings&section=common#log-guard', 'log_taxonomy_rename' => 'p=log&view=taxonomy', 'log_pin' => nm_str($_POST, 'back', 10) === 'edit' ? 'p=log_edit&id=' . rawurlencode(nm_str($_POST, 'post_id', 24)) : 'p=log', 'log_page_save' => 'p=log_page' . (preg_match(NL_PAGE_ID_PATTERN, nm_str($_POST, 'page_id', 14)) ? '&id=' . nm_str($_POST, 'page_id', 14) : ''), 'log_page_delete' => 'p=log_pages', 'log_comments_moderate', 'log_comments_reply' => 'p=log_comments', default => str_starts_with($do, 'log_media_') ? nl_media_back() : 'p=log' });
     }
 }
 /*

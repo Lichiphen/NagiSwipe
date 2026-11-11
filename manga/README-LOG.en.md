@@ -182,7 +182,7 @@ Scroll down and a "書く" (Write) button aligned with the right edge of the sid
 | Paging | Under a list: "新しい投稿" (newer posts), "過去の投稿" (older posts) and page numbers 1, 2, 3… The total and the current position (for example "51–60 of 124") are shown too. Post pages show the previous and next posts and "すべての投稿" (all posts). |
 | Sharing | On a public log, "Share" and "Copy" are under each post. Both use "post title + line break + post URL". Share opens the device's share sheet on phones, and on computers a chooser for X, Hatena Bookmark, LINE and Instagram. Instagram has no share URL that takes text, so it copies the text and then tells you to open Instagram. The icons are original drawings, not the services' official logos (`server/viewer/link-icons/README.txt`). |
 | Likes | A heart button left of "Share" under each post. A tap adds 1, holding adds 10 at a time. The same line and the same device can press at most 100 per post per day. It can be turned off in the settings. The count can be seen, changed and cleared on the post's edit screen. |
-| Comments | An anonymous comment block under posts and fixed pages (off by default). Readers choose an icon and write a stamp alone or text. Stamps show at once; text shows after you approve it. An ID per browser is shown instead of a name. |
+| Comments | An anonymous comment block under posts and fixed pages (off by default). Readers choose an icon and write a stamp alone or text. Stamps show at once; text shows after you approve it. A mark per browser (◆) is shown beside an optional name. Replies nest one level deep, and the owner can reply too. |
 | List style | "Microblog", showing whole posts, or "tiles" with a thumbnail, date and title. New posts get a "NEW" mark (the period and the text are set in the settings). |
 | Related posts | Six posts of the same category or hashtags under each post. Random, or most recently updated first. |
 | Pinned posts | Like “stick to the top” in WordPress, posts can be shown first on the top page. Pin several (up to 30) and reorder them in the admin panel; the admin post list shows them at the top too. |
@@ -1305,8 +1305,10 @@ Posts and fixed pages can show an anonymous comment block under them. It is off 
 | --- | --- |
 | An icon and a stamp (emoji) | At once |
 | An icon and text (up to 300 characters and a few lines, with or without a stamp) | Only to its writer, as waiting, until you approve it in the admin |
+| A comment with a name (optional, up to 16 characters) | Waiting, even a stamp alone, until you approve that name for that reader once; after that the same reader with the same name shows at once |
 
-There is no name field. The reader's browser keeps a secret key nobody can guess (32 random characters), and an 8-character ID made from it is shown instead of a name. The ID stays the same when a phone's IP address changes, and nobody else can show the same ID. Clearing the browser's data changes it.
+The reader's browser keeps a secret key nobody can guess (32 random characters), and a mark made from it (◆ and 6 characters) is shown beside the name. The mark stays the same when a phone's IP address changes, and nobody else can show the same mark, so someone taking the same name still looks different. Clearing the browser's data changes it.
+Each comment has a Reply button. Replies nest one level deep: a reply to a reply joins the same thread with "To …" in front, so the text stays wide on a phone. A comment still waiting for approval cannot be replied to. Deleting a comment deletes its replies too.
 The standard icons are eight outlines with a gradient (star, moon, drop, leaf, flower, cloud, heart, sparkle). The same settings block adds and deletes icons in SVG, PNG, JPEG, WebP or GIF (up to 64 KB each, up to 32) and chooses which ones readers see. SVGs are checked by `lib/log-svg.php`; PNG and the others are drawn again into a 128×128 PNG (no location or other data is kept). They are served only as pictures (no scripts run).
 Up to 24 stamps can be set, emoji only. Text is shown as plain text, never as HTML or links.
 
@@ -1314,7 +1316,7 @@ One line can send up to 4 comments a minute and 60 a day. Texts waiting for appr
 
 No database is used. Comments go into one small file per post or page (`log/comments/<ID>.php`), the counts and the number of new ones into `log/comments-index.php`. Pages stay cached: the comment block loads from `comment.php` (once, when it comes near the screen). Its CSS and JS (`viewer/log-comment.css`, `viewer/log-comment.js`) load only on pages with a comment block.
 
-In the admin, the bell in the top menu and the "Comments" tab of "LOG and posts" show the number of comments waiting for approval or not seen yet. On the public pages while logged in, the admin menu button (top right; bottom right on phones) shows it too. The "Comments" list approves and deletes them and can show only those waiting (icons are managed in the "Comments" settings). The post list and the page list show each one's count (waiting ones stand out). Deleting a post or page deletes its comments. Comments and icons are part of the LOG backup.
+In the admin, the bell in the top menu and the "Comments" tab of "LOG and posts" show the number of comments waiting for approval or not seen yet. On the public pages while logged in, the admin menu button (top right; bottom right on phones) shows it too. The "Comments" list approves, deletes and replies to them (the owner's replies carry an "Owner" badge and show at once; replying to a waiting comment approves it) and can show only those waiting (icons are managed in the "Comments" settings). The post list and the page list show each one's count (waiting ones stand out). Deleting a post or page deletes its comments. Comments and icons are part of the LOG backup.
 
 ## NagiScope (access analytics)
 

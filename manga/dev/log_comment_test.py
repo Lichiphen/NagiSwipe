@@ -43,9 +43,9 @@ def run(site, other_site, c, csrf, other, ot):
         return next(p['id'] for p in php(site, 'echo json_encode(nl_post_summaries(false));') if p['id'] not in before)
     def load(pid): return php(site, f"echo json_encode(nl_load_post('{pid}'));")
     def get(pid, key=''): return pub.get('/comment.php?id=' + pid, headers={'X-NagiLog-Key': key} if key else {})
-    def send(pid, stamp='', text='', icon='star', key=KEY, headers=None, client=pub):
+    def send(pid, stamp='', text='', icon='star', key=KEY, headers=None, client=pub, **more):
         hd = {'Content-Type': 'application/json', 'X-NagiLog': 'comment'} if headers is None else headers
-        return client.post('/comment.php', json.dumps({'id': pid, 'token': key, 'icon': icon, 'stamp': stamp, 'text': text}).encode(), headers=hd)
+        return client.post('/comment.php', json.dumps({'id': pid, 'token': key, 'icon': icon, 'stamp': stamp, 'text': text, **more}).encode(), headers=hd)
     def calm(where=site):
         for f in (where / 'data/ratelimit').glob('*'): f.unlink()
     def index(): return php(site, 'echo json_encode(nl_comments_index_read());')
@@ -62,7 +62,7 @@ def run(site, other_site, c, csrf, other, ot):
     pid = new_post('コメントのある記事')
     check('新しい記事は最初からON', load(pid)['comments'] is True)
     page = pub.get('/?id=' + pid).text
-    check('記事のページにコメント欄と専用のCSS・JSを読み込む', 'data-comments="' + pid + '"' in page and 'viewer/log-comment.css?v=' in page and 'viewer/log-comment.js?v=' in page)
+    check('記事のページにコメント欄と専用のCSS・JSを読み込む', 'data-comments="' + pid + '"' in page and re.search(r'data-comments-count>\d+</span><a class="log-comments-write" href="#comments-form"', page) and 'id="comments-form"' in page and 'viewer/log-comment.css?v=' in page and 'viewer/log-comment.js?v=' in page)
     top = pub.get('/').text
     check('一覧のページではコメントのCSS・JSを読み込まない', 'log-comment.css' not in top and 'log-comment.js' not in top)
     g = get(pid); d = json.loads(g.text) if g.status == 200 else {}
@@ -94,7 +94,7 @@ def run(site, other_site, c, csrf, other, ot):
     check('管理メニューにベルと件数', 'p=log_comments' in nav and 'nm-menu-count' in nav and 'nav-fab-count' in nav)
     check('投稿一覧に件数と承認待ちのバッジ', 'log-list-comments is-waiting' in nav)
     admin = c.get('/admin/index.php?p=log_comments').text
-    check('コメント一覧は文章をエスケープして表示', '&lt;script&gt;alert(1)&lt;/script&gt;<br>\nこんにちは' in admin and '<script>alert(1)' not in admin and 'ID:' + stamp['uid'] in admin)
+    check('コメント一覧は文章をエスケープして表示', '&lt;script&gt;alert(1)&lt;/script&gt;<br>\nこんにちは' in admin and '<script>alert(1)' not in admin and '◆' + stamp['uid'][:6] in admin)
     check('一覧を開くと新着は既読、承認待ちは残る', index()['new'] == 0 and php(site, 'echo json_encode(nl_comments_notice());') == 1)
     pair = json.dumps([[pid, text['id']]])
     r = post({'do': 'log_comments_moderate', 'action': 'ok', 'items': pair})
@@ -102,6 +102,45 @@ def run(site, other_site, c, csrf, other, ot):
     post({'do': 'log_comments_moderate', 'action': 'delete', 'items': json.dumps([[pid, stamp['id']]])})
     check('削除すると消える', stamp['id'] not in [x['id'] for x in json.loads(get(pid).text)['items']] and index()['n'][pid]['ok'] == 3)
     check('壊れた指定の操作は拒否', post({'do': 'log_comments_moderate', 'action': 'ok', 'items': '[["../x","1"]]'}).status == 303 and index()['n'][pid]['ok'] == 3)
+    # Replies (one level deep) and names.
+    rid = new_post('返信の記事')
+    calm()
+    item = lambda r: json.loads(r.text).get('item') or json.loads(r.text)
+    ids = lambda key='': {x['id']: x for x in json.loads(get(rid, key).text)['items']}
+    top = item(send(rid, '👍'))
+    r1 = item(send(rid, '🎉', key='b' * 32, re=top['id']))
+    r2 = item(send(rid, '😊', key='c' * 32, re=r1['id']))
+    check('返信は親の下へ（返信への返信も同じ流れ・1段まで）', r1.get('to') == top['id'] and r1.get('re') == top['id'] and r2.get('to') == top['id'] and r2.get('re') == r1['id'] and top.get('to') == '' and r2.get('wait') is False, [r1, r2])
+    calm()
+    waiting = item(send(rid, text='承認待ちの文', key='d' * 32))
+    check('返信先がない・承認待ちのコメントへは返信できない', item(send(rid, '👍', re='0123456789')).get('error') == 'gone' and item(send(rid, '👍', re=waiting['id'])).get('error') == 'gone' and item(send(rid, '👍', re='../x')).get('error') == 'form')
+    calm()
+    n1 = item(send(rid, '👍', key='b' * 32, name='  なぎ  '))
+    check('名前付きはスタンプだけでも承認待ち（ほかの人に見えない）', n1.get('wait') is True and n1.get('name') == 'なぎ' and n1['id'] not in ids() and n1['id'] in ids('b' * 32))
+    post({'do': 'log_comments_moderate', 'action': 'ok', 'items': json.dumps([[rid, n1['id']]])})
+    n2 = item(send(rid, '🎉', key='b' * 32, name='なぎ'))
+    n3 = item(send(rid, '🎉', key='e' * 32, name='なぎ'))
+    check('承認した名前は次からすぐ表示、同じ名前でも別の人は承認待ち', n1['id'] in ids() and n2.get('wait') is False and n3.get('wait') is True and n3.get('uid') != n2.get('uid'), [n2, n3])
+    calm()
+    check('長すぎる名前は拒否・◆は名前に使えない', item(send(rid, '👍', name='あ' * 17)).get('error') == 'long' and item(send(rid, '👍', key='f' * 32, name='◆偽')).get('name') == '偽')
+    calm()
+    r = post({'do': 'log_comments_reply', 'target': rid, 're': r2['id'], 'text': 'ありがとう<b>!</b>', 'show': ''})
+    mine = [x for x in ids().values() if x.get('own')]
+    check('管理人の返信はすぐ表示・管理人の印・同じ流れへ', r.status == 303 and len(mine) == 1 and mine[0]['uid'] == '' and mine[0]['to'] == top['id'] and mine[0]['re'] == r2['id'] and mine[0]['text'] == 'ありがとう<b>!</b>', r.text[:200])
+    g = json.loads(get(rid).text)
+    check('窓口が管理人の名前と名前の上限を返す', g.get('owner', {}).get('name') == php(site, "echo json_encode(nl_settings()['name']);") and g.get('name_max') == 16)
+    post({'do': 'log_comments_reply', 'target': rid, 're': n3['id'], 'text': 'ようこそ', 'show': ''})
+    check('承認待ちに管理人が返信すると、そのコメントも承認', ids()[n3['id']]['wait'] is False)
+    check('管理人の返信は空や長すぎる文・知らない返信先を拒否', post({'do': 'log_comments_reply', 'target': rid, 're': r2['id'], 'text': ' '}).status == 303 and post({'do': 'log_comments_reply', 'target': rid, 're': '0123456789', 'text': 'x'}).status == 303 and len([x for x in ids().values() if x.get('own')]) == 2)
+    admin = c.get('/admin/index.php?p=log_comments').text
+    check('コメント一覧に名前・印・返信先・管理人・返信フォーム', 'なぎ</b> <b>◆' + n2['uid'][:6] in admin and '管理人' in admin and '↳ ' in admin and 'name="do" value="log_comments_reply"' in admin)
+    before = set(ids())
+    post({'do': 'log_comments_moderate', 'action': 'delete', 'items': json.dumps([[rid, top['id']]])})
+    after = set(ids())
+    check('親を削除すると返信もまとめて消える', not ({top['id'], r1['id'], r2['id']} | {m['id'] for m in mine}) & after and {n1['id'], n2['id'], n3['id']} <= after and index()['n'][rid]['ok'] == len(after), [len(before), len(after)])
+    calm()
+    reply_keep = item(send(rid, '😊', key='c' * 32, re=n2['id']))
+    calm()
     # The post's own switch.
     p = load(pid)
     post({**base.payload(body=p['body']), 'post_id': pid, 'revision': str(p['revision']), 'comments_form': '1'})
@@ -143,6 +182,8 @@ def run(site, other_site, c, csrf, other, ot):
     r = other.post('/admin/index.php', {'csrf': ot, 'do': 'log_restore', 'overwrite': '1'}, files={'backup': ('log.zip', zipped, 'application/zip')})
     moved = php(other_site, f"echo json_encode([nl_comments_read('{pid}'), nl_settings()['comments'], array_keys(nl_comment_icons_custom()), nl_load_post('{pid}')['comments']]);")
     check('バックアップから復元（コメント・設定・アイコン・記事のスイッチ）', r.status == 303 and len(moved[0]) == 4 and moved[1] is True and sorted(moved[2]) == sorted([key, png]) and moved[3] is True, r.text[:200])
+    back = {x['id']: x for x in php(other_site, f"echo json_encode(nl_comments_read('{rid}'));")}
+    check('復元で名前・返信先・管理人の返信も戻る', back.get(reply_keep['id'], {}).get('to') == n2['id'] and back.get(n2['id'], {}).get('name') == 'なぎ' and any(x.get('own') for x in back.values()))
     # Deleting the post and the page.
     p = load(pid)
     post({'do': 'log_delete', 'post_id': pid, 'revision': str(p['revision'])})

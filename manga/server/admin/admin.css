@@ -363,6 +363,11 @@ html[data-log-theme^="dark"] .settings-form .settings-savebar-status.is-error { 
 .log-comment-row-text { margin-top:4px !important; line-height:1.7; overflow-wrap:anywhere; }
 .log-comment-row-target { display:flex; align-items:center; gap:6px; margin-top:6px !important; font-size:13px; }.log-comment-row-target .log-ui-icon { width:15px; height:15px; }
 .log-comment-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }.log-comment-row-actions form { margin:0; }
+span.log-comment-row-icon { display:grid; place-items:center; border-radius:50%; background:var(--line); font-weight:700; }img.log-comment-row-icon { border-radius:50%; object-fit:cover; }
+.log-comment-row-to { margin-top:2px !important; font-size:13px; }
+/* The owner's reply: under the comment, across the row. */
+.log-comment-reply { grid-column:2 / -1; grid-row:2; }.log-comment-reply summary { display:inline-flex; width:auto; list-style:none; }.log-comment-reply summary::-webkit-details-marker { display:none; }
+.log-comment-reply form { display:grid; gap:8px; margin-top:8px; }.log-comment-reply label { display:grid; gap:4px; font-size:13px; }.log-comment-reply textarea { width:100%; box-sizing:border-box; }.log-comment-reply .btn.primary { justify-self:end; }
 .log-comment-icon-choices { display:flex; flex-wrap:wrap; gap:8px; }
 .log-comment-icon-choice { display:grid; justify-items:center; gap:4px; width:84px; padding:8px 4px; border:1px solid var(--line); border-radius:12px; font-size:12px; text-align:center; }
 .log-comment-icon-choice:has(.log-comment-icon-show input:checked) { border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
@@ -371,7 +376,7 @@ html[data-log-theme^="dark"] .settings-form .settings-savebar-status.is-error { 
 .log-comment-icon-delete:has(input:checked) { font-weight:700; }.log-comment-icon-choice:has(.log-comment-icon-delete input:checked) img { opacity:.35; }
 .log-comment-icon-tag { color:var(--muted); font-size:11px; }
 .log-page-comments legend { display:flex; align-items:center; gap:6px; }
-@media(max-width:600px) { .log-comment-row { grid-template-columns:32px minmax(0,1fr); }.log-comment-row-icon { width:32px; height:32px; }.log-comment-row-actions { grid-column:1 / -1; } }
+@media(max-width:600px) { .log-comment-row { grid-template-columns:32px minmax(0,1fr); }.log-comment-row-icon { width:32px; height:32px; }.log-comment-row-actions,.log-comment-reply { grid-column:1 / -1; grid-row:auto; } }
 
 /* LOG restore: steps, a wave meter that fills from the left, the share done and the time left. */
 .log-restore-dialog { width:min(520px,calc(100% - 32px)); padding:22px; border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--text); box-shadow:0 20px 60px #0000004d; }
