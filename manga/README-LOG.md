@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.14.2](https://img.shields.io/badge/NagiLog-v0.14.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.14.2](https://img.shields.io/badge/NagiManga-v0.14.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.15.0](https://img.shields.io/badge/NagiLog-v0.15.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.15.0](https://img.shields.io/badge/NagiManga-v0.15.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -99,7 +99,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.14.2（NagiManga v0.14.2に同梱） |
+| 版 | 0.15.0（NagiManga v0.15.0に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -238,7 +238,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.14.2.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.15.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、FTP で `data/setup-key.php` に書いてある「セットアップの鍵」を貼り付けて、管理者パスワードを決めます。「おもに使うもの」は **NagiLog** を選ぶと、ログインしたときに LOG・投稿の画面が開きます。
 3. 表示された管理用URLをブックマークします。初めてログインすると、パスキーか二段階認証の設定をすすめるダイアログが出ます。できるだけ、ここで設定してください。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -1144,8 +1144,8 @@ LOG用のバックアップZIPには、追加CSSと適用のオン・オフを�
 | `.log-button-purple` | 紫のボタン（purple） | 記事のページ・固定ページ | `.log-button-purple { --button: #8250df; }` | v0.14.2 |
 | `.log-button-pink` | ピンクのボタン（pink） | 記事のページ・固定ページ | `.log-button-pink { --button: #bf3989; }` | v0.14.2 |
 | `.log-button-gray` | 灰色のボタン（gray） | 記事のページ・固定ページ | `.log-button-gray { --button: #57606a; }` | v0.14.2 |
-| `.log-comments` | 記事・固定ページの下のコメント欄（見出し・一覧・書き込み欄） | 記事のページ・固定ページ | `.log-comments { border-radius: 0; }` | 次のバージョン |
-| `.log-comment` | コメント1件（アイコン・ID・日時・スタンプ・文章） | 記事のページ・固定ページ | `.log-comment { padding: 12px 0; }` | 次のバージョン |
+| `.log-comments` | 記事・固定ページの下のコメント欄（見出し・一覧・書き込み欄） | 記事のページ・固定ページ | `.log-comments { border-radius: 0; }` | v0.15.0 |
+| `.log-comment` | コメント1件（アイコン・ID・日時・スタンプ・文章） | 記事のページ・固定ページ | `.log-comment { padding: 12px 0; }` | v0.15.0 |
 
 **CSS変数**
 
@@ -1296,7 +1296,7 @@ IPアドレスや端末情報そのものは保存せず、秘密鍵で作った
 
 ## コメント
 
-記事と固定ページの下に、匿名のコメント欄を出せます。既定はオフです。「設定 → LOG → コメント」でオンにすると、投稿画面の道具の列に「コメント欄」、固定ページの編集画面に「コメント欄」の欄が出て、記事・ページごとにオン・オフできます。オンにした後で作る記事・固定ページは最初からオン、それより前のものはオフのままです。自分専用Memoでは出しません。
+記事と固定ページの下に、匿名のコメント欄を出せます（v0.15.0 以降）。既定はオフです。「設定 → LOG → コメント」でオンにすると、投稿画面の道具の列に「コメント欄」、固定ページの編集画面に「コメント欄」の欄が出て、記事・ページごとにオン・オフできます。オンにした後で作る記事・固定ページは最初からオン、それより前のものはオフのままです。自分専用Memoでは出しません。
 
 | 書き込めるもの | 表示 |
 | --- | --- |
@@ -1905,6 +1905,14 @@ python manga/dev/contrast_audit.py
 | 英語表示（`dev/log_en_test.py`） | 24項目通過。ページ埋込・注意書き・図・ボタンの入った記事に日本語が残らず、英語の見出しで描くこと |
 | ブラウザー | Playwright の Chromium と WebKit（iPhone 13）で、6つのテーマのうち明るいもの2つと暗いもの2つ、パソコン幅とスマホ幅。塗りのボタンの文字のコントラストは、明るいテーマで 4.6 以上、暗いテーマで 7.6 以上 |
 | 既存の試験 | 27本すべて通過（翻訳 4113 項目を含む） |
+
+2026年11月13日の v0.15.0（記事・固定ページのコメント欄）で、次を確認しました。
+
+| 検証 | 結果 |
+| --- | --- |
+| コメント（`dev/log_comment_test.py`） | 83項目通過。スタンプと文章の表示・承認待ち・名前と印・返信の入れ子・管理人の返信、書き込み券（なし・2秒以内・古い券）・見えない入力欄・URLの禁止（全角・見えない文字を挟んだもの）・足し算の答え（なし・違う答え・数字でない・全角の数字）、1分・1日・承認待ち・スタンプの上限、鍵付きの記事、削除とバックアップ |
+| 管理メニュー（`dev/nav_fab_browser_test.py`） | 220項目通過。Chromium と WebKit（iPhone 13）で、コメントの数のバッジと並び順、パソコン幅とスマホ幅で横にはみ出さないこと |
+| 既存の試験 | 28本すべて通過（翻訳 4395 項目、LOG 223、セキュリティ 206 を含む） |
 
 ## 参照元と文章
 

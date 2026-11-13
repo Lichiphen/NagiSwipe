@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.14.2](https://img.shields.io/badge/NagiLog-v0.14.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.14.2](https://img.shields.io/badge/NagiManga-v0.14.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.15.0](https://img.shields.io/badge/NagiLog-v0.15.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.15.0](https://img.shields.io/badge/NagiManga-v0.15.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -101,7 +101,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.14.2 (included in NagiManga v0.14.2) |
+| Version | 0.15.0 (included in NagiManga v0.15.0) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -241,7 +241,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.14.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.15.0.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -1147,8 +1147,8 @@ The list of this version:
 | `.log-button-purple` | The purple button (purple) | Post pages, Fixed pages | `.log-button-purple { --button: #8250df; }` | v0.14.2 |
 | `.log-button-pink` | The pink button (pink) | Post pages, Fixed pages | `.log-button-pink { --button: #bf3989; }` | v0.14.2 |
 | `.log-button-gray` | The gray button (gray) | Post pages, Fixed pages | `.log-button-gray { --button: #57606a; }` | v0.14.2 |
-| `.log-comments` | The comment block under a post or fixed page (heading, list and form) | Post pages, Fixed pages | `.log-comments { border-radius: 0; }` | Next version |
-| `.log-comment` | One comment (icon, ID, time, stamp and text) | Post pages, Fixed pages | `.log-comment { padding: 12px 0; }` | Next version |
+| `.log-comments` | The comment block under a post or fixed page (heading, list and form) | Post pages, Fixed pages | `.log-comments { border-radius: 0; }` | v0.15.0 |
+| `.log-comment` | One comment (icon, ID, time, stamp and text) | Post pages, Fixed pages | `.log-comment { padding: 12px 0; }` | v0.15.0 |
 
 **CSS variables**
 
@@ -1299,7 +1299,7 @@ Deleting a post deletes its likes too.
 
 ## Comments
 
-Posts and fixed pages can show an anonymous comment block under them. It is off by default. Turned on in "Settings → LOG → Comments", the post editor's tool row gets a "Comments" panel and the page editor a "Comments" box, so each post or page can be switched on or off. Posts and pages made after turning it on start with it on; older ones stay off. A private Memo never shows comments.
+Posts and fixed pages can show an anonymous comment block under them (from v0.15.0). It is off by default. Turned on in "Settings → LOG → Comments", the post editor's tool row gets a "Comments" panel and the page editor a "Comments" box, so each post or page can be switched on or off. Posts and pages made after turning it on start with it on; older ones stay off. A private Memo never shows comments.
 
 | What readers write | Shown |
 | --- | --- |
@@ -1908,6 +1908,14 @@ On 5 November 2026, v0.14.2 (buttons in the text, `[[words]](URL)`) checked the 
 | English pages (`dev/log_en_test.py`) | 24 checks passed: a post with a page embed, an alert, a diagram and buttons leaves no Japanese and draws them with English labels |
 | Browsers | Playwright Chromium and WebKit (iPhone 13), on two light and two dark themes, at PC and phone widths. The words on filled buttons reach a contrast of 4.6 or more on light themes and 7.6 or more on dark ones |
 | Existing tests | All 27 test files passed (including 4113 translation checks) |
+
+On 13 November 2026, v0.15.0 (comments under posts and fixed pages) checked the following.
+
+| Check | Result |
+| --- | --- |
+| Comments (`dev/log_comment_test.py`) | 83 checks passed: stamps and texts shown, waiting for approval, names and marks, nested replies, owner replies, the write ticket (none, under 2 seconds, old), the hidden field, no addresses (full-width or broken up with hidden characters), the sum (none, wrong, not a number, full-width digits), the per-minute, per-day, waiting and stamp limits, locked posts, deletion and backups |
+| Admin menu (`dev/nav_fab_browser_test.py`) | 220 checks passed in Chromium and WebKit (iPhone 13): the comment count badge and the order of the items, with nothing spilling sideways at PC and phone widths |
+| Existing tests | All 28 test files passed (including 4395 translation checks, LOG 223 and security 206) |
 
 ## Sources and writing
 

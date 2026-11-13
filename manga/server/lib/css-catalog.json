@@ -1089,7 +1089,7 @@
     "page"
    ],
    "example": ".log-comments { border-radius: 0; }",
-   "since": "next"
+   "since": "0.15.0"
   },
   {
    "name": ".log-comment",
@@ -1102,7 +1102,7 @@
     "page"
    ],
    "example": ".log-comment { padding: 12px 0; }",
-   "since": "next"
+   "since": "0.15.0"
   }
  ],
  "variables": [
@@ -1705,7 +1705,7 @@
    ]
   },
   {
-   "version": "next",
+   "version": "0.15.0",
    "added": [
     ".log-comments",
     ".log-comment"
