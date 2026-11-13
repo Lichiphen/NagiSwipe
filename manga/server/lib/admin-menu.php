@@ -16,9 +16,10 @@ function nm_menu_entries(string $base, string $current, bool $guest): array
         . ($key !== '' && $key === $current ? ' aria-current="page"' : '') . '>' . nm_icon($icon, 'nm-menu-icon') . '<span>' . h($label) . '</span>' . $extra . '</a>';
     $main = $link('', 'tool-manga', 'NagiMANGA', 'manga');
     // The bell: comments to approve or not seen yet (lib/log-comments.php), while comments are on or some are kept.
+    // It heads the plain lines of the menu, like the others; its number is what stands out.
     $bell = !$guest && function_exists('nl_comments_notice') && (nl_settings()['comments'] || nl_comments_index()['n']) ? $link('?p=log_comments', 'nav-bell', nm_t('コメント'), 'comments', nl_comments_menu_badge()) : '';
-    if (!$guest) $main .= $link('?p=log', 'nav-log', nm_t('LOG・投稿'), 'log') . $bell . $link('?p=scope', 'nav-scope', 'NagiScope', 'scope') . $link('?p=settings', 'ui-settings', nm_t('設定'), 'settings');
-    $more = $guest ? '' : $link('?p=embed', 'nav-code', nm_t('漫画の設置用コード')) . $link('?p=backup', 'nav-backup', nm_t('バックアップ'))
+    if (!$guest) $main .= $link('?p=log', 'nav-log', nm_t('LOG・投稿'), 'log') . $link('?p=scope', 'nav-scope', 'NagiScope', 'scope') . $link('?p=settings', 'ui-settings', nm_t('設定'), 'settings');
+    $more = $guest ? '' : $bell . $link('?p=embed', 'nav-code', nm_t('漫画の設置用コード')) . $link('?p=backup', 'nav-backup', nm_t('バックアップ'))
         . $link('?p=update', 'nav-update', nm_t('更新'), '', nm_update_available(nm_update_cached()) ? ' <span class="badge new">' . h(nm_t('新')) . '</span>' : '');
     $more .= '<form method="post" action="' . h($base . 'index.php') . '"><input type="hidden" name="csrf" value="' . h(nm_csrf_token()) . '"><input type="hidden" name="do" value="logout">'
         . '<button class="link">' . nm_icon('nav-logout', 'nm-menu-icon') . '<span>' . h(nm_t($guest ? 'ゲストを終了' : 'ログアウト')) . '</span></button></form>';
