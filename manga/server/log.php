@@ -223,7 +223,7 @@ ob_start(static fn(string $html): string => str_replace('<!--nl-feature-css-->',
 <?php if (str_contains($postsHtml, 'data-new-until=')): ?><script src="<?= nl_public_asset('viewer/log-new.js') ?>" defer></script><?php endif; ?>
 <?php if (!$single && !$fixed && $s['pager'] === 'more'): ?><script src="<?= nl_public_asset('viewer/log-pager.js') ?>" defer></script><?php endif; ?>
 <?php if ($owner): ?><script src="<?= nl_public_asset('admin/log-av.js') ?>" defer></script><script src="<?= nl_public_asset('admin/log-editor.js') ?>" defer></script><?php endif; ?>
-<?= nm_t_script(NM_FRONT_TEXTS) ?>
+<?= nm_t_script($commentsHtml !== '' ? [...NM_FRONT_TEXTS, ...NM_COMMENT_TEXTS] : NM_FRONT_TEXTS) ?>
 <?php if ($breadcrumb !== ''): ?><script type="application/ld+json"><?= $breadcrumb ?></script><?php endif; ?>
 <?php if ($scope !== null): ?><script src="<?= nl_public_asset('viewer/scope.js') ?>" data-scope="<?= h(json_encode($scope, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>" defer></script><?php endif; ?>
 <?= nm_search_verify_meta() ?><?= nm_analytics_html(!$owner) ?>

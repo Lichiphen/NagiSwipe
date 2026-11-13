@@ -21,6 +21,12 @@ const NL_COMMENT_WAIT_MAX = 300;
 /** One line (IP address, IPv6 per /64): this many a minute and a day. */
 const NL_COMMENT_MINUTE = 4;
 const NL_COMMENT_DAY = 60;
+/** Texts and new names waiting from one line, the whole site together: a few bots cannot fill the site's queue. */
+const NL_COMMENT_WAIT_NET_MAX = 5;
+/** Shown stamps one line keeps on one post or page: a bot cannot fill a post's place for comments alone. */
+const NL_COMMENT_STAMP_NET_ITEM_MAX = 20;
+/** Cached pages are purged for new shown comments at most once in this many seconds. */
+const NL_COMMENT_PURGE_GAP = 30;
 const NL_COMMENT_STAMPS = ['👍', '👏', '😊', '😂', '😮', '😢', '🥰', '🙏', '🎉', '✨', '🔥', '💯'];
 const NL_COMMENT_STAMPS_MAX = 24;
 /** Bundled icons (viewer/comment-icons/<key>.svg): original outlines with a gradient. */
@@ -38,7 +44,7 @@ const NL_COMMENT_TOKEN = '/\A[a-f0-9]{32}\z/';
 const NL_COMMENT_TICKET_WAIT = 2;
 const NL_COMMENT_TICKET_LIFE = 6 * 3600;
 /** Addresses in a text or name (a scheme, www., or a name ending in a common top-level domain); checked after full-width letters are made plain. */
-const NL_COMMENT_URL = '~[a-z][a-z0-9+.\-]*://|\bwww\.|\b[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.(?:com|net|org|info|biz|xyz|top|site|online|shop|store|club|live|io|co|me|jp|ru|cn|uk|de|fr|us|tk|ml|ga|cf|gq|link|click|app|dev|pro|vip|win|bid|loan|cc|tv|ly|in|be|to|gl|gg|ws|su|pw|work|fun|space|website|icu|buzz|today|life)(?![a-z0-9])~i';
+const NL_COMMENT_URL = '~[a-z][a-z0-9+.\-]*://|\bwww\.|\b[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.(?:com|net|org|info|biz|xyz|top|site|online|shop|store|club|live|io|co|me|jp|ru|cn|uk|de|fr|us|tk|ml|ga|cf|gq|link|click|app|dev|pro|vip|win|bid|loan|cc|tv|ly|in|be|to|gl|gg|ws|su|pw|work|fun|space|website|icu|buzz|today|life|ai|tech|blog|page|art)(?![a-z0-9])~i';
 
 function nl_comments_dir(): string { return nl_root() . '/comments'; }
 function nl_comments_index_file(): string { return nl_root() . '/comments-index.php'; }
@@ -325,10 +331,67 @@ function nl_comment_ticket_check(string $id, mixed $ticket): string
     if ($age < NL_COMMENT_TICKET_WAIT) return 'fast';
     return $age > NL_COMMENT_TICKET_LIFE ? 'old' : '';
 }
-/** True when a reader's text or name holds an address (full-width letters count too). */
+/**
+ * The sum a reader solves before a text is sent ("3 + 5"), made from the ticket with the site's secret: nothing is stored,
+ * and a new ticket brings a new sum. Digits only, so it reads the same in every language.
+ */
+function nl_comment_quiz(string $ticket): array
+{
+    $h = hash_hmac('sha256', 'log-comment-quiz|' . $ticket, (string)(nm_config()['secret'] ?? ''));
+    return [1 + hexdec(substr($h, 0, 2)) % 9, 1 + hexdec(substr($h, 2, 2)) % 9];
+}
+/** True when $answer is the sum of the ticket's quiz (full-width digits and spaces allowed). */
+function nl_comment_quiz_ok(mixed $ticket, mixed $answer): bool
+{
+    if (!is_string($ticket) || (!is_string($answer) && !is_int($answer))) return false;
+    $answer = trim(mb_convert_kana((string)$answer, 'ns', 'UTF-8'));
+    if (!preg_match('/\A[0-9]{1,3}\z/', $answer)) return false;
+    return (int)$answer === array_sum(nl_comment_quiz($ticket));
+}
+/**
+ * A copy of a text only for checking it (what is stored stays as written): full-width letters made plain, rare look-alike
+ * dots and slashes made plain, and characters that show nothing (format characters, combining marks, Hangul fillers,
+ * the blank Braille cell) taken out, so "spam.c\u{00AD}om" reads as the address it shows.
+ */
+function nl_comment_url_probe(string $text): string
+{
+    $probe = strtr(mb_convert_kana($text, 'as', 'UTF-8'), ['․' => '.', '‧' => '.', '﹒' => '.', '∕' => '/', '⁄' => '/', '╱' => '/', '⧸' => '/']);
+    $probe = preg_replace('/[\p{Cf}\p{Mn}\x{115F}\x{1160}\x{3164}\x{FFA0}\x{2800}]/u', '', $probe);
+    if ($probe === null) throw new UnexpectedValueException('form');
+    return $probe;
+}
+/** True when a reader's text or name holds an address (full-width letters and hidden characters count too). */
 function nl_comment_has_url(string $text): bool
 {
-    return $text !== '' && preg_match(NL_COMMENT_URL, mb_convert_kana($text, 'as', 'UTF-8')) === 1;
+    return $text !== '' && preg_match(NL_COMMENT_URL, nl_comment_url_probe($text)) === 1;
+}
+/** '' for a text or name that shows nothing (only spaces and invisible characters), else the text as it is. */
+function nl_comment_visible(string $text): string
+{
+    return preg_match('/[^\s\p{Z}]/u', nl_comment_url_probe($text)) === 1 ? $text : '';
+}
+/** Texts and new names this line has waiting, the whole site together ($items: the post being written, as read under the lock). */
+function nl_comment_net_waiting(string $id, array $items, array $index, string $net): int
+{
+    $count = count(array_filter($items, static fn($o) => ($o['st'] ?? '') === 'wait' && ($o['net'] ?? '') === $net));
+    foreach ($index['n'] as $target => $n) {
+        if ((string)$target === $id || empty($n['wait'])) continue;
+        foreach (nl_comments_read((string)$target) as $o) if (($o['st'] ?? '') === 'wait' && ($o['net'] ?? '') === $net) $count++;
+    }
+    return $count;
+}
+/**
+ * New shown comments change the counts on cached pages: purge them, but at most once in NL_COMMENT_PURGE_GAP seconds, so a
+ * flood of stamps cannot keep the cache empty. A purge held back is done by a later visit to comment.php ($changed false).
+ */
+function nl_comment_purge(bool $changed = true): void
+{
+    $file = nl_root() . '/comments-purge.txt';
+    $state = is_file($file) ? explode('|', (string)@file_get_contents($file)) : ['0', '0'];
+    $last = (int)$state[0];
+    if (!$changed && ($state[1] ?? '0') !== '1') return;
+    if (time() - $last >= NL_COMMENT_PURGE_GAP) { nm_lscache_purge(true); @file_put_contents($file, time() . '|0', LOCK_EX); }
+    elseif ($changed) @file_put_contents($file, $last . '|1', LOCK_EX);
 }
 
 /** The ID shown beside a comment: made from the reader's key, so a changing IP address keeps it and nobody else can show it. */
@@ -347,7 +410,7 @@ function nl_comment_text(mixed $text): string
 {
     if (!is_string($text) || !mb_check_encoding($text, 'UTF-8')) throw new UnexpectedValueException('text');
     $text = trim(str_replace(["\r\n", "\r"], "\n", $text));
-    $text = preg_replace('/[\x00-\x09\x0B-\x1F\x7F\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $text) ?? '';
+    $text = preg_replace('/[\x00-\x09\x0B-\x1F\x7F\x{200B}\x{200C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u', '', $text) ?? '';
     $text = preg_replace("/\n{2,}/", "\n", $text) ?? '';
     if (mb_strlen($text) > NL_COMMENT_TEXT_MAX || substr_count($text, "\n") >= NL_COMMENT_LINES_MAX) throw new UnexpectedValueException('long');
     return $text;
@@ -357,7 +420,7 @@ function nl_comment_name(mixed $name): string
 {
     if ($name === null) return '';
     if (!is_string($name) || !mb_check_encoding($name, 'UTF-8')) throw new UnexpectedValueException('form');
-    $name = trim(preg_replace('/[\x00-\x1F\x7F\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{25C6}]/u', '', $name) ?? '');
+    $name = trim(preg_replace('/[\x00-\x1F\x7F\x{200B}\x{200C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{25C6}]/u', '', $name) ?? '');
     if (mb_strlen($name) > NL_COMMENT_NAME_MAX) throw new UnexpectedValueException('long');
     return $name;
 }
@@ -397,8 +460,9 @@ function nl_comment_add(string $id, array $in): array
     $stamp = is_string($in['stamp'] ?? null) ? $in['stamp'] : '';
     if (!preg_match(NL_COMMENT_TOKEN, $token) || !isset(nl_comment_icons()[$icon])) throw new UnexpectedValueException('form');
     if ($stamp !== '' && !in_array($stamp, $s['comment_stamps'], true)) throw new UnexpectedValueException('form');
-    $text = nl_comment_text($in['text'] ?? '');
-    $name = nl_comment_name($in['name'] ?? '');
+    // A text or name of only invisible characters counts as none.
+    $text = nl_comment_visible(nl_comment_text($in['text'] ?? ''));
+    $name = nl_comment_visible(nl_comment_name($in['name'] ?? ''));
     $re = is_string($in['re'] ?? null) ? $in['re'] : '';
     if ($text !== '' && !$s['comment_text']) throw new UnexpectedValueException('form');
     if ($stamp === '' && $text === '') throw new UnexpectedValueException('empty');
@@ -413,6 +477,9 @@ function nl_comment_add(string $id, array $in): array
         // A text waits for the owner; so does a name the owner has not yet approved for this reader (else a stamp could carry any words).
         if ($c['text'] !== '' || ($c['name'] !== '' && !isset($index['names'][$c['uid'] . '|' . $c['name']]))) $c['st'] = 'wait';
         if ($c['st'] === 'wait' && array_sum(array_map(static fn($n) => (int)($n['wait'] ?? 0), $index['n'])) >= NL_COMMENT_WAIT_MAX) throw new UnexpectedValueException('busy');
+        // One line: a few waiting at a time, and a limited share of a post's stamps.
+        if ($c['st'] === 'wait' && nl_comment_net_waiting($id, $items, $index, $c['net']) >= NL_COMMENT_WAIT_NET_MAX) throw new UnexpectedValueException('held');
+        if ($c['st'] === 'ok' && count(array_filter($items, static fn($o) => ($o['st'] ?? '') === 'ok' && ($o['text'] ?? '') === '' && empty($o['own']) && ($o['net'] ?? '') === $c['net'])) >= NL_COMMENT_STAMP_NET_ITEM_MAX) throw new UnexpectedValueException('many');
         $items[] = $c;
         nl_comments_write($id, $items);
         $index['n'][$id] = ['ok' => (int)($index['n'][$id]['ok'] ?? 0), 'wait' => (int)($index['n'][$id]['wait'] ?? 0)];
@@ -565,8 +632,10 @@ function nl_comments_settings_panel(): string
         . '<fieldset class="log-visibility"><legend>' . nm_t('名前と印') . '</legend><p class="note">' . nm_t('読者のブラウザーに推測できない合言葉を保存し、そこから作った印（◆と6文字）を名前の横に出します。スマホでIPアドレスが変わっても同じ印のままで、ほかの人は同じ印を出せません。名前は任意（{n}文字まで）で、同じ名前を名乗られても印で見分けられます。合言葉をなくす（ブラウザーのデータを消す）と、印が変わります。', ['n' => NL_COMMENT_NAME_MAX]) . '</p>'
         . '<p class="note">' . nm_t('名前の付いたコメントは、その名前を一度承認するまで公開しません（スタンプだけでも）。承認したあとは、同じ人が同じ名前で書くとすぐに表示します。') . '</p>'
         . '<p class="note">' . nm_t('返信は1段まで入れ子にして表示します。返信への返信は同じ流れの中に並び、誰あての返信かを表示します。管理画面の「コメント」から、管理人として返信できます。') . '</p>'
-        . '<p class="note">' . nm_t('bot対策として、読者には何もさせずに次の3つを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。', ['n' => NL_COMMENT_TICKET_WAIT]) . '</p>'
-        . '<p class="note">' . nm_t('連続の書き込みは、同じ回線から1分に{minute}件、1日に{day}件までです。IPアドレスそのものは保存せず、管理画面では回線ごとの短い印だけを見られます。', ['minute' => NL_COMMENT_MINUTE, 'day' => NL_COMMENT_DAY]) . '</p></fieldset>'
+        . '<p class="note">' . nm_t('管理人の返信に書いた http:// と https:// のURLは、押せるリンクになります（新しいタブで開きます）。読者のコメントのURLはリンクにならず、そもそも受け付けません。') . '</p>'
+        . '<p class="note">' . nm_t('bot対策として、次のことを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。文章を送るときだけ、1けたの足し算（数字で答える）を出します。スタンプだけなら何も聞きません。', ['n' => NL_COMMENT_TICKET_WAIT]) . '</p>'
+        . '<p class="note">' . nm_t('連続の書き込みは、同じ回線から1分に{minute}件、1日に{day}件までです。IPアドレスそのものは保存せず、管理画面では回線ごとの短い印だけを見られます。', ['minute' => NL_COMMENT_MINUTE, 'day' => NL_COMMENT_DAY]) . '</p>'
+        . '<p class="note">' . nm_t('承認待ちにできるのは、同じ回線からサイト全体で{wait}件までです（承認か削除で空きます）。1つの記事に残せるスタンプは、同じ回線から{stamp}件までです。', ['wait' => NL_COMMENT_WAIT_NET_MAX, 'stamp' => NL_COMMENT_STAMP_NET_ITEM_MAX]) . '</p></fieldset>'
         . '</div></section>';
 }
 /** The switch in the post editor (a panel of its tool row) and the page editor (a fieldset). Only while comments are on. */

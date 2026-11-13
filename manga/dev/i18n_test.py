@@ -83,8 +83,8 @@ for lang in sorted((SERVER / 'lib' / 'lang').glob('*.json')):
             continue
         check(f'{lang.name}: same placeholders in {k}', placeholders(k) == placeholders(v), v)
         check(f'{lang.name}: no quotes or other markup in {k}', not unsafe(k, v), v)
-# Public pages send their scripts only NM_FRONT_TEXTS (lib/i18n.php): every text those scripts translate must be in it.
-front = re.search(r"const NM_FRONT_TEXTS = \[(.*?)\];", (SERVER / 'lib' / 'i18n.php').read_text(encoding='utf-8')).group(1)
+# Public pages send their scripts only NM_FRONT_TEXTS, and NM_COMMENT_TEXTS with a comment block (lib/i18n.php): every text those scripts translate must be in them.
+front = ''.join(re.search(rf"const {name} = \[(.*?)\];", (SERVER / 'lib' / 'i18n.php').read_text(encoding='utf-8'), re.S).group(1) for name in ('NM_FRONT_TEXTS', 'NM_COMMENT_TEXTS'))
 front = {k.replace("\\'", "'") for k in re.findall(r"'((?:[^'\\]|\\.)*)'", front)}
 used = set()
 for f in [*SERVER.glob('viewer/log-*.js'), SERVER / 'viewer' / 'NagiManga.js']:

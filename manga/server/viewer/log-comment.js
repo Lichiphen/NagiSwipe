@@ -30,6 +30,22 @@
     // The mark made from the reader's key: the same name from someone else still shows a different mark.
     const mark = uid => '◆' + uid.slice(0, 6);
     const who = c => c.own ? (data.owner?.name || t('管理人')) : (c.name ? c.name + ' ' : '') + mark(c.uid);
+    // The owner's replies: their http(s) addresses become links (readers' comments never hold one).
+    function ownerText(text) {
+        const p = el('p', 'log-comment-text');
+        let last = 0;
+        for (const m of text.matchAll(/https?:\/\/[^\s<>"'「」『』（）()、。]+/g)) {
+            const raw = m[0].replace(/[.,!?;:]+$/, '');
+            let url;
+            try { url = new URL(raw); } catch { continue; }
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
+            const a = el('a', '', raw); a.href = url.href; a.target = '_blank'; a.rel = 'noopener';
+            p.append(text.slice(last, m.index), a);
+            last = m.index + raw.length;
+        }
+        p.append(text.slice(last));
+        return p;
+    }
     function item(c) {
         const li = el('li', 'log-comment' + (c.wait ? ' is-waiting' : '') + (c.own ? ' is-owner' : ''));
         li.id = 'comment-' + c.id;
@@ -52,7 +68,7 @@
         const to = c.re && data.items.find(x => x.id === c.re);
         if (to) body.append(el('p', 'log-comment-to', t('{who} さんへ', { who: who(to) })));
         if (c.stamp) body.append(el('p', 'log-comment-stamp', c.stamp));
-        if (c.text) body.append(el('p', 'log-comment-text', c.text));
+        if (c.text) body.append(c.own ? ownerText(c.text) : el('p', 'log-comment-text', c.text));
         if (c.wait) body.append(el('p', 'log-comment-wait', t('承認待ち：管理者が確認すると、ほかの人にも表示されます（いまはあなたにだけ見えています）。')));
         else {
             const b = el('button', 'log-comment-reply-btn', t('返信')); b.type = 'button';
@@ -126,15 +142,26 @@
             });
             set.append(stamps); f.append(set);
         }
-        let area = null, count = null;
+        let area = null, count = null, quiz = null, quizInput = null, quizSum = null;
+        const showQuiz = () => { if (quiz) quiz.hidden = !area.value.trim(); };
+        const setQuiz = q => { if (quizSum && Array.isArray(q)) { quizSum.textContent = `${q[0]} + ${q[1]} =`; quizInput.value = ''; } };
         if (data.text) {
             const label = el('label', 'log-comment-text-label');
             const head = el('span', 'log-comment-legend'); head.append(el('b', '', t('ひとこと')), el('span', 'log-comment-hint', t('任意・確認後に表示（{n}文字まで）', { n: data.max })));
             label.append(head);
             area = el('textarea'); area.rows = 2; area.maxLength = data.max; area.name = 'text';
             count = el('span', 'log-comment-counter', `0/${data.max}`);
-            area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${data.max}`; ready(); });
+            area.addEventListener('input', () => { count.textContent = `${[...area.value].length}/${data.max}`; showQuiz(); ready(); });
             label.append(area, count); f.append(label);
+            // A small sum, only for a text (a stamp alone stays one tap). Digits, so it reads the same in every language.
+            quiz = el('label', 'log-comment-quiz'); quiz.hidden = true;
+            const quizHead = el('span', 'log-comment-legend'); quizHead.append(el('b', '', t('確認')), el('span', 'log-comment-hint', t('文章を送るときだけ、答えを数字で入れてください')));
+            quizSum = el('span', 'log-comment-quiz-sum');
+            quizInput = el('input'); quizInput.name = 'quiz'; quizInput.inputMode = 'numeric'; quizInput.autocomplete = 'off'; quizInput.maxLength = 3; quizInput.setAttribute('aria-label', t('答え'));
+            quizInput.addEventListener('input', () => ready());
+            const row = el('span', 'log-comment-quiz-row'); row.append(quizSum, quizInput);
+            quiz.append(quizHead, row); f.append(quiz);
+            setQuiz(data.quiz);
         }
         const foot = el('div', 'log-comment-foot');
         const whoEl = el('span', 'log-comment-who', me ? t('あなたの印：{mark}', { mark: mark(me) }) : t('最初の書き込みで、このブラウザー用の印（◆）を作ります。'));
@@ -146,7 +173,7 @@
         const hp = el('input'); hp.name = 'website'; hp.type = 'text'; hp.tabIndex = -1; hp.autocomplete = 'off';
         trap.append(hp);
         f.append(trap, foot, status);
-        const ready = () => { send.disabled = !stamp && !(area && area.value.trim()); };
+        const ready = () => { send.disabled = !stamp && !(area && area.value.trim()) || !!(quiz && !quiz.hidden && !quizInput.value.trim()); };
         setReply = c => {
             replyTo = c;
             replying.hidden = !c;
@@ -168,18 +195,19 @@
             if (early > 0) await new Promise(r => setTimeout(r, early));
             try {
                 const res = await fetch(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-NagiLog': 'comment' },
-                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '', name, re: replyTo ? replyTo.id : '', ticket: data.ticket, website: hp.value }) });
+                    body: JSON.stringify({ id, token: newKey(), icon, stamp, text: area ? area.value : '', name, re: replyTo ? replyTo.id : '', ticket: data.ticket, quiz: quizInput && area.value.trim() ? quizInput.value : '', website: hp.value }) });
                 const out = await res.json().catch(() => ({}));
-                if (out.ticket) { data.ticket = out.ticket; ticketAt = Date.now(); }
+                if (out.ticket) { data.ticket = out.ticket; ticketAt = Date.now(); data.quiz = out.quiz; setQuiz(out.quiz); }
                 if (!res.ok || !out.item) {
-                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章か名前が長すぎます。文章は{n}文字・数行、名前は{name}文字までにしてください。', { n: data.max, name: data.name_max || 16 }), full: t('この記事のコメントはいっぱいです。'), gone: t('返信先のコメントが見つかりませんでした。'), url: t('URLは書けません。'), old: t('ページを開いてから時間がたったため、確認し直しました。もう一度送ってください。'), empty: t('スタンプを選ぶか、文章を書いてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
+                    status.textContent = { busy: t('続けて書き込まれています。少し時間をおいてから送ってください。'), long: t('文章か名前が長すぎます。文章は{n}文字・数行、名前は{name}文字までにしてください。', { n: data.max, name: data.name_max || 16 }), full: t('この記事のコメントはいっぱいです。'), gone: t('返信先のコメントが見つかりませんでした。'), url: t('URLは書けません。'), held: t('承認待ちのコメントが多いため、管理者が確認するまで新しく送れません。'), many: t('この記事には、同じ回線からのスタンプがもう十分にあります。'), old: t('ページを開いてから時間がたったため、確認し直しました。もう一度送ってください。'), empty: t('スタンプを選ぶか、文章を書いてください。'), quiz: t('確認の答えが違います。足し算の答えを数字で入れてください。') }[out.error] || t('送れませんでした。ページを読み込み直してから、もう一度お試しください。');
+                    if (out.error === 'quiz') quizInput.select();
                     ready(); return;
                 }
                 me = out.me; whoEl.textContent = t('あなたの印：{mark}', { mark: mark(me) });
                 data.items.push(out.item);
                 replyTo = null; replying.hidden = true; render();
                 stamp = ''; f.querySelectorAll('.log-comment-stamps button').forEach(x => x.setAttribute('aria-pressed', 'false'));
-                if (area) { area.value = ''; count.textContent = `0/${data.max}`; }
+                if (area) { area.value = ''; count.textContent = `0/${data.max}`; showQuiz(); }
                 status.textContent = out.item.wait ? (out.item.text ? t('送りました。管理者が確認すると表示されます。') : t('送りました。名前を管理者が確認すると表示されます。')) : t('送りました。');
                 document.getElementById('comment-' + out.item.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             } catch {

@@ -29,6 +29,8 @@ def png_with_text(w, h):
     return bytes.fromhex('89504e470d0a1a0a') + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) + chunk(b'tEXt', b'Comment' + bytes([0]) + b'SECRET') + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
 SVG_BAD = b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><script>alert(1)</script><circle cx="24" cy="24" r="18"/></svg>'
 
+NL_WAIT_NET, NL_STAMP_NET = 5, 20
+
 def run(site, other_site, c, csrf, other, ot):
     pub = h.Client(args.port)
     def post(data, files=None, client=c, token=csrf, headers=None): return client.post('/admin/index.php', {'csrf': token, **data}, files=files, headers=headers)
@@ -50,9 +52,15 @@ def run(site, other_site, c, csrf, other, ot):
         else: return tickets[pid]
         if age == 10: tickets[pid] = t
         return t
+    quizzes = {}
+    def quiz(t):
+        if t not in quizzes: quizzes[t] = php(site, f"echo json_encode(nl_comment_quiz('{t}'));")
+        return quizzes[t]
     def send(pid, stamp='', text='', icon='star', key=KEY, headers=None, client=pub, **more):
         hd = {'Content-Type': 'application/json', 'X-NagiLog': 'comment'} if headers is None else headers
         more.setdefault('ticket', ticket(pid))
+        # A person answers the sum shown with the ticket (only a text needs it).
+        if 'quiz' not in more and isinstance(more['ticket'], str) and more['ticket']: more['quiz'] = str(sum(quiz(more['ticket'])))
         return client.post('/comment.php', json.dumps({'id': pid, 'token': key, 'icon': icon, 'stamp': stamp, 'text': text, **more}).encode(), headers=hd)
     def calm(where=site):
         for f in (where / 'data/ratelimit').glob('*'): f.unlink()
@@ -89,6 +97,10 @@ def run(site, other_site, c, csrf, other, ot):
     calm()
     r = send(pid, '👍', ticket=ticket(pid, 7 * 3600))
     check('古い券は old と新しい券', err(r) == 'old' and re.fullmatch(r'\d{10}\.[a-f0-9]{24}', json.loads(r.text).get('ticket', '')) is not None)
+    r = json.loads(r.text)
+    check('古い券には新しい足し算が付く', r.get('quiz') == quiz(r.get('ticket', '')), str(r))
+    g = json.loads(get(pid).text)
+    check('窓口が券から作った1けたの足し算を渡す', g.get('quiz') == quiz(g['ticket']) and all(1 <= n <= 9 for n in g['quiz']), str(g.get('quiz')))
     check('隠し欄に何か入っていたら spam', err(send(pid, '👍', website='http://x')) == 'spam')
     calm()
     check('文章や名前にURLがあれば拒否（全角も）', err(send(pid, text='見てね https://spam.example')) == 'url' and err(send(pid, text='ｃｈｅａｐ．ｃｏｍ')) == 'url' and err(send(pid, '👍', name='spam.xyz')) == 'url')
@@ -201,6 +213,63 @@ def run(site, other_site, c, csrf, other, ot):
     check('PNGも追加でき、128pxに描き直して余計なデータを残さない', r.status == 200 and served.status == 200 and served.getheader('Content-Type') == 'image/png' and served.body[16:24] == bytes.fromhex('0000008000000080') and b'SECRET' not in served.body and png in added())
     check('追加したアイコンで書き込める', send(pid, '👍', icon=png).status == 200)
     check('知らないアイコンの配信は404', h.is_404(pub.get('/comment.php?icon=u000000000000')) and h.is_404(pub.get('/comment.php?icon=../config')))
+    # Hardening after the red-team review: hidden characters, emoji joiners, one line's share of the queue and of a post.
+    j = lambda r: json.loads(r.text)
+    q1, q2, q3, q4 = (new_post(f'bot対策の確認{n}') for n in range(4))
+    def url_err(**kw):
+        calm(); return err(send(q1, **kw))
+    hidden = ['\u00ad', '\u2060', '\ufeff', '\u034f', '\u180e', '\u3164', '\ufe0f', '\u2061', '\u2800', '\u200d']
+    check('見えない文字を挟んだURLも拒否（文章・名前）', all(url_err(text='spam.c' + ch + 'om') == 'url' for ch in hidden) and url_err(stamp='👍', name='x.c\u00adom') == 'url')
+    check('似た形の点・斜線のURLも拒否', url_err(text='https:∕∕example․com') == 'url' and url_err(text='example﹒net') == 'url')
+    check('ai・tech・blog・page・art のドメインも拒否', all(url_err(text=f'see foo.{t}') == 'url' for t in ('ai', 'tech', 'blog', 'page', 'art')))
+    check('Node.js などは引き続き通る（拒否されない）', url_err(text='Node.jsとv1.14.2、No.1') != 'url')
+    calm()
+    a = sum(quiz(ticket(q1)))
+    check('文章で答えなし・違う答え・数字でない答えは quiz', err(send(q1, text='こんにちは', quiz='')) == 'quiz' and err(send(q1, text='こんにちは', quiz=str(a + 1))) == 'quiz' and err(send(q1, text='こんにちは', quiz='abc')) == 'quiz')
+    calm()
+    check('スタンプだけなら答えなしで通る', send(q1, '👍', quiz='').status == 200)
+    calm()
+    full = str(a).translate(str.maketrans('0123456789', '０１２３４５６７８９'))
+    r = json.loads(send(q1, text='全角で答えました', quiz=' ' + full + '　').text)
+    check('全角数字・前後の空白の答えも通る', 'item' in r, str(r)[:200])
+    # Not left waiting: the per-line limit is tested on its own further down.
+    if 'item' in r: post({'do': 'log_comments_moderate', 'action': 'delete', 'items': json.dumps([[q1, r['item']['id']]])})
+    calm()
+    check('見えない文字だけの文章＋スタンプは答えなしで通る', send(q1, '👍', text='​⠀ ', quiz='').status == 200)
+    calm()
+    calm()
+    keep = '家族 👨\u200d👩\u200d👧 ❤️ は\u3099 e\u0301'
+    r = j(send(q1, text=keep))
+    check('絵文字のZWJ・異体字セレクター・結合文字を保存時に保つ', r.get('item', {}).get('text') == keep, str(r)[:200])
+    calm()
+    check('見えない文字だけの文章は empty', err(send(q1, text='\u00ad\u2060\u2800 \u3000')) == 'empty')
+    calm()
+    r = j(send(q1, '👍', text='\u2800\u00ad', name='\u2800\u3164'))
+    check('スタンプ＋見えない文字だけの文章・名前は、スタンプとして即表示', r.get('item', {}).get('wait') is False and r['item'].get('text') == '' and r['item'].get('name') == '', str(r)[:200])
+    net = php(site, f"echo json_encode(nl_comments_read('{q1}')[0]['net']);")
+    have = php(site, f"echo json_encode(nl_comment_net_waiting('', [], nl_comments_index_read(), '{net}'));")
+    need = NL_WAIT_NET - have
+    mine = []
+    for n in range(need):
+        calm(); r = j(send(q1 if n % 2 else q2, text=f'承認待ち{n}'))
+        if 'item' in r: mine.append((q1 if n % 2 else q2, r['item']['id']))
+    calm()
+    check('同じ回線の承認待ちはサイト全体で5件まで（承認待ちのない記事でも held）', need >= 1 and len(mine) == need and err(send(q3, text='6件目')) == 'held' and err(send(q3, '👍', name='新しい名前')) == 'held', f'have={have} need={need} mine={len(mine)}')
+    post({'do': 'log_comments_moderate', 'action': 'ok', 'items': json.dumps([list(mine[0])])})
+    calm()
+    r = j(send(q3, text='承認で空いた枠'))
+    check('承認すると枠が空く', r.get('item', {}).get('wait') is True, str(r)[:200])
+    calm()
+    check('承認の要らないスタンプは巻き込まれない', j(send(q3, '👍')).get('item', {}).get('wait') is False)
+    post({'do': 'log_comments_moderate', 'action': 'delete', 'items': json.dumps([list(x) for x in mine[1:]] + [[q3, r['item']['id']]])})
+    res = []
+    for n in range(NL_STAMP_NET + 1):
+        if n % 4 == 0: calm()
+        res.append(err(send(q4, '👍', key=f'{n:032x}')) or 'ok')
+    calm()
+    check('1つの記事に残せるスタンプは同じ回線から20件まで（合言葉を変えても）', res[:NL_STAMP_NET] == ['ok'] * NL_STAMP_NET and res[-1] == 'many' and err(send(q3, '😊')) is None, ' '.join(res))
+    purge = php(site, "$f = nl_root() . '/comments-purge.txt'; @unlink($f); nl_comment_purge(); $a = file_get_contents($f); nl_comment_purge(); $b = file_get_contents($f); nl_comment_purge(false); $c = file_get_contents($f); file_put_contents($f, (time() - 31) . '|1'); nl_comment_purge(false); $d = file_get_contents($f); echo json_encode([$a, $b, $c, $d]);")
+    check('キャッシュの削除は30秒に1回まで、残りは次の窓口で', purge[0].endswith('|0') and purge[1].endswith('|1') and purge[2] == purge[1] and purge[3].endswith('|0') and purge[3] != purge[2], str(purge))
     # Backup and restore into another site.
     zipped = post({'do': 'log_backup'}).body
     r = other.post('/admin/index.php', {'csrf': ot, 'do': 'log_restore', 'overwrite': '1'}, files={'backup': ('log.zip', zipped, 'application/zip')})

@@ -2,7 +2,7 @@
 /*
  * LOG comments. MIT License (c) 2026 Lichiphen.
  *   GET  comment.php?id=ID      the comments, the icons and stamps to choose from (header X-NagiLog-Key: the reader's key, to see their own waiting texts)
- *   POST comment.php            {"id", "token", "icon", "stamp", "text", "name", "re", "ticket", "website"} with the header X-NagiLog: comment
+ *   POST comment.php            {"id", "token", "icon", "stamp", "text", "name", "re", "ticket", "quiz", "website"} with the header X-NagiLog: comment
  *   GET  comment.php?icon=KEY   an icon the owner added (SVG, served as a picture only)
  * Pages stay cached: comments arrive here, never by rebuilding a page.
  */
@@ -36,6 +36,8 @@ $target = static function (string $id): array {
 if ($method === 'GET') {
     $id = nm_str($_GET, 'id', 24);
     $target($id);
+    // A purge held back after a burst of stamps (nl_comment_purge) is done now.
+    nl_comment_purge(false);
     $token = (string)($_SERVER['HTTP_X_NAGILOG_KEY'] ?? '');
     $uid = preg_match(NL_COMMENT_TOKEN, $token) ? nl_comment_uid($token) : '';
     $s = nl_settings();
@@ -43,7 +45,7 @@ if ($method === 'GET') {
     foreach (nl_comment_icons() as $key => $icon) $icons[] = ['key' => $key, 'name' => $icon['name'], 'url' => $icon['url']];
     // The owner's replies carry the LOG's name and icon.
     $avatar = nl_load_media($s['icon']);
-    nm_json(['items' => nl_comments_for($id, $uid), 'icons' => $icons, 'stamps' => $s['comment_stamps'], 'text' => $s['comment_text'], 'max' => NL_COMMENT_TEXT_MAX, 'name_max' => NL_COMMENT_NAME_MAX, 'me' => $uid, 'ticket' => nl_comment_ticket($id), 'wait' => NL_COMMENT_TICKET_WAIT,
+    nm_json(['items' => nl_comments_for($id, $uid), 'icons' => $icons, 'stamps' => $s['comment_stamps'], 'text' => $s['comment_text'], 'max' => NL_COMMENT_TEXT_MAX, 'name_max' => NL_COMMENT_NAME_MAX, 'me' => $uid, 'ticket' => ($ticket = nl_comment_ticket($id)), 'quiz' => nl_comment_quiz($ticket), 'wait' => NL_COMMENT_TICKET_WAIT,
         'owner' => ['name' => $s['name'], 'icon' => $avatar ? nl_media_url($avatar, true) : '']]);
 }
 if ($method !== 'POST') nm_not_found();
@@ -63,13 +65,18 @@ if (nm_rate_hit('log-comment', $net, 60) > NL_COMMENT_MINUTE || nm_rate_hit('log
 // Bots: a ticket from opening the comments (not too fresh, not too old), and the hidden field left empty.
 $bot = nl_comment_ticket_check($in['id'], $in['ticket'] ?? null);
 if ($bot === '' && ($in['website'] ?? '') !== '') $bot = 'spam';
-if ($bot !== '') { nm_log('log_comment_refused', $in['id'] . ' (' . $bot . ')'); nm_json(['error' => $bot] + ($bot === 'old' ? ['ticket' => nl_comment_ticket($in['id'])] : []), 422); }
+// A text (the part that carries words) also needs the sum shown with the ticket; a stamp alone stays one tap.
+if ($bot === '') {
+    try { $words = nl_comment_visible(nl_comment_text($in['text'] ?? '')) !== ''; } catch (UnexpectedValueException) { $words = false; }
+    if ($words && !nl_comment_quiz_ok($in['ticket'] ?? null, $in['quiz'] ?? null)) $bot = 'quiz';
+}
+if ($bot !== '') { nm_log('log_comment_refused', $in['id'] . ' (' . $bot . ')'); nm_json(['error' => $bot] + ($bot === 'old' ? ['ticket' => ($ticket = nl_comment_ticket($in['id'])), 'quiz' => nl_comment_quiz($ticket)] : []), 422); }
 try {
     $c = nl_comment_add($in['id'], $in);
 } catch (UnexpectedValueException $e) {
-    nm_json(['error' => in_array($e->getMessage(), ['empty', 'long', 'full', 'busy', 'gone', 'url'], true) ? $e->getMessage() : 'form'], 422);
+    nm_json(['error' => in_array($e->getMessage(), ['empty', 'long', 'full', 'busy', 'gone', 'url', 'held', 'many'], true) ? $e->getMessage() : 'form'], 422);
 }
 nm_log('log_comment', $in['id'] . ($c['wait'] ? ' (waiting)' : ''));
 // A shown comment changes the counts beside Share on the cached pages: they are rebuilt on their next visit.
-if (!$c['wait']) nm_lscache_purge(true);
+if (!$c['wait']) nl_comment_purge();
 nm_json(['item' => $c, 'me' => $c['uid']]);

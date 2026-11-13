@@ -2188,5 +2188,13 @@
   "書き込む": "Write",
   "URLは書けません。": "Addresses (URLs) cannot be posted.",
   "ページを開いてから時間がたったため、確認し直しました。もう一度送ってください。": "The page was open for a long time, so it was checked again. Please send once more.",
-  "bot対策として、読者には何もさせずに次の3つを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。": "Against bots, three checks run without asking readers to do anything. A comment sent less than {n} seconds after the comments opened, or sent without opening the page, is refused. A hidden field that people never see must stay empty. Text and names may not contain addresses (URLs)."
+  "bot対策として、次のことを確かめます。コメント欄を開いてから{n}秒たたないうちの送信と、ページを開かずに送られたものは断ります。人には見えない入力欄に何か入っていたら断ります。文章と名前にURLがあれば断ります。文章を送るときだけ、1けたの足し算（数字で答える）を出します。スタンプだけなら何も聞きません。": "Against bots, these checks run. A comment sent less than {n} seconds after the comments opened, or sent without opening the page, is refused. A hidden field that people never see must stay empty. Text and names may not contain addresses (URLs). Only when sending text, readers answer a one-digit sum with a number. A stamp alone asks nothing.",
+  "承認待ちのコメントが多いため、管理者が確認するまで新しく送れません。": "Many comments from your connection are waiting for approval. New ones can be sent after the owner checks them.",
+  "この記事には、同じ回線からのスタンプがもう十分にあります。": "This post already has enough stamps from your connection.",
+  "管理人の返信に書いた http:// と https:// のURLは、押せるリンクになります（新しいタブで開きます）。読者のコメントのURLはリンクにならず、そもそも受け付けません。": "Addresses starting with http:// or https:// in the owner replies become links that open in a new tab. Reader comments never become links, and addresses in them are refused.",
+  "承認待ちにできるのは、同じ回線からサイト全体で{wait}件までです（承認か削除で空きます）。1つの記事に残せるスタンプは、同じ回線から{stamp}件までです。": "One connection can have up to {wait} comments waiting for approval across the site (approving or deleting frees a place). One connection can leave up to {stamp} stamps on a post.",
+  "確認": "Check",
+  "文章を送るときだけ、答えを数字で入れてください": "Only when sending text: type the answer as a number",
+  "答え": "Answer",
+  "確認の答えが違います。足し算の答えを数字で入れてください。": "The answer to the check is not right. Please type the sum as a number."
 }

@@ -35,6 +35,7 @@
 .log-comment-me { padding:0 7px; border-radius:999px; background:color-mix(in srgb,var(--log-accent) 14%,transparent); color:var(--log-accent); font-weight:600; }
 .log-comment-stamp { margin:2px 0 0; font-size:1.9rem; line-height:1.2; }
 .log-comment-text { margin:2px 0 0; font-size:.95rem; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.log-comment-text a { color:var(--log-accent); text-decoration:underline; text-underline-offset:2px; }
 .log-comment-wait { margin:4px 0 0; color:var(--log-muted); font-size:.75rem; }
 .log-comment-form { display:grid; gap:12px; padding-top:14px; border-top:1px dashed var(--log-line); }
 /* The form under the thread it answers. */
@@ -66,6 +67,12 @@
 .log-comment-text-label textarea:focus { outline:2px solid var(--log-accent); outline-offset:1px; }
 .log-comment-counter { position:absolute; right:10px; bottom:6px; font-size:.7rem; }
 /* The hidden field for bots: off screen, not just display:none (some bots skip hidden fields). */
+.log-comment-quiz { display:grid; }
+.log-comment-quiz[hidden] { display:none; }
+.log-comment-quiz-row { display:flex; align-items:center; gap:10px; }
+.log-comment-quiz-sum { font-size:1.05rem; font-weight:700; color:var(--log-text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.log-site .log-comment-form .log-comment-quiz-row input[name="quiz"] { box-sizing:border-box; width:4.5em; flex:none; height:38px; padding:0 10px; border:1px solid var(--log-line); border-radius:10px; background:var(--log-bg); color:var(--log-text); font:inherit; font-size:1rem; text-align:center; }
+.log-comment-quiz input:focus { outline:2px solid var(--log-accent); outline-offset:1px; }
 .log-comment-trap { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
 .log-comment-foot { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; }
 .log-comment-who { color:var(--log-muted); font-size:.78rem; }

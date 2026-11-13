@@ -1594,7 +1594,10 @@
   "log-comments-form",
   "log-comments-write",
   "log-comments-write-icon",
-  "log-comment-trap"
+  "log-comment-trap",
+  "log-comment-quiz",
+  "log-comment-quiz-row",
+  "log-comment-quiz-sum"
  ],
  "dynamic": [
   "is-box",
