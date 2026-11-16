@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.15.0](https://img.shields.io/badge/NagiLog-v0.15.0-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.15.0](https://img.shields.io/badge/NagiManga-v0.15.0-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.15.1](https://img.shields.io/badge/NagiLog-v0.15.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.15.1](https://img.shields.io/badge/NagiManga-v0.15.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -99,7 +99,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.15.0（NagiManga v0.15.0に同梱） |
+| 版 | 0.15.1（NagiManga v0.15.1に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -238,7 +238,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.15.0.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.15.1.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、FTP で `data/setup-key.php` に書いてある「セットアップの鍵」を貼り付けて、管理者パスワードを決めます。「おもに使うもの」は **NagiLog** を選ぶと、ログインしたときに LOG・投稿の画面が開きます。
 3. 表示された管理用URLをブックマークします。初めてログインすると、パスキーか二段階認証の設定をすすめるダイアログが出ます。できるだけ、ここで設定してください。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -1335,7 +1335,7 @@ IP を保存する設定では、プライバシーポリシーの文例（日�
 | --- | --- |
 | 来てくれた人 | 1日・1ヶ月（30日）・1年（52週）のグラフ。前の期間と比べる |
 | 漫画の読了・離脱ページ | 最後のページまで行った人と、何ページ目でやめたか（サムネイル付き）。1ページ1秒未満でめくり続けた人は「流し読み」として分けて数える |
-| 記事の「きちんと読んだ」・離脱位置 | 本文の90%までスクロールし、文字数から見て妥当な時間（1分に500字が目安）開いていた人。やめた位置は「『〇〇』の辺りで半分が離脱」のように見出しの名前で出す |
+| 記事の「きちんと読んだ」・離脱位置 | 本文の90%までスクロールし、文字数から見て妥当な時間（1分に500字が目安）開いていた人。v0.15.1 以降、文字数は読者に見える本文だけで数え（題名の行、画像・漫画・ページ埋込のタグは数えない）、それより前に集計した日は、NagiScope を開いたときに生のログから1回だけ数え直す。やめた位置は「『〇〇』の辺りで半分が離脱」のように見出しの名前で出す |
 | どこから来たか・端末 | X・pixiv・検索・ほかの SNS・ほかのサイト・直接。スマホ・PC・タブレットの比率 |
 | サイト内の検索語・タグの人気・押されたリンク・いいね | |
 | 埋め込みのゲーム | [ページ埋込](#ページ埋込)ごとに、表示された → 読み込みを押した → 読み込みが終わった（参考） → ゲームを触った（起動） → ゲームから起動の合図、と遊んだ時間の平均（ゲームにフォーカスがあり、画面が見えている間だけ） |
@@ -1885,7 +1885,7 @@ python manga/dev/contrast_audit.py
 
 | 検証 | 結果 |
 | --- | --- |
-| NagiScope（`dev/scope_test.py`） | 56項目通過。OFF の間は何も数えないこと、送られた値の検査、ロボットとログイン中の持ち主を数えないこと、IP アドレスの3つの扱い、ゴールのさかのぼり集計、ダッシュボード、訪問者が送った文字のエスケープ、アクセスの拒否、バックアップと復元で二重に数えないこと、午前0時をまたぐ閲覧、英語の画面 |
+| NagiScope（`dev/scope_test.py`） | 60項目通過。OFF の間は何も数えないこと、送られた値の検査、ロボットとログイン中の持ち主を数えないこと、IP アドレスの3つの扱い、ゴールのさかのぼり集計、ダッシュボード、訪問者が送った文字のエスケープ、アクセスの拒否、バックアップと復元で二重に数えないこと、午前0時をまたぐ閲覧、英語の画面 |
 | NagiScope のブラウザー（`dev/scope_browser_test.py`） | Chromium と WebKit で52項目通過。記事を読んだ深さ・リンクのクリック・ページ埋込のゲームの「表示 → 読み込み → 触った → 起動の合図」・漫画を最後まで読んだことが届き、画面に出ること。スマホの幅ではみ出さないこと |
 | 管理メニュー（`dev/nav_fab_browser_test.py`） | Chromium と WebKit・スマホと PC・明るい表示と暗い表示で220項目通過。管理画面で下へスクロールするとボタンが入り、ログイン中の LOG ではスクロールせずに出ること（PC は右上、スマホは右下）。スマホでは画面の中央に幅を狭めずに開き、PC ではカーソルを当てるだけでボタンのすぐ下に開くこと。どの項目も名前の左にアイコンがあること |
 | 既存の試験 | 28本すべて通過（翻訳 4089 項目を含む） |

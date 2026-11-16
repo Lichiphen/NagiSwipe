@@ -30,6 +30,7 @@ function ns_invite_card(): string
 function ns_view(): void
 {
     ns_aggregate();
+    ns_reads_recount_once();
     $view = nm_str($_GET, 'view', 12);
     $s = ns_settings();
     $head = '<link rel="stylesheet" href="' . nm_asset('scope.css') . '"><script src="' . nm_asset('scope.js') . '" defer></script>';

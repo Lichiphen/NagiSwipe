@@ -311,11 +311,18 @@ function ns_target(string $kind, string $id): ?array
     return null;
 }
 
-/** Characters of a post or page's text, for "read properly": about 500 a minute. */
-function ns_body_chars(array $item): int
+/**
+ * Characters of a post or page's text as the reader sees it, for "read properly": about 500 a minute.
+ * viewer/scope.js counts the text on screen and sends "rd" once that long has passed, so nothing the screen does not
+ * show as text may be counted here: a post's title line ($post), picture, manga and embed tags, ruby readings, diagrams.
+ */
+function ns_body_chars(array $item, bool $post = false): int
 {
-    $body = (string)($item['body'] ?? '');
-    $body = (string)preg_replace(['~!\[[^\]]*\]\([^)]*\)~u', '~\[\[([^\[\]\n]+)\]\]\([^)]*\)~u', '~\[([^\]]*)\]\([^)]*\)~u', '~https?://\S+~u', '/[#>*_`~|\-\[\]]+/u', '~\s+~u'], ['', '$1', '$1', '', '', ''], $body);
+    $body = $post && function_exists('nl_post_parts') ? (string)nl_post_parts($item)['body'] : (string)($item['body'] ?? '');
+    if (function_exists('nl_ruby_plain')) $body = nl_ruby_plain($body);
+    $body = (string)preg_replace(['/^ {0,3}```[ \t]*mermaid\b.*?^ {0,3}```[ \t]*$/imsu', '/\[Image:[a-f0-9]{16}\]/', '/\[Manga[^\]\r\n]{1,230}\]/u'], '', $body);
+    if (defined('NL_FRAME_MARK')) $body = (string)preg_replace(NL_FRAME_MARK, '', $body);
+    $body =(string)preg_replace(['~!\[[^\]]*\]\([^)]*\)~u', '~\[\[([^\[\]\n]+)\]\]\([^)]*\)~u', '~\[([^\]]*)\]\([^)]*\)~u', '~https?://\S+~u', '/[#>*_`~|\-\[\]]+/u', '~\s+~u'], ['', '$1', '$1', '', '', ''], $body);
     return mb_strlen($body);
 }
 
@@ -365,7 +372,7 @@ function ns_event(array $in): ?array
                 $rec['n'] = count($item['pages']);
                 break;
             }
-            if ($kind === 'p' || $kind === 'g') $rec['need'] = max(10, (int)ceil(ns_body_chars($item) / 500 * 60));
+            if ($kind === 'p' || $kind === 'g') $rec['need'] = max(10, (int)ceil(ns_body_chars($item, $kind === 'p') / 500 * 60));
             if ($kind === 'l') {
                 $q = ns_text($in['q'] ?? '', 100);
                 if ($q !== '') $rec['q'] = $q;
@@ -503,6 +510,22 @@ function ns_session(array &$d, ?array &$prev, string $sk): ?array
     return null;
 }
 
+/**
+ * The seconds a post or page needs, for a visit opened with $stored: never more than its text asks for now.
+ * Older lines counted the title line and the picture, manga and embed tags as text to read.
+ */
+function ns_need_now(string $key, int $stored): int
+{
+    static $cache = [];
+    if (!array_key_exists($key, $cache)) {
+        [$kind, $id] = array_pad(explode(':', $key, 2), 2, '');
+        $item = null;
+        try { $item = ns_target($kind, $id); } catch (Throwable) { /* gone or unreadable: the stored time stays */ }
+        $cache[$key] = $item ? max(10, (int)ceil(ns_body_chars($item, $kind === 'p') / 500 * 60)) : null;
+    }
+    return $cache[$key] === null ? $stored : min($stored, $cache[$key]);
+}
+
 /** What a visit keeps from its opening line: device and the way in. */
 function ns_session_origin(array $r): array
 {
@@ -581,7 +604,7 @@ function ns_apply(array &$d, array $r, array $goals, ?array &$prev = null): void
                 $it['views']++;
                 if (!isset($V['it'][$key])) { $V['it'][$key] = 1; $it['v']++; $S['reads']++; }
                 unset($it);
-                $d['_s'][ns_session_key($r, 'p')] = ['i' => $key, 't0' => (int)$r['t'], 'need' => (int)($r['need'] ?? 0), 'hk' => ''] + ns_session_origin($r);
+                $d['_s'][ns_session_key($r, 'p')] = ['i' => $key, 't0' => (int)$r['t'], 'need' => ns_need_now($key, (int)($r['need'] ?? 0)), 'hk' => ''] + ns_session_origin($r);
             }
             if (isset($r['q']) && $once('q|' . $r['q'])) ns_inc($d['search'], (string)$r['q']);
             if (isset($r['tg'])) ns_inc($d['tags'], (string)$r['tg']);
@@ -679,6 +702,8 @@ function ns_aggregate(float $budget = 6.0): void
     if (!is_dir(ns_dir() . '/raw')) return;
     nm_with_lock('scope-aggregate', static function () use ($budget): void {
         $state = ns_state();
+        // Nothing added up yet: nothing to count again (ns_reads_recount_once()).
+        $fix = (int)($state['fix'] ?? ($state['f'] === '' ? 1 : 0));
         $goals = ns_goals();
         $deadline = microtime(true) + $budget;
         $days = [];
@@ -726,7 +751,7 @@ function ns_aggregate(float $budget = 6.0): void
             $d = ns_read_guarded($file);
             if ($d && !empty($d['open'])) { unset($d['_v'], $d['_s']); $d['open'] = 0; ns_write_guarded($file, $d); }
         }
-        ns_write_guarded(ns_dir() . '/state.json.php', $state);
+        ns_write_guarded(ns_dir() . '/state.json.php', ['fix' => $fix] + $state);
         ns_prune_raw($state['f']);
     });
 }
@@ -774,14 +799,13 @@ function ns_prune_raw(string $current): void
 }
 
 /**
- * A goal made or changed later still counts the past: every raw log still kept is read again and the goals of each
- * day are replaced (days whose raw log is gone keep what they had). Lines not yet added up are left to ns_aggregate().
+ * Reads every raw log still kept again into fresh days, and gives each day that has a summary to $merge($day, $fresh)
+ * (days whose raw log is gone keep what they had). Lines not yet added up are left to ns_aggregate().
  * One month is held in memory at a time; the raw logs are never locked while read, so recording goes on meanwhile.
  */
-function ns_goals_rebuild(): void
+function ns_replay(callable $merge): void
 {
-    ns_aggregate(20.0);
-    nm_with_lock('scope-aggregate', static function (): void {
+    nm_with_lock('scope-aggregate', static function () use ($merge): void {
         @set_time_limit(300);
         $state = ns_state();
         $goals = ns_goals();
@@ -807,11 +831,60 @@ function ns_goals_rebuild(): void
             foreach ($fresh as $day => $f) {
                 $d = ns_read_guarded(ns_daily_file($day));
                 if (!$d) continue;
-                $d['goals'] = $f['goals'];
-                if (!empty($d['open']) && isset($d['_v'])) foreach ($d['_v'] as $vis => $v) $d['_v'][$vis]['g'] = $f['_v'][$vis]['g'] ?? [];
+                $merge($d, $f);
                 ns_write_guarded(ns_daily_file($day), $d);
             }
         }
+    });
+}
+
+/** The goals of a day, replaced by the ones counted again. */
+function ns_merge_goals(array &$d, array $f): void
+{
+    $d['goals'] = $f['goals'];
+    if (!empty($d['open']) && isset($d['_v'])) foreach ($d['_v'] as $vis => $v) $d['_v'][$vis]['g'] = $f['_v'][$vis]['g'] ?? [];
+}
+
+/**
+ * "Read properly" of a day, from the count made again: the numbers only ever go up. A day still open also takes the
+ * marks that keep one reader from counting twice, and the time its visits still under way need.
+ */
+function ns_merge_reads(array &$d, array $f): void
+{
+    $d['l']['done'] = max((int)($d['l']['done'] ?? 0), (int)($f['l']['done'] ?? 0));
+    foreach ($f['l']['items'] ?? [] as $key => $it) {
+        if (isset($d['l']['items'][$key])) $d['l']['items'][$key]['deep'] = max((int)($d['l']['items'][$key]['deep'] ?? 0), (int)($it['deep'] ?? 0));
+    }
+    if (empty($d['open'])) return;
+    foreach ($d['_v'] ?? [] as $vis => $v) {
+        foreach ($f['_v'][$vis]['x'] ?? [] as $mark => $one) if (str_starts_with((string)$mark, 'rd|')) $d['_v'][$vis]['x'][$mark] = 1;
+    }
+    foreach ($d['_s'] ?? [] as $sk => $one) {
+        if (isset($one['need'], $f['_s'][$sk]['need'])) $d['_s'][$sk]['need'] = min((int)$one['need'], (int)$f['_s'][$sk]['need']);
+    }
+}
+
+/** A goal made or changed later still counts the past: the goals of each day are counted again from the raw logs. */
+function ns_goals_rebuild(): void
+{
+    ns_aggregate(20.0);
+    ns_replay('ns_merge_goals');
+}
+
+/**
+ * Once, on the owner's first visit to NagiScope with this version: days added up by older versions left out most
+ * "read properly" of posts with pictures (ns_need_now()), so they are counted again from the raw logs still kept,
+ * together with the goals that hang on them. The mark in the state keeps it from running twice.
+ */
+function ns_reads_recount_once(): void
+{
+    if ((int)(ns_state()['fix'] ?? 0) >= 1 || !is_dir(ns_dir() . '/raw')) return;
+    ns_replay(static function (array &$d, array $f): void {
+        ns_merge_goals($d, $f);
+        ns_merge_reads($d, $f);
+    });
+    nm_with_lock('scope-aggregate', static function (): void {
+        ns_write_guarded(ns_dir() . '/state.json.php', ['fix' => 1] + ns_state());
     });
 }
 

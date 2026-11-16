@@ -196,6 +196,38 @@ def run(site):
     daily = json.loads((data_dir / 'scope' / 'daily' / f'{today}.json.php').read_text(encoding='utf-8').split('\n', 1)[1])
     check('午前0時をまたいだ閲覧も「きちんと読んだ」に数え、今日の読者にも入れる', 'Midnight' in json.dumps(daily.get('_s', {})) and daily['_v'].get('bbbbbbbbbbbbbbbb', {}).get('it', {}).get('p:' + pid) == 1)
 
+    # --- Days added up by an older version: "read properly" is counted again from the raw log, once -----------------------
+    # An older version asked for more time than the text needs (need: 100) and dropped this reader for good.
+    now = int(time.time())
+    with open(raw_now, 'a', encoding='utf-8', newline='\n') as f:
+        f.write(json.dumps({'t': now - 40, 'e': 'pv', 'v': 'cccccccccccccccc', 's': 'OldCount0001', 'k': 'p', 'i': pid, 'rc': 'direct', 'd': 'pc', 'need': 100}) + '\n')
+        f.write(json.dumps({'t': now - 20, 'e': 'rd', 'v': 'cccccccccccccccc', 's': 'OldCount0001', 'k': 'p', 'i': pid}) + '\n')
+    c.get('/admin/index.php?p=scope')
+    daily_file = data_dir / 'scope' / 'daily' / f'{today}.json.php'
+    state_file = data_dir / 'scope' / 'state.json.php'
+    guard, text = daily_file.read_text(encoding='utf-8').split('\n', 1)
+    daily = json.loads(text)
+    counted = (daily['l']['done'], daily['l']['items']['p:' + pid]['deep'])
+    check('時間を多く見積もっていた古い記録の「きちんと読んだ」も、いまの本文の長さで数える', daily['_v']['cccccccccccccccc']['x'].get('rd|p:' + pid) == 1)
+    # The same day as the older version left it: that reader not counted, and no mark of the recount in the state.
+    daily['l']['done'] -= 1
+    daily['l']['items']['p:' + pid]['deep'] -= 1
+    del daily['_v']['cccccccccccccccc']['x']['rd|p:' + pid]
+    daily['_s']['p:OldCount0001']['need'] = 100
+    daily_file.write_text(guard + '\n' + json.dumps(daily, ensure_ascii=False) + '\n', encoding='utf-8', newline='\n')
+    state = json.loads(state_file.read_text(encoding='utf-8').split('\n', 1)[1])
+    had_mark = state.pop('fix', None)
+    state_file.write_text(guard + '\n' + json.dumps(state) + '\n', encoding='utf-8', newline='\n')
+    c.get('/admin/index.php?p=scope')
+    daily = json.loads(daily_file.read_text(encoding='utf-8').split('\n', 1)[1])
+    state = json.loads(state_file.read_text(encoding='utf-8').split('\n', 1)[1])
+    check('古い版が集計した日は、NagiScope を開いたときに生のログから 1 回だけ数え直す',
+          had_mark == 1 and state.get('fix') == 1 and (daily['l']['done'], daily['l']['items']['p:' + pid]['deep']) == counted
+          and daily['_v']['cccccccccccccccc']['x'].get('rd|p:' + pid) == 1 and daily['_s']['p:OldCount0001']['need'] < 100)
+    c.get('/admin/index.php?p=scope')
+    again = json.loads(daily_file.read_text(encoding='utf-8').split('\n', 1)[1])
+    check('数え直しても、同じ人を二重には数えない', (again['l']['done'], again['l']['items']['p:' + pid]['deep']) == counted)
+
     # --- Backup ------------------------------------------------------------------------------------------------
     r = post({'do': 'scope_backup'})
     backup_noraw = r.body
@@ -242,6 +274,13 @@ def run(site):
     left -= {'計測の漫画', '冒頭の文です。', 'はじめに', '中盤の話', 'おわりに', '「計測の漫画」', '「冒頭の文です。」', '#テストタグ', 'テストタグ', 'へ行った', 'ゲームを始めた', '漫画を読み終えた', '記事を読み終えた', '冒頭の文です。」', '計測の漫画」'}
     check('英語の管理画面に日本語が残らない（読者が書いたものを除く）' + (' ' + ' '.join(sorted(left)) if left else ''), not left)
     post({'do': 'settings_save_all', 'tab': 'common', 'sections[]': 'admin_lang', 'admin_lang': 'ja'})
+
+    # The time a post needs comes from the text the reader sees: not its title line, nor picture, manga or embed tags.
+    tag = json.loads(post({'do': 'log_upload'}, files={'image': ('art.png', h.png(80, 100, seed=7), 'image/png')}).text)['media']['tag']
+    art = '新しいイラストを描きました、ぜひ見てください\n' + 'あ' * 60 + ('\n' + tag) * 3 + '\n[ページ埋込]' + GAME + '[/ページ埋込]\n```mermaid\ngraph TD\n' + 'A-->B\n' * 30 + '```'
+    art_id = json.loads(post(base.payload(body=art)).text)['id']
+    beacon({'e': 'pv', 's': 'Picture00001', 'k': 'p', 'i': art_id})
+    check('絵の多い短い記事は、題名や画像のタグを読む時間に数えない（最短の 10 秒）', lines()[-1]['s'] == 'Picture00001' and lines()[-1]['need'] == 10)
 
 
 def main():
