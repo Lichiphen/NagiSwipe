@@ -89,6 +89,16 @@ div.ns-grid > .card { margin-top: 0; }
 .ns-table td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ns-table td:nth-child(3) { overflow-wrap: anywhere; min-width: 14em; }
 .ns-deny { margin: 8px 0 12px; }
+.ns-access-nav { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; max-width: 420px; }
+.ns-access-nav .btn { flex: none; width: auto; }
+.ns-access-nav strong { flex: 1; min-width: 0; font-size: 1.15em; text-align: center; white-space: nowrap; }
+.ns-access-nav [aria-disabled] { opacity: .45; pointer-events: none; }
+.ns-table td { font-variant-numeric: tabular-nums; }
+.ns-parts td:nth-child(n+2), .ns-parts th:nth-child(n+2), .ns-who td:nth-child(n+2):nth-child(-n+4), .ns-who th:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+.ns-parts td:nth-child(3), .ns-who td:nth-child(3) { min-width: 0; }
+.ns-who td { white-space: nowrap; }
+.ns-zero td { color: var(--muted); }
+.ns-ignore-me { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 .ns-danger { border-left: 4px solid var(--danger); }
 @media (max-width: 600px) {
     .ns-rows li { grid-template-columns: minmax(0, 1fr) auto; }

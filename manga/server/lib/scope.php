@@ -47,6 +47,10 @@ function ns_settings(?array $cfg = null): array
         // The owner answered the card on the works screen ("あとで" hides it), or turned NagiScope on once.
         'asked' => !empty($s['asked']),
         'since' => (int)($s['since'] ?? 0),
+        // Addresses whose visits are not counted (the owner's own phone or home line); the site still opens for them.
+        'ignore' => is_array($s['ignore'] ?? null) ? array_values(array_filter($s['ignore'], 'is_string')) : [],
+        // The dashboard opens on manga (m) or LOG (l) when the address names neither.
+        'site' => ($s['site'] ?? '') === 'l' ? 'l' : 'm',
     ];
 }
 function ns_on(): bool { return ns_settings()['on']; }
@@ -247,12 +251,30 @@ function ns_deny_rule(string $rule): string
 }
 function ns_denied(?string $ip = null): bool
 {
-    $list = ns_denied_list();
+    return ns_ip_in(ns_denied_list(), $ip);
+}
+/** Whether the address is on the list of addresses NagiScope does not count. */
+function ns_ignored(?string $ip = null): bool
+{
+    return ns_ip_in(ns_settings()['ignore'], $ip);
+}
+function ns_ip_in(array $list, ?string $ip): bool
+{
     if (!$list) return false;
     $ip ??= nm_client_ip();
     if (!function_exists('nm_ip_match')) require_once __DIR__ . '/auth.php';
     foreach ($list as $rule) if (nm_ip_match($ip, $rule)) return true;
     return false;
+}
+/** The rule for "this address": an IPv4 address as is, an IPv6 one as its /64 (phones change the rest often). */
+function ns_own_rule(?string $ip = null): string
+{
+    $ip ??= nm_client_ip();
+    $bin = @inet_pton($ip);
+    if ($bin === false) return '';
+    if (strlen($bin) === 4) return $ip;
+    if (str_starts_with($bin, str_repeat("\0", 10) . "\xff\xff")) return (string)inet_ntop(substr($bin, 12));
+    return inet_ntop(substr($bin, 0, 8) . str_repeat("\0", 8)) . '/64';
 }
 
 // ---------------------------------------------------------------------------
@@ -268,12 +290,12 @@ function ns_is_owner(): bool
     return nm_is_logged_in();
 }
 
-/** Whether this request may add a line at all: on, not a program, not the owner, not turned away, not too many. */
+/** Whether this request may add a line at all: on, not a program, not the owner (logged in, or from an address the owner listed), not turned away, not too many. */
 function ns_may_record(): bool
 {
     if (!ns_on()) return false;
     $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if (ns_is_bot($ua) || ns_denied() || ns_is_owner()) return false;
+    if (ns_is_bot($ua) || ns_denied() || ns_ignored() || ns_is_owner()) return false;
     nm_rate_gc();
     return nm_rate_hit('scope', nm_client_net(), 60) <= NS_RATE_MINUTE;
 }
@@ -1025,23 +1047,6 @@ function ns_source_label(string $src): string
 // ---------------------------------------------------------------------------
 
 /** The newest lines whose address starts with $ip (all lines when empty), newest first. */
-function ns_raw_search(string $ip, int $limit = 300): array
-{
-    $out = [];
-    $files = glob(ns_dir() . '/raw/*.jsonl.php') ?: [];
-    rsort($files);
-    foreach ($files as $file) {
-        $lines = [];
-        ns_read_lines($file, strlen(NS_HEAD), microtime(true) + 5, static function (array $r) use (&$lines, $ip, $limit): void {
-            if ($ip !== '' && !str_starts_with((string)($r['ip'] ?? ''), $ip)) return;
-            $lines[] = $r;
-            if (count($lines) > $limit * 4) $lines = array_slice($lines, -$limit);
-        });
-        $out = array_merge($out, array_reverse($lines));
-        if (count($out) >= $limit) break;
-    }
-    return array_slice($out, 0, $limit);
-}
 
 // ---------------------------------------------------------------------------
 // Privacy policy samples

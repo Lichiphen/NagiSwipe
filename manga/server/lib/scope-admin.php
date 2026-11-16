@@ -33,7 +33,9 @@ function ns_view(): void
     ns_reads_recount_once();
     $view = nm_str($_GET, 'view', 12);
     $s = ns_settings();
-    $head = '<link rel="stylesheet" href="' . nm_asset('scope.css') . '"><script src="' . nm_asset('scope.js') . '" defer></script>';
+    $head = '<link rel="stylesheet" href="' . nm_asset('scope.css') . '"><script src="' . nm_asset('scope.js') . '" defer></script>'
+        // The access list pages its lines with the LOG's pager.
+        . ($view === 'access' ? '<link rel="stylesheet" href="' . nm_asset('../viewer/log-pager.css') . '">' : '');
     if (!$s['on'] && !$s['since'] && $view !== 'settings') {
         nm_layout('NagiScope', '<h1 class="ns-title">NagiScope</h1>' . ns_start_panel(), true, $head);
         return;
@@ -191,7 +193,8 @@ function ns_period_json(): never
 
 function ns_dashboard(): string
 {
-    $site = nm_str($_GET, 'site', 1) === 'l' ? 'l' : 'm';
+    $site = nm_str($_GET, 'site', 1);
+    if ($site !== 'l' && $site !== 'm') $site = ns_settings()['site'];
     $goals = ns_goals();
     $data = [];
     $sections = '';
@@ -501,31 +504,191 @@ function ns_event_label(array $r): string
     };
 }
 
+/** Lines of the access list per page, and addresses in the table of who came. */
+const NS_ACCESS_PER_PAGE = 100;
+const NS_ACCESS_WHO = 100;
+
+/** The span of the access list (Japan time): a year (2026), a month (2026-11) or a day (2026-11-16); this month by default. */
+function ns_access_span(string $at): array
+{
+    if (preg_match('/\A(\d{4})\z/', $at, $m) && $m[1] >= '2000') return ['year', $at, $at . '-01-01', $at . '-12-31'];
+    if (preg_match('/\A(\d{4})-(\d{2})\z/', $at, $m) && $m[1] >= '2000' && checkdate((int)$m[2], 1, (int)$m[1])) return ['month', $at, $at . '-01', gmdate('Y-m-t', (int)strtotime($at . '-01 00:00:00 UTC'))];
+    if (preg_match('/\A(\d{4})-(\d{2})-(\d{2})\z/', $at, $m) && $m[1] >= '2000' && checkdate((int)$m[2], (int)$m[3], (int)$m[1])) return ['day', $at, $at, $at];
+    return ns_access_span(substr(ns_today(), 0, 7));
+}
+/** The span before or after this one. */
+function ns_access_step(string $kind, string $at, int $dir): string
+{
+    return match ($kind) {
+        'year' => (string)((int)$at + $dir),
+        'month' => gmdate('Y-m', (int)strtotime($at . '-01 00:00:00 UTC ' . ($dir > 0 ? '+1' : '-1') . ' month')),
+        default => ns_shift($at, $dir),
+    };
+}
+/** The same place shown as a year, a month or a day: the part of today that falls inside, else the first. */
+function ns_access_as(string $kind, string $at): string
+{
+    $today = ns_today();
+    return match ($kind) {
+        'year' => substr($at, 0, 4),
+        'month' => strlen($at) >= 7 ? substr($at, 0, 7) : (str_starts_with($today, $at) ? substr($today, 0, 7) : $at . '-01'),
+        default => strlen($at) === 10 ? $at : (str_starts_with($today, $at) ? $today : (strlen($at) === 7 ? $at : $at . '-01') . '-01'),
+    };
+}
+
+/**
+ * Every line of the span (oldest first) whose address starts with $ip, without the embed's own frame events.
+ * Returns false when the time ran out before the end.
+ */
+function ns_raw_range(string $from, string $to, string $ip, float $deadline, callable $fn): bool
+{
+    $tFrom = (int)strtotime($from . ' 00:00:00 UTC') - 32400;
+    $tTo = (int)strtotime($to . ' 00:00:00 UTC') + 86400 - 32400;
+    $files = glob(ns_dir() . '/raw/*.jsonl.php') ?: [];
+    sort($files);
+    foreach ($files as $file) {
+        $month = basename($file, '.jsonl.php');
+        if ($month < substr($from, 0, 7) || $month > substr($to, 0, 7)) continue;
+        ns_read_lines($file, strlen(NS_HEAD), $deadline, static function (array $r) use ($fn, $ip, $tFrom, $tTo): void {
+            if ($r['t'] < $tFrom || $r['t'] >= $tTo || in_array($r['e'], ['fv', 'fl', 'ft'], true)) return;
+            if ($ip !== '' && !str_starts_with((string)($r['ip'] ?? ''), $ip)) return;
+            $fn($r);
+        });
+        if (microtime(true) > $deadline) return false;
+    }
+    return true;
+}
+
 function ns_access_view(): string
 {
     $s = ns_settings();
     $ip = trim(nm_str($_GET, 'ip', 60));
     if ($ip !== '' && !preg_match('/\A[0-9a-fA-F.:x]{1,60}\z/', $ip)) $ip = '';
-    $lines = array_values(array_filter(ns_raw_search($ip, 300), static fn($r) => !in_array($r['e'], ['fv', 'fl', 'ft'], true)));
+    [$kind, $at, $from, $to] = ns_access_span(nm_str($_GET, 'at', 10));
+    $page = max(1, (int)($_GET['page'] ?? 1));
+    $url = static fn(array $q = []): string => ns_admin_url(array_filter(array_replace(['view' => 'access', 'at' => $at, 'ip' => $ip], $q), static fn($v) => $v !== '' && $v !== null));
+
+    // First pass: how many lines, who came, and the span cut into months, days or hours.
+    $deadline = microtime(true) + 8;
+    $total = 0;
+    $who = [];
+    $parts = [];
+    $complete = ns_raw_range($from, $to, $ip, $deadline, static function (array $r) use (&$total, &$who, &$parts, $kind): void {
+        $total++;
+        $addr = (string)($r['ip'] ?? '');
+        $day = ns_day($r['t']);
+        $w = &$who[$addr];
+        $w ??= ['n' => 0, 'views' => 0, 'days' => [], 'first' => $r['t'], 'last' => 0];
+        $w['n']++;
+        if ($r['e'] === 'pv' || $r['e'] === 'mo') $w['views']++;
+        $w['days'][$day] = true;
+        $w['last'] = $r['t'];
+        unset($w);
+        $part = match ($kind) { 'year' => substr($day, 0, 7), 'month' => $day, default => (string)ns_hour($r['t']) };
+        $p = &$parts[$part];
+        $p ??= ['n' => 0, 'people' => []];
+        $p['n']++;
+        $p['people'][$addr !== '' ? $addr : 'v:' . ($r['v'] ?? '')] = true;
+        unset($p);
+    });
+
+    // Second pass: only the lines of this page, newest first.
+    $per = NS_ACCESS_PER_PAGE;
+    $pages = max(1, (int)ceil($total / $per));
+    $page = min($page, $pages);
+    $hi = $total - 1 - ($page - 1) * $per;
+    $lo = $total - $page * $per;
+    $lines = [];
+    $i = 0;
+    if ($total) ns_raw_range($from, $to, $ip, $deadline + 4, static function (array $r) use (&$lines, &$i, $lo, $hi): void {
+        if ($i >= $lo && $i <= $hi) $lines[] = $r;
+        $i++;
+    });
+    $lines = array_reverse($lines);
+
+    $kinds = ['year' => '年ごと', 'month' => '月ごと', 'day' => '日ごと'];
+    $label = match ($kind) {
+        'year' => nm_t('{y}年', ['y' => (int)$at]),
+        'month' => nm_t('{y}年{m}月', ['y' => (int)substr($at, 0, 4), 'm' => (int)substr($at, 5, 2)]),
+        default => nm_t('{y}年{m}月{d}日', ['y' => (int)substr($at, 0, 4), 'm' => (int)substr($at, 5, 2), 'd' => (int)substr($at, 8, 2)]),
+    };
+    $spanTabs = '<nav class="ns-site" aria-label="' . nm_t('期間の単位') . '">';
+    foreach ($kinds as $k => $l) $spanTabs .= '<a href="' . h($url(['at' => ns_access_as($k, $at)])) . '"' . ($k === $kind ? ' aria-current="page"' : '') . '>' . nm_t($l) . '</a>';
+    $spanTabs .= '</nav>';
+    $next = ns_access_step($kind, $at, 1);
+    $nav = '<div class="ns-access-nav"><a class="btn" href="' . h($url(['at' => ns_access_step($kind, $at, -1)])) . '">← ' . nm_t('前') . '</a>'
+        . '<strong>' . h($label) . '</strong>'
+        . ($next <= ns_today() ? '<a class="btn" href="' . h($url(['at' => $next])) . '">' . nm_t('次') . ' →</a>' : '<span class="btn" aria-disabled="true">' . nm_t('次') . ' →</span>') . '</div>';
+
     $html = '<section class="card"><h2>' . nm_t('アクセスの一覧') . '</h2>'
         . ($s['ip'] === 'none' ? '<p class="warn">' . nm_t('いまは IP アドレスを保存しない設定です。保存しない設定のあいだの記録には、IP アドレスがありません。') . '</p>' : '')
-        . '<form method="get" action="index.php" class="form row"><input type="hidden" name="p" value="scope"><input type="hidden" name="view" value="access">'
+        . $spanTabs . $nav
+        . '<form method="get" action="index.php" class="form row"><input type="hidden" name="p" value="scope"><input type="hidden" name="view" value="access"><input type="hidden" name="at" value="' . h($at) . '">'
         . '<label>' . nm_t('IP アドレスで絞り込む（前方一致）') . '<input name="ip" value="' . h($ip) . '" placeholder="203.0.113." inputmode="decimal" autocomplete="off"></label><button class="btn">' . nm_t('絞り込む') . '</button>'
-        . ($ip !== '' ? ' <a class="btn" href="' . h(ns_admin_url(['view' => 'access'])) . '">' . nm_t('すべて表示') . '</a>' : '') . '</form>'
+        . ($ip !== '' ? ' <a class="btn" href="' . h($url(['ip' => null])) . '">' . nm_t('すべて表示') . '</a>' : '') . '</form>'
         . '<p class="note">' . nm_t('IP アドレスだけでは、相手の名前や住所は分かりません。相手を特定するには、プロバイダーへの発信者情報開示の手続きが必要です。ここに残る記録は、その手続きの証拠として使えます。') . '</p>';
     if ($ip !== '' && ($rule = ns_deny_rule($ip)) !== '') {
         $denied = in_array($rule, ns_denied_list(), true);
         $html .= '<form method="post" action="index.php" class="ns-deny" data-ns-confirm-text="' . h(nm_t('{ip} を拒否リストに入れますか？このアドレスからは、サイトが開けなくなります。', ['ip' => $rule])) . '">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_deny"><input type="hidden" name="ip" value="' . h($ip) . '">'
             . ($denied ? '<p>' . nm_t('{ip} は拒否リストに入っています。', ['ip' => h($rule)]) . '</p>' : '<button class="btn danger">' . nm_t('{ip} を拒否リストに入れる', ['ip' => h($rule)]) . '</button>') . '</form>';
+        $html .= in_array($rule, $s['ignore'], true)
+            ? '<p class="note">' . nm_t('{ip} は数えないアドレスに入っています。', ['ip' => h($rule)]) . '</p>'
+            : '<form method="post" action="index.php" class="ns-deny">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_ignore"><input type="hidden" name="ip" value="' . h($ip) . '">'
+                . '<button class="btn">' . nm_t('{ip} を数えない（自分のアドレスなど）', ['ip' => h($rule)]) . '</button></form>';
     }
-    if (!$lines) return $html . '<p class="note">' . nm_t('記録がありません。') . '</p></section>';
-    $html .= '<div class="ns-table-wrap"><table class="ns-table"><thead><tr><th>' . nm_t('時刻') . '</th><th>' . nm_t('IP アドレス') . '</th><th>' . nm_t('出来事') . '</th><th>' . nm_t('端末・来る前のページ') . '</th></tr></thead><tbody>';
+    if (!$complete) $html .= '<p class="warn">' . nm_t('記録が多いため、途中までしか読めませんでした。期間を短くするか、IP アドレスで絞り込んでください。') . '</p>';
+    if (!$total) return $html . '<p class="note">' . nm_t('この期間の記録はありません。') . '</p>' . ns_access_raw_note($s) . '</section>';
+
+    // The span cut into smaller parts: months of a year, days of a month, hours of a day.
+    $rows = '';
+    $today = ns_today();
+    $keys = match ($kind) {
+        'year' => array_map(static fn($m) => sprintf('%s-%02d', $at, $m), range(1, 12)),
+        'month' => array_map(static fn($d) => sprintf('%s-%02d', $at, $d), range(1, (int)substr($to, 8, 2))),
+        default => array_map('strval', range(0, 23)),
+    };
+    foreach ($keys as $key) {
+        if ($kind !== 'day' && $key > $today) break;
+        $p = $parts[$key] ?? ['n' => 0, 'people' => []];
+        $name = match ($kind) { 'year' => nm_t('{m}月', ['m' => (int)substr($key, 5, 2)]), 'month' => nm_t('{d}日', ['d' => (int)substr($key, 8, 2)]), default => nm_t('{h}時', ['h' => (int)$key]) };
+        $cell = $kind !== 'day' && $p['n'] ? '<a href="' . h($url(['at' => $key])) . '">' . h($name) . '</a>' : h($name);
+        $rows .= '<tr' . ($p['n'] ? '' : ' class="ns-zero"') . '><td>' . $cell . '</td><td>' . number_format(count($p['people'])) . '</td><td>' . number_format($p['n']) . '</td></tr>';
+    }
+    $html .= '<h3>' . nm_t('{span}の内訳', ['span' => h($label)]) . '</h3>'
+        . '<div class="ns-table-wrap"><table class="ns-table ns-parts"><thead><tr><th>' . nm_t('期間') . '</th><th>' . nm_t('人数') . '</th><th>' . nm_t('出来事') . '</th></tr></thead><tbody>' . $rows . '</tbody></table></div>';
+
+    // Who came: one row per address, the most active first.
+    uasort($who, static fn($a, $b) => $b['n'] <=> $a['n']);
+    $rows = '';
+    foreach (array_slice($who, 0, NS_ACCESS_WHO, true) as $addr => $w) {
+        $addr = (string)$addr;
+        $rows .= '<tr><td>' . ($addr !== '' ? '<a href="' . h($url(['ip' => $addr, 'page' => null])) . '">' . h($addr) . '</a>' : nm_t('（IP アドレスなし）')) . '</td>'
+            . '<td>' . number_format(count($w['days'])) . '</td><td>' . number_format($w['views']) . '</td><td>' . number_format($w['n']) . '</td>'
+            . '<td>' . h(gmdate('Y-m-d H:i', $w['first'] + 32400)) . '</td><td>' . h(gmdate('Y-m-d H:i', $w['last'] + 32400)) . '</td></tr>';
+    }
+    $html .= '<h3>' . nm_t('来た人（IP アドレスごと）') . '</h3>'
+        . '<div class="ns-table-wrap"><table class="ns-table ns-who"><thead><tr><th>' . nm_t('IP アドレス') . '</th><th>' . nm_t('来た日数') . '</th><th>' . nm_t('見たページ') . '</th><th>' . nm_t('出来事') . '</th><th>' . nm_t('最初') . '</th><th>' . nm_t('最後') . '</th></tr></thead><tbody>' . $rows . '</tbody></table></div>'
+        . (count($who) > NS_ACCESS_WHO ? '<p class="note">' . nm_t('多い順に {n} 件を出しています（全部で {all} 件）。', ['n' => NS_ACCESS_WHO, 'all' => number_format(count($who))]) . '</p>' : '');
+
+    // Every line, newest first, a page at a time.
+    $html .= '<h3>' . nm_t('記録（新しい順）') . '</h3>'
+        . '<div class="ns-table-wrap"><table class="ns-table"><thead><tr><th>' . nm_t('時刻') . '</th><th>' . nm_t('IP アドレス') . '</th><th>' . nm_t('出来事') . '</th><th>' . nm_t('端末・来る前のページ') . '</th></tr></thead><tbody>';
     foreach ($lines as $r) {
         $addr = (string)($r['ip'] ?? '');
-        $html .= '<tr><td>' . h(gmdate('Y-m-d H:i:s', (int)$r['t'] + 32400)) . '</td><td>' . ($addr !== '' ? '<a href="' . h(ns_admin_url(['view' => 'access', 'ip' => $addr])) . '">' . h($addr) . '</a>' : '—') . '</td>'
+        $html .= '<tr><td>' . h(gmdate('Y-m-d H:i:s', (int)$r['t'] + 32400)) . '</td><td>' . ($addr !== '' ? '<a href="' . h($url(['ip' => $addr, 'page' => null])) . '">' . h($addr) . '</a>' : '—') . '</td>'
             . '<td>' . h(ns_event_label($r)) . '</td><td>' . h(trim(nm_t(NS_DEVICE_LABELS[$r['d'] ?? ''] ?? '') . ' ' . ($r['b'] ?? ''))) . (isset($r['r']) ? '<br><small class="ns-url">' . h((string)$r['r']) . '</small>' : '') . '</td></tr>';
     }
-    return $html . '</tbody></table></div><p class="note">' . nm_t('新しい順に最大 300 件です。時刻は日本時間です。') . '</p></section>';
+    $query = substr($url(['page' => null]), strlen('index.php?'));
+    $pager = nl_pager(['posts_per_page' => $per, 'pager' => 'numbers', 'pager_status' => true], $query, $page, $total, 'index.php', '記録');
+    return $html . '</tbody></table></div>' . $pager
+        . '<p class="note">' . nm_t('1 ページに {n} 件です。時刻は日本時間です。', ['n' => $per]) . '</p>' . ns_access_raw_note($s) . '</section>';
+}
+/** Where the lines come from: one file per month, kept as long as the settings say. */
+function ns_access_raw_note(array $s): string
+{
+    return '<p class="note">' . ($s['raw_months'] > 0
+        ? nm_t('記録は月ごとのファイルに残り、{n} ヶ月より前のものは消えます（設定で変えられます）。', ['n' => $s['raw_months']])
+        : nm_t('記録は月ごとのファイルに残り、消さない設定です。')) . '</p>';
 }
 
 // ---------------------------------------------------------------------------
@@ -548,7 +711,13 @@ function ns_settings_view(): string
         . '<p class="note">' . nm_t('日ごとの集計は消しません。生のログを消すと、その期間は IP での絞り込みと、新しいゴールのさかのぼりができなくなります。') . '</p>'
         . '<label>' . nm_t('拒否リスト（1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="denied_ips" rows="4" spellcheck="false">' . h(implode("\n", ns_denied_list())) . '</textarea></label>'
         . '<p class="note">' . nm_t('ここにあるアドレスからは、漫画・LOG・いいねが「Not Found」になり、NagiScope にも数えません。LiteSpeed Cache がすでに保存したページは、届くことがあります。') . '</p>'
-        . '<button class="btn primary">' . nm_t('保存') . '</button></form>' . ns_policy_dialog() . '</section>'
+        . '<label>' . nm_t('ダッシュボードで最初に開く画面') . '<select name="site">'
+        . '<option value="m"' . ($s['site'] === 'm' ? ' selected' : '') . '>' . nm_t('漫画') . '</option>'
+        . '<option value="l"' . ($s['site'] === 'l' ? ' selected' : '') . '>' . nm_t('ログ') . '</option></select></label>'
+        . '<label>' . nm_t('数えないアドレス（1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="ignore_ips" rows="3" spellcheck="false">' . h(implode("\n", $s['ignore'])) . '</textarea></label>'
+        . '<p class="note">' . nm_t('ここにあるアドレスからの閲覧は数えません。サイトはふつうに開けます。管理画面にログインしているあいだの閲覧は、もとから数えません。ログインしていないスマホなどで自分のサイトを見るときのための設定です。') . '</p>'
+        . '<button class="btn primary">' . nm_t('保存') . '</button></form>' . ns_policy_dialog()
+        . ns_ignore_me_form() . '</section>'
         . '<section class="card"><h2>' . nm_t('使っている容量') . '</h2><p>' . nm_t('生のログ: {raw}　日ごとの集計: {daily}', ['raw' => ns_bytes($raw), 'daily' => ns_bytes($daily)]) . '</p>'
         . '<p class="note">' . nm_t('目安: 月に 1 万回の記録で、生のログはおよそ 3 MB です。') . '</p></section>'
         . '<section class="card"><h2>' . nm_t('プライバシーポリシーの文例') . '</h2><p class="note">' . nm_t('いまの設定に合わせた文例です。サイトのプライバシーポリシーに載せてください。') . '</p>' . ns_policy_samples($s['ip']) . '</section>'
@@ -563,6 +732,18 @@ function ns_settings_view(): string
         . '<section class="card ns-danger"><h2>' . nm_t('データを消す') . '</h2><p>' . nm_t('生のログと日ごとの集計をすべて消します。ゴールと設定は残ります。元に戻せません。') . '</p>'
         . '<form method="post" action="index.php" class="form" data-ns-confirm-text="' . h(nm_t('NagiScope のデータをすべて消しますか？元に戻せません。')) . '">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_delete">'
         . '<label class="check"><input type="checkbox" name="sure" value="1" required>' . nm_t('消すことを確認しました') . '</label><button class="btn danger">' . nm_t('すべて消す') . '</button></form></section>';
+}
+
+/** "Do not count this address": the address this screen is open from, one press. */
+function ns_ignore_me_form(): string
+{
+    $rule = ns_own_rule();
+    if ($rule === '') return '';
+    $html = '<div class="ns-ignore-me"><p>' . nm_t('いま使っているアドレス: {ip}', ['ip' => '<code>' . h($rule) . '</code>']) . '</p>';
+    if (in_array($rule, ns_settings()['ignore'], true)) return $html . '<p class="note">' . nm_t('このアドレスは数えないアドレスに入っています。') . '</p></div>';
+    return $html . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_ignore"><input type="hidden" name="ip" value="' . h($rule) . '"><input type="hidden" name="back" value="settings">'
+        . '<button class="btn">' . nm_t('このアドレスを数えない') . '</button></form>'
+        . '<p class="note">' . nm_t('家の回線やスマホのアドレスは、ときどき変わります。数えられているようなら、この画面を開き直して加えてください。') . '</p></div>';
 }
 
 // ---------------------------------------------------------------------------
@@ -598,10 +779,22 @@ function ns_handle_post(string $do): never
                 $rules[] = $rule;
             }
             $cfg['denied_ips'] = array_values(array_unique($rules));
-            $on = !empty($_POST['on']);
             $old = ns_settings($cfg);
+            $ignore = $old['ignore'];
+            if (isset($_POST['ignore_ips'])) {
+                $ignore = [];
+                foreach (preg_split('/\R/', nm_str($_POST, 'ignore_ips', 20000)) ?: [] as $line) {
+                    if (trim($line) === '') continue;
+                    $rule = ns_deny_rule($line);
+                    if ($rule === '') $back(nm_t('数えないアドレスに読めない行があります: {line}', ['line' => mb_substr(trim($line), 0, 60)]), ['view' => 'settings'], 'error');
+                    $ignore[] = $rule;
+                }
+                $ignore = array_values(array_unique($ignore));
+            }
+            $on = !empty($_POST['on']);
+            $site = nm_str($_POST, 'site', 1);
             $cfg['scope'] = array_merge($old, ['on' => $on, 'ip' => $ip ?? $old['ip'], 'raw_months' => in_array((int)($_POST['raw_months'] ?? 0), NS_RAW_MONTHS, true) ? (int)$_POST['raw_months'] : 0,
-                'asked' => true, 'since' => $old['since'] ?: ($on ? time() : 0)]);
+                'asked' => true, 'since' => $old['since'] ?: ($on ? time() : 0), 'ignore' => $ignore, 'site' => $site === 'l' || $site === 'm' ? $site : $old['site']]);
             nm_save_config($cfg);
             nm_log('scope_settings', ($on ? 'on' : 'off') . ' ' . $cfg['scope']['ip']);
             $back(nm_t('NagiScope の設定を保存しました'), ['view' => 'settings']);
@@ -613,6 +806,13 @@ function ns_handle_post(string $do): never
             nm_save_config($cfg);
             nm_log('scope_deny', $rule);
             $back(nm_t('{ip} を拒否リストに入れました', ['ip' => $rule]), ['view' => 'access', 'ip' => nm_str($_POST, 'ip', 60)]);
+        case 'scope_ignore':
+            $rule = ns_deny_rule(nm_str($_POST, 'ip', 60));
+            $q = nm_str($_POST, 'back', 10) === 'settings' ? ['view' => 'settings'] : ['view' => 'access', 'ip' => nm_str($_POST, 'ip', 60)];
+            if ($rule === '') $back(nm_t('IP アドレスが正しくありません'), $q, 'error');
+            ns_save_settings(['ignore' => array_values(array_unique([...ns_settings()['ignore'], $rule]))]);
+            nm_log('scope_ignore', $rule);
+            $back(nm_t('{ip} からの閲覧を数えないようにしました', ['ip' => $rule]), $q);
         case 'scope_goal_save':
             $kind = nm_str($_POST, 'kind', 10);
             if (!isset(NS_GOAL_KINDS[$kind])) $back(nm_t('ゴールの種類を選んでください'), ['view' => 'goals'], 'error');

@@ -173,6 +173,24 @@ def run(site):
     post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': ''})
     check('拒否リストから外すと戻る', public.get('/').status == 200)
 
+    # --- Addresses not counted, and the dashboard's first screen ------------------------------------------------
+    settings = c.get('/admin/index.php?p=scope&view=settings')
+    check('設定: いま使っているアドレスと「このアドレスを数えない」', 'いま使っているアドレス: <code>127.0.0.1</code>' in settings.text and 'value="scope_ignore"' in settings.text)
+    post({'do': 'scope_ignore', 'ip': '127.0.0.1', 'back': 'settings'})
+    n = len(lines())
+    beacon({'e': 'pv', 's': 'Ignored00001', 'k': 'l', 'i': ''})
+    check('数えないアドレスからは記録しない（サイトは開ける）', len(lines()) == n and public.get('/').status == 200)
+    check('設定と一覧に「数えないアドレスに入っています」', 'このアドレスは数えないアドレスに入っています' in c.get('/admin/index.php?p=scope&view=settings').text
+          and '127.0.0.1 は数えないアドレスに入っています' in c.get('/admin/index.php?p=scope&view=access&ip=127.0.0.1').text)
+    r = post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': '', 'ignore_ips': 'だめな行'})
+    check('数えないアドレスの読めない行は保存しない', 'Ignored' not in str(r.getheader('Location')) and '127.0.0.1' in c.get('/admin/index.php?p=scope&view=settings').text.split('name="ignore_ips"')[1][:200])
+    post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': '', 'ignore_ips': '', 'site': 'l'})
+    beacon({'e': 'pv', 's': 'Counted00001', 'k': 'l', 'i': ''})
+    check('数えないアドレスを空にすると、また数える', len(lines()) == n + 1)
+    check('既定を LOG にすると、site なしで LOG のダッシュボード', 'data-site="l"' in c.get('/admin/index.php?p=scope').text and 'data-site="m"' in c.get('/admin/index.php?p=scope&site=m').text)
+    post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': '', 'site': 'm'})
+    check('既定を漫画に戻せる', 'data-site="m"' in c.get('/admin/index.php?p=scope').text)
+
     # --- Hidden / no addresses ----------------------------------------------------------------------------------
     post({'do': 'scope_settings', 'on': '1', 'ip': 'partial', 'raw_months': '0', 'denied_ips': ''})
     beacon({'e': 'pv', 's': 'Partial00001', 'k': 'l', 'i': ''})
@@ -261,6 +279,27 @@ def run(site):
     bad = io.BytesIO(); z = zipfile.ZipFile(bad, 'w'); z.writestr('nagiscope-backup.json', '{}'); z.writestr('../config.php', '<?php'); z.writestr('raw/2026-01.jsonl.php', 'not guarded'); z.close()
     post({'do': 'scope_restore', 'overwrite': '1'}, files={'backup': ('evil.zip', bad.getvalue(), 'application/zip')})
     check('復元は決まった名前と形のファイルだけ', not (data_dir / 'scope' / 'raw' / '2026-01.jsonl.php').exists() and not (site / 'config.php').exists())
+
+    # --- Access list: a year, a month or a day, who came, and every line a page at a time -----------------------------
+    head = '<?php http_response_code(404); exit; __halt_compiler();\n'
+    base_t = 1741014000  # 2025-03-04 00:00 Japan time
+    old = [{'t': base_t + i * 600, 'e': 'pv', 'v': 'a' * 16, 'ip': '203.0.113.7' if i % 3 else '198.51.100.2', 's': f'Old{i:09d}', 'k': 'l', 'i': ''} for i in range(130)]
+    old.append({'t': base_t + 86400 * 2, 'e': 'pv', 'v': 'b' * 16, 'ip': '198.51.100.2', 's': 'OldLater0001', 'k': 'l', 'i': ''})
+    (raw_dir / '2025-03.jsonl.php').write_text(head + ''.join(json.dumps(r) + '\n' for r in old), encoding='utf-8')
+    month = c.get('/admin/index.php?p=scope&view=access&at=2025-03').text
+    check('アクセスの一覧: 月を選べて、前後の月へ移れる', '2025年3月' in month and 'at=2025-02' in month and 'at=2025-04' in month)
+    check('アクセスの一覧: 100 件ずつのページ送り（131 件中 1〜100 件目）', '131件中' in month and '1〜100件目' in month and month.count('<tr><td>2025-03-') == 100 and 'page=2' in month)
+    page2 = c.get('/admin/index.php?p=scope&view=access&at=2025-03&page=2').text
+    check('2 ページ目は残りの 31 件（いちばん古いものが最後）', page2.count('<tr><td>2025-03-') == 31 and page2.rfind('2025-03-04 00:00:00') > page2.rfind('2025-03-04 00:10:00'))
+    who = month.split('来た人（IP アドレスごと）')[1]
+    check('来た人: 多い順に、来た日数・見たページ・最初と最後', who.index('203.0.113.7') < who.index('198.51.100.2') and '198.51.100.2</a></td><td>2</td><td>45</td><td>45</td><td>2025-03-04 00:00</td><td>2025-03-06 00:00</td>' in who)
+    check('月の内訳: 日ごとの人数と出来事（日へ移れる）', 'href="index.php?p=scope&amp;view=access&amp;at=2025-03-04"' in month and '<td>2</td><td>130</td>' in month)
+    year = c.get('/admin/index.php?p=scope&view=access&at=2025').text
+    check('年の内訳: 月ごと', '2025年' in year and 'at=2025-03"' in year and '<td>2</td><td>131</td>' in year)
+    day = c.get('/admin/index.php?p=scope&view=access&at=2025-03-06&ip=198.51.100.2').text
+    check('日と IP で絞り込める（1 件だけ・時間ごとの内訳）', '1件中' not in day and day.count('<tr><td>2025-03-06') == 1 and '<td>0時</td><td>1</td><td>1</td>' in day.replace('<tr>', ''))
+    check('記録のない期間はそう書く', 'この期間の記録はありません' in c.get('/admin/index.php?p=scope&view=access&at=2024-01').text)
+    check('でたらめな期間は今月になる', c.get('/admin/index.php?p=scope&view=access&at=<b>').status == 200)
 
     # --- English admin: every NagiScope text is translated (only what readers wrote stays Japanese) ---------------
     post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': ''})
