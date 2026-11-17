@@ -78,7 +78,7 @@ def run(site, other_site, c, csrf, other, ot):
     pid = new_post('コメントのある記事')
     check('新しい記事は最初からON', load(pid)['comments'] is True)
     page = pub.get('/?id=' + pid).text
-    check('記事のページにコメント欄と専用のCSS・JSを読み込む', 'data-comments="' + pid + '"' in page and re.search(r'data-comments-count>\d+</span><a class="log-comments-write" href="#comments-form"', page) and 'id="comments-form"' in page and 'viewer/log-comment.css?v=' in page and 'viewer/log-comment.js?v=' in page)
+    check('記事のページにコメント欄と専用のCSS・JSを読み込む', 'data-comments="' + pid + '"' in page and re.search(r'data-comments-count>\d+</span><a class="log-comments-write" href="#comments-form"', page) and 'id="comments-form"' in page and '.log-comments' in page.split('</head>', 1)[0] and 'viewer/log-comment.js?v=' in page)
     top = pub.get('/').text
     check('一覧のページではコメントのCSS・JSを読み込まない', 'log-comment.css' not in top and 'log-comment.js' not in top)
     g = get(pid); d = json.loads(g.text) if g.status == 200 else {}
@@ -125,7 +125,7 @@ def run(site, other_site, c, csrf, other, ot):
     check('同じ回線から1分に4件を超えると busy', json.loads(send(pid, '❤️').text).get('error') == 'busy')
     calm()
     top = pub.get('/').text
-    check('ミニブログの一覧で、Shareの横にコメントのボタンと表示中の件数', 'class="log-share-btn log-comment-link" href="./?id=' + pid + '#comments" data-comments-for="' + pid + '"' in top and re.search(r'data-comments-for="' + pid + r'"[^>]*>.*?<span>3</span>', top) and 'data-comments-for="' + old + '"' not in top and 'viewer/log-share.css' in top)
+    check('ミニブログの一覧で、Shareの横にコメントのボタンと表示中の件数', 'class="log-share-btn log-comment-link" href="./?id=' + pid + '#comments" data-comments-for="' + pid + '"' in top and re.search(r'data-comments-for="' + pid + r'"[^>]*>.*?<span>3</span>', top) and 'data-comments-for="' + old + '"' not in top and '.log-share-open' in top.split('</head>', 1)[0])
     nav = c.get('/admin/index.php?p=log').text
     check('管理メニューにベルと件数', 'p=log_comments' in nav and 'nm-menu-count' in nav and 'nav-fab-count' in nav)
     check('投稿一覧に件数と承認待ちのバッジ', 'log-list-comments is-waiting' in nav)

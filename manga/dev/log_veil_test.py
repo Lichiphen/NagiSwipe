@@ -42,7 +42,7 @@ def run(c, csrf, port):
     page = public.get("/?id=" + sid).text
     veil = page.split('<details class="log-veil log-veil-image"')[1].split('</details>')[0] if 'log-veil-image' in page else ''
     check("センシティブは画像をぼかしのカバーで包む", 'data-veil="sensitive"' in veil and '肌の露出があります' in veil and '押して表示' in veil)
-    check("センシティブの本文は折りたたまない", '本文はそのまま読めます。' in page and 'log-veil-post' not in page)
+    check("センシティブの本文は折りたたまない", '本文はそのまま読めます。' in page and 'log-veil-post' not in page.split('<body', 1)[-1])
     check("覆われた画像は拡大リンクを持たない（data-veil-hrefで待つ）", 'data-veil-href="./?media=' + a["id"] in veil and 'href="./?media=' + a["id"] not in veil.replace('data-veil-href', ''))
     check("閲覧注意のある記事は自分の画像をOGPに使わない", ('media=' + a["id"]) not in re.search(r'<meta property="og:image" content="([^"]*)"', page).group(1))
     check("閲覧注意のある記事でlog-veil.jsを読む", 'viewer/log-veil.js?v=' in page)

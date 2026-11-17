@@ -52,14 +52,19 @@
     }, { passive: false });
     // Keyboard users moving through the links see each one.
     scroller.addEventListener('focusin', event => event.target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' }));
-    const current = scroller.querySelector('[aria-current="page"]');
-    if (current) {
+    function centerCurrent() {
+        const current = scroller.querySelector('[aria-current="page"]');
+        if (!current) return;
         const left = current.offsetLeft - (scroller.clientWidth - current.offsetWidth) / 2;
         scroller.scrollLeft = Math.max(0, left);
         if (left > 4) { hinted = true; touched = true; nav.classList.add('is-touched'); }
     }
-    if ('ResizeObserver' in window) new ResizeObserver(() => update()).observe(scroller);
-    else window.addEventListener('resize', update);
-    document.fonts?.ready.then(update);
-    update();
+    // Sizes are read once the browser has laid the page out (the observer's first call, or right after the first frame),
+    // never while the page is still being built: reading them then would make it lay everything out an extra time.
+    let first = true;
+    const measure = () => { if (first) { first = false; centerCurrent(); } update(); };
+    const afterFrame = fn => requestAnimationFrame(() => setTimeout(fn));
+    if ('ResizeObserver' in window) new ResizeObserver(measure).observe(scroller);
+    else { window.addEventListener('resize', update); afterFrame(measure); }
+    document.fonts?.ready.then(() => afterFrame(update));
 })();

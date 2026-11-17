@@ -108,7 +108,7 @@ html.log-frame-covered,html.log-frame-covered body { overflow:hidden; }
 .log-card-image { flex:0 0 auto; width:min(36%,220px); height:auto; min-height:100%; aspect-ratio:1.91 / 1; object-fit:cover; background:var(--log-bg); border-left:1px solid var(--log-line); }
 @media(max-width:446px) {
     .embeddedtwitch iframe { display:none; }
-    .embeddedtwitch::before { content:"Twitchのプレーヤーは、スマホを横向きにすると表示されます。下のリンクからTwitchでも見られます。"; display:block; font-size:13px; color:var(--log-muted); }
+    .embeddedtwitch::before { content:attr(data-note); display:block; font-size:13px; color:var(--log-muted); }
 }
 @media(max-width:560px) {
     .log-site .log-card,.log-card { flex-direction:column-reverse; }

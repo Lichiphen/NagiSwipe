@@ -47,7 +47,10 @@ def run(c, csrf, port):
 
     page = public.get("/?id=" + pid_a)
     check("説明文はタグ・URL・太字記号を除いた文章だけ", 'name="description" content="ここが説明の文章です。 太字も文章です。"' in page.text)
-    check("いいねボタンがShareの左にある", page.text.find('class="log-share-btn log-like"') != -1 and page.text.find('class="log-share-btn log-like"') < page.text.find('log-share-open'))
+    body_a = page.text.split('<body', 1)[1]
+    check("いいねボタンがShareの左にある", body_a.find('class="log-share-btn log-like"') != -1 and body_a.find('class="log-share-btn log-like"') < body_a.find('log-share-open'))
+    head_a = page.text.split('</head>', 1)[0]
+    check("読者のページは機能のCSSを1つの<style>で持ち、ファイルはlog.cssだけ", '<style>' in head_a and '.log-share-open' in head_a and 'viewer/log-share.css' not in head_a and 'viewer/log.css?v=' in head_a)
     check("関連記事は同じタグ・カテゴリの記事だけ", has(related(page.text), pid_b) and not has(related(page.text), pid_c))
     check("ミニブログでは個別記事はnoindex", page.getheader('X-Robots-Tag') == 'noindex,follow')
     ld = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', page.text).group(1))
@@ -267,7 +270,7 @@ def run(c, csrf, port):
     check("ボタン: サイト内のURL、none でアイコンなし", '<a class="log-button" href="./?pg=about"><span class="log-button-label">サイト内</span></a>' in body and '<a class="log-button" href="https://example.com/a.pdf" rel="noopener noreferrer"><span class="log-button-label">なし</span></a>' in body)
     check("ボタン: javascript: はボタンにせず、コードの中と [[x]] だけは文字のまま", 'href="javascript' not in body and '<code>[[コード]](https://x.jp)</code>' in body and '[[x]]' in body)
     check("ボタン: 説明文には文字だけ", description.startswith('配布ZIP 応援 PNG DL 素材 サイト内 なし') and 'example.com' not in description)
-    check("ボタン: CSSとエディターの用意", '.log-button-icon' in (HERE.parent / 'server/viewer/log-button.css').read_text(encoding='utf-8') and 'viewer/log-button.css?v=' in page and "'button' + (icon && '-' + icon)" in (HERE.parent / 'server/admin/log-editor.js').read_text(encoding='utf-8'))
+    check("ボタン: CSSとエディターの用意", '.log-button-icon' in (HERE.parent / 'server/viewer/log-button.css').read_text(encoding='utf-8') and '.log-button-icon' in page.split('</head>', 1)[0] and "'button' + (icon && '-' + icon)" in (HERE.parent / 'server/admin/log-editor.js').read_text(encoding='utf-8'))
 
     # Page embeds: [ページ埋込]URL[/ページ埋込] alone on a line is a cover that loads the page through embed.php, which opens only signed URLs.
     pid_frame = save("ゲームを貼る\n[ページ埋込 9:16]https://game.example/play/?a=1&b=2[/ページ埋込]\n[ページ埋込 5:4]https://game.example/[/ページ埋込]\n[Embed]https://game.example/en/[/Embed]\n文の途中の [ページ埋込]https://game.example/x/[/ページ埋込] は文字\n[ページ埋込]javascript:alert(1)[/ページ埋込]", status="published")

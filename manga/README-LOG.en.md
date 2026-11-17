@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.15.2](https://img.shields.io/badge/NagiLog-v0.15.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.15.2](https://img.shields.io/badge/NagiManga-v0.15.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.15.3](https://img.shields.io/badge/NagiLog-v0.15.3-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.15.3](https://img.shields.io/badge/NagiManga-v0.15.3-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -101,7 +101,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.15.2 (included in NagiManga v0.15.2) |
+| Version | 0.15.3 (included in NagiManga v0.15.3) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -241,7 +241,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.15.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.15.3.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -597,7 +597,7 @@ In the quotes after the URL, write these names apart by spaces, in any order. Ea
 | Filled | `solid`. Without it, a pale button |
 
 - Without an icon name, a button to a file such as `.zip`, `.exe`, `.pdf`, `.epub` or `.clip` shows the download icon, and a `mailto:` button the mail icon. Write `none` to leave it out.
-- A button with the download icon asks the browser to save the file instead of opening it, and the loading sign does not show. A file on another site is saved only when that site sends `Content-Disposition: attachment`; otherwise a picture from there opens in the tab.
+- A button with the download icon asks the browser to save the file instead of opening it, and the loading sign does not show. A file on another site is saved only when that site sends `Content-Disposition: attachment`; otherwise a picture from there opens in the tab (v0.15.3 and later).
 - Buttons on one line sit side by side and wrap on a narrow screen. A button can also sit in a sentence.
 - Unknown names are ignored. The URLs that work are those of an ordinary link (including addresses in the site, `mailto:` and `tel:`).
 - "装飾 › ボタン" (Format › Button) in the posting box and the fixed page editor makes a button from the selected words or URL. Add the color in the quotes by hand.
@@ -928,6 +928,7 @@ The cache busters of JS and CSS are update numbers that change with their conten
 The numbers are noted in `data/asset-versions.php` and computed again only when a file's size or modification time changes.
 Versioned JS, CSS, SVG and PNG files are kept by browsers for a year through `.htaccess` on Apache and LiteSpeed (`max-age=31536000, immutable`). The check request on every page change goes away. The pages themselves are checked every time as before (`no-cache`).
 A change to only the manga CSS also changes the update number of the loading JS.
+On pages readers see, the CSS of the features the page uses (`viewer/log-*.css`) and the image viewer's CSS are written into the page as one `<style>`. Only `log.css` holds back the first paint, so the page shows sooner on a slow phone line. The owner's pages and "show more" lists use every feature, so they load the files as before (v0.15.3 and later).
 Replaced pictures get new version numbers in their URLs too.
 There is no way to force share services to drop their OGP caches.
 
@@ -1905,7 +1906,7 @@ On 5 November 2026, v0.14.2 (buttons in the text, `[[words]](URL)`) checked the 
 
 | Check | Result |
 | --- | --- |
-| Buttons (`dev/log_feature_test.py`) | 107 feature checks passed: color names and the download icon for files, download links that save, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
+| Buttons (`dev/log_feature_test.py`) | 108 feature checks passed: feature CSS in one `<style>` on readers’ pages, color names and the download icon for files, download links that save, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
 | English pages (`dev/log_en_test.py`) | 24 checks passed: a post with a page embed, an alert, a diagram and buttons leaves no Japanese and draws them with English labels |
 | Browsers | Playwright Chromium and WebKit (iPhone 13), on two light and two dark themes, at PC and phone widths. The words on filled buttons reach a contrast of 4.6 or more on light themes and 7.6 or more on dark ones |
 | Existing tests | All 27 test files passed (including 4113 translation checks) |

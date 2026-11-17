@@ -4,9 +4,9 @@
 
 # NagiSeries
 
-[![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
-[![NagiManga v0.15.2](https://img.shields.io/badge/NagiManga-v0.15.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.md)
-[![NagiLog v0.15.2](https://img.shields.io/badge/NagiLog-v0.15.2-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.md)
+[![NagiSwipe v1.3.3](https://img.shields.io/badge/NagiSwipe-v1.3.3-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
+[![NagiManga v0.15.3](https://img.shields.io/badge/NagiManga-v0.15.3-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.md)
+[![NagiLog v0.15.3](https://img.shields.io/badge/NagiLog-v0.15.3-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.md)
 [![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
@@ -78,6 +78,7 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 #### 使い方
 ページ内の `<a href="image.jpg">` のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。
+`download` 属性の付いたリンク（`<a href="image.png" download>`）は、保存用のリンクとして扱い、ギャラリーでは開きません（v1.3.3〜）。
 
 #### キャプション（v1.1.0〜）
 画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。

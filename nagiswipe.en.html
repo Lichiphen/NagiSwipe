@@ -24,11 +24,11 @@
 <meta property="og:image:alt" content="NagiSwipe | NagiSeries">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
-<link rel="stylesheet" href="NagiSwipe-main.css?v=b57203b70e">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=d26583267c">
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/index.en.html"}, {"@type": "ListItem", "position": 2, "name": "NagiSwipe", "item": "https://nagiswipe.pages.dev/nagiswipe.en.html"}]}</script>
-<script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.en.json?v=aa6d47d741" defer></script>
+<script src="NagiSwipe-main.js?v=b15997938f" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.en.json?v=d98731f179" defer></script>
 </head>
 <body class="page-nagiswipe has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -66,7 +66,7 @@
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <div class="callout callout-note" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg><span>Note</span></p><div class="callout-body"><p>The part after <code>@</code> (such as <code>@93db749</code>) identifies the version of the file. When NagiSwipe is updated, the value in this README changes too. Until you paste the new URL, your site keeps showing the version you have. You can also give a release number, such as <code>@v1.6.0</code>. To always use the latest <code>main</code> branch, write <code>@main</code> (jsDelivr may keep an old file for up to 12 hours, and browsers for up to 7 days).</p></div></div>
 </div></details><details class="sec" open><summary><h3 id="usage">Usage<a class="anchor" href="#usage" aria-label="Link to this heading">#</a></h3><span class="sec-hint">Links on the page such as &lt;a href=&quot;image.jpg&quot;&gt; are found automatically, and the gallery opens when one is clic…</span></summary><div class="sec-body">
-<p>Links on the page such as <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> are found automatically, and the gallery opens when one is clicked.</p>
+<p>Links on the page such as <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> are found automatically, and the gallery opens when one is clicked. A link with the <code>download</code> attribute (<code>&lt;a href=&quot;image.png&quot; download&gt;</code>) is a link for saving the file, and the gallery does not open it.</p>
 </div></details><details class="sec" open><summary><h3 id="captions-v110-and-later">Captions (v1.1.0 and later)<a class="anchor" href="#captions-v110-and-later" aria-label="Link to this heading">#</a></h3><span class="sec-hint">When a picture opens, a caption is shown at the bottom of the screen. The first of these that is found is used…</span></summary><div class="sec-body">
 <p>When a picture opens, a caption is shown at the bottom of the screen. The first of these that is found is used:</p>
 <ol><li><code>data-ns-caption</code> on the link (an empty value means no caption)</li><li><code>data-caption</code> on the link</li><li><code>alt</code> of the thumbnail <code>&lt;img&gt;</code></li><li><code>title</code> of the link</li><li><code>title</code> of the thumbnail <code>&lt;img&gt;</code></li><li>the <code>&lt;figcaption&gt;</code> of the <code>&lt;figure&gt;</code> around the link</li></ol>

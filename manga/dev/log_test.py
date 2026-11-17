@@ -461,7 +461,7 @@ def run(c, csrf, key, site, raw_port, other, other_csrf):
     check("ページ送りの欄がない古いフォームは設定を保つ", 'data-pager-more' in public.get('/').text)
     pager_settings(pager_form='1', pager='simple', pager_status='1')
     simple = public.get('/?page=2').text
-    check("新しい・過去だけの形式と前後リンクの非表示", 'log-pager is-simple' in simple and 'log-pager-num' not in simple and 'class="log-post-nav"' not in public.get('/?id=' + newest[1]).text)
+    check("新しい・過去だけの形式と前後リンクの非表示", 'log-pager is-simple' in simple and 'log-pager-num' not in simple.split('<body', 1)[-1] and 'class="log-post-nav"' not in public.get('/?id=' + newest[1]).text)
     pager_settings(pager_form='1', pager='numbers', pager_status='1', post_nav='1')
     from urllib.parse import quote
     def found(q):

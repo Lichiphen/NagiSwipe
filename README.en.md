@@ -4,9 +4,9 @@
 
 # NagiSeries
 
-[![NagiSwipe v1.3.2](https://img.shields.io/badge/NagiSwipe-v1.3.2-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
-[![NagiManga v0.15.2](https://img.shields.io/badge/NagiManga-v0.15.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
-[![NagiLog v0.15.2](https://img.shields.io/badge/NagiLog-v0.15.2-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
+[![NagiSwipe v1.3.3](https://img.shields.io/badge/NagiSwipe-v1.3.3-1d7a8c?style=flat-square&logo=javascript&logoColor=white)](#nagiswipe)
+[![NagiManga v0.15.3](https://img.shields.io/badge/NagiManga-v0.15.3-c2410c?style=flat-square&logo=bookstack&logoColor=white)](manga/README.en.md)
+[![NagiLog v0.15.3](https://img.shields.io/badge/NagiLog-v0.15.3-2563eb?style=flat-square&logo=rss&logoColor=white)](manga/README-LOG.en.md)
 [![jsDelivr](https://img.shields.io/jsdelivr/gh/hm/Lichiphen/NagiSwipe?style=flat-square&logo=jsdelivr&logoColor=white&label=jsDelivr)](https://www.jsdelivr.com/package/gh/Lichiphen/NagiSwipe)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
@@ -80,6 +80,7 @@ The files are served fast through [jsDelivr](https://www.jsdelivr.com/). Copy th
 
 #### Usage
 Links on the page such as `<a href="image.jpg">` are found automatically, and the gallery opens when one is clicked.
+A link with the `download` attribute (`<a href="image.png" download>`) is a link for saving the file, and the gallery does not open it (v1.3.3 and later).
 
 #### Captions (v1.1.0 and later)
 When a picture opens, a caption is shown at the bottom of the screen. The first of these that is found is used:

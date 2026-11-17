@@ -271,7 +271,27 @@ function nl_feature_css_files(string $html, bool $all = false): array
     }
     return $out;
 }
-const NL_UI_ICONS = ['pen', 'time', 'title', 'delete', 'view', 'wrench', 'list', 'tag', 'settings', 'globe', 'lock', 'images', 'page', 'copy', 'comment'];
+/**
+ * Stylesheets written into the page as one <style>, for a reader's first visit: no request holds back the first paint.
+ * Each file is the same as its <link> would load; relative url()s are pointed at the file's folder.
+ */
+function nl_inline_css(array $files): string
+{
+    $css = '';
+    foreach ($files as $file) {
+        $path = NM_ROOT . '/' . $file;
+        // The development router serves the image viewer's files from the repository root.
+        if (!is_file($path) && str_starts_with(basename($file), 'NagiSwipe-main.')) $path = dirname(NM_ROOT, 2) . '/' . basename($file);
+        $text = is_file($path) ? (string)file_get_contents($path) : '';
+        if ($text === '') return '';
+        $dir = dirname($file) . '/';
+        // The comments are notes for whoever edits the file; the page does not need them.
+        $text = (string)preg_replace('~/\*.*?\*/~s', '', $text);
+        $css .= preg_replace('~url\((["\']?)(?![a-z][a-z0-9+.-]*:|/|#)~i', 'url($1' . $dir, $text) . "\n";
+    }
+    return $css === '' ? '' : '<style>' . str_ireplace('</style', '<\/style', $css) . '</style>';
+}
+const NL_UI_ICONS =['pen', 'time', 'title', 'delete', 'view', 'wrench', 'list', 'tag', 'settings', 'globe', 'lock', 'images', 'page', 'copy', 'comment'];
 function nl_ui_icon(string $name = 'pen'): string
 {
     return nm_icon(in_array($name, NL_UI_ICONS, true) ? 'ui-' . $name : 'ui-pen', 'log-ui-icon');

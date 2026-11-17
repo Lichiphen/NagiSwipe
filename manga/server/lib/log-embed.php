@@ -157,7 +157,9 @@ function nl_embed_name(string $line): string
 
 function nl_embed_frame(string $type, string $classes, string $src, string $title, string $attrs = '', string $href = ''): string
 {
-    return '<span class="log-embed ' . $classes . '" data-embed="' . $type . '"><iframe src="' . h($src) . '" title="' . h($title) . '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"' . $attrs . '></iframe>'
+    // Twitch's player needs a wider frame than a phone held upright; log-embed.css shows this note in its place.
+    $note = $type === 'twitch' ? ' data-note="' . h(nm_t('Twitchのプレーヤーは、スマホを横向きにすると表示されます。下のリンクからTwitchでも見られます。')) . '"' : '';
+    return '<span class="log-embed ' . $classes . '" data-embed="' . $type . '"' . $note . '><iframe src="' . h($src) . '" title="' . h($title) . '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"' . $attrs . '></iframe>'
         . ($href !== '' ? '<a class="log-embed-source" href="' . h($href) . '" target="_blank" rel="noopener noreferrer">' . h(nm_t('{name}で開く', ['name' => $title])) . ' ↗</a>' : '') . '</span>';
 }
 

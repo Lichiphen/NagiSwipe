@@ -3,7 +3,7 @@
  * ![NagiSwipe Library Core]
  * Drop-in gallery library
  * 
- * NagiSwipe v1.3.2
+ * NagiSwipe v1.3.3
  * Copyright (c) 2026 Lichiphen
  * Licensed under the MIT License
  * https://gitlab.com/lichiphen/nagiswipe/-/blob/main/LICENSE
@@ -221,7 +221,8 @@
             this.items = [];
             targets.forEach((el, index) => {
                 const href = el.href;
-                if (SmartUtils.isImageUrl(href, this.options.imageExtensions)) {
+                // A link with the download attribute is for saving the file, not viewing it.
+                if (!el.hasAttribute('download') && SmartUtils.isImageUrl(href, this.options.imageExtensions)) {
                     // Try to find a thumb
                     const img = el.querySelector('img');
                     this.items.push({

@@ -191,7 +191,16 @@ $tocRail = ($single || $fixed) && !str_contains($postsHtml, 'log-veil-post') && 
         . '<div class="log-toc-progress" aria-hidden="true"><i></i></div>' . $tocMatch[1] . '</div></aside>'
     : '';
 // The feature stylesheets go where the placeholder is in the head, once the finished page shows which features it uses.
-ob_start(static fn(string $html): string => str_replace('<!--nl-feature-css-->', implode('', array_map(static fn($f) => '<link rel="stylesheet" href="' . nl_public_asset($f) . '">', nl_feature_css_files($html, $owner || $more))), $html));
+// A reader's page holds them (and the image viewer's) as one <style>: small files, and none of them holds back the first paint.
+// The owner and "show more" lists load every feature, so they keep the cached files.
+$inlineCss = !$owner && !$more;
+ob_start(static function (string $html) use ($owner, $more, $inlineCss, $swipe): string {
+    $files = nl_feature_css_files($html, $owner || $more);
+    if ($inlineCss && $swipe) $files[] = 'viewer/NagiSwipe-main.css';
+    $css = $inlineCss ? nl_inline_css($files) : '';
+    if ($css === '') $css = implode('', array_map(static fn($f) => '<link rel="stylesheet" href="' . nl_public_asset($f) . '">', $files));
+    return str_replace('<!--nl-feature-css-->', $css, $html);
+});
 ?><!DOCTYPE html>
 <html lang="<?= nm_lang() ?>" data-icons="<?= h(nm_icon_url()) ?>" data-log-theme="<?= h($s['theme']) ?>"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= h($single || ($fixed && !$front) ? $title . nm_t('｜') . $s['title'] : $title) ?></title>
@@ -201,7 +210,7 @@ ob_start(static fn(string $html): string => str_replace('<!--nl-feature-css-->',
 <meta property="og:title" content="<?= h($title) ?>"><meta property="og:description" content="<?= h($desc) ?>"><meta property="og:image" content="<?= h($ogImage) ?>"><?php if ($ogWidth > 0): ?><meta property="og:image:width" content="<?= $ogWidth ?>"><meta property="og:image:height" content="<?= $ogHeight ?>"><?php endif; ?>
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= h($title) ?>"><meta name="twitter:description" content="<?= h($desc) ?>"><meta name="twitter:image" content="<?= h($ogImage) ?>">
 <?php if (($favicon = nl_favicon_links()) !== ''): ?><?= $favicon ?><?php else: ?><link rel="icon" href="<?= ($icon = nl_load_media($s['icon'])) ? h(nl_media_url($icon, true)) : nl_public_asset('viewer/favicon.svg') ?>"><?php endif; ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log.css') ?>"><!--nl-feature-css--><?php if ($owner): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/log-owner.css') ?>"><link rel="stylesheet" href="<?= nl_public_asset('viewer/admin-menu.css') ?>"><script src="<?= nl_public_asset('viewer/admin-menu.js') ?>" defer></script><?php endif; ?>
-<?php if ($swipe): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>">
+<?php if ($swipe): ?><?php if (!$inlineCss): ?><link rel="stylesheet" href="<?= nl_public_asset('viewer/NagiSwipe-main.css') ?>"><?php endif; ?>
 <script src="<?= nl_public_asset('viewer/NagiSwipe-main.js') ?>" defer></script><?php endif; ?>
 <?= nl_css_link() ?>
 <?php if ($manga): ?><script src="<?= nl_public_asset('viewer/NagiManga.js') ?>" defer></script><?php endif; ?>

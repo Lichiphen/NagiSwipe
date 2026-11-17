@@ -24,11 +24,11 @@
 <meta property="og:image:alt" content="NagiSwipe | NagiSeries">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="site/favicon.svg?v=526a356933" type="image/svg+xml">
-<link rel="stylesheet" href="NagiSwipe-main.css?v=b57203b70e">
+<link rel="stylesheet" href="NagiSwipe-main.css?v=d26583267c">
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiSwipe", "item": "https://nagiswipe.pages.dev/nagiswipe.html"}]}</script>
-<script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=9d3a533dac" defer></script>
+<script src="NagiSwipe-main.js?v=b15997938f" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=ddcfc8e99a" defer></script>
 </head>
 <body class="page-nagiswipe has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -65,8 +65,8 @@
 &lt;!-- JavaScript --&gt;
 &lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <div class="callout callout-note" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg><span>補足</span></p><div class="callout-body"><p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p></div></div>
-</div></details><details class="sec" open><summary><h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">ページ内の &lt;a href=&quot;image.jpg&quot;&gt; のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</span></summary><div class="sec-body">
-<p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。</p>
+</div></details><details class="sec" open><summary><h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">ページ内の &lt;a href=&quot;image.jpg&quot;&gt; のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。downlo…</span></summary><div class="sec-body">
+<p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。<code>download</code> 属性の付いたリンク（<code>&lt;a href=&quot;image.png&quot; download&gt;</code>）は、保存用のリンクとして扱い、ギャラリーでは開きません。</p>
 </div></details><details class="sec" open><summary><h3 id="キャプションv110">キャプション（v1.1.0〜）<a class="anchor" href="#キャプションv110" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</span></summary><div class="sec-body">
 <p>画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</p>
 <ol><li>リンクの <code>data-ns-caption</code>（空文字を指定するとキャプションなし）</li><li>リンクの <code>data-caption</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>alt</code></li><li>リンクの <code>title</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>title</code></li><li>リンクを含む <code>&lt;figure&gt;</code> の <code>&lt;figcaption&gt;</code></li></ol>
