@@ -290,12 +290,15 @@ function ns_is_owner(): bool
     return nm_is_logged_in();
 }
 
-/** Whether this request may add a line at all: on, not a program, not the owner (logged in, or from an address the owner listed), not turned away, not too many. */
-function ns_may_record(): bool
+/**
+ * Whether this request may add a line at all: on, not a program, not the owner (logged in, or from an address the owner listed), not turned away, not too many.
+ * $like: a like press, which is kept even from the listed addresses (people using the site like to press their own once).
+ */
+function ns_may_record(bool $like = false): bool
 {
     if (!ns_on()) return false;
     $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if (ns_is_bot($ua) || ns_denied() || ns_ignored() || ns_is_owner()) return false;
+    if (ns_is_bot($ua) || ns_denied() || (!$like && ns_ignored()) || ns_is_owner()) return false;
     nm_rate_gc();
     return nm_rate_hit('scope', nm_client_net(), 60) <= NS_RATE_MINUTE;
 }
@@ -454,7 +457,7 @@ function ns_event(array $in): ?array
 function ns_record_like(string $postId, int $n): void
 {
     try {
-        if (!ns_may_record()) return;
+        if (!ns_may_record(true)) return;
         ns_append(ns_base('lk') + ['s' => '', 'k' => 'p', 'i' => $postId, 'n' => max(1, min(100, $n))]);
     } catch (Throwable) {
         // Analytics never break a like.

@@ -632,9 +632,9 @@ function ns_access_view(): string
         $html .= '<form method="post" action="index.php" class="ns-deny" data-ns-confirm-text="' . h(nm_t('{ip} を拒否リストに入れますか？このアドレスからは、サイトが開けなくなります。', ['ip' => $rule])) . '">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_deny"><input type="hidden" name="ip" value="' . h($ip) . '">'
             . ($denied ? '<p>' . nm_t('{ip} は拒否リストに入っています。', ['ip' => h($rule)]) . '</p>' : '<button class="btn danger">' . nm_t('{ip} を拒否リストに入れる', ['ip' => h($rule)]) . '</button>') . '</form>';
         $html .= in_array($rule, $s['ignore'], true)
-            ? '<p class="note">' . nm_t('{ip} は数えないアドレスに入っています。', ['ip' => h($rule)]) . '</p>'
+            ? '<p class="note">' . nm_t('{ip} は集計から除外しています。', ['ip' => h($rule)]) . '</p>'
             : '<form method="post" action="index.php" class="ns-deny">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_ignore"><input type="hidden" name="ip" value="' . h($ip) . '">'
-                . '<button class="btn">' . nm_t('{ip} を数えない（自分のアドレスなど）', ['ip' => h($rule)]) . '</button></form>';
+                . '<button class="btn">' . nm_t('{ip} を集計から除外する（管理者のアドレスなど）', ['ip' => h($rule)]) . '</button></form>';
     }
     if (!$complete) $html .= '<p class="warn">' . nm_t('記録が多いため、途中までしか読めませんでした。期間を短くするか、IP アドレスで絞り込んでください。') . '</p>';
     if (!$total) return $html . '<p class="note">' . nm_t('この期間の記録はありません。') . '</p>' . ns_access_raw_note($s) . '</section>';
@@ -714,8 +714,8 @@ function ns_settings_view(): string
         . '<label>' . nm_t('ダッシュボードで最初に開く画面') . '<select name="site">'
         . '<option value="m"' . ($s['site'] === 'm' ? ' selected' : '') . '>' . nm_t('漫画') . '</option>'
         . '<option value="l"' . ($s['site'] === 'l' ? ' selected' : '') . '>' . nm_t('ログ') . '</option></select></label>'
-        . '<label>' . nm_t('数えないアドレス（1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="ignore_ips" rows="3" spellcheck="false">' . h(implode("\n", $s['ignore'])) . '</textarea></label>'
-        . '<p class="note">' . nm_t('ここにあるアドレスからの閲覧は数えません。サイトはふつうに開けます。管理画面にログインしているあいだの閲覧は、もとから数えません。ログインしていないスマホなどで自分のサイトを見るときのための設定です。') . '</p>'
+        . '<label>' . nm_t('集計から除外する IP アドレス（管理者の回線など。1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="ignore_ips" rows="3" spellcheck="false">' . h(implode("\n", $s['ignore'])) . '</textarea></label>'
+        . '<p class="note">' . nm_t('管理者（あなた）の家の回線やスマホのグローバル IP アドレスを入れると、そこからの閲覧を集計に入れません。アクセスを拒否するものではなく、サイトはふつうに開けます。いいねは除外せず、NagiScope にも記録します。管理画面にログインしているあいだの閲覧は、もとから数えません。ログインしていないスマホなどで自分のサイトを見るときのための設定です。') . '</p>'
         . '<button class="btn primary">' . nm_t('保存') . '</button></form>' . ns_policy_dialog()
         . ns_ignore_me_form() . '</section>'
         . '<section class="card"><h2>' . nm_t('使っている容量') . '</h2><p>' . nm_t('生のログ: {raw}　日ごとの集計: {daily}', ['raw' => ns_bytes($raw), 'daily' => ns_bytes($daily)]) . '</p>'
@@ -739,11 +739,11 @@ function ns_ignore_me_form(): string
 {
     $rule = ns_own_rule();
     if ($rule === '') return '';
-    $html = '<div class="ns-ignore-me"><p>' . nm_t('いま使っているアドレス: {ip}', ['ip' => '<code>' . h($rule) . '</code>']) . '</p>';
-    if (in_array($rule, ns_settings()['ignore'], true)) return $html . '<p class="note">' . nm_t('このアドレスは数えないアドレスに入っています。') . '</p></div>';
+    $html = '<div class="ns-ignore-me"><p>' . nm_t('あなたのいまのグローバル IP アドレス: {ip}', ['ip' => '<code>' . h($rule) . '</code>']) . '</p>';
+    if (in_array($rule, ns_settings()['ignore'], true)) return $html . '<p class="note">' . nm_t('このアドレスは集計から除外しています。') . '</p></div>';
     return $html . '<form method="post" action="index.php">' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_ignore"><input type="hidden" name="ip" value="' . h($rule) . '"><input type="hidden" name="back" value="settings">'
-        . '<button class="btn">' . nm_t('このアドレスを数えない') . '</button></form>'
-        . '<p class="note">' . nm_t('家の回線やスマホのアドレスは、ときどき変わります。数えられているようなら、この画面を開き直して加えてください。') . '</p></div>';
+        . '<button class="btn">' . nm_t('このアドレスを集計から除外する') . '</button></form>'
+        . '<p class="note">' . nm_t('家の回線やスマホのグローバル IP アドレスは、ときどき変わります。自分の閲覧が数えられているようなら、この画面を開き直して加えてください。') . '</p></div>';
 }
 
 // ---------------------------------------------------------------------------
@@ -786,7 +786,7 @@ function ns_handle_post(string $do): never
                 foreach (preg_split('/\R/', nm_str($_POST, 'ignore_ips', 20000)) ?: [] as $line) {
                     if (trim($line) === '') continue;
                     $rule = ns_deny_rule($line);
-                    if ($rule === '') $back(nm_t('数えないアドレスに読めない行があります: {line}', ['line' => mb_substr(trim($line), 0, 60)]), ['view' => 'settings'], 'error');
+                    if ($rule === '') $back(nm_t('集計から除外する IP アドレスに読めない行があります: {line}', ['line' => mb_substr(trim($line), 0, 60)]), ['view' => 'settings'], 'error');
                     $ignore[] = $rule;
                 }
                 $ignore = array_values(array_unique($ignore));
@@ -812,7 +812,7 @@ function ns_handle_post(string $do): never
             if ($rule === '') $back(nm_t('IP アドレスが正しくありません'), $q, 'error');
             ns_save_settings(['ignore' => array_values(array_unique([...ns_settings()['ignore'], $rule]))]);
             nm_log('scope_ignore', $rule);
-            $back(nm_t('{ip} からの閲覧を数えないようにしました', ['ip' => $rule]), $q);
+            $back(nm_t('{ip} からの閲覧を集計から除外しました', ['ip' => $rule]), $q);
         case 'scope_goal_save':
             $kind = nm_str($_POST, 'kind', 10);
             if (!isset(NS_GOAL_KINDS[$kind])) $back(nm_t('ゴールの種類を選んでください'), ['view' => 'goals'], 'error');

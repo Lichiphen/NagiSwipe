@@ -175,13 +175,17 @@ def run(site):
 
     # --- Addresses not counted, and the dashboard's first screen ------------------------------------------------
     settings = c.get('/admin/index.php?p=scope&view=settings')
-    check('設定: いま使っているアドレスと「このアドレスを数えない」', 'いま使っているアドレス: <code>127.0.0.1</code>' in settings.text and 'value="scope_ignore"' in settings.text)
+    check('設定: いま使っているアドレスと「このアドレスを集計から除外する」', 'あなたのいまのグローバル IP アドレス: <code>127.0.0.1</code>' in settings.text and 'value="scope_ignore"' in settings.text)
     post({'do': 'scope_ignore', 'ip': '127.0.0.1', 'back': 'settings'})
     n = len(lines())
     beacon({'e': 'pv', 's': 'Ignored00001', 'k': 'l', 'i': ''})
     check('数えないアドレスからは記録しない（サイトは開ける）', len(lines()) == n and public.get('/').status == 200)
-    check('設定と一覧に「数えないアドレスに入っています」', 'このアドレスは数えないアドレスに入っています' in c.get('/admin/index.php?p=scope&view=settings').text
-          and '127.0.0.1 は数えないアドレスに入っています' in c.get('/admin/index.php?p=scope&view=access&ip=127.0.0.1').text)
+    pid2 = json.loads(post(base.payload(body='Like check while excluded')).text)['id']
+    public.post('/like.php', json.dumps({'id': pid2, 'n': 1}).encode(), headers={'Content-Type': 'application/json', 'X-NagiLog': 'like', 'User-Agent': UA})
+    check('集計から除外したアドレスでも、いいねは記録する', len(lines()) == n + 1 and lines()[-1]['e'] == 'lk' and lines()[-1]['i'] == pid2)
+    n = len(lines())
+    check('設定と一覧に「集計から除外しています」', 'このアドレスは集計から除外しています' in c.get('/admin/index.php?p=scope&view=settings').text
+          and '127.0.0.1 は集計から除外しています' in c.get('/admin/index.php?p=scope&view=access&ip=127.0.0.1').text)
     r = post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': '', 'ignore_ips': 'だめな行'})
     check('数えないアドレスの読めない行は保存しない', 'Ignored' not in str(r.getheader('Location')) and '127.0.0.1' in c.get('/admin/index.php?p=scope&view=settings').text.split('name="ignore_ips"')[1][:200])
     post({'do': 'scope_settings', 'on': '1', 'ip': 'full', 'raw_months': '0', 'denied_ips': '', 'ignore_ips': '', 'site': 'l'})
