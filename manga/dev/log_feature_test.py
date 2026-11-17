@@ -257,15 +257,16 @@ def run(c, csrf, port):
     check("Mermaid: 図のある記事だけ図のスクリプトを読む", 'viewer/log-mermaid.js?v=' in page and 'viewer/log-mermaid.js' not in public.get("/?id=" + pid_ruby).text)
 
     # Buttons: [[words]](URL "color icon solid"); file addresses get the download icon, and unsafe URLs stay words.
-    pid_button = save("ボタンの記事\n[[配布**ZIP**]](https://example.com/app.zip \"緑\") [[応援]](https://example.com/ \"heart pink solid ないもの\")\n[[サイト内]](./?pg=about) [[なし]](https://example.com/a.pdf \"none\")\n[[危険]](javascript:alert(1) \"red\") と `[[コード]](https://x.jp)` と [[x]]", status="published")
+    pid_button = save("ボタンの記事\n[[配布**ZIP**]](https://example.com/app.zip \"緑\") [[応援]](https://example.com/ \"heart pink solid ないもの\") [[PNG DL]](https://example.com/t.png \"download\") [[素材]](https://example.com/t.clip)\n[[サイト内]](./?pg=about) [[なし]](https://example.com/a.pdf \"none\")\n[[危険]](javascript:alert(1) \"red\") と `[[コード]](https://x.jp)` と [[x]]", status="published")
     page = public.get("/?id=" + pid_button).text
     body = page.split('class="log-body"')[1].split('<footer')[0]
     description = page.split('name="description" content="')[1].split('"')[0]
-    check("ボタン: 色の名前とファイルのアイコン", '<a class="log-button log-button-green" href="https://example.com/app.zip" data-icon="download" rel="noopener noreferrer"><svg class="log-button-icon"' in body and '<span class="log-button-label">配布<strong>ZIP</strong></span></a>' in body)
+    check("ボタン: 色の名前とファイルのアイコン", '<a class="log-button log-button-green" href="https://example.com/app.zip" data-icon="download" download rel="noopener noreferrer"><svg class="log-button-icon"' in body and '<span class="log-button-label">配布<strong>ZIP</strong></span></a>' in body)
+    check("ボタン: download と書いたボタン・CLIPのファイルは保存するリンクに", 'href="https://example.com/t.png" data-icon="download" download rel=' in body and 'href="https://example.com/t.clip" data-icon="download" download rel=' in body and 'href="https://example.com/" data-icon="heart" download' not in body)
     check("ボタン: アイコン・色・塗りを順不同で、知らない名前は無視", '<a class="log-button log-button-pink log-button-solid" href="https://example.com/" data-icon="heart"' in body)
     check("ボタン: サイト内のURL、none でアイコンなし", '<a class="log-button" href="./?pg=about"><span class="log-button-label">サイト内</span></a>' in body and '<a class="log-button" href="https://example.com/a.pdf" rel="noopener noreferrer"><span class="log-button-label">なし</span></a>' in body)
     check("ボタン: javascript: はボタンにせず、コードの中と [[x]] だけは文字のまま", 'href="javascript' not in body and '<code>[[コード]](https://x.jp)</code>' in body and '[[x]]' in body)
-    check("ボタン: 説明文には文字だけ", description.startswith('配布ZIP 応援 サイト内 なし') and 'example.com' not in description)
+    check("ボタン: 説明文には文字だけ", description.startswith('配布ZIP 応援 PNG DL 素材 サイト内 なし') and 'example.com' not in description)
     check("ボタン: CSSとエディターの用意", '.log-button-icon' in (HERE.parent / 'server/viewer/log-button.css').read_text(encoding='utf-8') and 'viewer/log-button.css?v=' in page and "'button' + (icon && '-' + icon)" in (HERE.parent / 'server/admin/log-editor.js').read_text(encoding='utf-8'))
 
     # Page embeds: [ページ埋込]URL[/ページ埋込] alone on a line is a cover that loads the page through embed.php, which opens only signed URLs.

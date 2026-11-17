@@ -596,7 +596,8 @@ In the quotes after the URL, write these names apart by spaces, in any order. Ea
 | Icon | `download`, `link`, `arrow`, `play`, `book`, `mail`, `cart`, `heart`, `star`, `home`, `none` |
 | Filled | `solid`. Without it, a pale button |
 
-- Without an icon name, a button to a file such as `.zip`, `.exe`, `.pdf` or `.epub` shows the download icon, and a `mailto:` button the mail icon. Write `none` to leave it out.
+- Without an icon name, a button to a file such as `.zip`, `.exe`, `.pdf`, `.epub` or `.clip` shows the download icon, and a `mailto:` button the mail icon. Write `none` to leave it out.
+- A button with the download icon asks the browser to save the file instead of opening it, and the loading sign does not show. A file on another site is saved only when that site sends `Content-Disposition: attachment`; otherwise a picture from there opens in the tab.
 - Buttons on one line sit side by side and wrap on a narrow screen. A button can also sit in a sentence.
 - Unknown names are ignored. The URLs that work are those of an ordinary link (including addresses in the site, `mailto:` and `tel:`).
 - "装飾 › ボタン" (Format › Button) in the posting box and the fixed page editor makes a button from the selected words or URL. Add the color in the quotes by hand.
@@ -1904,7 +1905,7 @@ On 5 November 2026, v0.14.2 (buttons in the text, `[[words]](URL)`) checked the 
 
 | Check | Result |
 | --- | --- |
-| Buttons (`dev/log_feature_test.py`) | 106 feature checks passed: color names and the download icon for files, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
+| Buttons (`dev/log_feature_test.py`) | 107 feature checks passed: color names and the download icon for files, download links that save, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
 | English pages (`dev/log_en_test.py`) | 24 checks passed: a post with a page embed, an alert, a diagram and buttons leaves no Japanese and draws them with English labels |
 | Browsers | Playwright Chromium and WebKit (iPhone 13), on two light and two dark themes, at PC and phone widths. The words on filled buttons reach a contrast of 4.6 or more on light themes and 7.6 or more on dark ones |
 | Existing tests | All 27 test files passed (including 4113 translation checks) |

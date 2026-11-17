@@ -399,7 +399,7 @@ const NL_MD_BUTTON_WORDS = [
     'none' => 'none', 'なし' => 'none', 'solid' => 'solid', 'fill' => 'solid', '塗り' => 'solid',
 ];
 /** Addresses of files to save: such a button shows the download icon when its title names none. */
-const NL_MD_BUTTON_FILE = '/\.(?:zip|7z|rar|lzh|tar|gz|tgz|bz2|xz|exe|msi|dmg|pkg|appimage|deb|rpm|apk|ipa|pdf|epub|cbz)(?:[?#]|\z)/i';
+const NL_MD_BUTTON_FILE = '/\.(?:zip|7z|rar|lzh|tar|gz|tgz|bz2|xz|exe|msi|dmg|pkg|appimage|deb|rpm|apk|ipa|pdf|epub|cbz|clip|psd)(?:[?#]|\z)/i';
 function nl_md_button(string $words, string $url, string $title, bool $admin, bool $links): string
 {
     $label = nl_md_inline($words, $admin, false);
@@ -414,8 +414,11 @@ function nl_md_button(string $words, string $url, string $title, bool $admin, bo
     }
     if ($icon === '') $icon = str_starts_with(strtolower($href), 'mailto:') ? 'mail' : (preg_match(NL_MD_BUTTON_FILE, (string)parse_url($href, PHP_URL_PATH)) ? 'download' : '');
     if ($icon === 'none') $icon = '';
+    // A download button asks the browser to save the file. Browsers save files from another site only when that
+    // site says so (Content-Disposition: attachment); a picture from there still opens in the tab.
+    $download = $icon === 'download' && preg_match('~\A(?:https?://|[./?#]|[^:]*\z)~i', $href);
     return '<a class="log-button' . ($color !== '' ? ' log-button-' . $color : '') . ($solid ? ' log-button-solid' : '') . '" href="' . h($href) . '"'
-        . ($icon !== '' ? ' data-icon="' . $icon . '"' : '') . (preg_match('~\Ahttps?://~i', $href) ? ' rel="noopener noreferrer"' : '') . '>'
+        . ($icon !== '' ? ' data-icon="' . $icon . '"' : '') . ($download ? ' download' : '') . (preg_match('~\Ahttps?://~i', $href) ? ' rel="noopener noreferrer"' : '') . '>'
         . ($icon !== '' ? '<svg class="log-button-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . NL_MD_BUTTON_ICONS[$icon] . '</svg>' : '')
         . '<span class="log-button-label">' . $label . '</span></a>';
 }
