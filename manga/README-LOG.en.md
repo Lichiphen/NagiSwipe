@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.15.1](https://img.shields.io/badge/NagiLog-v0.15.1-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.15.1](https://img.shields.io/badge/NagiManga-v0.15.1-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.15.2](https://img.shields.io/badge/NagiLog-v0.15.2-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.15.2](https://img.shields.io/badge/NagiManga-v0.15.2-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -101,7 +101,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.15.1 (included in NagiManga v0.15.1) |
+| Version | 0.15.2 (included in NagiManga v0.15.2) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -241,7 +241,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.15.1.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.15.2.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -1317,7 +1317,7 @@ One line can send up to 4 comments a minute and 60 a day. Texts waiting for appr
 
 No database is used. Comments go into one small file per post or page (`log/comments/<ID>.php`), the counts and the number of new ones into `log/comments-index.php`. Pages stay cached: the comment block loads from `comment.php` (once, when it comes near the screen). Its CSS and JS (`viewer/log-comment.css`, `viewer/log-comment.js`) load only on pages with a comment block.
 
-In the admin, the bell in the top menu and the "Comments" tab of "LOG and posts" show the number of comments waiting for approval or not seen yet. On the public pages while logged in, the admin menu button (top right; bottom right on phones) shows it too. The "Comments" list approves, deletes and replies to them (the owner's replies carry an "Owner" badge and show at once; replying to a waiting comment approves it) and can show only those waiting (icons are managed in the "Comments" settings). The post list and the page list show each one's count (waiting ones stand out). Deleting a post or page deletes its comments. Comments and icons are part of the LOG backup.
+In the admin, the bell in the top menu and the "Comments" tab of "LOG and posts" show the number of comments waiting for approval or not seen yet. On the public pages while logged in, the admin menu button (top right; bottom right on phones) shows it too. The "Comments" list approves, deletes and replies to them (the owner's replies carry an "Owner" badge and show at once; replying to a waiting comment approves it) and can show only those waiting (icons are managed in the "Comments" settings). The post list and the page list show each one's count (waiting ones stand out). Deleting a post or page deletes its comments. Comments and icons are part of the LOG backup. Under "Comments" in the admin menu, "View the public site" opens the public pages in a new tab (v0.15.2 and later).
 
 ## NagiScope (access analytics)
 
@@ -1352,9 +1352,9 @@ if (window.parent !== window) window.parent.postMessage('nagiscope:start', '*');
 
 Make as many goals as you like: visited a page, clicked a link (URL contains or starts with), finished reading, liked, started an embedded game. One person reaching a goal several times a day counts once, and where they came from is listed. A new goal is also counted back over the records kept.
 
-Robots (told apart by the UA; visits that run no JavaScript never arrive) and the logged-in owner are not counted. To look at your own site from a phone or other device that is not logged in without being counted, put your global IP address in "IP addresses left out of the counts" in the NagiScope settings ("Leave this address out of the counts" adds the one you are using in one press; an IPv6 address is added as its /64). Nothing is turned away: unlike the block list, the site still opens for them. Likes are not left out; NagiScope still records them. "Dashboard opens on" in the same settings chooses whether NagiScope opens on manga or the LOG. Every value sent is checked against the works, posts, page numbers, headings and page embeds that exist before it is recorded, and too many sends from one visitor (over 60 a minute, or over 5 events in one send) are dropped.
+Robots (told apart by the UA; visits that run no JavaScript never arrive) and the logged-in owner are not counted. To look at your own site from a phone or other device that is not logged in without being counted, put your global IP address in "IP addresses left out of the counts" in the NagiScope settings (v0.15.2 and later) ("Leave this address out of the counts" adds the one you are using in one press; an IPv6 address is added as its /64). Nothing is turned away: unlike the block list, the site still opens for them. Likes are not left out; NagiScope still records them. "Manga | LOG" at the top of the dashboard switches between the two, and "Dashboard opens on", at the top of the same settings, chooses which one NagiScope opens on (v0.15.2 and later; choose the LOG if that is what you mostly use). Every value sent is checked against the works, posts, page numbers, headings and page embeds that exist before it is recorded, and too many sends from one visitor (over 60 a minute, or over 5 events in one send) are dropped.
 
-The access list shows a year, a month or a day (with links to the one before and after): that period cut into months, days or hours (people and events in each), one row per IP address (days visited, pages viewed, first and last time), and every record, newest first, 100 to a page. Filtering by IP address shows when and how often that visitor came, and the address can be added to the block list or left out of the counts. The block list works like this: manga, the LOG and likes then answer Not Found to it (pages LiteSpeed Cache already stored may still reach it). An IP address alone does not tell you a name or address; identifying someone takes a disclosure request to their provider, and the records can serve as evidence for it.
+The access list (v0.15.2 and later) shows a year, a month or a day (with links to the one before and after): that period cut into months, days or hours (people and events in each), one row per IP address (days visited, pages viewed, first and last time), and every record, newest first, 100 to a page. Filtering by IP address shows when and how often that visitor came, and the address can be added to the block list or left out of the counts. The block list works like this: manga, the LOG and likes then answer Not Found to it (pages LiteSpeed Cache already stored may still reach it). An IP address alone does not tell you a name or address; identifying someone takes a disclosure request to their provider, and the records can serve as evidence for it.
 
 Records go to `data/scope/raw/YYYY-MM.jsonl.php` (one file a month, one line per event) and daily totals to `data/scope/daily/YYYY-MM-DD.json.php`. Both start with a line of PHP that stops at once, so a server ignoring `.htaccess` never shows them. Opening NagiScope in the admin adds the new lines to the daily totals (no cron needed). The raw log can be set to be deleted after some months; daily totals are kept. The NagiScope settings download and restore the data, with or without the raw log.
 

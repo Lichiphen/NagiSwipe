@@ -705,15 +705,15 @@ function ns_settings_view(): string
         . '<form method="post" action="index.php" class="form" data-ns-ip-form>' . nm_csrf_field() . '<input type="hidden" name="do" value="scope_settings">'
         . '<label class="check ns-switch"><input type="checkbox" name="on" value="1"' . ($s['on'] ? ' checked' : '') . '>' . nm_t('NagiScope を使う（ON）') . '</label>'
         . '<p class="note">' . nm_t('OFF のあいだは、サーバーで数えることも、閲覧者のブラウザーから送ることもしません。OFF にしても、それまでのデータは消えません。') . '</p>'
+        . '<label>' . nm_t('ダッシュボードで最初に開く画面') . '<select name="site">'
+        . '<option value="m"' . ($s['site'] === 'm' ? ' selected' : '') . '>' . nm_t('漫画') . '</option>'
+        . '<option value="l"' . ($s['site'] === 'l' ? ' selected' : '') . '>' . nm_t('ログ') . '</option></select></label>'
         . ns_ip_choices($s['ip'])
         . '<p class="note">' . nm_t('IP アドレスを保存する設定では、GDPR（EU の個人データの規則）では個人データの扱いになります。「同意バナーがいらない」と言えるのは「保存しない」のときだけです。どの設定でも Cookie は使いません。') . '</p>'
         . '<label>' . nm_t('生のログ（1 件ずつの記録）') . '<select name="raw_months">' . $months . '</select></label>'
         . '<p class="note">' . nm_t('日ごとの集計は消しません。生のログを消すと、その期間は IP での絞り込みと、新しいゴールのさかのぼりができなくなります。') . '</p>'
         . '<label>' . nm_t('拒否リスト（1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="denied_ips" rows="4" spellcheck="false">' . h(implode("\n", ns_denied_list())) . '</textarea></label>'
         . '<p class="note">' . nm_t('ここにあるアドレスからは、漫画・LOG・いいねが「Not Found」になり、NagiScope にも数えません。LiteSpeed Cache がすでに保存したページは、届くことがあります。') . '</p>'
-        . '<label>' . nm_t('ダッシュボードで最初に開く画面') . '<select name="site">'
-        . '<option value="m"' . ($s['site'] === 'm' ? ' selected' : '') . '>' . nm_t('漫画') . '</option>'
-        . '<option value="l"' . ($s['site'] === 'l' ? ' selected' : '') . '>' . nm_t('ログ') . '</option></select></label>'
         . '<label>' . nm_t('集計から除外する IP アドレス（管理者の回線など。1 行に 1 つ。203.0.113.0/24 のような範囲も可）') . '<textarea name="ignore_ips" rows="3" spellcheck="false">' . h(implode("\n", $s['ignore'])) . '</textarea></label>'
         . '<p class="note">' . nm_t('管理者（あなた）の家の回線やスマホのグローバル IP アドレスを入れると、そこからの閲覧を集計に入れません。アクセスを拒否するものではなく、サイトはふつうに開けます。いいねは除外せず、NagiScope にも記録します。管理画面にログインしているあいだの閲覧は、もとから数えません。ログインしていないスマホなどで自分のサイトを見るときのための設定です。') . '</p>'
         . '<button class="btn primary">' . nm_t('保存') . '</button></form>' . ns_policy_dialog()
