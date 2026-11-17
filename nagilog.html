@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiLog", "item": "https://nagiswipe.pages.dev/nagilog.html"}]}</script>
 <script src="NagiSwipe-main.js?v=68e2574f68" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=c91c9d7a92" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=1c73197444" defer></script>
 </head>
 <body class="page-nagilog has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -346,7 +346,7 @@
 <p>「ゲームを触った（起動）」は、読者がゲームの枠の中を押したかタップして、操作がゲームへ移った人の数です。ゲームの中のクリックそのものは、ブラウザーの仕組み上取れません。「読み込みが終わった」は、ゲームのサイトが埋め込みを断ったときや通信の失敗でも数えることがあるため、目安です。自分で作ったゲームなら、起動したときに次の 1 行を実行すると「ゲームから起動の合図」も数えられ、確実に起動したかが分かります。</p>
 <pre><code class="language-js">if (window.parent !== window) window.parent.postMessage(&#x27;nagiscope:start&#x27;, &#x27;*&#x27;);</code></pre>
 <p>ゴールは何個でも作れます。種類は「ページに来た」「リンクを押した（URL を含む・前方一致）」「読み終えた」「いいねした」「埋め込みのゲームを始めた」です。1人が1日に何度達成しても1人と数え、達成した人がどこから来たかも並べます。後から作ったゴールも、残っている記録から過去にさかのぼって数えます。</p>
-<p>ロボット（UA で見分け、JavaScript を動かさないアクセスはそもそも届かない）と、ログイン中の管理者自身は数えません。ログインしていないスマホなどで自分のサイトを見るときは、NagiScope の設定の「数えないアドレス」に自分の IP アドレスを入れておくと数えません（「このアドレスを数えない」ボタンで、いま使っているアドレスを 1 回で加えられます。IPv6 は /64 の範囲で加えます）。拒否リストと違い、サイトはふつうに開けます。設定の「ダッシュボードで最初に開く画面」で、NagiScope を開いたときに漫画とログのどちらを出すかを選べます。送られてきた値は、存在する作品・記事・ページ番号・見出し・ページ埋込か確かめてから記録します。同じ相手からの送りすぎ（1分に60回、1回に5件を超える分）は捨てます。</p>
+<p>ロボット（UA で見分け、JavaScript を動かさないアクセスはそもそも届かない）と、ログイン中の管理者自身は数えません。ログインしていないスマホなどで自分のサイトを見るときは、NagiScope の設定の「集計から除外する IP アドレス」に自分のグローバル IP アドレスを入れておくと数えません（「このアドレスを集計から除外する」ボタンで、いま使っているアドレスを 1 回で加えられます。IPv6 は /64 の範囲で加えます）。アクセスを拒否するものではなく、拒否リストと違ってサイトはふつうに開けます。いいねは除外せず、NagiScope にも記録します。設定の「ダッシュボードで最初に開く画面」で、NagiScope を開いたときに漫画とログのどちらを出すかを選べます。送られてきた値は、存在する作品・記事・ページ番号・見出し・ページ埋込か確かめてから記録します。同じ相手からの送りすぎ（1分に60回、1回に5件を超える分）は捨てます。</p>
 <p>「アクセスの一覧」では、年ごと・月ごと・日ごとに期間を選び（前後へ移れます）、その期間の内訳（年なら月ごと、月なら日ごと、日なら時間ごとの人数と出来事の数）、IP アドレスごとの来た日数・見たページ数・最初と最後の時刻、すべての記録（新しい順に 100 件ずつのページ送り）を見られます。記録を IP アドレスで絞り込むと、その人がいつどれだけ来たかが分かり、その IP を拒否リストや数えないアドレスに入れられます。拒否リストのアドレスからは、漫画・LOG・いいねが「Not Found」になります（LiteSpeed Cache がすでに保存したページは届くことがあります）。IP アドレスだけでは相手の名前や住所は分かりません。相手を特定するには、プロバイダーへの発信者情報開示の手続きが必要で、その証拠として使えます。</p>
 <p>記録は <code>data/scope/raw/YYYY-MM.jsonl.php</code>（1ヶ月1ファイル、1行に1件）、日ごとの集計は <code>data/scope/daily/YYYY-MM-DD.json.php</code> に置きます。どちらも先頭に PHP の停止行があり、<code>.htaccess</code> が効かないサーバーでも中身は見えません。管理画面で NagiScope を開いたときに、前回の続きから日ごとの集計に足します（cron はいりません）。生のログは「〇ヶ月で消す」も選べます。日ごとの集計は消しません。NagiScope の設定画面から、データをダウンロード・復元できます（生のログを含めるかは選べます）。</p>
 <h2 id="サイドバーの並び替えとhtml枠"><span class="ch-num" aria-hidden="true">26</span>サイドバーの並び替えとHTML枠<a class="anchor" href="#サイドバーの並び替えとhtml枠" aria-label="この見出しへのリンク">#</a></h2>
