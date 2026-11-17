@@ -29,7 +29,7 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiManga", "item": "https://nagiswipe.pages.dev/nagimanga.html"}]}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "NagiManga", "url": "https://nagiswipe.pages.dev/nagimanga.html", "description": "タグを 1 つ貼るだけで開く漫画ビューアー NagiManga の設置・管理画面・機能の説明。", "inLanguage": "ja", "image": ["https://nagiswipe.pages.dev/img/logo/nagimanga-logo-1024.png?v=0d4d678151", "https://nagiswipe.pages.dev/img/logo/nagimanga-logo-512.png?v=1bee118866"], "applicationCategory": "MultimediaApplication", "operatingSystem": "Web (PHP 8.1 or later)", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "JPY"}, "isAccessibleForFree": true, "license": "https://opensource.org/licenses/MIT", "author": {"@type": "Person", "name": "Lichiphen", "url": "https://lichiphen.com/"}, "downloadUrl": "https://github.com/Lichiphen/NagiSwipe/releases/latest", "isPartOf": {"@type": "WebSite", "name": "NagiSeries", "url": "https://nagiswipe.pages.dev/"}, "softwareVersion": "0.15.3"}</script>
 <script src="NagiSwipe-main.js?v=b15997938f" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=ddcfc8e99a" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=0d7295df61" defer></script>
 </head>
 <body class="page-nagimanga has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -114,7 +114,7 @@
 </div></details><details class="sec" open><summary><h3 id="てがろぐに載せる">てがろぐに載せる<a class="anchor" href="#てがろぐに載せる" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">てがろぐの投稿には、ブログ用の HTML タグは使えません。代わりに、作品ページのいちばん上にある 「共有リンク」 を使います。</span></summary><div class="sec-body">
 <p>てがろぐの投稿には、ブログ用の HTML タグは使えません。代わりに、作品ページのいちばん上にある <strong>「共有リンク」</strong> を使います。</p>
 <ol><li><p>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開き、「<strong>他のスクリプトを使う：URLを指定</strong>」を選びます。</p></li><li><p>「JavaScriptのURL」欄に、NagiManga の URL を書いて保存します。管理画面の <strong>「設置用コード」</strong> に、この欄にそのまま貼れる 1 行（NagiSwipe と NagiManga の両方、キャッシュバスター付き）があります。画像の拡大表示に NagiSwipe を使っている場合は、NagiSwipe の URL の <strong>うしろに半角スペースを 1 つ入れて</strong> 続けて書きます（1 行のまま続けます）。</p>
-<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js</code></pre>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js https://example.com/nagimanga/viewer/NagiManga.js</code></pre>
 <p>※ URL の <code>@</code> の後ろ（<code>@93db749</code> など）は、ファイルのバージョンを表す値です。NagiSwipe が更新されると、README の値も新しくなります。新しい版を使いたいときは、ここの URL を貼り直してください（貼り直すまでは、今の版のまま表示が変わりません）。 NagiManga を更新したときも、「設置用コード」の新しい 1 行に貼り替えてください。</p></li></ol>
 <ol start="3"><li><p><strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p></li><li><p>NagiManga の管理画面で作品を開き、「共有リンク」の「コピー」を押します。</p></li><li><p>てがろぐに、リンクの文字（下の例では「第1話を読む」）を付けて投稿します。</p>
 <pre><code>[第1話を読む]https://example.com/nagimanga/read.php?nagimanga=Ab3dE5gH7jK9&amp;dir=rtl</code></pre></li></ol>

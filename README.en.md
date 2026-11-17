@@ -69,10 +69,10 @@ The files are served fast through [jsDelivr](https://www.jsdelivr.com/). Copy th
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js"></script>
 ```
 
 > [!NOTE]
@@ -123,15 +123,15 @@ It works without it, but if the link carries the picture's real width and height
 
 1. In Tegalog's admin panel, open **[設定] → [システム設定] → 【画像拡大スクリプトの選択】** (Settings → System settings → Image zoom script).
 2. Choose "**他のスクリプトを使う：URLを指定**" (use another script: give its URL), paste these two, and save.
-   - The "JavaScriptのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js`
-   - The "CSSのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css`
+   - The "JavaScriptのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js`
+   - The "CSSのURL" field: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css`
 
 Now a click on a picture in a post shows it large with NagiSwipe.
 
 **To use the manga viewer (NagiManga) too**, write NagiManga's URL in the same "JavaScriptのURL" field, **after NagiSwipe's URL and one space** (keep it on one line; the CSS field stays as it is).
 
 ```
-https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js https://your-site/nagimanga/viewer/NagiManga.js
 ```
 
 > [!IMPORTANT]

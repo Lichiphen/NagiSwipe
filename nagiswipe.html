@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiSwipe", "item": "https://nagiswipe.pages.dev/nagiswipe.html"}]}</script>
 <script src="NagiSwipe-main.js?v=b15997938f" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=ddcfc8e99a" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=0d7295df61" defer></script>
 </head>
 <body class="page-nagiswipe has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -60,13 +60,13 @@
 <details class="sec" open><summary><h3 id="cdn経由-推奨">CDN経由 (推奨)<a class="anchor" href="#cdn経由-推奨" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">jsDelivr を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。</span></summary><div class="sec-body">
 <p><a href="https://www.jsdelivr.com/" class="ext">jsDelivr</a> を利用して高速に配信されます。以下の URL をコピーしてください（いつも最新版の URL が書いてあります）。</p>
 <pre><code class="language-html">&lt;!-- CSS --&gt;
-&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css&quot;&gt;
 
 &lt;!-- JavaScript --&gt;
-&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
+&lt;script src=&quot;https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js&quot;&gt;&lt;/script&gt;</code></pre>
 <div class="callout callout-note" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg><span>補足</span></p><div class="callout-body"><p>※ <code>@</code> の後ろ（<code>@93db749</code> など）はファイルのバージョンを表す値で、NagiSwipe を更新するとこの README の値も新しくなります。URL を貼り直すまでは、今のバージョンのまま表示が変わりません。<code>@v1.4.0</code> のようにリリースの番号でも指定できます。常に最新の <code>main</code> ブランチを使いたい場合は <code>@main</code> にしてください（jsDelivr で最大 12 時間、ブラウザで最大 7 日、古いファイルが残ることがあります）。</p></div></div>
 </div></details><details class="sec" open><summary><h3 id="使い方">使い方<a class="anchor" href="#使い方" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">ページ内の &lt;a href=&quot;image.jpg&quot;&gt; のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。downlo…</span></summary><div class="sec-body">
-<p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。<code>download</code> 属性の付いたリンク（<code>&lt;a href=&quot;image.png&quot; download&gt;</code>）は、保存用のリンクとして扱い、ギャラリーでは開きません。</p>
+<p>ページ内の <code>&lt;a href=&quot;image.jpg&quot;&gt;</code> のような形式のリンクが自動的に検出され、クリック時にギャラリーが開きます。<code>download</code> 属性の付いたリンク（<code>&lt;a href=&quot;image.png&quot; download&gt;</code>）は、保存用のリンクとして扱い、ギャラリーでは開きません（v1.3.3〜）。</p>
 </div></details><details class="sec" open><summary><h3 id="キャプションv110">キャプション（v1.1.0〜）<a class="anchor" href="#キャプションv110" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</span></summary><div class="sec-body">
 <p>画像を開くと、画面下部にキャプションを表示します。次の順で最初に見つかったものを使います。</p>
 <ol><li>リンクの <code>data-ns-caption</code>（空文字を指定するとキャプションなし）</li><li>リンクの <code>data-caption</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>alt</code></li><li>リンクの <code>title</code></li><li>サムネイル <code>&lt;img&gt;</code> の <code>title</code></li><li>リンクを含む <code>&lt;figure&gt;</code> の <code>&lt;figcaption&gt;</code></li></ol>
@@ -86,10 +86,10 @@
 </div></details><h2 id="てがろぐで使う"><span class="ch-num" aria-hidden="true">03</span>てがろぐで使う<a class="anchor" href="#てがろぐで使う" aria-label="この見出しへのリンク">#</a></h2>
 <p><a href="https://www.nishishi.com/cgi/tegalog/" class="ext">てがろぐ</a> では、スキンのファイルを書き換えなくても、管理画面で設定するだけで NagiSwipe を使えます。</p>
 <ol><li>てがろぐの管理画面で <strong>[設定] → [システム設定] → 【画像拡大スクリプトの選択】</strong> を開きます。</li><li>「<strong>他のスクリプトを使う：URLを指定</strong>」を選び、次の 2 つをコピーして貼り付け、保存します。
-<ul><li>「JavaScriptのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js</code></li><li>「CSSのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css</code></li></ul></li></ol>
+<ul><li>「JavaScriptのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js</code></li><li>「CSSのURL」欄: <code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css</code></li></ul></li></ol>
 <p>これで、投稿の画像をクリックすると NagiSwipe で大きく表示されます。</p>
 <p><strong>漫画ビューアー（NagiManga）も使う場合</strong> は、同じ「JavaScriptのURL」欄で、NagiSwipe の URL の <strong>うしろに半角スペースを 1 つ入れて</strong>、NagiManga の URL を続けて書きます（1 行のまま続けます。「CSSのURL」欄はそのままで大丈夫です）。</p>
-<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js</code></pre>
+<pre><code>https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js</code></pre>
 <div class="callout callout-important" role="note"><p class="callout-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14v11H11l-4 4v-4H5Z"/><path d="M12 7.5v4M12 13.8v.1"/></svg><span>重要</span></p><div class="callout-body"><p>あわせて、<strong>画像のない投稿でも</strong> 漫画を開けるように設定します。てがろぐは、画像のない投稿のページでは上の欄のファイルを読み込まないためです。[設定] → [ページの表示] → 【投稿本文の表示／URL処理】 の「▼画像URLを画像として埋め込む表示」にある <strong>「画像リンクに独自のclass属性値を追加する」</strong> にチェックを入れ、<code>class=&quot;</code> と <code>&quot;</code> の間の欄に <code>nagimanga</code> と入力して保存します。</p></div></div>
 <p>てがろぐに漫画を載せる方法は、<a href="nagimanga.html#てがろぐに載せる">manga/README.md の「てがろぐに載せる」</a> を見てください。</p>
 <p><a href="https://github.com/Lichiphen/NagiMemo" class="ext">NagiMemo</a>（てがろぐ用のスキン）でも同じ方法で使えます。</p>

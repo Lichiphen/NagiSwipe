@@ -67,10 +67,10 @@ HTMLの `<head>` 内で以下のファイルを読み込んでください。
 
 ```html
 <!-- CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css">
 
 <!-- JavaScript -->
-<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js"></script>
 ```
 
 > [!NOTE]
@@ -121,15 +121,15 @@ OS の「視差効果を減らす」設定（`prefers-reduced-motion`）が有�
 
 1. てがろぐの管理画面で **[設定] → [システム設定] → 【画像拡大スクリプトの選択】** を開きます。
 2. 「**他のスクリプトを使う：URLを指定**」を選び、次の 2 つをコピーして貼り付け、保存します。
-   - 「JavaScriptのURL」欄: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js`
-   - 「CSSのURL」欄: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.css`
+   - 「JavaScriptのURL」欄: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js`
+   - 「CSSのURL」欄: `https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.css`
 
 これで、投稿の画像をクリックすると NagiSwipe で大きく表示されます。
 
 **漫画ビューアー（NagiManga）も使う場合** は、同じ「JavaScriptのURL」欄で、NagiSwipe の URL の **うしろに半角スペースを 1 つ入れて**、NagiManga の URL を続けて書きます（1 行のまま続けます。「CSSのURL」欄はそのままで大丈夫です）。
 
 ```
-https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@83d6ea2/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js
+https://cdn.jsdelivr.net/gh/Lichiphen/NagiSwipe@1c36e16/NagiSwipe-main.js https://あなたのサイト/nagimanga/viewer/NagiManga.js
 ```
 
 > [!IMPORTANT]
