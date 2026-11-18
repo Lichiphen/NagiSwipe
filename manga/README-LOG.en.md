@@ -1601,7 +1601,7 @@ Except on page 1 of the top, breadcrumbs are shown above the text. They start wi
 
 | Page | Breadcrumbs |
 | --- | --- |
-| Post | HOME › first category › post title (HOME › post for posts without a category) |
+| Post | HOME › first category › post title (HOME › post for posts without a category). Phones (600px wide or less) show it up to the category and leave the title to the heading right below (v0.15.4 and later). The structured data (JSON-LD) keeps the post title |
 | Category, hashtag, search results | HOME › category name, #tag name, results for "words" |
 | Date, month | HOME › October 2026 › October 4 |
 | Page 2 and on | "page 2" after the above |
@@ -1906,7 +1906,7 @@ On 5 November 2026, v0.14.2 (buttons in the text, `[[words]](URL)`) checked the 
 
 | Check | Result |
 | --- | --- |
-| Buttons (`dev/log_feature_test.py`) | 108 feature checks passed: feature CSS in one `<style>` on readers’ pages, color names and the download icon for files, download links that save, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
+| Buttons (`dev/log_feature_test.py`) | 109 feature checks passed: post breadcrumbs up to the category on phones, feature CSS in one `<style>` on readers’ pages, color names and the download icon for files, download links that save, color, icon and solid in any order, unknown names ignored, addresses in the site, `none`, no button for `javascript:`, marks kept as written in code, and only the words in descriptions |
 | English pages (`dev/log_en_test.py`) | 24 checks passed: a post with a page embed, an alert, a diagram and buttons leaves no Japanese and draws them with English labels |
 | Browsers | Playwright Chromium and WebKit (iPhone 13), on two light and two dark themes, at PC and phone widths. The words on filled buttons reach a contrast of 4.6 or more on light themes and 7.6 or more on dark ones |
 | Existing tests | All 27 test files passed (including 4113 translation checks) |

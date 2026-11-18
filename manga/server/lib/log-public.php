@@ -58,7 +58,8 @@ function nl_breadcrumb_trail(array $s, array $filter, int $page, ?array $post = 
     if ($post) {
         $cats = nl_taxonomy()['categories'];
         foreach ($post['categories'] ?? [] as $id) if (isset($cats[$id])) { $trail[] = [$cats[$id], nl_list_path('category=' . $id)]; break; }
-        $trail[] = [nl_post_title($post), null];
+        // Phones show the trail up to the post's category (the title is the heading right below); see log.css.
+        $trail[] = [nl_post_title($post), null, count($trail) > 1];
         return $trail;
     }
     $here = nl_list_path($filter['query']);
@@ -89,8 +90,10 @@ function nl_breadcrumb(array $trail, string $canonical): array
     $base = nl_base_url();
     $home = nm_icon('home', 'log-crumb-home');
     $sep = nm_icon('crumb-sep', 'log-crumb-sep');
-    $items = ''; $list = [];
-    foreach ($trail as $i => [$name, $path]) {
+    $items = ''; $list = []; $post = false;
+    foreach ($trail as $i => $crumb) {
+        [$name, $path] = $crumb;
+        $post = !empty($crumb[2]);
         $current = $path === null;
         $url = $current ? $canonical : $base . '/' . $path;
         $label = ($i === 0 ? $home : '') . '<span>' . h($name) . '</span>';
@@ -99,7 +102,7 @@ function nl_breadcrumb(array $trail, string $canonical): array
         $list[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $name, 'item' => $url];
     }
     $json = json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-    return ['<nav class="log-breadcrumb" aria-label="' . nm_t('パンくずリスト') . '"><ol>' . $items . '</ol></nav>', (string)$json];
+    return ['<nav class="log-breadcrumb' . ($post ? ' is-post' : '') . '" aria-label="' . nm_t('パンくずリスト') . '"><ol>' . $items . '</ol></nav>', (string)$json];
 }
 /** A page of a list: the public lists ('./') live at the top or in the blog; the admin passes "index.php". */
 function nl_page_url(string $query, int $page, string $base = './'): string

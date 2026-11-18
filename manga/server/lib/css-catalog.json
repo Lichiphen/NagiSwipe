@@ -1266,6 +1266,7 @@
   "is-owner",
   "is-past",
   "is-pinned",
+  "is-post",
   "is-plain",
   "is-playing",
   "is-preparing",

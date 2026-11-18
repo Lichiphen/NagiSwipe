@@ -83,7 +83,8 @@ a.log-crumb:focus-visible { outline:2px solid var(--log-accent); outline-offset:
 .log-breadcrumb [aria-current] .log-crumb { color:var(--log-text); }
 .log-crumb-home { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .log-crumb-sep { width:14px; height:14px; flex:none; margin:0 1px; fill:none; stroke:var(--log-muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; opacity:.6; }
-@media(max-width:600px) { .log-breadcrumb { font-size:12px; }.log-crumb { padding:5px 9px; gap:5px; }.log-breadcrumb li:first-child .log-crumb > span { max-width:7.5em; }.log-breadcrumb li:not(:first-child):not(:last-child) .log-crumb > span { max-width:6.5em; } }
+@media(max-width:600px) { .log-breadcrumb { font-size:12px; }.log-crumb { padding:5px 9px; gap:5px; }.log-breadcrumb li:first-child .log-crumb > span { max-width:7.5em; }.log-breadcrumb li:not(:first-child):not(:last-child) .log-crumb > span { max-width:6.5em; }
+    .log-breadcrumb.is-post li:last-child { display:none; }.log-breadcrumb.is-post li:nth-last-child(2) { flex:0 1 auto; }.log-breadcrumb.is-post li:nth-last-child(2) .log-crumb > span { max-width:none; } }
 @media(max-width:900px) {
     .log-site-grid { display:block; padding:0; }.log-site-header { padding-right:84px; }.log-site-main { padding:0; width:100%; }
     .log-site .log-post { border-radius:0; border-left:0; border-right:0; margin-bottom:12px; width:100%; box-shadow:none; }

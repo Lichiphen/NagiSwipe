@@ -56,8 +56,9 @@ def run(c, csrf, port):
     ld = json.loads(re.search(r'<script type="application/ld\+json">(.*?)</script>', page.text).group(1))
     names = [i["name"] for i in ld["itemListElement"]]
     check("記事のパンくず: サイト › カテゴリ › 記事（構造化データ）", ld["@type"] == "BreadcrumbList" and len(names) == 3 and names[1:] == ["日記", "最初の記録"] and ld["itemListElement"][2]["item"].endswith("/?id=" + pid_a))
-    crumbs = page.text.split('class="log-breadcrumb"')[1].split('</nav>')[0]
+    crumbs = page.text.split('class="log-breadcrumb is-post"')[1].split('</nav>')[0]
     check("記事のパンくず: 家のSVG・区切りのSVG・今のページ", 'log-crumb-home' in crumbs and crumbs.count('log-crumb-sep') == 2 and 'aria-current="page"' in crumbs)
+    check("記事のパンくず: スマホではカテゴリまで（記事名は構造化データに残す）", '.log-breadcrumb.is-post li:last-child { display:none; }' in (HERE.parent / 'server/viewer/log.css').read_text(encoding='utf-8'))
     sha = re.search(r"script-src [^;]*'sha256-([^']+)'", page.getheader('Content-Security-Policy'))
     check("構造化データはCSPのハッシュで許可", sha is not None)
     check("トップの1ページ目にはパンくずなし", 'log-breadcrumb' not in public.get("/").text)
