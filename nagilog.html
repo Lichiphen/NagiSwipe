@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="site/site.css?v=2a2d81db0b">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "NagiSeries", "item": "https://nagiswipe.pages.dev/"}, {"@type": "ListItem", "position": 2, "name": "NagiLog", "item": "https://nagiswipe.pages.dev/nagilog.html"}]}</script>
 <script src="NagiSwipe-main.js?v=b15997938f" defer></script>
-<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=0d7295df61" defer></script>
+<script src="site/site.js?v=6bc8dd3f9a" data-index="site/search.json?v=16cf5c0805" defer></script>
 </head>
 <body class="page-nagilog has-rail">
 <div class="read-progress" aria-hidden="true"><span data-progress></span></div>
@@ -410,7 +410,7 @@
 <p>詳しくはGoogleの <a href="https://developers.google.com/search/docs/crawling-indexing/block-indexing?hl=ja" class="ext">noindexの説明</a> と<a href="https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls?hl=ja" class="ext">正規URLの説明</a> を参照してください。</p>
 <details class="sec" open><summary><h3 id="パンくずリスト">パンくずリスト<a class="anchor" href="#パンくずリスト" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">トップの1ページ目以外では、本文の上にパンくずリストを出します。家のアイコンと「HOME」から始まり、今のページで終わります。</span></summary><div class="sec-body">
 <p>トップの1ページ目以外では、本文の上にパンくずリストを出します。家のアイコンと「HOME」から始まり、今のページで終わります。</p>
-<div class="table-wrap"><table><thead><tr><th>ページ</th><th>パンくず</th></tr></thead><tbody><tr><td>記事</td><td>HOME › 最初のカテゴリ › 記事のタイトル（カテゴリがない記事はHOME › 記事）</td></tr><tr><td>カテゴリ・ハッシュタグ・検索結果</td><td>HOME › カテゴリ名・#タグ名・「言葉」の検索結果</td></tr><tr><td>日付・月</td><td>HOME › 2026年10月 › 10月4日</td></tr><tr><td>2ページ目以降</td><td>上の続きに「2ページ目」</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>ページ</th><th>パンくず</th></tr></thead><tbody><tr><td>記事</td><td>HOME › 最初のカテゴリ › 記事のタイトル（カテゴリがない記事はHOME › 記事）。スマホ（幅600px以下）ではカテゴリまでを出し、記事のタイトルはすぐ下の見出しに任せます（v0.15.4 以降）。構造化データ（JSON-LD）には、記事のタイトルまで入れます</td></tr><tr><td>カテゴリ・ハッシュタグ・検索結果</td><td>HOME › カテゴリ名・#タグ名・「言葉」の検索結果</td></tr><tr><td>日付・月</td><td>HOME › 2026年10月 › 10月4日</td></tr><tr><td>2ページ目以降</td><td>上の続きに「2ページ目」</td></tr></tbody></table></div>
 <p>先頭の文字は「設定 → LOG → 一覧の見せ方・記事の下 → パンくずリストの先頭」で、<code>HOME</code>（標準）・サイト名・任意の文字（30文字まで。空なら<code>HOME</code>）から選べます。</p>
 <p>同じ階層を、schema.orgの<code>BreadcrumbList</code>（JSON-LD）でも出します。検索エンジンがページの位置を理解でき、検索結果にもURLの代わりに階層が表示されることがあります。アイコンと区切りの記号はSVGで描いています。長い名前は「…」で省略し、今のページの名前を優先して見せます。</p>
 </div></details><details class="sec" open><summary><h3 id="検索エンジンに載せない">検索エンジンに載せない<a class="anchor" href="#検索エンジンに載せない" aria-label="この見出しへのリンク">#</a></h3><span class="sec-hint">二次創作のサイトや、公式と間違われたくないサイトのために、「すべてのページを載せない（noindex,nofollow）」を選べます。すべて…</span></summary><div class="sec-body">
