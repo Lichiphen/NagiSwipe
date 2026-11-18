@@ -61,7 +61,8 @@
             requestAnimationFrame(() => { ticking = false; measure(); checkRead(); });
         }, { passive: true });
         setInterval(checkRead, 5000);
-        measure();
+        // The first measure waits until the page has been drawn: measuring sooner would hold back its first paint.
+        requestAnimationFrame(() => setTimeout(measure));
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') { if (since) visibleMs += performance.now() - since; since = 0; leave(); }
             else since = performance.now();

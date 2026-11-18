@@ -95,8 +95,12 @@
     window.addEventListener('resize', () => { current = -2; schedule(); });
     // Pictures loading above a heading move it: measure again.
     article.addEventListener('load', schedule, true);
-    update();
-    requestAnimationFrame(() => rail.classList.add('is-ready'));
+    // The first measure waits until the page has been drawn once: measuring the headings right after adding the button
+    // would make the browser lay out the whole page an extra time before anything shows. The rail fades in after it, as before.
+    requestAnimationFrame(() => setTimeout(() => {
+        if (!frame) update();
+        requestAnimationFrame(() => rail.classList.add('is-ready'));
+    }));
     // The button is there from the start: it puffs up a moment after the page opens.
     setTimeout(() => fab.classList.add('is-shown'), reduce.matches ? 0 : 280);
 })();
