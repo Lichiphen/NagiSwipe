@@ -4,8 +4,8 @@
 
 # NagiLog (personal log)
 
-[![NagiLog v0.15.4](https://img.shields.io/badge/NagiLog-v0.15.4-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
-[![NagiManga v0.15.4](https://img.shields.io/badge/NagiManga-v0.15.4-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
+[![NagiLog v0.15.5](https://img.shields.io/badge/NagiLog-v0.15.5-2563eb?style=flat-square&logo=rss&logoColor=white)](#demo)
+[![NagiManga v0.15.5](https://img.shields.io/badge/NagiManga-v0.15.5-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.en.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -101,7 +101,7 @@ It is the same installation as the manga viewer demo ([demo.html](https://notebo
 
 | Item | Details |
 | --- | --- |
-| Version | 0.15.4 (included in NagiManga v0.15.4) |
+| Version | 0.15.5 (included in NagiManga v0.15.5) |
 | Requirements | PHP 8.1 or later (GD, fileinfo, mbstring). Backups and EPUB also use ZipArchive; HTML boxes and SVG also use the DOM extension. HTTPS and a server where `.htaccess` works (Apache, LiteSpeed) are recommended |
 | Storage | No database. Each post is stored as its own file; storage and login are shared with NagiManga |
 | Audience | Public to everyone, or a private Memo (readable only when you are logged in) |
@@ -241,7 +241,7 @@ Backup and restore and importing manga EPUB also use ZipArchive.
 HTML boxes in the sidebar and importing SVG also need PHP's DOM extension.
 Use HTTPS, and let PHP write to the storage.
 
-1. Download [the release ZIP (`nagimanga-v0.15.4.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
+1. Download [the release ZIP (`nagimanga-v0.15.5.zip`)](https://lichiphen.com/tool/link/r/NagiManga) and upload the `nagimanga/` inside it. Send the hidden `.htaccess` files too.
 2. The first time, open `/nagimanga/admin/`, paste the "setup key" written in `data/setup-key.php` (read it with FTP), and choose the administrator password. Pick **NagiLog** under "What you will mostly use" so that logging in opens the LOG and posts screen.
 3. Bookmark the admin URL that is shown. The first login shows a dialog that suggests setting up a passkey or the two-step login; set one up there if you can.
 4. Under "Common and security" in the settings, enter where it is installed as the "Public URL", such as `https://example.com/nagimanga`. Do not add `log.php`.
@@ -258,6 +258,8 @@ After 40 failures an hour across the whole site, browsers new to the site wait f
 
 You stay logged in for 30 days from the last login, even after closing the browser.
 "Keep me logged in for" under "Settings → Common and security" can make it 1 year (365 days).
+From v0.15.5 you also stay logged in when you open the site from a link in another app or site (LINE, X…) or reopen the browser on a phone after closing it (before, you sometimes had to log in again).
+After logging out, a public LOG offers a "Back to the top page" button.
 
 ![The setting for how long to stay logged in. 30 days or 1 year](docs/images/log-login-days.jpg)
 
@@ -966,6 +968,7 @@ To take something down that must not be seen, delete the post or turn it back in
 To keep "today" in the calendar right, the cache is rebuilt every hour.
 When the program is uploaded over with FTP, the first view notices that the program files' modification times changed and clears the old cache once.
 The included `.htaccess` has `CacheLookup on`, which works only on LiteSpeed. If the cache is turned off on the server side, this does not work either.
+Visits carrying the login cookie (`nm_admin`) or the locked-post cookie (`nl_keys`) skip the cache through the same `.htaccess` and go to PHP. From v0.15.5 a logged-in owner never gets the visitor page without the writing box (before, it could show until a reload).
 
 ### Making uncached views fast too
 
@@ -1874,6 +1877,7 @@ On 27 October 2026 the fixes for the security review of v0.11.1 (v0.12.0) were a
 | Passkeys (`dev/passkey_test.py`) | 46 checks passed. A passkey still logs in while the site-wide limit holds |
 | Updating an old install | v0.11.1, installed and updated to v0.12.0 with its own updater: still logged in, given the mark, old log carried over (7 checks) |
 | Setup and way in (`dev/login_entry_test.py`) | 43 checks passed. The setup screen’s apology and how to find the key; the screen chosen under What you will mostly use shows on the login page and the finished screen. The two-step reminder shows once per login, and not again after Don’t show this again |
+| Staying logged in (`dev/login_keep_browser_test.py`) | 7 checks passed. In a real browser (Chromium), opening the admin from a link on another site keeps the owner logged in, and the login cookie still lasts 30 days. The LOG's top page opened that way shows the owner's view without a reload. After logging out, a public LOG offers a button back to its top page |
 | Hotlink protection for the LOG (`dev/log_test.py`) | LOG 223 checks passed. On from the start for new sites: pictures and thumbnails used by another site’s page give 404, while the LOG’s pages, allowed sites, opening the URL directly, and card and RSS fetchers still get them. A picture allowed on other sites and the share (OGP) images are left out (a share image’s thumbnail is not). Protected pictures are kept out of shared caches. It works apart from the manga switch. On earlier sites, Turn it on and Not now in the notice work |
 | Existing tests | sidebar 133, admin 107, fixed pages 94, features 100, pins and locks 77, content warnings 30, LiteSpeed 24, English 22, embeds 124, custom CSS 104, custom CSS in browsers 119, video and audio 28, top and blog 70, two-step login 49, preview 7, translations 3559 passed |
 

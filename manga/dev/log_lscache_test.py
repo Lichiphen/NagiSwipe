@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """LiteSpeed Cache headers: only public visitor pages are cacheable, writes purge, other servers get nothing."""
-import argparse,json,os,secrets,shutil,socket,sys
+import argparse,json,os,re,secrets,shutil,socket,sys
 from pathlib import Path
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('root',nargs='?')
@@ -64,7 +64,14 @@ def run(site,c,csrf,plain,pt):
     later=time.time()+5; os.utime(site/'lib/log.php',(later,later))
     first=ls(pub.get('/')); second=ls(pub.get('/'))
     check('プログラムを上書きしたら最初の表示で古いキャッシュを消す（1回だけ）',first.get('x-litespeed-purge')=='tag=nagilog' and 'x-litespeed-purge' not in second)
-    check('.htaccessはLiteSpeedのときだけCacheLookupを使う','<IfModule LiteSpeed>\n    CacheLookup on\n</IfModule>' in (site/'.htaccess').read_text(encoding='utf-8'))
+    hta=(site/'.htaccess').read_text(encoding='utf-8')
+    check('.htaccessはLiteSpeedのときだけCacheLookupを使う','<IfModule LiteSpeed>\n    CacheLookup on\n' in hta)
+    start=hta.index('<IfModule LiteSpeed>'); block=hta[start:hta.index('</IfModule>',start)]
+    rule=re.search(r'RewriteCond %\{HTTP_COOKIE\} (\S+)\n\s*RewriteRule \.\* - \[E=Cache-Control:no-cache\]',block)
+    cookie=re.compile(rule.group(1)) if rule else None
+    check('LiteSpeedはログインCookie・鍵のCookieを持つ訪問ではキャッシュを見ない（PHPより前に分ける）',cookie is not None
+          and all(cookie.search(v) for v in ('nm_admin=abc','a=1; nm_admin=abc','nl_keys=x','x=1;nl_keys=y'))
+          and not any(cookie.search(v) for v in ('','other=1','my_nm_admin=1','nm_admin_x=1')))
 
     # A server that is not LiteSpeed: nothing changes
     ppub=h.Client(args.other_port)

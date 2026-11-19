@@ -4,8 +4,8 @@
 
 # NagiLog（個人用LOG）
 
-[![NagiLog v0.15.4](https://img.shields.io/badge/NagiLog-v0.15.4-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
-[![NagiManga v0.15.4](https://img.shields.io/badge/NagiManga-v0.15.4-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
+[![NagiLog v0.15.5](https://img.shields.io/badge/NagiLog-v0.15.5-2563eb?style=flat-square&logo=rss&logoColor=white)](#デモ)
+[![NagiManga v0.15.5](https://img.shields.io/badge/NagiManga-v0.15.5-c2410c?style=flat-square&logo=bookstack&logoColor=white)](README.md)
 [![Latest release](https://img.shields.io/github/v/release/Lichiphen/NagiSwipe?style=flat-square&logo=github&label=release)](https://github.com/Lichiphen/NagiSwipe/releases/latest)
 [![GitHub](https://img.shields.io/badge/GitHub-Lichiphen%2FNagiSwipe-181717?style=flat-square&logo=github)](https://github.com/Lichiphen/NagiSwipe)
 [![GitLab](https://img.shields.io/badge/GitLab-lichiphen%2Fnagiswipe-FC6D26?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/lichiphen/nagiswipe)
@@ -99,7 +99,7 @@ NagiLogは、NagiManga v0.4.0から配布ZIPに含めています。
 
 | 項目 | 内容 |
 | --- | --- |
-| 版 | 0.15.4（NagiManga v0.15.4に同梱） |
+| 版 | 0.15.5（NagiManga v0.15.5に同梱） |
 | 動作環境 | PHP 8.1以上（GD・fileinfo・mbstring）。バックアップとEPUBにはZipArchive、HTML枠とSVGにはDOM拡張も使います。HTTPSと、`.htaccess` が効くサーバー（Apache・LiteSpeed）をおすすめします |
 | 保存 | データベースを使いません。投稿は1件ずつファイルで保存し、NagiMangaと保存先・ログインを共用します |
 | 公開範囲 | 全体公開か、自分専用のMemo（ログインしたときだけ読める）を選べます |
@@ -238,7 +238,7 @@ SVGも使えますが、内容を検査し、描画に使う要素と属性だ�
 サイドバーのHTML枠とSVGの取り込みには、PHPのDOM拡張も必要です。
 HTTPSで使い、保存先にPHPから書き込める権限を付けてください。
 
-1. [配布ZIP（`nagimanga-v0.15.4.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
+1. [配布ZIP（`nagimanga-v0.15.5.zip`）](https://lichiphen.com/tool/link/r/NagiManga)をダウンロードし、中の `nagimanga/` をアップロードします。隠しファイルの `.htaccess` も送ってください。
 2. 初回は `/nagimanga/admin/` を開き、FTP で `data/setup-key.php` に書いてある「セットアップの鍵」を貼り付けて、管理者パスワードを決めます。「おもに使うもの」は **NagiLog** を選ぶと、ログインしたときに LOG・投稿の画面が開きます。
 3. 表示された管理用URLをブックマークします。初めてログインすると、パスキーか二段階認証の設定をすすめるダイアログが出ます。できるだけ、ここで設定してください。
 4. 設定の「共通・安全」にある「公開URL」に、`https://example.com/nagimanga` のように設置先を入力します。`log.php` は付けません。
@@ -255,6 +255,8 @@ v0.10.0 からは、新しく設置すると「秘密のログイン URL から�
 
 ログイン状態は、最後にログインした日から30日間続きます。ブラウザを閉じてもログインしたままです。
 「設定 → 共通・安全」の「ログインを保つ期間」で、1年（365日）にもできます。
+v0.15.5 以降は、LINEやXなどほかのアプリ・サイトのリンクから開いたときや、スマホでブラウザーを終了して開き直したときも、ログインしたままです（それまでは、ログインし直しになることがありました）。
+ログアウトすると、公開しているLOGなら「トップページへ戻る」ボタンが出ます。
 
 ![設定のログインを保つ期間。30日と1年を選べる](docs/images/log-login-days.jpg)
 
@@ -963,6 +965,7 @@ LiteSpeedかどうかは自動で判断します。LiteSpeedでないサーバ�
 カレンダーの「今日」を正しく保つため、キャッシュは1時間で作り直します。
 FTPでプログラムを上書きした場合も、プログラムのファイルの更新日時が変わったことを最初の表示で見つけ、古いキャッシュを1回だけ消します。
 同梱の`.htaccess`に、LiteSpeedのときだけ働く`CacheLookup on`を入れています。サーバー側でキャッシュ機能が無効の場合は、この設定も働きません。
+ログインの Cookie（`nm_admin`）か、鍵付き記事の Cookie（`nl_keys`）を持つ訪問では、同じ`.htaccess`の指定により、LiteSpeedがキャッシュを見ずにPHPへ回します。v0.15.5 以降は、ログインしているのに書き込み欄のない訪問者用のページが出ることはありません（それまでは、再読み込みするまで書き込み欄が出ないことがありました）。
 
 ### キャッシュされない表示も速くする
 
@@ -1871,6 +1874,7 @@ python manga/dev/contrast_audit.py
 | パスキー（`dev/passkey_test.py`） | 46項目通過。全体の上限の間もパスキーならログインできること |
 | 古い版からの更新 | v0.11.1 を設置し、その更新機能のまま v0.12.0 に更新できること。ログインしたまま印が付き、古いログを引き継ぐこと（7項目） |
 | セットアップと入口（`dev/login_entry_test.py`） | 43項目通過。セットアップ画面のお断りと鍵の見つけ方、「おもに使うもの」で選んだ画面がログイン画面と完了の画面に出ること。二段階認証をすすめるダイアログが1回のログインで1度だけ出て、「今後は表示しない」で出なくなること |
+| ログインを保つ（`dev/login_keep_browser_test.py`） | 7項目通過。実際のブラウザー（Chromium）で、ほかのサイトのリンクから管理画面を開いてもログインしたままで、ログインの Cookie が30日のまま残ること。LOGのトップも、再読み込みしなくても持ち主の画面で開くこと。ログアウトの画面に、公開LOGならトップページへ戻るボタンが出ること |
 | LOGの直リンク防止（`dev/log_test.py`） | LOG 223項目通過。新しく設置したサイトでは最初からオンで、ほかのサイトのページからの画像・サムネイルを404にし、LOGのページ・許可したサイト・URLを直接開いたとき・カードやRSSの取得では表示すること。「ほかのサイトにも貼れる」画像と OGP 画像は対象外になること（OGP 画像でもサムネイルは対象）。対象の画像は共有キャッシュに置かせないこと。漫画のスイッチとは別に動くこと。前からのサイトでは、お知らせの「オンにする」「今はしない」が効くこと |
 | 既存の試験 | サイドバー 133、管理 107、固定ページ 94、機能 100、ピン・鍵 77、閲覧注意 30、LiteSpeed 24、英語 22、埋め込み 124、追加CSS 104、追加CSSのブラウザー 119、動画・音声 28、トップとブログ 70、二段階認証 49、プレビュー 7、翻訳 3559 項目を通過 |
 

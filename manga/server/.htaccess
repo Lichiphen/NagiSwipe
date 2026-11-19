@@ -6,6 +6,12 @@ DirectoryIndex index.php
 # Other servers skip this block. The admin, the owner's pages and images are never cached.
 <IfModule LiteSpeed>
     CacheLookup on
+    # The owner (login cookie) and readers who opened locked posts (nl_keys) skip the cache before PHP runs.
+    # The vary header PHP sends only splits pages stored later, so a visitor page cached earlier reached the
+    # owner without the writing box until a reload.
+    RewriteEngine On
+    RewriteCond %{HTTP_COOKIE} (^|;\s*)(nm_admin|nl_keys)=
+    RewriteRule .* - [E=Cache-Control:no-cache]
 </IfModule>
 
 # Clean URLs for posts and fixed pages, and the animated 404 page for missing paths, at any installation depth.

@@ -564,7 +564,7 @@ def run(data_dir):
     raw = Client()
     rr = raw.get(f"/admin/index.php?k={key}")
     sc = rr.getheader("Set-Cookie") or ""
-    check("セッション Cookie は HttpOnly + SameSite=Strict", "HttpOnly" in sc and "SameSite=Strict" in sc)
+    check("セッション Cookie は HttpOnly + SameSite=Lax（ほかのサイトやアプリから開いてもログインが消えない）", "HttpOnly" in sc and "SameSite=Lax" in sc)
 
     # --- Owner login lasts 30 days (or 365), then log in again (the first attempt used to fail) ---
     idle = Client()
@@ -573,7 +573,7 @@ def run(data_dir):
     cookie_header = next((v for h, v in r.getheaders() if h.lower() == "set-cookie" and "expires=" in v.lower()), "")
     m = re.search(r"expires=([^;]+)", cookie_header, re.I)
     days = (parsedate_to_datetime(m.group(1)).timestamp() - time.time()) / 86400 if m else 0
-    check("ログイン Cookie はブラウザを閉じても 30 日残る", 29.9 < days <= 30.01 and "HttpOnly" in cookie_header and "SameSite=Strict" in cookie_header)
+    check("ログイン Cookie はブラウザを閉じても 30 日残る", 29.9 < days <= 30.01 and "HttpOnly" in cookie_header and "SameSite=Lax" in cookie_header)
     sess = data_dir / "sessions" / f"sess_{idle.cookies.get('nm_admin', '')}"
     def age_login(days_ago):
         if sess.exists():

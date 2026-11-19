@@ -597,6 +597,8 @@ function nm_handle_post(array $cfg): void
             $g = $wasGuest ? nm_guest_config() : null;
             nm_logout();
             $link = $g && $g['exit_url'] !== '' ? '<p><a class="btn primary" href="' . h($g['exit_url']) . '">' . nm_t('デモのページへ戻る') . '</a></p>' : '';
+            // A public LOG: a way back to its top page (a private Memo's top is Not Found once logged out).
+            if ($link === '' && nl_settings()['public']) $link = '<p><a class="btn primary" href="../">' . nm_t('トップページへ戻る') . '</a></p>';
             nm_layout(nm_t('ログアウト'), '<section class="card narrow"><h1>' . ($wasGuest ? nm_t('ゲストを終了しました') : nm_t('ログアウトしました')) . '</h1>' . $link . '</section>', false);
             exit;
 

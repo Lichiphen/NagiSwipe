@@ -34,6 +34,12 @@ const NM_LOGIN_LOCKS = [900, 3600, 21600, 86400];   // how long an address is sh
 const NM_LOGIN_FAIL_GLOBAL = 40;    // all IPs / hour (distributed guessing); only browsers without the owner's mark wait
 const NM_DEVICE_COOKIE = 'nm_device';   // the owner's mark: this browser has logged in before (see nm_device_id())
 const NM_DEVICE_DAYS = 400;
+/**
+ * The login cookie is Lax, not Strict: a browser holds a Strict cookie back when the page is opened from another site or
+ * app, or restored after the browser was closed (phones), and the cookie-less request then got a new empty session whose
+ * cookie overwrote the saved login. Every change is a POST with a CSRF token, and a cross-site POST carries no Lax cookie.
+ */
+const NM_SESSION_SAMESITE = 'Lax';
 
 /**
  * Whether admin/login.php (the LOG's "ログイン" link) may show the login form. "secret": only the secret login URL
@@ -108,7 +114,7 @@ function nm_session_start(): void
         'path' => $path,
         'secure' => nm_is_https(),
         'httponly' => true,
-        'samesite' => 'Strict',
+        'samesite' => NM_SESSION_SAMESITE,
     ]);
     $GLOBALS['nm_session_path'] = $path;
     session_start();
@@ -117,7 +123,7 @@ function nm_session_start(): void
     // Migrate the former /admin/ cookie when an existing admin visits this page.
     if (preg_match('~/admin/[^/]+$~', $script)) {
         $params = session_get_cookie_params();
-        setcookie('nm_admin', session_id(), ['expires' => 0, 'path' => $path, 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
+        setcookie('nm_admin', session_id(), ['expires' => 0, 'path' => $path, 'secure' => $params['secure'], 'httponly' => true, 'samesite' => NM_SESSION_SAMESITE]);
         setcookie('nm_admin', '', ['expires' => time() - 3600, 'path' => rtrim(dirname($script), '/\\') . '/', 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
     }
 }
@@ -149,7 +155,7 @@ function nm_session_keep(): void
 {
     if (headers_sent() || ($_SESSION['nm_role'] ?? '') !== 'admin') return;
     $params = session_get_cookie_params();
-    setcookie('nm_admin', session_id(), ['expires' => (int)$_SESSION['nm_login'] + nm_login_days() * 86400, 'path' => $GLOBALS['nm_session_path'] ?? $params['path'], 'secure' => $params['secure'], 'httponly' => true, 'samesite' => 'Strict']);
+    setcookie('nm_admin', session_id(), ['expires' => (int)$_SESSION['nm_login'] + nm_login_days() * 86400, 'path' => $GLOBALS['nm_session_path'] ?? $params['path'], 'secure' => $params['secure'], 'httponly' => true, 'samesite' => NM_SESSION_SAMESITE]);
 }
 
 /** Version numbers are left out: browser updates must not end a year-long login. */
